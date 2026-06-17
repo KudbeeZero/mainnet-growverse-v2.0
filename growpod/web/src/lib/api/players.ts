@@ -5,6 +5,7 @@ import type {
   LevelProgress,
   LedgerEntry,
   Achievement,
+  PlayerProfile,
 } from "@/lib/types";
 
 export const players = {
@@ -37,4 +38,7 @@ export const players = {
       `/players/${playerId}/achievements/${key}/claim`,
       { method: "POST" },
     ),
+
+  profile: (playerId: string) =>
+    apiFetch<PlayerProfile>(`/players/${playerId}/profile`, { auth: true }),
 };

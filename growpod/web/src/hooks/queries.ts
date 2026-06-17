@@ -224,3 +224,12 @@ export function useSeasonalStrains() {
     staleTime: 60_000,
   });
 }
+
+export function useProfile() {
+  const { playerId, isAuthed } = useSession();
+  return useQuery({
+    queryKey: queryKeys.profile(playerId ?? ""),
+    queryFn: () => api.players.profile(playerId!),
+    enabled: isAuthed,
+  });
+}

@@ -68,6 +68,31 @@ export interface LevelProgress {
   progress_pct: number;
 }
 
+export interface Rank {
+  index: number;
+  name: string;
+  icon: string;
+  level_min: number;
+  next_level_min: number | null;
+}
+
+export interface Badge {
+  key: string;
+  label: string;
+  description: string;
+  icon: string;
+  category: string;
+  earned: boolean;
+  earned_at: string | null;
+}
+
+export interface PlayerProfile {
+  rank: Rank;
+  level: LevelProgress;
+  badges: Badge[];
+  medals: Achievement[];
+}
+
 export interface Strain {
   id: string;
   name: string;

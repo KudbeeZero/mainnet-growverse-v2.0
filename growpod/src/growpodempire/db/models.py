@@ -567,6 +567,22 @@ class SeasonalStrain(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class PlayerBadge(UUIDPrimaryKeyMixin, Base):
+    """A specialization badge earned by a player via gameplay milestones."""
+
+    __tablename__ = "player_badges"
+
+    player_id: Mapped[str] = mapped_column(ForeignKey("players.id"), nullable=False)
+    badge_key: Mapped[str] = mapped_column(String(48), nullable=False)
+    earned_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        Index("uq_player_badges_player_key", "player_id", "badge_key", unique=True),
+    )
+
+
 class MarketListing(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "market_listings"
 

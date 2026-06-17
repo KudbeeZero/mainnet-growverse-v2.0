@@ -22,6 +22,7 @@ from ..services.university_service import UniversityService
 from ..services.seasonal_service import SeasonalService
 from ..services.research_service import ResearchService
 from ..services import leveling_service
+from ..services.badge_service import BadgeService, rank_for_level
 from ..economy.ledger import InsufficientFundsError
 from ..feature_flags import all_flags, FeatureDisabledError, feature_required as require_feature
 from .auth import require_player, require_admin
@@ -399,6 +400,7 @@ def breed(player_id):
                 data["parent_b_id"],
                 offspring_name=data.get("name"),
             )
+            BadgeService(s).check_all(player_id)
             payload = S.strain_dict(offspring)
         return jsonify(payload), 201
     except (GameError, InsufficientFundsError) as e:
@@ -433,6 +435,7 @@ def harvest(player_id, plant_id):
                 plant_id,
                 sell=bool(data.get("sell", True)),
             )
+            BadgeService(s).check_all(player_id)
             payload = S.harvest_dict(h)
         return jsonify(payload), 201
     except GameError as e:
@@ -734,7 +737,15 @@ def feed_plant(player_id, plant_id):
 @game_bp.post("/players/<player_id>/plants/<plant_id>/treat-pests")
 @require_player
 def treat_pests(player_id, plant_id):
-    return _care_action(player_id, plant_id, "treat_pests")
+    try:
+        with session_scope() as s:
+            sim = SimulationService(s)
+            plant = sim.treat_pests(player_id, plant_id)
+            BadgeService(s).check_all(player_id)
+            payload = S.plant_dict(plant)
+        return jsonify(payload)
+    except (GameError, InsufficientFundsError) as e:
+        return _error(str(e))
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/treat-disease")
@@ -880,10 +891,35 @@ def buy_listing(player_id, listing_id):
     try:
         with session_scope() as s:
             listing = GameService(s).buy_listing(player_id, listing_id)
+            if listing.seller_id:
+                BadgeService(s).check_all(listing.seller_id)
             payload = S.listing_dict(listing)
         return jsonify(payload)
     except (GameError, InsufficientFundsError) as e:
         return _error(str(e))
+
+
+# ----- Grower rank, badges & profile summary ----------------------------
+@game_bp.get("/players/<player_id>/profile")
+@require_player
+def player_profile(player_id):
+    """Full profile summary: rank, XP progress, specialization badges, medals."""
+    try:
+        with session_scope() as s:
+            player = GameService(s).get_player(player_id)
+            level_data = leveling_service.progress(player)
+            rank = rank_for_level(level_data["level"])
+            badges = BadgeService(s).list_badges(player_id)
+            medals = ProgressionService(s).list_achievements(player_id)
+        payload = {
+            "rank": rank,
+            "level": level_data,
+            "badges": badges,
+            "medals": medals,
+        }
+        return jsonify(payload)
+    except GameError as e:
+        return _error(str(e), 404)
 
 
 # ----- Progression: daily stipend & achievements -------------------------
@@ -952,6 +988,7 @@ def fulfill_contract(player_id, contract_id):
     try:
         with session_scope() as s:
             payload = ContractService(s).fulfill(player_id, contract_id)
+            BadgeService(s).check_all(player_id)
         return jsonify(payload), 201
     except GameError as e:
         return _error(str(e))
@@ -1358,6 +1395,7 @@ def mint_harvest(player_id, harvest_id):
     try:
         with session_scope() as s:
             harvest = MintingService(s).mint_harvest(player_id, harvest_id)
+            BadgeService(s).check_all(player_id)
             payload = S.harvest_dict(harvest)
         return jsonify(payload), 201
     except GameError as e:
