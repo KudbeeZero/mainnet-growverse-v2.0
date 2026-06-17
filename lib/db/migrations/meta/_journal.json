@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1781695355940,
+      "tag": "0000_clone_room",
+      "breakpoints": true
+    }
+  ]
+}
