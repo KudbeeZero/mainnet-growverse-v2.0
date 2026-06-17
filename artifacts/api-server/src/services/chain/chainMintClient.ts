@@ -14,6 +14,7 @@
 // ============================================================================
 
 import type { PlantSeed } from "@workspace/db";
+import type { RarityTier } from "../plant/rarity";
 
 /** What the chain service needs to mint a seed (the plant_seeds row). */
 export type SeedMintInput = Pick<
@@ -33,8 +34,28 @@ export interface SeedMintResult {
   network: string;
 }
 
+/**
+ * What the chain service needs to mint a Harvest NFT — the proof-of-play token
+ * created when a grow completes (Manual Section 8.3). It references the parent
+ * seed, the grow, the rarity tier and the player's resolved story-event journey.
+ */
+export interface HarvestMintInput {
+  growId: string;
+  seedId: string;
+  parentSeedId: string | null;
+  ownerAddress: string;
+  rarityTier: RarityTier;
+  tendActions: number;
+  parentPlotBiome?: string | null;
+  storyEvents: Array<{ type: string; choice: string | null; outcome?: unknown }>;
+}
+
+/** Result of the same shape as a seed mint (asset id + creating txid). */
+export type HarvestMintResult = SeedMintResult;
+
 export interface ChainMintClient {
   mintSeed(seed: SeedMintInput): Promise<SeedMintResult>;
+  mintHarvest(harvest: HarvestMintInput): Promise<HarvestMintResult>;
 }
 
 /**
@@ -50,6 +71,14 @@ export class MockChainMintClient implements ChainMintClient {
   }
 
   async mintSeed(_seed: SeedMintInput): Promise<SeedMintResult> {
+    return this.next();
+  }
+
+  async mintHarvest(_harvest: HarvestMintInput): Promise<HarvestMintResult> {
+    return this.next();
+  }
+
+  private next(): SeedMintResult {
     const assetId = this.nextAssetId++;
     this.txSeq += 1;
     return {
@@ -71,28 +100,40 @@ export class HttpChainMintClient implements ChainMintClient {
   ) {}
 
   async mintSeed(seed: SeedMintInput): Promise<SeedMintResult> {
-    const res = await fetch(`${this.baseUrl.replace(/\/$/, "")}/api/chain/mint-seed`, {
+    return this.post("mint-seed", seed);
+  }
+
+  async mintHarvest(harvest: HarvestMintInput): Promise<HarvestMintResult> {
+    return this.post("mint-harvest", harvest);
+  }
+
+  /** POST a JSON body to a chain-service endpoint and parse the mint result. */
+  private async post(
+    endpoint: string,
+    body: unknown,
+  ): Promise<SeedMintResult> {
+    const res = await fetch(`${this.baseUrl.replace(/\/$/, "")}/api/chain/${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-API-Key": this.apiKey,
       },
-      body: JSON.stringify(seed),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      throw new Error(`mint-seed failed: ${res.status} ${detail}`.trim());
+      throw new Error(`${endpoint} failed: ${res.status} ${detail}`.trim());
     }
 
-    const body = (await res.json()) as Partial<SeedMintResult>;
-    if (typeof body.assetId !== "number") {
-      throw new Error("mint-seed response missing assetId");
+    const parsed = (await res.json()) as Partial<SeedMintResult>;
+    if (typeof parsed.assetId !== "number") {
+      throw new Error(`${endpoint} response missing assetId`);
     }
     return {
-      assetId: body.assetId,
-      txId: body.txId ?? null,
-      network: body.network ?? "unknown",
+      assetId: parsed.assetId,
+      txId: parsed.txId ?? null,
+      network: parsed.network ?? "unknown",
     };
   }
 }

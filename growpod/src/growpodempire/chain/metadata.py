@@ -48,6 +48,37 @@ def seed_metadata(seed: Dict) -> Dict:
     }
 
 
+def clone_room_harvest_metadata(harvest: Dict) -> Dict:
+    """ARC-3 metadata for a Clone Room Harvest NFT (proof-of-play).
+
+    Unlike :func:`harvest_metadata` (which serializes a Python game harvest +
+    strain), this builds the proof-of-play token described in Manual Section
+    8.3 from the JSON the TS api-server sends: it records the parent seed, the
+    grow id, the rarity tier and the player's full resolved story-event journey,
+    so the completed grow is an independently verifiable record.
+    """
+    rarity = harvest.get("rarityTier", "common")
+    story = harvest.get("storyEvents") or []
+    return {
+        "name": f"{rarity} Harvest"[:32],
+        "description": (
+            f"GrowPodEmpire Clone Room harvest — rarity {rarity}, "
+            f"{len(story)} story event(s)."
+        ),
+        "decimals": 0,
+        "properties": {
+            "type": "harvest",
+            "grow_id": harvest.get("growId"),
+            "parent_seed_id": harvest.get("parentSeedId"),
+            "owner_address": harvest.get("ownerAddress"),
+            "rarity": rarity,
+            "tend_actions": harvest.get("tendActions"),
+            "parent_plot_biome": harvest.get("parentPlotBiome"),
+            "story_events": story,
+        },
+    }
+
+
 def strain_metadata(strain) -> Dict:
     """ARC-3 metadata for a (stabilized, rare) strain NFT."""
     return {
