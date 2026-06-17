@@ -48,8 +48,11 @@ export function useCareActions(plantId: string) {
   const harvest = useMutation<Harvest, ApiError, { sell: boolean }>({
     mutationFn: ({ sell }) => api.plants.harvest(playerId!, plantId, { sell }),
     onSuccess: (h) => {
+      const q = Math.round(h.quality ?? 0);
       toast.success(
-        h.sold ? `Harvested & sold for ${h.sale_value} GC` : "Harvested",
+        h.sold
+          ? `✅ Harvested! Quality ${q}/100 · +${h.sale_value} GC`
+          : `✅ Harvested! Quality ${q}/100 — sell it in your profile`,
       );
       invalidate();
       if (playerId) {

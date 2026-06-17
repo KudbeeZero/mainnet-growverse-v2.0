@@ -90,6 +90,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   // Growth-preview scrubber: null = track the real (server) age; a number =
   // preview that day on the cycle. Preview never mutates server state.
   const [previewDay, setPreviewDay] = useState<number | null>(null);
+  const [devSpeed, setDevSpeed] = useState(false);
 
   const pod = pods?.find((p) => p.id === plant?.pod_id);
 
@@ -134,6 +135,23 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   useEffect(() => () => {
     if (commitRef.current) clearTimeout(commitRef.current);
   }, []);
+
+  // ⚡ Dev speed: advance test clock 1 game-hour every 700ms while ON.
+  // Requires GROW_TEST_CLOCK=true on the API (set in dev env).
+  useEffect(() => {
+    if (!devSpeed) return;
+    const id = setInterval(async () => {
+      try {
+        await fetch("/api/dev/clock/advance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hours: 1 }),
+        });
+      } catch { /* test clock may not be available */ }
+      refetch();
+    }, 700);
+    return () => clearInterval(id);
+  }, [devSpeed, refetch]);
 
   function onSlide(key: keyof ChamberClimate, value: number) {
     setClimate((c) => {
@@ -259,6 +277,17 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             }}
           />
         </div>
+
+        {/* 🔬 View Buds — fades in once bud geometry starts rendering (flowering/harvest) */}
+        {(renderStage === "flowering" || renderStage === "harvest") && !ended && view !== "macro" && (
+          <button
+            onClick={() => { setView("macro"); setTab("view"); }}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full border border-cyan-400/50 bg-[#08141e]/85 px-4 py-2 text-xs font-bold text-cyan-200 backdrop-blur transition-all duration-500 hover:bg-[#16364c] hover:border-cyan-300"
+          >
+            🔬 View Buds
+          </button>
+        )}
+
         {ended && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#050b12]/85 text-center">
             {plant.harvested ? (
@@ -428,6 +457,19 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         )}
       </div>
       </div>
+
+      {/* ⚡ Dev speed toggle — fixed bottom-right. ON = 1 game-hour every 700ms. */}
+      <button
+        onClick={() => setDevSpeed((s) => !s)}
+        title={devSpeed ? "10× speed ON — tap to disable" : "10× speed OFF — tap to enable"}
+        className={`fixed bottom-4 right-4 z-50 flex h-9 w-16 items-center justify-center rounded-full border text-[11px] font-extrabold tracking-wide transition-all ${
+          devSpeed
+            ? "border-green-400 bg-green-500/20 text-green-300 shadow-[0_0_14px_rgba(74,222,128,0.45)]"
+            : "border-[#1c3447] bg-[#0d1d2b] text-[#7fa9bf] hover:border-green-700 hover:text-green-500"
+        }`}
+      >
+        ⚡ 10×
+      </button>
     </div>
   );
 }

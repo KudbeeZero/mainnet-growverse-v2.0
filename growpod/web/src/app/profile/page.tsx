@@ -103,6 +103,24 @@ function ProfileInner() {
           </div>
         </Card>
 
+        {/* ── Stake stub ── locked tokens / passive drip (full chain in v2) */}
+        <Card className="border-cyan-900/40">
+          <CardHeader title="🔒 Stake GROW" subtitle="Lock tokens for a passive daily drip" />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-400">Staked</span>
+              <span className="font-mono font-bold text-gray-200">0 GC</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-400">Daily drip</span>
+              <span className="font-mono font-bold text-grow-400">— GC / day</span>
+            </div>
+            <Button size="sm" disabled className="w-full cursor-not-allowed opacity-50">
+              Stake — unlocks after first harvest
+            </Button>
+          </div>
+        </Card>
+
         <Card className="lg:col-span-2">
           <CardHeader title="Lifetime titles" subtitle="Earned across the Cup and the University" />
           {titles.length === 0 ? (
