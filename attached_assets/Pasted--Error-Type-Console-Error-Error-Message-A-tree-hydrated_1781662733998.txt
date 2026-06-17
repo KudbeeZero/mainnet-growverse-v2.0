@@ -1,0 +1,78 @@
+## Error Type
+Console Error
+
+## Error Message
+A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload assetPrefix="" globalError={[...]}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/onboarding" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <RootLayout>
+                        <html
+                          lang="en"
+-                         __gcrremoteframetoken="0889d768a7d4f49cb51ac38d63fac434"
+                        >
+                          ...
+                            <Card className="mx-auto ma...">
+                              <div className="rounded-xl...">
+                                <CardHeader>
+                                <div>
+                                <CreateForm onCreated={function onCreated}>
+                                  <form
+                                    className="space-y-3"
+                                    onSubmit={function onSubmit}
+-                                   __gcruniqueid="1"
+                                  >
+                                    <Field label="Username">
+                                      <label className="block">
+                                        <span>
+                                        <TextInput value="" onChange={function onChange} placeholder="greenthumb" ...>
+                                          <input
+                                            value=""
+                                            onChange={function onChange}
+                                            placeholder="greenthumb"
+                                            required={true}
+                                            className={"w-full rounded-md border border-ink-600 bg-ink-900 px-3 py-2 ..."}
+-                                           __gcruniqueid="2"
+                                          >
+                                    <Field label="Email (opt...">
+                                      <label className="block">
+                                        <span>
+                                        <TextInput type="email" value="" onChange={function onChange} ...>
+                                          <input
+                                            type="email"
+                                            value=""
+                                            onChange={function onChange}
+                                            placeholder="you@example.com"
+                                            className={"w-full rounded-md border border-ink-600 bg-ink-900 px-3 py-2 ..."}
+-                                           __gcruniqueid="3"
+                                          >
+                                    ...
+                  ...
+
+
+
+    at input (unknown:0:0)
+
+Next.js version: 15.5.19 (Webpack)
