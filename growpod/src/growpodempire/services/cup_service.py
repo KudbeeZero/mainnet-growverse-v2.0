@@ -27,6 +27,7 @@ from ..db.seed import slugify
 from ..genetics.breeding import derive_strain_fields
 from ..simulation.clock import Clock, SystemClock
 from . import leveling_service
+from .badge_service import BadgeService
 from .game_service import GameService, GameError
 
 
@@ -220,6 +221,7 @@ class CupService:
             player = self.session.get(Player, champ_entry.player_id)
             if player is not None:
                 player.cannabis_cup_title = f"{cup.title} Champion"
+            BadgeService(self.session).check_all(champ_entry.player_id)
 
         cup.status = "judged"
         cup.judged_at = self.clock.now()
