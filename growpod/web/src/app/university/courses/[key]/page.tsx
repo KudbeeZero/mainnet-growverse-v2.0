@@ -137,6 +137,9 @@ function CourseInner({ courseKey }: { courseKey: string }) {
   );
 }
 
+// Average ElevenLabs generation time (seconds). Used for the progress estimate.
+const AUDIO_GEN_ESTIMATE_S = 8;
+
 function CourseAudioPlayer({ courseKey }: { courseKey: string }) {
   const [playing, setPlaying] = useState(false);
   // Optimistic default: show the button right away.  Hide it only when we
@@ -148,6 +151,8 @@ function CourseAudioPlayer({ courseKey }: { courseKey: string }) {
   // "generating" is true while the HEAD probe is slow (> 1 s) AND the server
   // header says the audio is a cache miss — i.e. being generated right now.
   const [generating, setGenerating] = useState(false);
+  // Elapsed seconds since generating started — drives the progress bar.
+  const [genElapsed, setGenElapsed] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const audioUrl = `/api/game/university/courses/${courseKey}/audio`;
@@ -229,6 +234,19 @@ function CourseAudioPlayer({ courseKey }: { courseKey: string }) {
     };
   }, [audioUrl]);
 
+  // Drive the countdown / progress bar while generation is in progress.
+  useEffect(() => {
+    if (!generating) {
+      setGenElapsed(0);
+      return;
+    }
+    setGenElapsed(0);
+    const interval = setInterval(() => {
+      setGenElapsed((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [generating]);
+
   function handlePlay() {
     if (status === "unavailable" || !audioRef.current) return;
 
@@ -288,9 +306,23 @@ function CourseAudioPlayer({ courseKey }: { courseKey: string }) {
         <span>{loading ? "Loading…" : playing ? "Pause" : "Listen"}</span>
       </button>
       {generating && (
-        <p className="text-[10px] text-gray-500 leading-tight">
-          Generating professor audio for the first time…
-        </p>
+        <div className="w-full min-w-[140px] flex flex-col gap-1 items-end">
+          <div className="w-full h-1 rounded-full bg-ink-700 overflow-hidden">
+            {genElapsed < AUDIO_GEN_ESTIMATE_S ? (
+              <div
+                className="h-full rounded-full bg-grow-500 transition-all duration-1000 ease-linear"
+                style={{ width: `${Math.min((genElapsed / AUDIO_GEN_ESTIMATE_S) * 100, 95)}%` }}
+              />
+            ) : (
+              <div className="h-full w-full rounded-full bg-grow-500 animate-pulse" />
+            )}
+          </div>
+          <p className="text-[10px] text-gray-500 leading-tight">
+            {genElapsed < AUDIO_GEN_ESTIMATE_S
+              ? `Generating audio… ~${AUDIO_GEN_ESTIMATE_S - genElapsed}s remaining`
+              : "Almost ready…"}
+          </p>
+        </div>
       )}
     </div>
   );
