@@ -908,6 +908,7 @@ class GameService:
 
     def cleanup_plant(self, player_id: str, plant_id: str, cleanup_cost: int = 25) -> None:
         """Pay GROW to remove a harvested or dead plant and free the pod slot."""
+        from sqlalchemy import text
         plant = self.session.get(Plant, plant_id)
         if plant is None or plant.player_id != player_id:
             raise GameError("Plant not found")
@@ -916,6 +917,11 @@ class GameService:
         cost = Decimal(str(cleanup_cost))
         post(self.session, player_id, -cost, LedgerEntryType.POD_CLEANUP,
              ref_type="plant", ref_id=plant_id)
+        # Delete child rows that have FK constraints before removing the plant.
+        self.session.execute(text("DELETE FROM growth_measurements WHERE plant_id = :pid"), {"pid": plant_id})
+        self.session.execute(text("DELETE FROM plant_events WHERE plant_id = :pid"), {"pid": plant_id})
+        self.session.execute(text("DELETE FROM harvests WHERE plant_id = :pid"), {"pid": plant_id})
+        self.session.flush()
         self.session.delete(plant)
         self.session.flush()
 
