@@ -1213,8 +1213,9 @@ def university_course_audio(course_key):
         return _error("Course not found", 404)
 
     try:
-        from ..ai.elevenlabs_narrator import generate_narration_for_course
+        from ..ai.elevenlabs_narrator import generate_narration_for_course, is_course_audio_cached
         with session_scope() as s:
+            cache_hit = is_course_audio_cached(course, session=s)
             mp3 = generate_narration_for_course(
                 course,
                 api_key=get_settings().elevenlabs_api_key,
@@ -1235,6 +1236,7 @@ def university_course_audio(course_key):
             "Content-Disposition": f'inline; filename="{course_key}.mp3"',
             "Content-Length": str(len(mp3)),
             "Cache-Control": "public, max-age=86400",
+            "X-Audio-Cache-Status": "hit" if cache_hit else "miss",
         },
     )
 

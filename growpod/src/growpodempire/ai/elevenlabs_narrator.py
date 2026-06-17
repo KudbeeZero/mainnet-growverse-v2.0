@@ -167,6 +167,22 @@ def generate_narration(
         return None
 
 
+def is_course_audio_cached(course: dict, session=None) -> bool:
+    """Return True if MP3 bytes for this course are already in /tmp or the DB cache.
+
+    Used by the audio endpoint to set the X-Audio-Cache-Status response header
+    without modifying the generation pipeline."""
+    department = course.get("department")
+    voice_id = _voice_for(department)
+    text = build_course_spoken_text(course)
+    path = _cache_path(voice_id, text)
+    if path.exists():
+        return True
+    if session is not None:
+        return bool(_db_get(session, voice_id, text))
+    return False
+
+
 def generate_narration_for_course(
     course: dict,
     api_key: str | None = None,

@@ -145,6 +145,9 @@ function CourseAudioPlayer({ courseKey }: { courseKey: string }) {
   // "buffering"   — user clicked before canplaythrough; waiting on browser
   // "unavailable" — server returned 204; button is hidden
   const [status, setStatus] = useState<"ready" | "buffering" | "unavailable">("ready");
+  // "generating" is true while the HEAD probe is slow (> 1 s) AND the server
+  // header says the audio is a cache miss — i.e. being generated right now.
+  const [generating, setGenerating] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const audioUrl = `/api/game/university/courses/${courseKey}/audio`;
@@ -173,26 +176,51 @@ function CourseAudioPlayer({ courseKey }: { courseKey: string }) {
     });
     audio.load();
 
-    // HEAD probe: if the server returns 204 (no ElevenLabs key / not cached)
-    // tear down the element and hide the button.
+    // HEAD probe: measures response time and reads the cache-status header.
+    // If the probe takes > 1 s we show a "generating" hint so the player
+    // knows the delay is expected (first-time generation), not a hang.
+    const probeStart = Date.now();
+    const slowTimer = setTimeout(() => {
+      if (!cancelled) setGenerating(true);
+    }, 1000);
+
     fetch(audioUrl, { method: "HEAD" })
       .then((r) => {
+        clearTimeout(slowTimer);
         if (cancelled) return;
+
+        const cacheStatus = r.headers.get("X-Audio-Cache-Status");
+        // Only keep the "generating" hint visible if the server confirmed
+        // it was a live generation (miss) AND the probe actually took > 1 s.
+        const wasSlow = Date.now() - probeStart > 1000;
+        if (!wasSlow || cacheStatus !== "miss") {
+          setGenerating(false);
+        }
+
         if (r.status === 204 || !r.ok) {
           audio.pause();
           audio.src = "";
           audioRef.current = null;
           setStatus("unavailable");
+          setGenerating(false);
         }
         // 200 → already loading; nothing extra to do.
       })
       .catch(() => {
+        clearTimeout(slowTimer);
+        setGenerating(false);
         // Network error — keep the button visible; worst case the audio element
         // fires its own error event and we hide then.
       });
 
+    // Once the audio element buffers successfully, clear any generating hint.
+    audio.addEventListener("canplaythrough", () => {
+      if (!cancelled) setGenerating(false);
+    }, { once: true });
+
     return () => {
       cancelled = true;
+      clearTimeout(slowTimer);
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = "";
@@ -242,22 +270,29 @@ function CourseAudioPlayer({ courseKey }: { courseKey: string }) {
   const loading = status === "buffering";
 
   return (
-    <button
-      onClick={handlePlay}
-      disabled={loading}
-      aria-label={playing ? "Pause professor narration" : "Play professor narration"}
-      title={playing ? "Pause narration" : "Play professor narration"}
-      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
-        loading
-          ? "border-ink-600 text-gray-500 cursor-wait"
-          : playing
-          ? "border-grow-500 bg-grow-900/40 text-grow-200"
-          : "border-ink-600 bg-ink-800 text-gray-300 hover:border-grow-600 hover:text-grow-200"
-      }`}
-    >
-      <span>{loading ? "⏳" : playing ? "⏸" : "🔊"}</span>
-      <span>{loading ? "Loading…" : playing ? "Pause" : "Listen"}</span>
-    </button>
+    <div className="flex flex-col items-end gap-1">
+      <button
+        onClick={handlePlay}
+        disabled={loading}
+        aria-label={playing ? "Pause professor narration" : "Play professor narration"}
+        title={playing ? "Pause narration" : "Play professor narration"}
+        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+          loading
+            ? "border-ink-600 text-gray-500 cursor-wait"
+            : playing
+            ? "border-grow-500 bg-grow-900/40 text-grow-200"
+            : "border-ink-600 bg-ink-800 text-gray-300 hover:border-grow-600 hover:text-grow-200"
+        }`}
+      >
+        <span>{loading ? "⏳" : playing ? "⏸" : "🔊"}</span>
+        <span>{loading ? "Loading…" : playing ? "Pause" : "Listen"}</span>
+      </button>
+      {generating && (
+        <p className="text-[10px] text-gray-500 leading-tight">
+          Generating professor audio for the first time…
+        </p>
+      )}
+    </div>
   );
 }
 
