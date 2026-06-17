@@ -267,18 +267,22 @@ class UniversityService:
                 "claimable": key not in earned and len(done) == len(required) and required != [],
             })
 
+        raw_depts = self.curriculum.get("departments", {})
+        flat_depts = {k: (v.get("name", k) if isinstance(v, dict) else str(v)) for k, v in raw_depts.items()}
         return {
             "player_id": player_id,
             "title": player.university_title,
-            "departments": self.curriculum.get("departments", {}),
+            "departments": flat_depts,
             "courses": course_rows,
             "degrees": degree_rows,
         }
 
     def catalog(self) -> dict:
         """Public, player-agnostic course/degree catalog."""
+        raw_depts = self.curriculum.get("departments", {})
+        flat_depts = {k: (v.get("name", k) if isinstance(v, dict) else str(v)) for k, v in raw_depts.items()}
         return {
-            "departments": self.curriculum.get("departments", {}),
+            "departments": flat_depts,
             "courses": [
                 {"key": k, "name": c.get("name", k), "department": c.get("department"),
                  "credits": c.get("credits"), "level_req": int(c.get("level_req", 1)),
