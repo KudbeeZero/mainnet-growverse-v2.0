@@ -183,8 +183,9 @@ export function Microscope({ seed, terpenes, maturity, purple = 0, className = "
     const canvas = canvasRef.current;
     const wrap = wrapRef.current;
     if (!canvas || !wrap) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const ctxOrNull = canvas.getContext("2d");
+    if (!ctxOrNull) return;
+    const ctx: CanvasRenderingContext2D = ctxOrNull;
 
     const motionOK =
       typeof window === "undefined" ||
