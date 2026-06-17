@@ -15,6 +15,7 @@ from sqlalchemy import func
 from ..db.models import (
     PlayerBadge,
     BreedingEvent,
+    CourseEnrollment,
     Harvest,
     LedgerEntry,
     MarketListing,
@@ -22,6 +23,8 @@ from ..db.models import (
     Contract,
 )
 from ..enums import LedgerEntryType
+
+TERPENE_COURSE_KEYS = {"chem-101", "chem-201"}
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +72,12 @@ BADGES: dict[str, dict] = {
         "label": "Contract King",
         "description": "Complete 100 delivery contracts",
         "icon": "📜",
+        "category": "specialization",
+    },
+    "terpene_tactician": {
+        "label": "Terpene Tactician",
+        "description": "Complete all chemistry / terpene university courses",
+        "icon": "🧪",
         "category": "specialization",
     },
 }
@@ -150,13 +159,14 @@ class BadgeService:
         newly_earned: List[str] = []
 
         checks = {
-            "master_breeder": self._count_breeds(player_id) >= 10,
-            "yield_king":     self._count_quality_harvests(player_id) >= 5,
-            "pest_warden":    self._count_pest_treatments(player_id) >= 20,
-            "market_mogul":   self._count_market_sales(player_id) >= 50,
-            "cup_champion":   self._has_won_cup(player_id),
-            "nft_pioneer":    self._has_minted_nft(player_id),
-            "contract_king":  self._count_fulfilled_contracts(player_id) >= 100,
+            "master_breeder":     self._count_breeds(player_id) >= 10,
+            "yield_king":         self._count_quality_harvests(player_id) >= 5,
+            "pest_warden":        self._count_pest_treatments(player_id) >= 20,
+            "market_mogul":       self._count_market_sales(player_id) >= 50,
+            "cup_champion":       self._has_won_cup(player_id),
+            "nft_pioneer":        self._has_minted_nft(player_id),
+            "contract_king":      self._count_fulfilled_contracts(player_id) >= 100,
+            "terpene_tactician":  self._has_completed_terpene_courses(player_id),
         }
 
         for key, qualified in checks.items():
@@ -247,3 +257,15 @@ class BadgeService:
             .scalar()
             or 0
         )
+
+    def _has_completed_terpene_courses(self, player_id: str) -> bool:
+        completed = (
+            self.session.query(CourseEnrollment.course_key)
+            .filter(
+                CourseEnrollment.player_id == player_id,
+                CourseEnrollment.course_key.in_(list(TERPENE_COURSE_KEYS)),
+                CourseEnrollment.status == "completed",
+            )
+            .count()
+        )
+        return completed >= len(TERPENE_COURSE_KEYS)

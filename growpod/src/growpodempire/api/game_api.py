@@ -1089,6 +1089,7 @@ def university_complete(player_id, course_key):
     try:
         with session_scope() as s:
             payload = UniversityService(s).complete_course(player_id, course_key)
+            BadgeService(s).check_all(player_id)
         return jsonify(payload), 201
     except GameError as e:
         return _error(str(e))

@@ -130,4 +130,8 @@ class ProgressionService:
             return breeds >= spec.get("threshold", 5)
         if key == "high_roller":
             return balance(self.session, player_id) >= Decimal(str(spec.get("threshold", 2000)))
+        if key == "long_campaign":
+            return harvests >= spec.get("threshold", 10)
+        if key == "veteran":
+            return harvests >= spec.get("threshold", 25)
         return False

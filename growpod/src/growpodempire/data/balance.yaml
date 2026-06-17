@@ -223,6 +223,8 @@ progression:
     green_thumb: {reward: 300, threshold: 5, description: "Complete 5 harvests"}
     master_breeder: {reward: 500, threshold: 5, description: "Breed 5 strains"}
     high_roller: {reward: 400, threshold: 2000, description: "Hold 2000 GROW"}
+    long_campaign: {reward: 600, threshold: 10, description: "Complete 10 harvests"}
+    veteran: {reward: 1000, threshold: 25, description: "Complete 25 harvests"}
 
 # Player progression. XP is awarded for meaningful actions; level is derived
 # from cumulative XP via a quadratic curve (level L needs curve_base*L*(L-1)/2).
