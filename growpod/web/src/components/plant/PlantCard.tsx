@@ -15,6 +15,7 @@ import { StageTimelineCompact } from "./StageTimeline";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap } from "@/hooks/queries";
 import { useCleanupPlant } from "@/hooks/useCareActions";
+import { useDevSpeedStore } from "@/lib/devSpeedStore";
 import { titleCase, num } from "@/lib/format";
 import {
   morphologyFor,
@@ -40,6 +41,7 @@ export function PlantCard({
   const { map } = useStrainMap();
   const cleanup = useCleanupPlant();
   const [chamberView, setChamberView] = useState<ChamberView>("chamber");
+  const devSpeed = useDevSpeedStore((s) => s.devSpeed);
 
   if (isLoading) {
     return (
@@ -78,7 +80,19 @@ export function PlantCard({
     : ageDays(plant.planted_at);
   const dev = previewDev(liveNominalDay, flMid);
 
+  const glowing = devSpeed && plant.is_alive && !plant.harvested;
+
   return (
+    <div className="relative">
+      {glowing && (
+        <div
+          className="pointer-events-none absolute inset-0 rounded-xl"
+          style={{
+            boxShadow: "0 0 0 2px rgba(74,222,128,0.25), 0 0 18px 4px rgba(74,222,128,0.12)",
+            animation: "pulse 2.5s ease-in-out infinite",
+          }}
+        />
+      )}
     <Card className="flex flex-col gap-3">
       <div className="flex items-start justify-between">
         <div>
@@ -168,5 +182,6 @@ export function PlantCard({
       <PlantActionCTA plant={plant} pod={pod} compact />
       {!plant.harvested && <CareButtons plant={plant} />}
     </Card>
+    </div>
   );
 }

@@ -51,12 +51,16 @@ export function NavBar() {
             <button
               onClick={toggle}
               title={devSpeed ? "10× speed ON — click to disable" : "Enable 10× time acceleration"}
-              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold tracking-wide transition-all ${
+              className={`relative flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold tracking-wide transition-all duration-300 ${
                 devSpeed
-                  ? "border-green-400 bg-green-500/20 text-green-300 shadow-[0_0_10px_rgba(74,222,128,0.35)]"
+                  ? "border-green-400 bg-green-500/20 text-green-300 shadow-[0_0_12px_rgba(74,222,128,0.5)]"
                   : "border-ink-600 bg-ink-800 text-gray-500 hover:border-green-700 hover:text-green-400"
               }`}
             >
+              {/* Slow glow pulse ring when active */}
+              {devSpeed && (
+                <span className="animate-ping pointer-events-none absolute inset-0 rounded-full border border-green-400/60" />
+              )}
               ⚡ 10×
             </button>
           )}
