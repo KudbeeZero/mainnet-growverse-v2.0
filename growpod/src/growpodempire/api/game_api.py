@@ -1444,6 +1444,39 @@ def store_partners():
     return jsonify(out)
 
 
+@game_bp.get("/admin/store/partners")
+@require_admin
+def admin_list_partners():
+    """Admin-only list returning ALL partners (active and inactive) for management."""
+    from ..db.models import StorePartner, Strain
+    from ..economy.config import get_economy_config as _cfg
+    with session_scope() as s:
+        partners = (
+            s.query(StorePartner)
+            .order_by(StorePartner.display_order, StorePartner.created_at)
+            .all()
+        )
+        out = []
+        for p in partners:
+            product_name = p.product_id
+            if p.product_type == "strain":
+                strain = s.get(Strain, p.product_id)
+                if strain:
+                    product_name = strain.name
+            elif p.product_type == "consumable":
+                item = _cfg().shop_consumables.get(p.product_id)
+                if item:
+                    product_name = item.get("name", p.product_id)
+            out.append({
+                "id": p.id, "name": p.name, "logo_url": p.logo_url,
+                "tagline": p.tagline, "product_type": p.product_type,
+                "product_id": p.product_id, "product_name": product_name,
+                "price_gc": float(p.price_gc), "display_order": p.display_order,
+                "active": p.active,
+            })
+    return jsonify(out)
+
+
 @game_bp.post("/admin/store/partners")
 @require_admin
 def admin_add_partner():
@@ -1637,9 +1670,10 @@ def store_bundles():
 @game_bp.post("/players/<player_id>/store/bundles/<bundle_id>/purchase")
 @require_player
 def purchase_bundle(player_id, bundle_id):
-    from ..db.models import Bundle, ConsumableInventory
+    from ..db.models import Bundle, ConsumableInventory, SeedInventory, Strain
     from ..economy.ledger import post as _post
     from ..economy.config import get_economy_config as _cfg
+    from ..enums import LedgerEntryType
     from decimal import Decimal as _Dec
     try:
         with session_scope() as s:
@@ -1647,30 +1681,63 @@ def purchase_bundle(player_id, bundle_id):
             if b is None or not b.active:
                 return _error("Bundle not found or inactive", 404)
             cfg = _cfg()
-            full_price = sum(
-                float((cfg.shop_consumables.get(c.get("key", "")) or {}).get("cost", 0)) * int(c.get("qty", 1))
-                for c in (b.components or [])
-            )
+            # Compute full price across consumable + strain components
+            full_price = 0.0
+            for c in (b.components or []):
+                ctype = c.get("type", "consumable")
+                qty = int(c.get("qty", 1))
+                if ctype == "consumable":
+                    full_price += float((cfg.shop_consumables.get(c.get("key", "")) or {}).get("cost", 0)) * qty
+                elif ctype == "strain":
+                    # Strain component: use the strain's catalog seed price
+                    strain_id = c.get("strain_id", "")
+                    if strain_id:
+                        strain = s.get(Strain, strain_id)
+                        if strain:
+                            from ..economy import pricing as _pricing
+                            try:
+                                full_price += float(_pricing.seed_price(strain.rarity, cfg)) * qty
+                            except Exception:
+                                full_price += 0.0
             bundle_price = _Dec(str(round(full_price * (1 - float(b.discount_pct)), 6)))
-            from ..enums import LedgerEntryType
             _post(s, player_id, -bundle_price, LedgerEntryType.SHOP_PURCHASE,
                   ref_type="bundle", ref_id=bundle_id)
+            # Deliver components
             items_delivered = []
             for comp in (b.components or []):
-                key = comp.get("key", "")
+                ctype = comp.get("type", "consumable")
                 qty = int(comp.get("qty", 1))
-                if not key or qty < 1:
+                if qty < 1:
                     continue
-                stack = (s.query(ConsumableInventory)
-                         .filter(ConsumableInventory.player_id == player_id,
-                                 ConsumableInventory.item_key == key)
-                         .one_or_none())
-                if stack is None:
-                    stack = ConsumableInventory(player_id=player_id, item_key=key, quantity=0)
-                    s.add(stack)
-                    s.flush()
-                stack.quantity += qty
-                items_delivered.append({"key": key, "qty": qty})
+                if ctype == "consumable":
+                    key = comp.get("key", "")
+                    if not key:
+                        continue
+                    stack = (s.query(ConsumableInventory)
+                             .filter(ConsumableInventory.player_id == player_id,
+                                     ConsumableInventory.item_key == key)
+                             .one_or_none())
+                    if stack is None:
+                        stack = ConsumableInventory(player_id=player_id, item_key=key, quantity=0)
+                        s.add(stack)
+                        s.flush()
+                    stack.quantity += qty
+                    items_delivered.append({"type": "consumable", "key": key, "qty": qty})
+                elif ctype == "strain":
+                    strain_id = comp.get("strain_id", "")
+                    if not strain_id:
+                        continue
+                    seed_stack = (s.query(SeedInventory)
+                                  .filter(SeedInventory.player_id == player_id,
+                                          SeedInventory.strain_id == strain_id)
+                                  .one_or_none())
+                    if seed_stack is None:
+                        seed_stack = SeedInventory(player_id=player_id, strain_id=strain_id,
+                                                   quantity=0, source="bundle")
+                        s.add(seed_stack)
+                        s.flush()
+                    seed_stack.quantity += qty
+                    items_delivered.append({"type": "strain", "strain_id": strain_id, "qty": qty})
         return jsonify({"purchased": b.name, "items_delivered": items_delivered}), 201
     except InsufficientFundsError as e:
         return _error(str(e))

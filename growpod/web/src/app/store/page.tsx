@@ -92,8 +92,8 @@ function FeaturedShelf() {
     source: "seasonal" as const,
   }));
 
-  // Pinned items take priority; seasonal fills to cap of 5 display slots
-  const allItems = [...pinnedItems, ...seasonalItems].slice(0, 5);
+  // Pinned items take priority; seasonal fills remaining slots up to 3 total
+  const allItems = [...pinnedItems, ...seasonalItems].slice(0, 3);
 
   if (featured.isLoading) return <LoadingBlock />;
   if (allItems.length === 0) return null;
