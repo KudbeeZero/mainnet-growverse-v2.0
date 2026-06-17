@@ -1,0 +1,1252 @@
+[
+  {
+    "name": "Gelato",
+    "slug": "gelato",
+    "type": "hybrid-indica",
+    "lineage_type": "hybrid",
+    "rarity": "rare",
+    "indica_ratio": 0.55,
+    "thc_pct": [
+      20,
+      25
+    ],
+    "cbd_pct": [
+      0,
+      1
+    ],
+    "flowering_days": [
+      56,
+      70
+    ],
+    "difficulty": 3,
+    "terpenes": [
+      "caryophyllene",
+      "limonene",
+      "myrcene",
+      "linalool"
+    ],
+    "effects": [
+      "euphoric",
+      "relaxed",
+      "uplifted",
+      "happy",
+      "creative",
+      "focused"
+    ],
+    "flavors": [
+      "sweet",
+      "dessert",
+      "berry",
+      "citrus",
+      "creamy",
+      "earthy"
+    ],
+    "aromas": [
+      "sweet",
+      "fruity",
+      "berry",
+      "citrus",
+      "earthy",
+      "pungent"
+    ],
+    "origin": "Bay Area, California, USA",
+    "breeder": "Cookie Fam Genetics / Sherbinski",
+    "parents": [
+      "Sunset Sherbet",
+      "Thin Mint Girl Scout Cookies"
+    ],
+    "aka": [
+      "Larry Bird",
+      "Gelato #42",
+      "Zelato"
+    ],
+    "yield_indoor_g_m2": [
+      500,
+      600
+    ],
+    "awards": [
+      "Widely regarded elite Cookie-family hybrid; parent of numerous award-winning descendants"
+    ],
+    "summary": "Gelato is a slightly indica-dominant hybrid (roughly 55% indica / 45% sativa) born in the Bay Area of California from a cross of Sunset Sherbet and Thin Mint Girl Scout Cookies. It belongs to the celebrated Cookie family and takes its name from its sweet, dessert-like aroma and flavor. Typical THC sits in the 20-25% range, with negligible CBD, placing it well above average potency.\n\nThe high comes on quickly and is notably head-forward despite the slight indica lean: an uplifting, euphoric cerebral rush paired with deep physical relaxation that rarely tips into couch-lock. Users report a productive, creative, and focused energy alongside relief from pain, stress, and fatigue, making it popular both recreationally and medicinally.\n\nGelato's dominant terpene is caryophyllene, supported by limonene, myrcene, and linalool, yielding a flavor profile of sweet berry, citrus, and creamy dessert notes over an earthy, pungent base. It has become one of the most influential modern strains, spawning a large number of named phenotypes (Gelato #33, #41, #45) and serving as a parent to many elite hybrids.",
+    "history": "Gelato was bred in the San Francisco Bay Area by the Cookie Fam collective, with Mario \"Sherbinski\" Guzman widely credited as its creator. It descends from Sunset Sherbet crossed with Thin Mint Girl Scout Cookies, both themselves Cookie-family genetics, giving Gelato its characteristic sweet, fruity dessert profile. The strain was selected into several numbered phenotypes (notably #33 \"Larry Bird,\" #41, and #45), each refined for flavor and potency. Since its emergence in the mid-2010s it has become a cornerstone of modern American hybrid breeding and a foundational parent for countless elite crosses.",
+    "growing": "Gelato is best suited to indoor or controlled-environment cultivation and is rated moderate in difficulty. Plants reach medium-tall height with a relatively compact structure that does not demand much space. It flowers in about 8-10 weeks (roughly 56-70 days) indoors, producing dense, colorful buds. Indoor yields typically run 500-600 g/m\u00b2, with outdoor plants yielding 600+ g each. The strain has decent pest resistance but is sensitive to humidity and temperature swings, so stable climate control and attentive feeding reward growers; beginners can succeed in a well-managed tent, but a grow or two of experience helps maximize quality.",
+    "sources": [
+      "https://www.leafly.com/strains/gelato",
+      "https://seedfinder.eu/en/strain-info/gelato/seed-junky-genetics",
+      "https://www.cannaconnection.com/strains/gelato"
+    ],
+    "status": "complete",
+    "game_mapping": {
+      "name": "Gelato",
+      "lineage_type": "hybrid",
+      "rarity": "rare",
+      "stability": 0.8,
+      "terpenes": [
+        "caryophyllene",
+        "limonene",
+        "myrcene"
+      ],
+      "traits": {
+        "indica_ratio": 0.55,
+        "thc": 22.5,
+        "cbd": 0.5,
+        "flowering_time": 63,
+        "yield": 550,
+        "difficulty": 3,
+        "disease_resistance": 0.55,
+        "pest_resistance": 0.65,
+        "vigor": 0.7
+      },
+      "dominant": [
+        "thc"
+      ]
+    }
+  },
+  {
+    "name": "Wedding Cake",
+    "slug": "wedding-cake",
+    "type": "hybrid-indica",
+    "lineage_type": "hybrid",
+    "rarity": "epic",
+    "indica_ratio": 0.6,
+    "thc_pct": [
+      23,
+      27
+    ],
+    "cbd_pct": [
+      0,
+      1
+    ],
+    "flowering_days": [
+      56,
+      63
+    ],
+    "difficulty": 2,
+    "terpenes": [
+      "caryophyllene",
+      "limonene",
+      "humulene",
+      "linalool",
+      "myrcene"
+    ],
+    "effects": [
+      "relaxed",
+      "euphoric",
+      "happy",
+      "uplifted",
+      "aroused",
+      "creative",
+      "calming"
+    ],
+    "flavors": [
+      "sweet",
+      "vanilla",
+      "earthy",
+      "pepper",
+      "sugary",
+      "tangy",
+      "doughy"
+    ],
+    "aromas": [
+      "sweet",
+      "vanilla",
+      "earthy",
+      "pungent",
+      "peppery",
+      "sour"
+    ],
+    "origin": "United States (California)",
+    "breeder": "Seed Junky Genetics",
+    "parents": [
+      "Triangle Kush",
+      "Animal Mints"
+    ],
+    "aka": [
+      "Triangle Mints #23",
+      "Pink Cookies"
+    ],
+    "awards": [
+      "Leafly Strain of the Year 2019"
+    ],
+    "yield_indoor_g_m2": [
+      500,
+      650
+    ],
+    "summary": "Wedding Cake is a potent, indica-dominant hybrid (roughly 60% indica / 40% sativa) bred by Seed Junky Genetics, also known as Triangle Mints #23 and sometimes marketed as Pink Cookies. It is one of the most popular dessert-flavored cultivars on the modern market, prized for its high THC content (commonly testing in the 23-27% range, averaging around 25%) and a rich, tangy-sweet profile reminiscent of vanilla frosting over an earthy, peppery base.\n\nThe strain delivers a heavy, relaxing body high paired with a euphoric, mood-lifting head buzz, making it a favorite for evening use and for medical patients seeking relief from pain, insomnia, stress, and appetite loss. Its effects start cerebral and uplifting before settling into deep physical relaxation, a balance that earned it broad mainstream appeal.\n\nWedding Cake rose to fame in the late 2010s and was named Leafly's Strain of the Year in 2019. Beyond its consumer reputation, it is also valued commercially for dense, trichome-coated buds, reliable yields, and excellent terpene preservation, which has made it a staple parent in countless modern crosses.",
+    "history": "Wedding Cake was created by Seed Junky Genetics (breeder Jbeezy) by crossing Triangle Kush with Animal Mints. Its lineage is debated within the cannabis community: while the Triangle Kush x Animal Mints cross is the most widely accepted account, some sources claim it descends from Cherry Pie crossed with GSC (Girl Scout Cookies), and others argue Wedding Cake is simply a standout phenotype of Triangle Mints (itself Triangle Kush x Animal Mints), which gave rise to its alternate name Triangle Mints #23. It is also distributed under the name Pink Cookies in some markets. Seed Junky did not widely release it in seed or clone form, so most commercially available Wedding Cake genetics come from other seed banks working from cuts of the original. The strain surged in popularity through the late 2010s and was crowned Leafly Strain of the Year in 2019.",
+    "growing": "Wedding Cake performs well both indoors and outdoors but prefers a warm, dry climate and is most often grown indoors where humidity can be controlled to protect its dense, resin-heavy buds from mold. It is regarded as relatively easy to grow and forgiving enough for less experienced cultivators, though plants can roughly double in size during the stretch, so topping and training help manage height and improve light penetration. Indoor flowering runs about 8-9 weeks (56-63 days), producing large yields of approximately 500-650 g/m2 of frosty, trichome-dense flower. Growers value it for trichome density, terpene preservation, and reliable production, but should manage airflow and humidity in late flower given the tight bud structure.",
+    "status": "complete",
+    "sources": [
+      "https://www.leafly.com/strains/wedding-cake",
+      "https://seedfinder.eu/en/strain-info/wedding-cake/seed-junky-genetics",
+      "https://www.allbud.com/marijuana-strains/indica-dominant-hybrid/wedding-cake"
+    ],
+    "game_mapping": {
+      "name": "Wedding Cake",
+      "lineage_type": "hybrid",
+      "rarity": "epic",
+      "stability": 0.8,
+      "terpenes": [
+        "caryophyllene",
+        "limonene",
+        "myrcene"
+      ],
+      "traits": {
+        "indica_ratio": 0.6,
+        "thc": 25,
+        "cbd": 0.5,
+        "flowering_time": 60,
+        "yield": 575,
+        "difficulty": 2,
+        "disease_resistance": 0.55,
+        "pest_resistance": 0.6,
+        "vigor": 0.75
+      },
+      "dominant": [
+        "thc",
+        "yield"
+      ]
+    }
+  },
+  {
+    "name": "Runtz",
+    "slug": "runtz",
+    "aka": [
+      "Runtz OG",
+      "Gelato Zkittlez",
+      "Rainshadow Runtz"
+    ],
+    "type": "hybrid",
+    "lineage_type": "hybrid",
+    "breeder": "Cookies Fam / Runtz (Nick, Yung LB & Raybama)",
+    "origin": "United States (California)",
+    "parents": [
+      "Zkittlez",
+      "Gelato #33"
+    ],
+    "rarity": "rare",
+    "indica_ratio": 0.55,
+    "thc_pct": [
+      19,
+      29
+    ],
+    "cbd_pct": [
+      0,
+      1
+    ],
+    "flowering_days": [
+      56,
+      63
+    ],
+    "yield_indoor_g_m2": [
+      400,
+      500
+    ],
+    "difficulty": 3,
+    "terpenes": [
+      "caryophyllene",
+      "limonene",
+      "myrcene",
+      "linalool"
+    ],
+    "effects": [
+      "euphoric",
+      "happy",
+      "relaxed",
+      "uplifted",
+      "talkative",
+      "giggly",
+      "tingly"
+    ],
+    "flavors": [
+      "sweet",
+      "fruity",
+      "candy",
+      "citrus",
+      "grape",
+      "berry",
+      "creamy"
+    ],
+    "aromas": [
+      "sugary candy",
+      "tropical fruit",
+      "sour berry",
+      "creamy vanilla",
+      "subtle gas"
+    ],
+    "awards": [
+      "Emerald Cup 2017 debut"
+    ],
+    "summary": "Runtz is a rare, exotic balanced hybrid created by crossing Zkittlez with Gelato #33, two cornerstone cultivars of the modern designer-cannabis era. It is celebrated for an intensely sweet, fruit-candy flavor that genuinely resembles a bag of the sugary candy it is named after, paired with resin-drenched buds that range from rich purple to lime green. Potency runs above average, with THC typically in the low-to-high 20s (mid-range around 24%) and negligible CBD.\n\nThe high is euphoric and uplifting with a talkative, giggly cerebral onset that gradually develops into a smooth, relaxing full-body warmth, making it popular for socializing and unwinding alike. Its dominant terpenes \u2014 caryophyllene, limonene, myrcene and linalool \u2014 drive a candy-sweet, citrus-and-berry bouquet with a faint peppery gas finish.\n\nCommercialized through the Cookies/Runtz brand, it became a flagship best-seller and a frequent parent strain used to pass on candy sweetness and dense trichome coverage to new hybrids. Runtz is moderately demanding to grow and prized as an exotic, high-shelf cultivar.</parameter>\n<parameter name=\"history\">Runtz was bred in California by a grower known as Nick, who partnered with Long Beach rapper Yung LB and his manager Raybama to release it. It officially debuted at the 2017 Emerald Cup, where it reportedly sold roughly five pounds of flower in under ten minutes. The cross combines Zkittlez \u2014 source of its signature sweet fruit-syrup terpene profile and resinous stickiness \u2014 with Gelato #33, which contributes structural stability, deep purple coloring and a creamy, gas-forward undertone. Commercialized by the Cookies/Runtz organization, it grew into one of the brand's best-selling and most influential strains, spawning a large family of phenotypes and descendants (White Runtz, Pink Runtz, Tropical Runtz, Runtz #33 and many more).</parameter>\n<parameter name=\"growing\">Runtz finishes flowering indoors in about 8\u20139 weeks (56\u201363 days), with outdoor harvest typically arriving by mid-October. Indoor yields are medium-to-high, around 400\u2013500 g/m\u00b2, while outdoor plants can produce 500\u2013600 g per plant in good conditions. It is generally rated intermediate difficulty: not the easiest beginner strain due to its exotic genetics and the care needed to coax out its purple coloring, dense trichome coverage and full candy terpene expression, but manageable for growers with some experience. It responds well to topping and a controlled, slightly cooler late-flower environment that brings out purple hues. Vigor is moderate and resin production is heavy.</parameter>\n<parameter name=\"terpenes_note\">",
+    "sources": [
+      "https://www.leafly.com/strains/runtz",
+      "https://www.strainpedia.com/runtz/",
+      "https://en.seedfinder.eu/strain-info/Runtz/SeedStockers/"
+    ],
+    "status": "complete",
+    "game_mapping": {
+      "name": "Runtz",
+      "lineage_type": "hybrid",
+      "rarity": "rare",
+      "stability": 0.8,
+      "terpenes": [
+        "caryophyllene",
+        "limonene",
+        "myrcene"
+      ],
+      "traits": {
+        "indica_ratio": 0.55,
+        "thc": 24,
+        "cbd": 0.5,
+        "flowering_time": 59,
+        "yield": 450,
+        "difficulty": 3,
+        "disease_resistance": 0.6,
+        "pest_resistance": 0.55,
+        "vigor": 0.65
+      },
+      "dominant": [
+        "thc"
+      ]
+    }
+  },
+  {
+    "name": "Zkittlez",
+    "slug": "zkittlez",
+    "type": "hybrid-indica",
+    "lineage_type": "hybrid",
+    "rarity": "epic",
+    "indica_ratio": 0.7,
+    "thc_pct": [
+      18,
+      25
+    ],
+    "cbd_pct": [
+      0,
+      0.6
+    ],
+    "flowering_days": [
+      49,
+      63
+    ],
+    "difficulty": 2,
+    "terpenes": [
+      "caryophyllene",
+      "humulene",
+      "limonene",
+      "myrcene",
+      "linalool"
+    ],
+    "effects": [
+      "relaxed",
+      "happy",
+      "uplifted",
+      "euphoric",
+      "calm",
+      "focused",
+      "sleepy"
+    ],
+    "flavors": [
+      "sweet",
+      "berry",
+      "grape",
+      "tropical",
+      "citrus",
+      "candy",
+      "bubblegum"
+    ],
+    "aromas": [
+      "sweet",
+      "fruity",
+      "grape candy",
+      "berry",
+      "citrus",
+      "earthy",
+      "skunky"
+    ],
+    "origin": "California, USA",
+    "breeder": "3rd Gen Family & Terp Hogz (Dying Breed Seeds)",
+    "parents": [
+      "Grape Ape",
+      "Grapefruit"
+    ],
+    "aka": [
+      "Skittles",
+      "Skittlez",
+      "Zkittles",
+      "The Original Z",
+      "Z"
+    ],
+    "awards": [
+      "1st Place Best Indica - 2015 Cannabis Cup San Francisco",
+      "1st Place Best Indica - 2015 Cannabis Cup Michigan",
+      "1st Place Best US Hybrid Concentrate - 2015 Cannabis Cup San Francisco"
+    ],
+    "yield_indoor_g_m2": [
+      500,
+      700
+    ],
+    "summary": "Zkittlez is an award-winning, indica-dominant hybrid famous above all for its candy-like, fruity flavor that mirrors the rainbow of sweet, tropical, and berry notes of its namesake confection. Bred in California from Grape Ape and Grapefruit (with a closely guarded third parent), it pairs an exceptionally sweet terpene profile with a moderate, well-balanced THC range typically in the high-teens to mid-twenties percent.\n\nThe high is relaxing without being overly sedating: users report a calm, happy, and uplifted body buzz that keeps the mind clear and focused, making it a versatile any-time-of-day strain that leans into evening relaxation at higher doses. CBD is negligible (well under 1%), so its appeal is recreational and terpene-driven rather than therapeutic CBD content.\n\nCup-winning and highly sought after, Zkittlez is a benchmark \"exotic\" flavor strain that has spawned countless crosses (Zerbert, Runtz, and more). It rewards growers with dense, colorful buds and generous yields while remaining forgiving enough for less experienced cultivators.",
+    "history": "Zkittlez was created in California by Terp Hogz (growers Fields and Tony Mendo) in collaboration with 3rd Gen Family's Brandon Parker, with seeds released under the Dying Breed Seeds banner. Its parents are the indica Grape Ape and the citrus-forward Grapefruit, crossed with an undisclosed third strain that the breeders have kept secret. Grape Ape contributes deep, soothing indica relaxation and grape notes, while Grapefruit lends bright, sativa-leaning citrus energy. The strain rose to prominence after sweeping the 2015 Cannabis Cup, winning Best Indica in both San Francisco and Michigan and a top concentrate prize, cementing its reputation as one of the most flavorful and influential modern cultivars.",
+    "growing": "Zkittlez is generally considered easy to moderate to grow, thriving both indoors and outdoors and tolerant enough for beginners while rewarding experienced growers who apply training (topping, LST, SCROG) to maximize its potential. Indoors it flowers in roughly 7-9 weeks, producing dense, resinous, often colorful purple-tinged buds and yields around 500-700 g/m\u00b2. It is a hardy, robust plant (\"tough as nails\") with good resilience, performing well in warm, sunny Mediterranean-type climates outdoors where harvest typically lands in early-to-mid October. Letting it finish toward week 9 maximizes resin and the signature sweet flavor.",
+    "sources": [
+      "https://www.leafly.com/strains/zkittlez",
+      "https://en.seedfinder.eu/strain-info/Zkittlez/Dying_Breed_Seeds/",
+      "https://www.royalqueenseeds.com/blog-zkittlez-it-doesn-t-get-sweeter-than-this-n1551",
+      "https://www.cannaconnection.com/strains/zkittlez"
+    ],
+    "status": "complete",
+    "game_mapping": {
+      "name": "Zkittlez",
+      "lineage_type": "hybrid",
+      "rarity": "epic",
+      "stability": 0.8,
+      "terpenes": [
+        "caryophyllene",
+        "limonene",
+        "myrcene"
+      ],
+      "traits": {
+        "indica_ratio": 0.7,
+        "thc": 21,
+        "cbd": 0.3,
+        "flowering_time": 56,
+        "yield": 600,
+        "difficulty": 2,
+        "disease_resistance": 0.7,
+        "pest_resistance": 0.7,
+        "vigor": 0.75
+      },
+      "dominant": [
+        "yield",
+        "vigor"
+      ]
+    }
+  },
+  {
+    "name": "Gushers",
+    "slug": "gushers",
+    "aka": [
+      "Gusherz",
+      "White Gushers",
+      "White Gusherz",
+      "TK41"
+    ],
+    "type": "hybrid-indica",
+    "lineage_type": "hybrid",
+    "rarity": "rare",
+    "origin": "United States (California)",
+    "breeder": "Cookie Fam Genetics",
+    "parents": [
+      "Gelato #41",
+      "Triangle Kush"
+    ],
+    "indica_ratio": 0.6,
+    "thc_pct": [
+      18,
+      24
+    ],
+    "cbd_pct": [
+      0,
+      1
+    ],
+    "flowering_days": [
+      55,
+      65
+    ],
+    "yield_indoor_g_m2": [
+      450,
+      500
+    ],
+    "difficulty": 2,
+    "terpenes": [
+      "caryophyllene",
+      "limonene",
+      "myrcene"
+    ],
+    "effects": [
+      "euphoric",
+      "relaxed",
+      "tingly",
+      "uplifting",
+      "happy",
+      "giggly"
+    ],
+    "flavors": [
+      "berry",
+      "sweet",
+      "fruity",
+      "cookie",
+      "tropical",
+      "earthy"
+    ],
+    "aromas": [
+      "fruity",
+      "sugary",
+      "creamy",
+      "earthy",
+      "kushy",
+      "candy"
+    ],
+    "awards": [
+      "10th Place - The Emerald Cup 2018 (Outdoor, Licensed)"
+    ],
+    "summary": "Gushers (also marketed as Gusherz, White Gushers, and TK41) is an indica-leaning hybrid (~60% indica) bred by California's Cookie Fam Genetics from a cross of Gelato #41 and Triangle Kush. Named after the fruit-snack candy, it is prized for an intensely sweet, fruity, berry-and-cookie flavor layered over a kushy, earthy base, with some phenotypes leaning more toward gas and spice.\n\nPotency is solid but not extreme, with THC typically landing in the upper teens to low twenties (around 18-24%) and negligible CBD. The high is a balanced hybrid experience that opens euphoric, uplifting, and giggly before settling into deep physical relaxation and a characteristic tingly body sensation, making it a popular evening and stress-relief choice.\n\nDominant terpenes are caryophyllene (peppery spice), limonene (citrus), and myrcene (herbal/earthy), which together drive its sweet-yet-savory profile. Gushers has become a ubiquitous dispensary staple and the namesake parent of an entire family of \"Gusherz\" crosses, while still carrying competition pedigree from its Emerald Cup placement.",
+    "history": "Gushers was developed in the United States by Cookie Fam Genetics (the California breeding collective behind the Cookies/Gelato lineage) by crossing Gelato #41 with Triangle Kush, a Florida-born OG Kush phenotype. The Gelato #41 parent contributes the sweet, dessert-like fruitiness and Cookies-family backbone, while Triangle Kush adds OG gas, structure, and resin. The strain takes its name from the Gushers fruit-snack candy, reflecting its juicy, candy-sweet flavor. It earned a 10th-place finish in the Outdoor (Licensed) category at The Emerald Cup 2018 and has since spawned a large family of \"Gusherz\" hybrids and pheno-hunts. It is also distributed in feminized seed form by breeders such as Royal Queen Seeds.",
+    "growing": "Gushers is a hardy, bushy plant with strong vigor and a manageable structure, making it approachable for beginners while still rewarding experienced growers. Indoors it stays compact (roughly 70-120 cm) and finishes relatively quickly at about 55-65 days of flower, with outdoor harvests in early October. Indoor yields are moderate-to-good at around 450-500 g/m2, with outdoor plants producing up to 650-700 g each. Its sturdy frame and vigorous growth give it decent resilience to common stresses; standard training (topping, light defoliation) helps open the bushy canopy for airflow and even light penetration to the dense, resinous, often colorful buds.",
+    "status": "complete",
+    "sources": [
+      "https://www.leafly.com/strains/gushers",
+      "https://seedfinder.eu/en/strain-info/gushers/cookie-fam-genetics",
+      "https://www.royalqueenseeds.com/feminized-cannabis-seeds/632-gushers.html"
+    ],
+    "game_mapping": {
+      "name": "Gushers",
+      "lineage_type": "hybrid",
+      "rarity": "rare",
+      "stability": 0.8,
+      "terpenes": [
+        "caryophyllene",
+        "limonene",
+        "myrcene"
+      ],
+      "traits": {
+        "indica_ratio": 0.6,
+        "thc": 21,
+        "cbd": 0.5,
+        "flowering_time": 60,
+        "yield": 475,
+        "difficulty": 2,
+        "disease_resistance": 0.65,
+        "pest_resistance": 0.65,
+        "vigor": 0.8
+      },
+      "dominant": [
+        "thc",
+        "yield"
+      ]
+    }
+  },
+  {
+    "name": "Sunset Sherbet",
+    "slug": "sunset-sherbet",
+    "aka": [
+      "Sherbet",
+      "Sherbert",
+      "Sunset Sherbert"
+    ],
+    "type": "hybrid-indica",
+    "lineage_type": "hybrid",
+    "rarity": "uncommon",
+    "origin": "Bay Area, California, USA",
+    "breeder": "Mr. Sherbinski (Sherbinski)",
+    "parents": [
+      "Girl Scout Cookies",
+      "Pink Panties"
+    ],
+    "indica_ratio": 0.65,
+    "thc_pct": [
+      18,
+      24
+    ],
+    "cbd_pct": [
+      0,
+      1
+    ],
+    "flowering_days": [
+      56,
+      65
+    ],
+    "difficulty": 3,
+    "terpenes": [
+      "caryophyllene",
+      "limonene",
+      "myrcene",
+      "humulene",
+      "linalool"
+    ],
+    "effects": [
+      "relaxed",
+      "happy",
+      "uplifted",
+      "euphoric",
+      "tingly",
+      "creative",
+      "carefree"
+    ],
+    "flavors": [
+      "sweet",
+      "citrus",
+      "berry",
+      "candy",
+      "dessert",
+      "tropical"
+    ],
+    "aromas": [
+      "sweet",
+      "skunky citrus",
+      "earthy",
+      "candy",
+      "berry"
+    ],
+    "awards": [],
+    "yield_indoor_g_m2": [
+      400,
+      500
+    ],
+    "sources": [
+      "https://www.leafly.com/strains/sunset-sherbert",
+      "https://en.seedfinder.eu/strain-info/Sunset_Sherbert/Seed_Junky_Genetics/",
+      "https://www.allbud.com/marijuana-strains/indica-dominant-hybrid/sunset-sherbet"
+    ],
+    "summary": "Sunset Sherbet (also spelled Sherbert, and commonly shortened to Sherbet) is a popular indica-dominant hybrid created by Bay Area breeder Mr. Sherbinski. It is a cross of the legendary Girl Scout Cookies (GSC) and Pink Panties, inheriting GSC's potent, dessert-like character. THC typically tests in the high-teens to low-twenties (roughly 18-24%), with negligible CBD, placing it firmly in the high-potency tier without being an extreme outlier.\n\nThe strain is prized for its sweet, fruity, candy-and-berry flavor over a skunky-citrus and earthy aroma. Its terpene profile is led by caryophyllene, limonene, and myrcene, lending spicy-peppery, citrus, and earthy notes respectively, with supporting humulene and linalool. Effects are full-bodied and relaxing but lifted by a cerebral, happy, uplifting buzz, making it a versatile evening or wind-down strain that remains social and creative rather than fully sedating.\n\nSunset Sherbet is also a foundational parent in modern breeding, most notably as a parent of Sherbinski's Gelato line, which cemented its influence across contemporary dessert hybrids.",
+    "history": "Sunset Sherbet was bred in the San Francisco Bay Area by Mario Guzman, better known as Mr. Sherbinski, as a Girl Scout Cookies x Pink Panties cross (Pink Panties itself descending from Burmese Kush and a Florida Kush line). It emerged from the same Bay Area cookies-and-dessert breeding scene that produced GSC and went on to become hugely influential, serving as a parent of Gelato (Sunset Sherbet x Thin Mint GSC). Because it spread widely through clone-only cuts and multiple seed-bank reproductions, several breeders (Seed Junky, Divine Genetics, Pyramid Seeds, Linda Seeds, Barney's Farm) now offer their own versions, and lineage attributions and spellings vary across catalogs.",
+    "growing": "Sunset Sherbet is considered moderate difficulty, suited to growers with some experience. It flowers indoors in about 8-9 weeks (roughly 56-65 days) and finishes outdoors in late September to early October. Plants are medium height with dense, fluffy, trichome-coated nugs and dark amber pistils. It performs well both indoors and outdoors and responds to training (topping, LST/SCROG) to even the canopy; indoor yields are moderate, commonly around 400-500 g/m2. It carries decent resilience typical of GSC-derived hybrids but benefits from good airflow and humidity control late in flower to protect the dense, resinous buds from mold.",
+    "status": "complete",
+    "game_mapping": {
+      "name": "Sunset Sherbet",
+      "lineage_type": "hybrid",
+      "rarity": "uncommon",
+      "stability": 0.8,
+      "terpenes": [
+        "caryophyllene",
+        "limonene",
+        "myrcene"
+      ],
+      "traits": {
+        "indica_ratio": 0.65,
+        "thc": 21,
+        "cbd": 0.5,
+        "flowering_time": 60,
+        "yield": 450,
+        "difficulty": 3,
+        "disease_resistance": 0.6,
+        "pest_resistance": 0.6,
+        "vigor": 0.7
+      },
+      "dominant": [
+        "thc",
+        "indica_ratio"
+      ]
+    }
+  },
+  {
+    "name": "Do-Si-Dos",
+    "slug": "do-si-dos",
+    "type": "hybrid-indica",
+    "lineage_type": "hybrid",
+    "rarity": "rare",
+    "indica_ratio": 0.7,
+    "thc_pct": [
+      20,
+      30
+    ],
+    "cbd_pct": [
+      0.1,
+      1
+    ],
+    "flowering_days": [
+      56,
+      70
+    ],
+    "difficulty": 3,
+    "terpenes": [
+      "limonene",
+      "caryophyllene",
+      "linalool",
+      "myrcene"
+    ],
+    "effects": [
+      "relaxed",
+      "sleepy",
+      "euphoric",
+      "happy",
+      "hungry",
+      "uplifted",
+      "pain relief",
+      "stress relief"
+    ],
+    "flavors": [
+      "sweet",
+      "earthy",
+      "minty",
+      "pine",
+      "lime",
+      "diesel",
+      "skunky",
+      "floral"
+    ],
+    "aromas": [
+      "pungent",
+      "sweet",
+      "earthy",
+      "floral",
+      "minty",
+      "diesel funk"
+    ],
+    "origin": "Pacific Northwest, USA",
+    "breeder": "Archive Seed Bank",
+    "parents": [
+      "Girl Scout Cookies (OGKB phenotype)",
+      "Face Off OG"
+    ],
+    "aka": [
+      "Dosidos",
+      "Dosi",
+      "Dosi Doe",
+      "Do Si Dos"
+    ],
+    "awards": [],
+    "yield_indoor_g_m2": [
+      450,
+      550
+    ],
+    "summary": "Do-Si-Dos (often shortened to \"Dosi\") is a potent, indica-dominant hybrid roughly 70% indica / 30% sativa, bred by the Pacific Northwest's Archive Seed Bank. It crosses a rare, resinous OGKB (OG Kush Breath) phenotype of Girl Scout Cookies with the heavy Face Off OG, producing dense, frosty, purple-tinged buds renowned for their sticky trichome coverage and pungent aroma.\n\nTHC typically lands in the 20-30% range, putting Do-Si-Dos firmly among the heavier-hitting modern hybrids, with CBD remaining negligible (generally under 1%). The terpene profile is led by limonene, backed by caryophyllene, linalool, and myrcene, which together give it a sweet-earthy, floral, minty-pine character that turns skunky and diesel-like on the exhale.\n\nThe high opens with a fast, in-your-face cerebral buzz that melts into deep, sedating full-body relaxation. It is widely used in the evening for stress, anxiety, insomnia, and chronic pain. The pronounced couch-lock and sleepiness make it better suited to nighttime than daytime functional use.",
+    "history": "Do-Si-Dos was created by Archive Seed Bank, a breeder based in the Pacific Northwest, by crossing a sought-after OGKB (OG Kush Breath) cut of Girl Scout Cookies with Face Off OG (a Face Off OG bx). The OGKB pheno is a rare, extremely resinous Girl Scout Cookies cut discovered by sifting through large seed populations, prized for its trichome production and potency. Combining it with the OG-heavy Face Off OG yielded a stable, high-THC, indica-leaning strain that quickly became an industry staple in the late 2010s and a popular parent for further breeding (e.g., crosses producing strains like Wedding Cake-adjacent lineages and many \"Dosi\" hybrids). Numerous seed banks now offer Do-Si-Dos variants, but they trace back to Archive's original work.",
+    "growing": "Do-Si-Dos can be grown indoors or outdoors and is considered moderately challenging, rewarding experienced growers who manage feeding and environment carefully. Indoors it flowers in about 8-10 weeks (roughly 56-70 days), with outdoor harvest in late September to early October. It tends to stay relatively compact and bushy, making topping and some defoliation useful to open up the canopy and improve airflow to its dense, resin-heavy colas. Indoor yields commonly fall around 450-550 g/m\u00b2. The heavy trichome coverage makes it excellent for concentrates but also means humidity and bud-rot must be watched closely during late flower. Cooler night temperatures late in flower can coax out purple hues.",
+    "sources": [
+      "https://www.leafly.com/strains/do-si-dos",
+      "https://en.seedfinder.eu/strain-info/Do-Si-Dos/Archive_Seed_Bank/",
+      "https://www.allbud.com/marijuana-strains/indica-dominant-hybrid/do-si-dos"
+    ],
+    "status": "complete",
+    "game_mapping": {
+      "name": "Do-Si-Dos",
+      "lineage_type": "hybrid",
+      "rarity": "rare",
+      "stability": 0.82,
+      "terpenes": [
+        "limonene",
+        "caryophyllene",
+        "myrcene"
+      ],
+      "traits": {
+        "indica_ratio": 0.7,
+        "thc": 25,
+        "cbd": 0.5,
+        "flowering_time": 63,
+        "yield": 500,
+        "difficulty": 3,
+        "disease_resistance": 0.55,
+        "pest_resistance": 0.6,
+        "vigor": 0.6
+      },
+      "dominant": [
+        "thc",
+        "indica_ratio"
+      ]
+    }
+  },
+  {
+    "name": "Biscotti",
+    "slug": "biscotti",
+    "type": "hybrid-indica",
+    "lineage_type": "hybrid",
+    "rarity": "rare",
+    "indica_ratio": 0.8,
+    "thc_pct": [
+      21,
+      25
+    ],
+    "cbd_pct": [
+      0,
+      1
+    ],
+    "flowering_days": [
+      56,
+      63
+    ],
+    "difficulty": 3,
+    "terpenes": [
+      "caryophyllene",
+      "limonene",
+      "myrcene",
+      "linalool"
+    ],
+    "effects": [
+      "relaxed",
+      "euphoric",
+      "happy",
+      "creative",
+      "uplifted",
+      "sleepy"
+    ],
+    "flavors": [
+      "sweet",
+      "cookie",
+      "diesel",
+      "spicy",
+      "cocoa",
+      "vanilla",
+      "earthy"
+    ],
+    "aromas": [
+      "sweet",
+      "cocoa",
+      "diesel",
+      "earthy",
+      "spice",
+      "dough"
+    ],
+    "breeder": "Cookie Fam Genetics",
+    "origin": "California, USA",
+    "parents": [
+      "Gelato #25",
+      "South Florida OG"
+    ],
+    "aka": [],
+    "awards": [],
+    "yield_indoor_g_m2": [
+      400,
+      650
+    ],
+    "summary": "Biscotti is a potent, indica-dominant hybrid (roughly 80% indica / 20% sativa) bred by Cookie Fam Genetics, the team behind the Cookies brand and the wider Gelato/Cookies family. It is a designer cross of Gelato #25 and South Florida OG, combining the dessert sweetness and bag appeal of the Gelato line with the heavy, fuel-forward backbone of OG genetics. THC typically lands in the low-to-mid 20s percent (sources range from about 21% to 25%), with negligible CBD under 1%.\n\nThe strain is prized for a sweet, creamy, cookie-and-cocoa aroma underlaid with diesel and warm spice, driven by a terpene profile led by caryophyllene and limonene with supporting myrcene and linalool. Effects tend to creep up: an early cerebral, euphoric lift gives way to a deeply relaxing, body-heavy calm, making it a popular late-day or evening smoke for stress, low mood, and unwinding.\n\nBiscotti has become a flagship modern hybrid and a foundational parent for many newer crosses (Biscotti Sundae, Purple Biscotti, Guava Biscotti, and others), cementing it as a sought-after, dispensary-favorite cultivar rather than a mass-market everyday strain.",
+    "history": "Biscotti was developed by Cookie Fam Genetics (the breeding collective associated with the Cookies brand) in California as part of the prolific Gelato/Cookies dessert-strain lineage. It is most consistently documented as a cross of Gelato #25 and South Florida OG, pairing the sweet, colorful, terpene-rich Gelato side with the dense, fuel-heavy structure of an OG. A minority of secondary sources cite alternative parentage such as Motorbreath x Gelato 41, but the Gelato #25 x South Florida OG lineage is the SeedFinder and Leafly consensus. Since its release, Biscotti has itself become a widely used parent, spawning numerous popular descendants and helping define the modern bakery/dessert flavor trend in cannabis.",
+    "growing": "Biscotti is a photoperiod strain best suited to growers with at least some experience; it is not the most beginner-friendly cultivar but is far from the most finicky. Plants stay relatively compact and bushy (often around 100-120 cm indoors), benefiting from topping, defoliation, and a managed canopy to maximize light penetration and bud density. Indoor flowering runs about 8-9 weeks (roughly 56-63 days). Indoor yields are moderate to high, commonly cited in the 400-650 g/m\u00b2 range under good conditions. As with most OG/Gelato-derived hybrids, attention to airflow and humidity during dense flower formation helps prevent mold, and cooler late-flower nights can coax out purple coloration. Vigor and resistance are average for an exotic modern hybrid.",
+    "sources": [
+      "https://www.leafly.com/strains/biscotti",
+      "https://en.seedfinder.eu/strain-info/Biscotti/Cookie_Fam_Genetics/",
+      "https://www.cannaconnection.com/strains/biscotti"
+    ],
+    "status": "complete",
+    "game_mapping": {
+      "name": "Biscotti",
+      "lineage_type": "hybrid",
+      "rarity": "rare",
+      "stability": 0.8,
+      "terpenes": [
+        "caryophyllene",
+        "limonene",
+        "myrcene"
+      ],
+      "traits": {
+        "indica_ratio": 0.8,
+        "thc": 23,
+        "cbd": 0.5,
+        "flowering_time": 60,
+        "yield": 525,
+        "difficulty": 3,
+        "disease_resistance": 0.55,
+        "pest_resistance": 0.55,
+        "vigor": 0.6
+      },
+      "dominant": [
+        "thc",
+        "indica_ratio"
+      ]
+    }
+  },
+  {
+    "name": "MAC (Miracle Alien Cookies)",
+    "slug": "mac",
+    "type": "hybrid",
+    "lineage_type": "hybrid",
+    "rarity": "epic",
+    "indica_ratio": 0.5,
+    "thc_pct": [
+      20,
+      25
+    ],
+    "cbd_pct": [
+      0,
+      1
+    ],
+    "flowering_days": [
+      56,
+      70
+    ],
+    "difficulty": 4,
+    "terpenes": [
+      "limonene",
+      "caryophyllene",
+      "pinene",
+      "myrcene",
+      "humulene"
+    ],
+    "effects": [
+      "happy",
+      "uplifted",
+      "creative",
+      "relaxed",
+      "euphoric",
+      "tingly"
+    ],
+    "flavors": [
+      "citrus",
+      "diesel",
+      "creamy",
+      "sour",
+      "spicy",
+      "floral"
+    ],
+    "aromas": [
+      "citrus",
+      "diesel",
+      "spicy",
+      "earthy",
+      "floral",
+      "creamy orange"
+    ],
+    "origin": "United States",
+    "breeder": "Capulator",
+    "parents": [
+      "Alien Cookies",
+      "Colombian",
+      "Starfighter"
+    ],
+    "aka": [
+      "Miracle Alien Cookies",
+      "Miracle Cookies",
+      "The MAC"
+    ],
+    "awards": [
+      "Emerald Cup 2019 (16th, Outdoor)",
+      "Karma Cup 2019 (3rd Place)"
+    ],
+    "yield_indoor_g_m2": [
+      400,
+      500
+    ],
+    "summary": "MAC, short for Miracle Alien Cookies (also called Miracle Cookies or \"The MAC\"), is a balanced hybrid bred by Capulator that has become one of the most coveted boutique strains in the modern cannabis market. It is prized for its glittering, resin-soaked, frosty buds and a layered terpene profile that blends bright citrus, sour diesel, creamy sweetness, and a peppery floral spice.\n\nEffects are reported as happy, uplifting, and creative, delivering a strong mood boost and mental clarity that gradually settles into a deep, tension-melting physical relaxation. This even split between cerebral lift and body calm makes MAC popular both recreationally and among users seeking relief from stress and low mood.\n\nTHC typically tests in the low-to-mid 20s, with elite phenotypes reportedly reaching the high 20s to 30%, while CBD remains negligible. MAC's exotic reputation, award pedigree, and finicky, lower-yielding cultivation profile have cemented its status as a connoisseur strain.",
+    "history": "MAC was created by the breeder Capulator, who combined Alien Cookies with a cross of a Colombian landrace sativa and Starfighter. Alien Cookies (itself Alien Dawg x Girl Scout Cookies) contributed the sweet, earthy cookie backbone; the Colombian landrace added uplifting cerebral energy and citrus; and Starfighter, an indica-leaning hybrid, supplied structure, body effects, and heavy resin production. The standout selection became known as \"Miracle 15,\" from which the famed MAC1 cut and numbered phenotypes (MAC #4, etc.) were derived. Originally circulated as a near clone-only elite cut, it gained cult status before seed versions (MAC V2, etc.) were released. It earned recognition at the 2019 Emerald Cup and the 2019 Karma Cup.",
+    "growing": "MAC is generally rated intermediate-to-advanced to grow. It tends toward slow vegetative growth and can stretch tall (up to several feet outdoors), so training methods such as topping, LST, and SCROG help manage height and improve canopy light penetration. Indoor flowering runs roughly 8-10 weeks (about 56-70 days). Yields are modest, commonly around 400-500 g/m\u00b2 indoors, trading bulk for exceptional bag appeal and potency. It performs best indoors where light, humidity, and temperature are tightly controlled, rewarding attentive growers with dense, frosty, resin-coated flowers.",
+    "sources": [
+      "https://www.leafly.com/strains/mac",
+      "https://seedfinder.eu/en/strain-info/miracle-alien-cookies/capulator",
+      "https://askgrowers.com/strains/mac-strain-review"
+    ],
+    "status": "complete",
+    "game_mapping": {
+      "name": "MAC (Miracle Alien Cookies)",
+      "lineage_type": "hybrid",
+      "rarity": "epic",
+      "stability": 0.78,
+      "terpenes": [
+        "limonene",
+        "caryophyllene",
+        "pinene"
+      ],
+      "traits": {
+        "indica_ratio": 0.5,
+        "thc": 24,
+        "cbd": 0.5,
+        "flowering_time": 63,
+        "yield": 420,
+        "difficulty": 4,
+        "disease_resistance": 0.5,
+        "pest_resistance": 0.5,
+        "vigor": 0.45
+      },
+      "dominant": [
+        "thc",
+        "difficulty"
+      ]
+    }
+  },
+  {
+    "name": "Cereal Milk",
+    "slug": "cereal-milk",
+    "type": "hybrid",
+    "lineage_type": "hybrid",
+    "rarity": "rare",
+    "indica_ratio": 0.45,
+    "thc_pct": [
+      20,
+      25
+    ],
+    "cbd_pct": [
+      0,
+      1
+    ],
+    "flowering_days": [
+      56,
+      70
+    ],
+    "difficulty": 2,
+    "terpenes": [
+      "caryophyllene",
+      "limonene",
+      "humulene"
+    ],
+    "effects": [
+      "relaxed",
+      "happy",
+      "giggly",
+      "uplifted",
+      "calm",
+      "euphoric"
+    ],
+    "flavors": [
+      "sweet",
+      "creamy",
+      "vanilla",
+      "berry",
+      "fruity",
+      "ice cream"
+    ],
+    "aromas": [
+      "sweet milk",
+      "creamy",
+      "vanilla",
+      "sugary",
+      "earthy",
+      "fruity"
+    ],
+    "origin": "United States (California)",
+    "breeder": "Cookies / Powerzzzup Genetics",
+    "parents": [
+      "Y Life",
+      "Snowman"
+    ],
+    "aka": [
+      "Milk",
+      "Cereal Milk #2",
+      "Snowman x Y Life"
+    ],
+    "awards": [],
+    "yield_indoor_g_m2": [
+      450,
+      550
+    ],
+    "summary": "Cereal Milk is a high-potency, roughly balanced hybrid bred by the Cookies camp (in collaboration with Powerzzzup Genetics) that first gained popularity around 2019. It crosses Y Life (Girl Scout Cookies x Cherry Pie) with Snowman, a sativa-leaning Cookies phenotype, producing a dessert-style strain famous for its sweet, creamy \"leftover cereal milk\" and ice-cream nose. Buds are dense and heavily frosted with trichomes.\n\nTHC typically tests in the low-to-mid 20s (sources cite about 20-25%), with negligible CBD, placing it firmly among potent modern hybrids. The terpene profile is led by caryophyllene, supported by limonene and humulene, which together temper the sugary sweetness with peppery, citrus, and warm earthy depth.\n\nEffects are commonly described as balanced: an upbeat, happy, sometimes giggly mental lift early on that eases into a relaxed, calming body feel. This makes Cereal Milk a flexible all-day or social strain, and it is also reported for stress, anxiety, and low-mood relief.",
+    "history": "Cereal Milk emerged from the Cookies (Berner) ecosystem around 2019 and is credited to Cookies in collaboration with Powerzzzup Genetics. Its parents are Y Life (a Girl Scout Cookies x Cherry Pie cross) and Snowman, a sativa-dominant phenotype selected from the Cookies Fam line. The strain rode the wave of dessert-flavored \"loud\" hybrids that defined late-2010s California cannabis culture, prized for an unusually authentic sweet-cream aroma. It has since been bred and distributed by multiple seed banks (including Royal Queen Seeds, Blimburn, and others) and has spawned descendants such as Zereal and Coconut Milk.",
+    "growing": "Cereal Milk is considered approachable for less experienced growers, with moderate overall difficulty and good resistance to common pests and diseases. Plants reach a moderate height (roughly 80-140 cm indoors) with tightly spaced internodes, and flower in about 8-10 weeks indoors, with outdoor harvests around mid-to-late October. Indoor yields are solid at roughly 450-550 g/m\u00b2. The main caution is its dense, resinous buds, which make humidity control important late in flower to avoid bud rot and mold; otherwise it is forgiving and rewards basic defoliation and airflow management.",
+    "status": "complete",
+    "sources": [
+      "https://www.leafly.com/strains/cereal-milk",
+      "https://seedfinder.eu/en/strain-info/cereal-milk/cookie-fam-genetics",
+      "https://www.royalqueenseeds.com/feminized-cannabis-seeds/631-cereal-milk.html"
+    ],
+    "game_mapping": {
+      "name": "Cereal Milk",
+      "lineage_type": "hybrid",
+      "rarity": "rare",
+      "stability": 0.8,
+      "terpenes": [
+        "caryophyllene",
+        "limonene"
+      ],
+      "traits": {
+        "indica_ratio": 0.45,
+        "thc": 23,
+        "cbd": 0.5,
+        "flowering_time": 63,
+        "yield": 500,
+        "difficulty": 2,
+        "disease_resistance": 0.65,
+        "pest_resistance": 0.7,
+        "vigor": 0.7
+      },
+      "dominant": [
+        "thc"
+      ]
+    }
+  },
+  {
+    "name": "Ice Cream Cake",
+    "slug": "ice-cream-cake",
+    "type": "hybrid-indica",
+    "lineage_type": "hybrid",
+    "rarity": "rare",
+    "indica_ratio": 0.75,
+    "thc_pct": [
+      20,
+      25
+    ],
+    "cbd_pct": [
+      0,
+      1
+    ],
+    "flowering_days": [
+      56,
+      63
+    ],
+    "difficulty": 3,
+    "terpenes": [
+      "limonene",
+      "caryophyllene",
+      "myrcene",
+      "linalool",
+      "pinene"
+    ],
+    "effects": [
+      "relaxed",
+      "sleepy",
+      "euphoric",
+      "happy",
+      "calming",
+      "couch-lock",
+      "pain relief",
+      "stress relief"
+    ],
+    "flavors": [
+      "vanilla",
+      "creamy",
+      "sweet",
+      "sugary dough",
+      "nutty",
+      "cheese"
+    ],
+    "aromas": [
+      "sweet",
+      "creamy",
+      "vanilla",
+      "doughy",
+      "earthy",
+      "nutty"
+    ],
+    "origin": "United States (California) \u2014 Seed Junky Genetics",
+    "breeder": "Seed Junky Genetics",
+    "parents": [
+      "Wedding Cake",
+      "Gelato #33"
+    ],
+    "aka": [
+      "ICC",
+      "Ice Cream Cake #5"
+    ],
+    "awards": [],
+    "yield_indoor_g_m2": [
+      450,
+      600
+    ],
+    "sources": [
+      "https://www.leafly.com/strains/ice-cream-cake",
+      "https://www.allbud.com/marijuana-strains/indica-dominant-hybrid/ice-cream-cake",
+      "https://seedfinder.eu/en/strain-info/ice-cream-cake/seed-junky-genetics"
+    ],
+    "summary": "Ice Cream Cake is a potent indica-dominant hybrid (roughly 75% indica / 25% sativa) bred by Seed Junky Genetics from a cross of Wedding Cake and Gelato #33. It belongs to the celebrated \"dessert\" lineage of the GSC/Cookies family and has become one of the most sought-after night-time strains for its creamy, sweet flavor and heavy, sedating effects.\n\nTHC typically tests in the 20-25% range, occasionally higher, with negligible CBD (under 1%). The high opens with a brief uplifting, euphoric rush that softens stress before settling into deep, bone-melting physical relaxation that often ends in couch-lock and sleep. This makes it a popular choice among medical users seeking relief from pain, insomnia, and anxiety.\n\nIts flavor is the strain's signature: sweet vanilla and sugary cake dough with creamy, slightly nutty and cheesy undertones, backed by a dominant terpene set of limonene, caryophyllene, and myrcene with frequent linalool and a touch of pinene. Dense, frosty buds with deep green and purple hues make it as visually striking as it is flavorful.",
+    "history": "Ice Cream Cake was created by the California breeder Seed Junky Genetics, the operation behind much of the modern Cookies/Cake dessert lineage. It is the offspring of Wedding Cake (Triangle Kush x Animal Mints) crossed with Gelato #33 (Sunset Sherbet x Thin Mint GSC), both themselves indica-leaning descendants of Girl Scout Cookies. The result is a richly stabilized dessert hybrid that rose to prominence in the late 2010s. A separate, unrelated Ice Cream Cake from Mad Scientist Genetics (Dream Cookie x Cheesecake) also circulates, but the Seed Junky cross is the widely recognized version referenced on Leafly and most dispensary menus.",
+    "growing": "Ice Cream Cake flowers indoors in roughly 8-9 weeks (56-63 days) and is harvestable outdoors around early-to-mid October. Indoor yields typically run 450-600 g/m\u00b2, with outdoor plants capable of up to ~2 kg per plant in ideal conditions. Plants stay relatively short and bushy in classic indica fashion, responding well to topping and low-stress training to open the canopy. It carries moderate resistance to mold and pests but, like other dense-budded Cookies descendants, benefits from good airflow and humidity control late in flower to avoid bud rot. Overall it is a moderate-difficulty grow \u2014 forgiving enough for experienced hobbyists but rewarding careful environmental management with frosty, resin-heavy buds.",
+    "status": "complete",
+    "game_mapping": {
+      "name": "Ice Cream Cake",
+      "lineage_type": "hybrid",
+      "rarity": "rare",
+      "stability": 0.8,
+      "terpenes": [
+        "limonene",
+        "caryophyllene",
+        "myrcene"
+      ],
+      "traits": {
+        "indica_ratio": 0.75,
+        "thc": 22.5,
+        "cbd": 0.5,
+        "flowering_time": 59,
+        "yield": 525,
+        "difficulty": 3,
+        "disease_resistance": 0.55,
+        "pest_resistance": 0.6,
+        "vigor": 0.65
+      },
+      "dominant": [
+        "thc",
+        "indica_ratio"
+      ]
+    }
+  },
+  {
+    "name": "Apple Fritter",
+    "slug": "apple-fritter",
+    "aka": [
+      "Apple Fritters",
+      "Apple Fritter (Lumpy's Cut)"
+    ],
+    "type": "hybrid-indica",
+    "lineage_type": "hybrid",
+    "rarity": "rare",
+    "breeder": "Lumpy's Flowers",
+    "origin": "Northern California, USA",
+    "parents": [
+      "Sour Apple",
+      "Animal Cookies"
+    ],
+    "indica_ratio": 0.55,
+    "thc_pct": [
+      22,
+      28
+    ],
+    "cbd_pct": [
+      0,
+      1
+    ],
+    "flowering_days": [
+      56,
+      70
+    ],
+    "yield_indoor_g_m2": [
+      450,
+      500
+    ],
+    "difficulty": 3,
+    "terpenes": [
+      "caryophyllene",
+      "myrcene",
+      "limonene",
+      "pinene",
+      "humulene",
+      "linalool"
+    ],
+    "effects": [
+      "relaxed",
+      "euphoric",
+      "happy",
+      "giggly",
+      "tingly",
+      "uplifted"
+    ],
+    "flavors": [
+      "apple",
+      "sweet",
+      "earthy",
+      "butter",
+      "cheese",
+      "diesel"
+    ],
+    "aromas": [
+      "sweet apple",
+      "earthy",
+      "pungent",
+      "pine",
+      "vanilla"
+    ],
+    "awards": [
+      "2nd Place, Hybrids - 2016 NorCal High Times Cannabis Cup"
+    ],
+    "summary": "Apple Fritter is a potent, sweet-and-pastry-forward hybrid created by Lumpy's Flowers (Jason Dias) in Northern California's Napa wine region. A cross of Sour Apple and Animal Cookies, it is the brand's most iconic and best-selling cultivar, prized for its dessert-like apple-and-butter flavor and a powerful, balanced high that leans gently indica.\n\nCannabinoid testing typically places THC in the low-to-high 20s, commonly cited around 24% with phenotypes reaching up to 31%, and CBD is negligible (under 1%). Effects open with a burst of euphoria, mental clarity and giggly, social energy before settling into a deeply relaxing, tingly body high that stops short of full sedation, making it a versatile late-afternoon-to-evening strain.\n\nThe flavor and aroma are its calling card: sweet baked apple and buttery pastry over an earthy, faintly diesel-and-cheese backbone, driven by a caryophyllene-dominant terpene profile rounded out by myrcene, limonene, pinene, humulene and linalool.",
+    "history": "Apple Fritter was bred around 2013 by Jason Dias, co-owner of Lumpy's Flowers, a self-described craft cannabis legacy brand based in Northern California's Napa region. It is a cross of Sour Apple (Sour Diesel x Cinderella 99, originally from Top Shelf Seeds) and Animal Cookies (GSC x Fire OG, part of the legendary Girl Scout Cookies line). The strain rose to fame after winning 2nd Place in the Hybrids category at the 2016 NorCal High Times Cannabis Cup, and the original elite clone (\"Lumpy's Cut\") remains the gold-standard phenotype. Because the prized cut is largely clone-only, seed-grown versions from various seedbanks show notable phenotype variation.",
+    "growing": "Apple Fritter grows as a bushy, stocky, indica-leaning plant with tight, dense, resinous bud structure. It flowers in roughly 8-10 weeks indoors, with outdoor harvests around early-to-mid October. Indoor yields are moderate, around 450-500 g/m2, with outdoor plants producing up to 500-600 g each. The dense buds make it sensitive to humidity and bud rot, so it rewards low-humidity environments, good airflow, defoliation and plenty of light; this finickiness plus the need to source a good cut make it moderately difficult, better suited to growers with some experience.",
+    "sources": [
+      "https://www.leafly.com/strains/apple-fritter",
+      "https://seedfinder.eu/en/strain-info/apple-fritter/unknown-or-legendary",
+      "https://www.royalqueenseeds.com/us/feminized-cannabis-seeds/634-apple-fritter.html"
+    ],
+    "status": "complete",
+    "game_mapping": {
+      "name": "Apple Fritter",
+      "lineage_type": "hybrid",
+      "rarity": "rare",
+      "stability": 0.72,
+      "terpenes": [
+        "caryophyllene",
+        "myrcene",
+        "limonene"
+      ],
+      "traits": {
+        "indica_ratio": 0.55,
+        "thc": 24,
+        "cbd": 0.5,
+        "flowering_time": 63,
+        "yield": 475,
+        "difficulty": 3,
+        "disease_resistance": 0.45,
+        "pest_resistance": 0.55,
+        "vigor": 0.7
+      },
+      "dominant": [
+        "thc"
+      ]
+    }
+  }
+]

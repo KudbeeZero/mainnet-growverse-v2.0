@@ -1,0 +1,255 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  /* System font stacks — no build-time webfont fetch (offline-clean, CSP-safe).
+     tailwind.config.ts maps font-sans/font-mono to these variables. */
+  --font-sans:
+    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code", Menlo,
+    Consolas, monospace;
+}
+
+body {
+  @apply bg-ink-950 text-gray-100 antialiased;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Keyboard-only focus ring. `:focus-visible` keeps mouse/touch taps clean while
+   giving keyboard and screen-reader users a clearly visible target on every
+   interactive element (links, buttons, inputs, the mobile tab bar). */
+:focus-visible {
+  outline: 2px solid theme("colors.grow.400");
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---- Plant body animations (intensity scaled via --stress 0..1) ---- */
+@keyframes gpe-sway {
+  0%,
+  100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+
+@keyframes gpe-droop {
+  0%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  50% {
+    transform: rotate(2deg) translateY(2px);
+  }
+}
+
+.gpe-body {
+  transform-origin: bottom center;
+}
+.gpe-anim-sway {
+  animation: gpe-sway calc(6s - var(--stress, 0.4) * 3s) ease-in-out infinite;
+}
+.gpe-anim-droop {
+  transform: rotate(calc(var(--stress, 0.4) * 10deg));
+  animation: gpe-droop calc(5s - var(--stress, 0.4) * 2s) ease-in-out infinite;
+}
+.gpe-anim-wilt-hard {
+  transform: rotate(calc(var(--stress, 0.7) * 22deg)) scaleY(calc(1 - var(--stress, 0.7) * 0.18));
+}
+.gpe-anim-shrivel {
+  transform: scale(calc(1 - var(--stress, 0.7) * 0.25));
+  opacity: calc(1 - var(--stress, 0.7) * 0.4);
+}
+.gpe-anim-none {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+/* ---- Overlays ---- */
+@keyframes gpe-bug-crawl {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(6px, -4px);
+  }
+  50% {
+    transform: translate(-4px, 5px);
+  }
+  75% {
+    transform: translate(5px, 3px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+.gpe-bug {
+  animation: gpe-bug-crawl 2.4s ease-in-out infinite;
+}
+
+@keyframes gpe-mildew-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+.gpe-mildew {
+  animation: gpe-mildew-pulse 3s ease-in-out infinite;
+}
+
+@keyframes gpe-sheen {
+  0% {
+    transform: translateX(-60%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateX(60%);
+    opacity: 0;
+  }
+}
+.gpe-sheen {
+  animation: gpe-sheen 3.5s ease-in-out infinite;
+}
+
+/* ---- Care feedback: the burst of delight when you tend a plant ---- */
+@keyframes gpe-care-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.6);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--dx, 0px) * 0.4), -6px) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx, 0px)), -52px) scale(0.9);
+  }
+}
+/* Reduced-motion fallback: a gentle, drift-free fade (opacity only). */
+@keyframes gpe-care-fade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.9);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+.gpe-care-float {
+  animation: gpe-care-float ease-out forwards;
+}
+.gpe-care-fade {
+  animation: gpe-care-fade 900ms ease-out forwards;
+}
+@keyframes gpe-care-glow {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.gpe-care-glow {
+  animation: gpe-care-glow 1s ease-out forwards;
+}
+
+/* ---- Celebration: harvest moment (sparkle ring + pop-in) ---- */
+@keyframes gpe-celebrate-ring {
+  0% {
+    opacity: 0.65;
+    transform: scale(0.35);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+.gpe-celebrate-ring {
+  animation: gpe-celebrate-ring 1.4s ease-out forwards;
+}
+@keyframes gpe-celebrate-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.gpe-celebrate-pop {
+  animation: gpe-celebrate-pop 0.5s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gpe-anim-sway,
+  .gpe-anim-droop,
+  .gpe-bug,
+  .gpe-mildew,
+  .gpe-sheen,
+  .gpe-care-float,
+  .gpe-care-glow,
+  .gpe-celebrate-ring,
+  .gpe-celebrate-pop,
+  .animate-spin,
+  .animate-twinkle,
+  .animate-pulse-ring,
+  .animate-fade-up {
+    animation: none !important;
+  }
+}
+
+/* ---- Signature motif: instrument labels + glowing surfaces ---- */
+@layer components {
+  /* Monospace, uppercase, wide-tracked label — the "research instrument" voice
+     (matches the NODES / DRAG·SCROLL·LIVE PARTICLES readouts in the brand). */
+  .instrument-label {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    @apply text-[10px] uppercase tracking-[0.25em] text-gray-500;
+  }
+  .instrument-value {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    @apply tabular-nums;
+  }
+  /* A frosted panel surface that sits on the dark canvas. */
+  .panel {
+    @apply rounded-xl border border-ink-700 bg-ink-900/70 backdrop-blur;
+  }
+  .text-glow-grow {
+    text-shadow: 0 0 10px rgba(118, 192, 36, 0.55);
+  }
+  .text-glow-accent {
+    text-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
+  }
+}
+
+/* Near-black canvas with a faint radial vignette — the constellation stage. */
+.canvas-dark {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(118, 192, 36, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(56, 189, 248, 0.05), transparent 60%),
+    #070a0e;
+}

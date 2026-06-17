@@ -1,0 +1,292 @@
+# GrowPod University curriculum — departments, courses, and degrees.
+#
+# Grounded in real cannabis higher-ed (see
+# docs/research/2026-06-08-cannabis-education-curriculum.md): NMU Medicinal
+# Plant Chemistry B.S., CSU-Pueblo Cannabis Biology & Chemistry, Cornell hemp
+# genetics/breeding, Penn State PLANT 240, Oaksterdam. Course names + lecture
+# topics + prereq chains mirror those programs.
+#
+# A COURSE is completed by: paying tuition (enroll), letting `duration_hours` of
+# study time elapse, AND meeting a `practical` tied to real gameplay. A DEGREE is
+# earned once its `required_courses` are all complete; it grants permanent perks
+# (the same effect keys as the research tree), a permanent title, and XP.
+#
+# practical types (checked against live game state): harvest_count(>=N) ·
+# harvest_quality(best harvest quality >= threshold) · breed(>=N crosses) ·
+# stabilize(>=1 stabilized line) · cure(>=N cured harvests) · cup_entry(>=1) ·
+# research(>=N unlocked nodes) · level(>=N).
+
+departments:
+  cultivation: {name: "Cultivation & Horticulture"}
+  genetics: {name: "Plant Genetics & Breeding"}
+  nutrients: {name: "Soil & Nutrient Science"}
+  ipm: {name: "Integrated Pest Management"}
+  chemistry: {name: "Cannabis Chemistry"}
+  postharvest: {name: "Post-Harvest & Processing"}
+
+courses:
+  cult-101:
+    name: "Fundamentals of Cannabis Cultivation"
+    department: cultivation
+    credits: 3
+    level_req: 1
+    duration_hours: 48
+    tuition: 150
+    prereqs: []
+    lecture:
+      topic: "The cannabis plant from first principles: biology, the grow cycle, and the environmental parameters that drive growth and cannabinoid production."
+      objectives:
+        - "Explain how abiotic and biotic factors influence growth and cannabinoid content."
+        - "Describe the seed-to-harvest cycle and each growth stage."
+        - "Employ basic growing practices and data collection for yield forecasting."
+    practical: {type: harvest_count, threshold: 1}
+    perks: {quality_bonus: 1}
+
+  cult-201:
+    name: "Environmental Control: VPD & DLI"
+    department: cultivation
+    credits: 4
+    level_req: 3
+    duration_hours: 96
+    tuition: 300
+    prereqs: [cult-101]
+    lecture:
+      topic: "Steering the canopy with vapor-pressure deficit and daily light integral — the levers commercial growers actually dial."
+      objectives:
+        - "Target VPD by growth stage and relate it to transpiration."
+        - "Use DLI/PPFD to drive yield without light stress."
+    practical: {type: harvest_quality, threshold: 70}
+    perks: {yield_pct: 0.03}
+
+  cult-301:
+    name: "Advanced Canopy & Yield Management"
+    department: cultivation
+    credits: 5
+    level_req: 6
+    duration_hours: 168
+    tuition: 600
+    prereqs: [cult-201]
+    lecture:
+      topic: "Training, light penetration, and ripening: optimizing whole-canopy yield and quality at harvest."
+      objectives:
+        - "Plan a canopy for even light distribution and airflow."
+        - "Time the harvest window for peak quality."
+    practical: {type: harvest_quality, threshold: 85}
+    perks: {yield_pct: 0.05, quality_bonus: 1}
+
+  gen-101:
+    name: "Plant Genetics"
+    department: genetics
+    credits: 3
+    level_req: 2
+    duration_hours: 60
+    tuition: 200
+    prereqs: []
+    lecture:
+      topic: "Single-gene vs. polygenic traits, Mendelian inheritance, and how genotype meets environment (G×E)."
+      objectives:
+        - "Predict trait inheritance with Punnett-square reasoning."
+        - "Distinguish genotype from phenotype and the role of the grow."
+    practical: {type: breed, threshold: 1}
+    perks: {terpene_pct: 0.03}
+
+  gen-201:
+    name: "Breeding & Selection"
+    department: genetics
+    credits: 4
+    level_req: 4
+    duration_hours: 120
+    tuition: 350
+    prereqs: [gen-101]
+    lecture:
+      topic: "Breeding methodologies — mass and recurrent selection, hybridization — and designing a selection scheme toward an objective."
+      objectives:
+        - "Define a breeding objective and a selection strategy."
+        - "Evaluate offspring against a target trait."
+    practical: {type: breed, threshold: 3}
+    perks: {breeding_discount_pct: 0.05}
+
+  gen-301:
+    name: "Stabilization & Pheno-Hunting"
+    department: genetics
+    credits: 5
+    level_req: 7
+    duration_hours: 192
+    tuition: 700
+    prereqs: [gen-201]
+    lecture:
+      topic: "Fixing a line: inbreeding/selfing to raise stability, pheno-hunting, and true-breeding cultivars."
+      objectives:
+        - "Explain how stability narrows expressed trait ranges."
+        - "Plan a stabilization program across generations."
+    practical: {type: stabilize, threshold: 1}
+    perks: {breeding_discount_pct: 0.05, quality_bonus: 1}
+
+  nut-101:
+    name: "Soil & Nutrient Science"
+    department: nutrients
+    credits: 3
+    level_req: 2
+    duration_hours: 60
+    tuition: 200
+    prereqs: []
+    lecture:
+      topic: "The soil food web, macro/micronutrients, and pH — feeding the plant without burn or lockout."
+      objectives:
+        - "Diagnose deficiency symptoms by leaf signs."
+        - "Relate root-zone pH to nutrient availability."
+    practical: {type: harvest_count, threshold: 2}
+    perks: {care_discount_pct: 0.05}
+
+  nut-201:
+    name: "Hydroponics & EC/pH Management"
+    department: nutrients
+    credits: 4
+    level_req: 5
+    duration_hours: 120
+    tuition: 350
+    prereqs: [nut-101]
+    lecture:
+      topic: "Soilless systems and nutrient-solution formulation: EC as the strength dial, pH as the availability gate."
+      objectives:
+        - "Formulate and monitor a nutrient solution by EC and pH."
+        - "Avoid lockout and salt buildup."
+    practical: {type: harvest_quality, threshold: 75}
+    perks: {yield_pct: 0.03, care_discount_pct: 0.05}
+
+  ipm-101:
+    name: "Pest & Disease Identification"
+    department: ipm
+    credits: 3
+    level_req: 2
+    duration_hours: 60
+    tuition: 200
+    prereqs: []
+    lecture:
+      topic: "Scouting and ID: spider mites, aphids, thrips, powdery mildew, and botrytis — distinguishing pest from disease damage."
+      objectives:
+        - "Identify the common cannabis pests and pathogens."
+        - "Set up a scouting routine and monitoring log."
+    practical: {type: harvest_count, threshold: 2}
+    perks: {care_discount_pct: 0.05}
+
+  ipm-201:
+    name: "Integrated Pest Management"
+    department: ipm
+    credits: 4
+    level_req: 5
+    duration_hours: 120
+    tuition: 350
+    prereqs: [ipm-101]
+    lecture:
+      topic: "A systems approach: prevention first, action thresholds, and biological/cultural/physical/chemical controls in priority order."
+      objectives:
+        - "Set action thresholds and choose a control hierarchy."
+        - "Design an IPM plan for a grow space."
+    practical: {type: harvest_quality, threshold: 70}
+    perks: {consumable_potency_pct: 0.1}
+
+  chem-101:
+    name: "Cannabinoids & Terpenes"
+    department: chemistry
+    credits: 3
+    level_req: 3
+    duration_hours: 72
+    tuition: 250
+    prereqs: []
+    lecture:
+      topic: "Phytochemistry of cannabis: cannabinoid and terpene biosynthesis, and why chemotype matters more than name."
+      objectives:
+        - "Describe the major cannabinoid and terpene classes."
+        - "Explain the three terpene chemotype clusters."
+    practical: {type: harvest_count, threshold: 3}
+    perks: {terpene_pct: 0.05}
+
+  chem-201:
+    name: "Chemotypes & GC/LC Analytics"
+    department: chemistry
+    credits: 5
+    level_req: 6
+    duration_hours: 168
+    tuition: 600
+    prereqs: [chem-101]
+    lecture:
+      topic: "Quantifying the plant: gas and liquid chromatography, calibration, and reading a certificate of analysis (incl. label inflation)."
+      objectives:
+        - "Interpret a cannabinoid/terpene lab result."
+        - "Explain potency-label inflation and lab variance."
+    practical: {type: harvest_quality, threshold: 80}
+    perks: {terpene_pct: 0.05, quality_bonus: 1}
+
+  ph-101:
+    name: "Harvest, Drying & Curing"
+    department: postharvest
+    credits: 3
+    level_req: 2
+    duration_hours: 60
+    tuition: 200
+    prereqs: []
+    lecture:
+      topic: "The final 20%: harvest timing, controlled drying, and the cure that stabilizes cannabinoids and develops aroma."
+      objectives:
+        - "Run a controlled dry and a proper cure window."
+        - "Avoid over-drying and bud rot."
+    practical: {type: cure, threshold: 1}
+    perks: {cure_bonus_pct: 0.1}
+
+  ph-201:
+    name: "Post-Harvest Quality & Storage"
+    department: postharvest
+    credits: 4
+    level_req: 5
+    duration_hours: 120
+    tuition: 350
+    prereqs: [ph-101]
+    lecture:
+      topic: "Preserving quality: moisture/water-activity control, storage, and preventing degradation and contamination."
+      objectives:
+        - "Hold quality through storage."
+        - "Manage water activity to prevent mold."
+    practical: {type: cure, threshold: 3}
+    perks: {cure_bonus_pct: 0.1, quality_bonus: 1}
+
+degrees:
+  cert-cultivation:
+    name: "Cannabis Cultivation Certificate"
+    tier: certificate
+    title: "Certified Grower"
+    required_courses: [cult-101, nut-101, ipm-101]
+    perks: {quality_bonus: 2}
+    xp_reward: 200
+
+  assoc-science:
+    name: "Associate of Applied Cannabis Science"
+    tier: associate
+    title: "Associate Cannabis Scientist"
+    required_courses: [cult-201, gen-101, nut-101, ph-101]
+    perks: {yield_pct: 0.05, quality_bonus: 1}
+    xp_reward: 400
+
+  bs-horticulture:
+    name: "B.S. Cannabis Horticulture"
+    tier: bachelor
+    title: "Cannabis Horticulturist"
+    required_courses: [cult-301, nut-201, ipm-201, ph-201]
+    perks: {yield_pct: 0.08, care_discount_pct: 0.05}
+    xp_reward: 800
+
+  bs-genetics:
+    name: "B.S. Plant Genetics & Chemistry"
+    tier: bachelor
+    title: "Cannabis Geneticist"
+    required_courses: [gen-301, chem-201]
+    perks: {terpene_pct: 0.1, breeding_discount_pct: 0.1}
+    xp_reward: 800
+
+  ms-master-grower:
+    name: "M.S. — Master Grower"
+    tier: master
+    title: "Master Grower"
+    required_courses: [cult-301, gen-301, nut-201, ipm-201, chem-201, ph-201]
+    perks: {yield_pct: 0.1, quality_bonus: 3, terpene_pct: 0.05}
+    xp_reward: 1500

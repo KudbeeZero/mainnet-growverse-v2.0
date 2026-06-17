@@ -1,0 +1,38 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# test coverage
+/coverage
+
+# playwright
+/test-results
+/playwright-report
+/playwright/.cache
+
+# canonical stage PNGs (regenerable build artifacts: `npm run gen:stages`)
+/canonical-stages

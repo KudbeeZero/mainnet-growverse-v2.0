@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "python-3.11"]
 
 [deployment]
 router = "application"
@@ -11,6 +11,43 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "GrowPod Web"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "GrowPod API"
+
+[[workflows.workflow]]
+name = "GrowPod Web"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace/growpod/web && npm run dev"
+waitForPort = 3000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow]]
+name = "GrowPod API"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace/growpod && DATABASE_URL='sqlite:////home/runner/workspace/growpod/growpod.db' USE_MOCK_AI=true USE_MOCK_CHAIN=true PYTHONPATH=src sh -c 'python3 -c \"from growpodempire.db.session import init_db; init_db()\" && python3 -m gunicorn server:app --bind 0.0.0.0:8000 --workers 2 --timeout 60'"
+waitForPort = 8000
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
@@ -18,3 +55,15 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[nix]
+channel = "stable-25_05"
+packages = ["libxcrypt", "libyaml"]
+
+[[ports]]
+localPort = 3000
+externalPort = 3000
+
+[[ports]]
+localPort = 8000
+externalPort = 80

@@ -1,0 +1,246 @@
+# Starter strain catalog. Loaded idempotently (upsert by slug) by db/seed.py.
+# `traits` are the canonical gene values; `dominant` lists genes that express as
+# dominant (others default to codominant). Display ranges are derived from the
+# genome + stability at seed time.
+#
+# Trait ranges: indica_ratio 0..1, thc 0..35 (%), cbd 0..25 (%),
+# flowering_time 45..120 (days), yield 50..800 (g), difficulty 1..5,
+# disease_resistance / pest_resistance / vigor 0..1.
+
+strains:
+  - name: Afghani
+    lineage_type: landrace
+    rarity: rare
+    stability: 1.0
+    terpenes: [myrcene, caryophyllene]
+    traits: {indica_ratio: 1.0, thc: 18, cbd: 4, flowering_time: 56, yield: 500, difficulty: 2, disease_resistance: 0.8, pest_resistance: 0.7, vigor: 0.7}
+    dominant: [indica_ratio, disease_resistance]
+
+  - name: Durban Poison
+    lineage_type: landrace
+    rarity: rare
+    stability: 1.0
+    terpenes: [terpinolene, ocimene]
+    traits: {indica_ratio: 0.0, thc: 20, cbd: 1, flowering_time: 63, yield: 450, difficulty: 2, disease_resistance: 0.7, pest_resistance: 0.8, vigor: 0.8}
+    dominant: [indica_ratio, pest_resistance, vigor]
+
+  - name: Hindu Kush
+    lineage_type: landrace
+    rarity: rare
+    stability: 1.0
+    terpenes: [myrcene, limonene]
+    traits: {indica_ratio: 1.0, thc: 17, cbd: 3, flowering_time: 55, yield: 420, difficulty: 1, disease_resistance: 0.8, pest_resistance: 0.7, vigor: 0.6}
+    dominant: [indica_ratio]
+
+  - name: Thai
+    lineage_type: landrace
+    rarity: rare
+    stability: 1.0
+    terpenes: [limonene, pinene]
+    traits: {indica_ratio: 0.05, thc: 22, cbd: 0.5, flowering_time: 95, yield: 400, difficulty: 4, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.9}
+    dominant: [vigor]
+
+  - name: Northern Lights
+    lineage_type: hybrid
+    rarity: uncommon
+    stability: 0.95
+    terpenes: [myrcene, pinene]
+    traits: {indica_ratio: 0.9, thc: 18, cbd: 1, flowering_time: 49, yield: 500, difficulty: 1, disease_resistance: 0.7, pest_resistance: 0.6, vigor: 0.7}
+    dominant: [indica_ratio]
+
+  - name: Skunk No. 1
+    lineage_type: hybrid
+    rarity: uncommon
+    stability: 0.9
+    terpenes: [myrcene, caryophyllene]
+    traits: {indica_ratio: 0.65, thc: 16, cbd: 1, flowering_time: 56, yield: 550, difficulty: 1, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.8}
+    dominant: [vigor, yield]
+
+  - name: Haze
+    lineage_type: hybrid
+    rarity: rare
+    stability: 0.85
+    terpenes: [terpinolene, caryophyllene]
+    traits: {indica_ratio: 0.1, thc: 23, cbd: 0.5, flowering_time: 84, yield: 450, difficulty: 4, disease_resistance: 0.5, pest_resistance: 0.5, vigor: 0.9}
+    dominant: [thc, vigor]
+
+  - name: Blue Dream
+    lineage_type: hybrid
+    rarity: common
+    stability: 0.8
+    terpenes: [myrcene, pinene, caryophyllene]
+    traits: {indica_ratio: 0.4, thc: 19, cbd: 1, flowering_time: 67, yield: 600, difficulty: 2, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.8}
+    dominant: [yield]
+
+  - name: OG Kush
+    lineage_type: hybrid
+    rarity: uncommon
+    stability: 0.82
+    terpenes: [limonene, myrcene, caryophyllene]
+    traits: {indica_ratio: 0.55, thc: 22, cbd: 0.5, flowering_time: 63, yield: 450, difficulty: 3, disease_resistance: 0.5, pest_resistance: 0.5, vigor: 0.7}
+    dominant: [thc]
+
+  - name: Sour Diesel
+    lineage_type: hybrid
+    rarity: uncommon
+    stability: 0.8
+    terpenes: [limonene, caryophyllene]
+    traits: {indica_ratio: 0.3, thc: 21, cbd: 0.5, flowering_time: 77, yield: 500, difficulty: 3, disease_resistance: 0.5, pest_resistance: 0.6, vigor: 0.85}
+    dominant: [thc, vigor]
+
+  - name: White Widow
+    lineage_type: hybrid
+    rarity: common
+    stability: 0.85
+    terpenes: [myrcene, caryophyllene]
+    traits: {indica_ratio: 0.5, thc: 19, cbd: 1, flowering_time: 60, yield: 500, difficulty: 2, disease_resistance: 0.7, pest_resistance: 0.6, vigor: 0.75}
+    dominant: []
+
+  - name: Granddaddy Purple
+    lineage_type: hybrid
+    rarity: uncommon
+    stability: 0.85
+    terpenes: [myrcene, pinene]
+    traits: {indica_ratio: 0.85, thc: 18, cbd: 1, flowering_time: 60, yield: 480, difficulty: 2, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.7}
+    dominant: [indica_ratio]
+
+  - name: Girl Scout Cookies
+    lineage_type: hybrid
+    rarity: rare
+    stability: 0.78
+    terpenes: [caryophyllene, limonene, humulene]
+    traits: {indica_ratio: 0.6, thc: 25, cbd: 0.5, flowering_time: 63, yield: 450, difficulty: 3, disease_resistance: 0.5, pest_resistance: 0.5, vigor: 0.7}
+    dominant: [thc]
+
+  - name: Gorilla Glue No. 4
+    lineage_type: hybrid
+    rarity: rare
+    stability: 0.78
+    terpenes: [caryophyllene, limonene, myrcene]
+    traits: {indica_ratio: 0.5, thc: 27, cbd: 0.3, flowering_time: 63, yield: 550, difficulty: 3, disease_resistance: 0.5, pest_resistance: 0.5, vigor: 0.8}
+    dominant: [thc, yield]
+
+  - name: Jack Herer
+    lineage_type: hybrid
+    rarity: uncommon
+    stability: 0.82
+    terpenes: [terpinolene, pinene, caryophyllene]
+    traits: {indica_ratio: 0.4, thc: 20, cbd: 0.5, flowering_time: 70, yield: 500, difficulty: 3, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.85}
+    dominant: [vigor]
+
+  - name: Pineapple Express
+    lineage_type: hybrid
+    rarity: common
+    stability: 0.8
+    terpenes: [caryophyllene, limonene, pinene]
+    traits: {indica_ratio: 0.4, thc: 20, cbd: 0.5, flowering_time: 63, yield: 550, difficulty: 2, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.8}
+    dominant: []
+
+  - name: Acapulco Gold
+    lineage_type: landrace
+    rarity: rare
+    stability: 1.0
+    terpenes: [pinene, caryophyllene]
+    traits: {indica_ratio: 0.1, thc: 20, cbd: 0.5, flowering_time: 70, yield: 450, difficulty: 3, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.85}
+    dominant: [vigor]
+
+  - name: Maui Wowie
+    lineage_type: landrace
+    rarity: uncommon
+    stability: 0.9
+    terpenes: [limonene, pinene]
+    traits: {indica_ratio: 0.2, thc: 19, cbd: 0.5, flowering_time: 70, yield: 450, difficulty: 3, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.85}
+    dominant: [vigor]
+
+  - name: Chemdawg
+    lineage_type: hybrid
+    rarity: rare
+    stability: 0.78
+    terpenes: [caryophyllene, myrcene, limonene]
+    traits: {indica_ratio: 0.45, thc: 24, cbd: 0.5, flowering_time: 63, yield: 480, difficulty: 4, disease_resistance: 0.5, pest_resistance: 0.5, vigor: 0.8}
+    dominant: [thc]
+
+  - name: AK-47
+    lineage_type: hybrid
+    rarity: uncommon
+    stability: 0.85
+    terpenes: [myrcene, caryophyllene, pinene]
+    traits: {indica_ratio: 0.35, thc: 20, cbd: 1, flowering_time: 60, yield: 500, difficulty: 2, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.8}
+    dominant: [vigor]
+
+  - name: Bubba Kush
+    lineage_type: hybrid
+    rarity: uncommon
+    stability: 0.85
+    terpenes: [caryophyllene, myrcene, limonene]
+    traits: {indica_ratio: 0.8, thc: 19, cbd: 0.5, flowering_time: 56, yield: 450, difficulty: 2, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.7}
+    dominant: [indica_ratio]
+
+  - name: Super Lemon Haze
+    lineage_type: hybrid
+    rarity: rare
+    stability: 0.8
+    terpenes: [limonene, terpinolene, caryophyllene]
+    traits: {indica_ratio: 0.25, thc: 22, cbd: 0.5, flowering_time: 70, yield: 520, difficulty: 3, disease_resistance: 0.5, pest_resistance: 0.6, vigor: 0.85}
+    dominant: [thc]
+
+  - name: G13
+    lineage_type: hybrid
+    rarity: epic
+    stability: 0.9
+    terpenes: [myrcene, caryophyllene, pinene]
+    traits: {indica_ratio: 0.7, thc: 24, cbd: 0.5, flowering_time: 60, yield: 520, difficulty: 3, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.8}
+    dominant: [thc, indica_ratio]
+
+  - name: Purple Diddy Punch
+    lineage_type: hybrid
+    rarity: rare
+    stability: 0.8
+    terpenes: [caryophyllene, myrcene, limonene]
+    traits: {indica_ratio: 0.8, thc: 23, cbd: 0.5, flowering_time: 60, yield: 520, difficulty: 2, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.7}
+    dominant: [indica_ratio, thc]
+
+  - name: Animal Mints
+    lineage_type: hybrid
+    rarity: rare
+    stability: 0.8
+    # linalool (its real lead terpene) isn't modeled by the sim's 4-terpene
+    # genome yet — use modeled terpenes here; the linalool/mint character lives
+    # in the encyclopedia aroma/flavor. Revisit if linalool joins TERPENE_TRAITS.
+    terpenes: [caryophyllene, limonene, myrcene]
+    traits: {indica_ratio: 0.75, thc: 23, cbd: 0.5, flowering_time: 60, yield: 520, difficulty: 2, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.75}
+    dominant: [indica_ratio, thc]
+
+  # --- Launch Strain Integration Pack. Visuals authored in
+  # web/src/lib/chamber/{strainVisuals,budDna}.ts; encyclopedia in strain_knowledge.yaml.
+  - name: White Rhino
+    lineage_type: hybrid
+    rarity: rare
+    stability: 0.85
+    terpenes: [myrcene, caryophyllene, pinene]
+    traits: {indica_ratio: 0.85, thc: 22, cbd: 0.5, flowering_time: 56, yield: 600, difficulty: 2, disease_resistance: 0.7, pest_resistance: 0.6, vigor: 0.75}
+    dominant: [indica_ratio, yield]
+
+  - name: White Fire OG
+    lineage_type: hybrid
+    rarity: epic
+    stability: 0.8
+    terpenes: [caryophyllene, limonene, myrcene]
+    traits: {indica_ratio: 0.55, thc: 23, cbd: 0.5, flowering_time: 63, yield: 480, difficulty: 3, disease_resistance: 0.5, pest_resistance: 0.6, vigor: 0.7}
+    dominant: [thc]
+
+  - name: Gelato
+    lineage_type: hybrid
+    rarity: epic
+    stability: 0.8
+    terpenes: [caryophyllene, limonene, myrcene]
+    traits: {indica_ratio: 0.55, thc: 24, cbd: 0.5, flowering_time: 60, yield: 520, difficulty: 3, disease_resistance: 0.5, pest_resistance: 0.6, vigor: 0.7}
+    dominant: [thc]
+
+  - name: Wedding Cake
+    lineage_type: hybrid
+    rarity: epic
+    stability: 0.8
+    terpenes: [caryophyllene, limonene, myrcene]
+    traits: {indica_ratio: 0.6, thc: 25, cbd: 0.5, flowering_time: 60, yield: 520, difficulty: 3, disease_resistance: 0.6, pest_resistance: 0.6, vigor: 0.7}
+    dominant: [thc, indica_ratio]

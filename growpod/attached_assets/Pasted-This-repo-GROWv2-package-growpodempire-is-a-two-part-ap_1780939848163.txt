@@ -1,0 +1,42 @@
+This repo (GROWv2 / package "growpodempire") is a two-part app:
+  • Backend: Python 3.11 Flask API, src layout (package under src/growpodempire),
+    WSGI entrypoint is `server:app`. gunicorn is already in requirements.txt.
+  • Frontend: Next.js 15 in web/.
+
+Set it up to run in PRODUCTION on Replit. Do NOT use dev servers.
+
+=== BACKEND (this is the deployed service) ===
+1. Use Python 3.11. Install:
+     pip install -r requirements.txt
+     pip install -e .
+2. Database: add a Replit PostgreSQL database so DATABASE_URL is provided as a
+   Secret. (SQLite is the default but is ephemeral on Replit — use Postgres.)
+3. Apply schema + seed the strain catalog (PYTHONPATH must include src):
+     PYTHONPATH=src alembic upgrade head
+     PYTHONPATH=src python -m growpodempire.db.seed
+4. Run the production server with gunicorn, binding to Replit's port:
+     PYTHONPATH=src gunicorn server:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60
+5. Set these as Replit Secrets (env vars), NOT in code:
+     USE_MOCK_AI=true          # start without an Anthropic key; set ANTHROPIC_API_KEY + USE_MOCK_AI=false for the real AI advisor
+     USE_MOCK_CHAIN=true       # start without any wallet; for real Algorand set USE_MOCK_CHAIN=false and provide ALGORAND_NETWORK, ALGOD_TOKEN, ASA_ID, and ALGO_TREASURY_MNEMONIC (mnemonic ONLY as a Secret)
+     RATELIMIT_ENABLED=true
+     CORS_ALLOWED_ORIGINS=<the frontend's public URL, e.g. https://<frontend>.replit.app>
+   (DATABASE_URL is auto-set by the Replit Postgres integration.)
+6. Health check: GET / should return JSON {"name":"GROWv2 API", ...} and
+   GET /api/game/strains should return ~22 strains.
+
+=== FRONTEND (web/) — separate Repl/deployment, or skip if API-only ===
+1. cd web && npm ci
+2. NEXT_PUBLIC_API_BASE is baked at BUILD time, so set it before building to the
+   backend's public URL, e.g. NEXT_PUBLIC_API_BASE=https://<backend>.replit.app
+3. Build and serve the PRODUCTION build (critical):
+     npm run build && npm run start    # serves on port 3000
+   Do NOT use `next dev`. The app's CSP allows 'unsafe-inline' scripts but NOT
+   'unsafe-eval'; dev-mode webpack uses eval(), so under the CSP the app never
+   hydrates and pages hang on "Loading session…". Only the prod build hydrates.
+4. Make sure the backend's CORS_ALLOWED_ORIGINS equals this frontend's origin.
+   (The frontend CSP's connect-src is auto-derived from NEXT_PUBLIC_API_BASE.)
+
+Writes are API-key authenticated; reads are public. Money is ledgered with
+Decimal. Confirm both services boot, the API health checks pass, and the
+frontend onboarding screen loads and can create a player.

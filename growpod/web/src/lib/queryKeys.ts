@@ -1,0 +1,35 @@
+import type { LeaderboardKind } from "@/lib/types";
+import type { StrainFilters } from "@/lib/api";
+
+export const queryKeys = {
+  player: (id: string) => ["player", id] as const,
+  wallet: (id: string) => ["wallet", id] as const,
+  level: (id: string) => ["level", id] as const,
+  ledger: (id: string) => ["ledger", id] as const,
+  achievements: (id: string) => ["achievements", id] as const,
+  strains: (filters: StrainFilters) => ["strains", filters] as const,
+  strain: (id: string) => ["strain", id] as const,
+  knowledge: (id: string) => ["knowledge", id] as const,
+  provenance: (id: string) => ["provenance", id] as const,
+  lineage: (id: string) => ["lineage", id] as const,
+  favorites: (id: string) => ["favorites", id] as const,
+  seeds: (id: string) => ["seeds", id] as const,
+  pods: (id: string) => ["pods", id] as const,
+  plants: (id: string) => ["plants", id] as const,
+  plant: (plantId: string) => ["plant", plantId] as const,
+  events: (plantId: string) => ["events", plantId] as const,
+  advisor: (plantId: string) => ["advisor", plantId] as const,
+  harvests: (id: string) => ["harvests", id] as const,
+  market: () => ["market"] as const,
+  contracts: (id: string, status?: string) => ["contracts", id, status ?? "all"] as const,
+  leaderboard: (board: LeaderboardKind) => ["leaderboard", board] as const,
+  cupCurrent: () => ["cup", "current"] as const,
+  cupStandings: (cupId: string) => ["cup", "standings", cupId] as const,
+  hallOfFame: () => ["cup", "hall-of-fame"] as const,
+  uniCatalog: () => ["university", "catalog"] as const,
+  transcript: (id: string) => ["university", "transcript", id] as const,
+  lecture: (id: string, courseKey: string, level: string) =>
+    ["university", "lecture", id, courseKey, level] as const,
+  ftueStatus: (id: string) => ["ftue", "status", id] as const,
+  ftueCoaching: (id: string, step: string) => ["ftue", "coaching", id, step] as const,
+};

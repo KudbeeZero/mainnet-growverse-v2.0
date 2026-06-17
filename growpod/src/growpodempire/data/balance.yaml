@@ -1,0 +1,416 @@
+# GrowPodEmpire economy tuning. ALL economic constants live here so balance can
+# be adjusted without code changes. Values are in the in-game currency (GROW),
+# which later maps 1:1 to an Algorand ASA (decimals = 6).
+
+currency:
+  name: GROW
+  symbol: GC
+  decimals: 6
+
+# One-time grant credited when a player account is created (a faucet).
+starting_balance: 500
+# Small, fixed login bonus (retention faucet, intentionally not a wealth pump).
+daily_stipend: 50
+
+seeds:
+  base_cost: 25            # price of a COMMON seed
+  rarity_multiplier:
+    common: 1.0
+    uncommon: 2.5
+    rare: 6.0
+    epic: 15.0
+    legendary: 40.0
+
+nutrients:
+  per_application: 5
+
+pest_treatment:
+  per_application: 15
+
+disease_treatment:
+  per_application: 20
+
+pods:
+  basic: 100
+  standard: 400
+  pro: 1200
+
+breeding:
+  base_fee: 75
+  # Extra fee scales with the average rarity tier of the two parents.
+  rarity_fee_per_tier: 40
+  # Each selfing/stabilize generation raises a line's stability by this much.
+  stabilize_increment: 0.15
+
+# Selling a harvest to the NPC market (a faucet, gated by real grow time).
+harvest_sale:
+  base_price_per_gram: 2.0
+  quality_curve_exponent: 1.5     # rewards high quality non-linearly
+  rarity_multiplier:
+    common: 1.0
+    uncommon: 1.4
+    rare: 2.2
+    epic: 4.0
+    legendary: 8.0
+  thc_bonus_per_pct_over_15: 0.04  # +4% value per THC point above 15%
+  # A strong dominant-terpene expression earns up to this fractional premium
+  # (e.g. 0.25 = +25% at a fully expressed terpene).
+  terpene_premium_max: 0.25
+  # Diminishing returns: grams above the soft cap are worth less per gram.
+  soft_cap_grams: 120
+  soft_cap_factor: 0.6
+
+# Post-harvest drying/curing. An optional, time-gated step that raises a
+# harvest's quality (and therefore its sale value) — but over-drying erodes it.
+# Deterministic / compute-on-read; see simulation/curing.py.
+curing:
+  optimal_hours: 72          # ~3 days of cure for the peak quality bonus
+  default_target_hours: 72   # used when the player doesn't specify a target
+  max_target_hours: 336      # 2-week cap on a committed cure
+  max_quality_bonus: 10.0    # up to +10 quality at a perfect cure
+  over_dry_penalty_per_hour: 0.04
+  over_dry_grace_hours: 48   # forgiving window past optimal before erosion
+
+# Player-to-player marketplace. Fees/taxes are GROW sinks (burned) to fight
+# inflation.
+market:
+  listing_fee_pct: 0.03   # charged to the seller at listing time
+  sale_tax_pct: 0.05      # withheld from the seller's proceeds on a sale
+
+# Real-time grow simulation (Phase 2). The engine advances a plant in fixed
+# 1-hour steps from its last_tick_at to "now" (compute-on-read catch-up), so
+# correctness never depends on a background process being alive.
+simulation:
+  # Bound on compute-on-read: one catch-up simulates at most this many hours.
+  # An absence beyond it puts the plant in dormancy for the remainder (state +
+  # stage clock pause; an auditable `dormancy` event is recorded) so every
+  # read costs at most one cap window. 1 year comfortably exceeds a worst-case
+  # full lifecycle, so no live plant loses real progress to the cap.
+  max_catchup_hours: 8760
+
+  resource_decay:
+    water_per_hour: 1.5     # how fast the medium dries out
+    nutrient_per_hour: 1.0
+
+  water:
+    optimal_low: 40
+    optimal_high: 78
+    overwater_threshold: 88   # sustained above -> overwatered / root rot
+    rot_threshold: 96
+    underwater_threshold: 15  # below -> wilting
+
+  nutrient:
+    optimal_low: 35
+    optimal_high: 82
+    burn_threshold: 95
+    deficient_threshold: 20
+
+  # Pod environment optimal bands; deviations sap health.
+  environment:
+    temperature: [20, 28]
+    humidity: [40, 60]
+    ph_level: [6.0, 7.0]
+    # Assumed when a pod has no sensor snapshot yet (kept optimal = no penalty).
+    defaults:
+      temperature: 24
+      humidity: 50
+      ph_level: 6.5
+      light_intensity: 600    # mid-band PPFD -> no penalty when unsensored
+
+  # Light (Phase A). PPFD is the stored 0..1000 light scalar; the engine now
+  # reads it. Outside the adequate band saps health; the band drives DLI too.
+  light:
+    optimal_ppfd: [300, 900]
+    photoperiod_hours: 18     # assumed veg light cycle (for the DLI readout)
+
+  # Vapour-pressure deficit (Phase A). Derived from temperature + humidity; the
+  # band spans the veg->flower sweet spot. See simulation/horticulture.py.
+  vpd:
+    optimal: [0.8, 1.6]       # kPa leaf VPD
+    leaf_offset_c: 2.0        # leaf assumed this much cooler than air
+
+  pests:
+    base_spawn_chance_per_hour: 0.012
+    humidity_high: 62                 # damp air invites pests
+    humidity_spawn_bonus: 0.03
+    growth_per_hour: 1.6              # infestation worsens until treated
+
+  disease:
+    humidity_threshold: 64            # mildew sets in above this humidity
+    growth_per_hour: 1.3
+
+  health:
+    drift_rate: 0.12                  # fraction of (target-health) closed per hour
+    death_threshold: 1.0              # at/below this health the plant dies
+    water_stress_weight: 0.6
+    nutrient_stress_weight: 0.5
+    env_stress_weight: 0.5
+    light_stress_weight: 0.02         # per PPFD point outside the adequate band
+    vpd_stress_weight: 0.5            # per kPa of leaf VPD outside the band
+    pest_weight: 0.45                 # health target penalty per pest_level point
+    disease_weight: 0.55
+
+  # Launch pacing multiplier on EVERY stage's duration — the pre-flower stage
+  # knobs below *and* the strain's genetic flowering window. 1.0 = canonical
+  # real-time pace (~104 days for a 60-day-flower strain). For the launch window
+  # we compress so a new $25-pod player experiences the full emotional arc —
+  # visible growth → branching → pre-flower → buds → trichome frost → phenotype
+  # colour → harvest payoff — inside their first week, instead of ~7 weeks out.
+  # 0.075 -> a 60-day-flower strain runs ~7.8 days seed→harvest (flowering begins
+  # ~day 3.3, frost reads ~day 5). Dial back toward 1.0 to lengthen the cycle.
+  # Tuning only: no genetics, prices, or faucet/sink *rates* change here.
+  time_scale: 0.075
+
+  # Canonical stage durations in days (flowering comes from the strain's genome).
+  # These are the REAL-TIME reference lengths; time_scale above scales them for
+  # the live cycle, so reverting launch pacing is a one-line change.
+  stages:
+    seed_days: 3
+    germination_days: 5
+    seedling_days: 10
+    vegetative_days: 26
+
+  # Height gain (cm/day) at full health, by stage.
+  growth:
+    seedling_cm_per_day: 0.6
+    vegetative_cm_per_day: 2.2
+    flowering_cm_per_day: 0.5
+
+  # How much a player action moves a level.
+  actions:
+    water_amount: 35
+    feed_amount: 30
+
+  # Pod automation (higher tiers): top resources up when they run low.
+  automation:
+    water_refill_below: 45
+    water_refill_to: 72
+    nutrient_refill_below: 40
+    nutrient_refill_to: 72
+
+  # Random weather events that shift a pod's environment (then feed the sim).
+  # Deltas are applied to the current snapshot; `set_*` overrides absolutely.
+  weather:
+    events:
+      heatwave:       {weight: 2, temperature: 7,  humidity: -12}
+      cold_snap:      {weight: 2, temperature: -7, humidity: 6}
+      humidity_spike: {weight: 2, humidity: 20}
+      dry_spell:      {weight: 2, humidity: -20}
+      ideal:          {weight: 1, set_temperature: 24, set_humidity: 50, set_ph_level: 6.5}
+    clamps:
+      temperature: [10, 40]
+      humidity: [10, 95]
+      co2_level: [300, 2000]
+      light_intensity: [0, 1000]
+      ph_level: [4.0, 9.0]
+
+# GrowPod University (LiveOps education). Curriculum structure (departments,
+# courses, degrees, lectures, practicals, perks) lives in data/curriculum.yaml;
+# this block holds the economic knobs. Enrolling pays tuition (a sink); degrees
+# pay perks/XP, not GROW, so the system is net-deflationary. See
+# services/university_service.py and docs/memory/design/06-university.md.
+university:
+  enabled: true
+  course_xp: 50          # XP awarded on completing any course
+
+# Retention loop: a once-per-24h login stipend and one-time achievement rewards.
+progression:
+  daily_cooldown_hours: 22       # claim window (slightly under 24h is forgiving)
+  achievements:
+    first_harvest: {reward: 100, description: "Harvest your first plant"}
+    first_breed: {reward: 150, description: "Breed a new strain"}
+    first_nft: {reward: 250, description: "Mint your first NFT"}
+    green_thumb: {reward: 300, threshold: 5, description: "Complete 5 harvests"}
+    master_breeder: {reward: 500, threshold: 5, description: "Breed 5 strains"}
+    high_roller: {reward: 400, threshold: 2000, description: "Hold 2000 GROW"}
+
+# Player progression. XP is awarded for meaningful actions; level is derived
+# from cumulative XP via a quadratic curve (level L needs curve_base*L*(L-1)/2).
+leveling:
+  curve_base: 100
+  xp:
+    harvest: 25
+    breed: 40
+    mint: 60
+
+# Timed NPC contracts: deliver target grams of a rarity by a deadline for a
+# GROW + XP reward. Offers are drawn from these weighted templates.
+contracts:
+  duration_days: 7
+  templates:
+    - {rarity: common,   grams: 100, reward: 250, xp: 30, weight: 3}
+    - {rarity: uncommon, grams: 80,  reward: 400, xp: 50, weight: 2}
+    - {rarity: rare,     grams: 60,  reward: 700, xp: 90, weight: 1}
+
+# Research tree (Phase 2). Players spend GROW (gated by level + prerequisites) to
+# unlock permanent operation-wide upgrades. Effects aggregate ADDITIVELY across
+# all unlocked nodes and are applied in player-scoped service code (never inside
+# the pure simulation engine). Supported effect keys:
+#   yield_pct, quality_bonus, cure_bonus_pct, care_discount_pct,
+#   breeding_discount_pct, seed_discount_pct, terpene_pct,
+#   consumable_potency_pct, pod_capacity_bonus
+research:
+  nodes:
+    # --- Cultivation: raw output ---
+    hydroponics:
+      {name: "Hydroponics", branch: cultivation, cost: 400, level_req: 2,
+       requires: [], effects: {yield_pct: 0.08}, description: "+8% harvest yield"}
+    aeroponics:
+      {name: "Aeroponics", branch: cultivation, cost: 1200, level_req: 5,
+       requires: [hydroponics], effects: {yield_pct: 0.12}, description: "+12% harvest yield"}
+    co2_enrichment:
+      {name: "CO₂ Enrichment", branch: cultivation, cost: 2000, level_req: 8,
+       requires: [aeroponics], effects: {yield_pct: 0.15}, description: "+15% harvest yield"}
+    # --- Horticulture: quality & curing ---
+    nutrient_science:
+      {name: "Nutrient Science", branch: horticulture, cost: 500, level_req: 3,
+       requires: [], effects: {quality_bonus: 4}, description: "+4 harvest quality"}
+    slow_cure_mastery:
+      {name: "Slow-Cure Mastery", branch: horticulture, cost: 900, level_req: 4,
+       requires: [nutrient_science], effects: {cure_bonus_pct: 0.4}, description: "+40% curing quality bonus"}
+    master_curing:
+      {name: "Master Curing", branch: horticulture, cost: 1800, level_req: 7,
+       requires: [slow_cure_mastery], effects: {quality_bonus: 5, cure_bonus_pct: 0.4},
+       description: "+5 quality and +40% more curing bonus"}
+    # --- Defense: cost efficiency & consumable potency ---
+    ipm_basics:
+      {name: "IPM Basics", branch: defense, cost: 350, level_req: 2,
+       requires: [], effects: {care_discount_pct: 0.2}, description: "-20% nutrient/pest/disease cost"}
+    biocontrol_lab:
+      {name: "Biocontrol Lab", branch: defense, cost: 1100, level_req: 5,
+       requires: [ipm_basics], effects: {care_discount_pct: 0.2, consumable_potency_pct: 0.25},
+       description: "-20% more care cost and +25% consumable potency"}
+    # --- Genetics: breeding & terpenes ---
+    tissue_culture:
+      {name: "Tissue Culture", branch: genetics, cost: 600, level_req: 3,
+       requires: [], effects: {breeding_discount_pct: 0.25}, description: "-25% breeding fee"}
+    terpene_profiling:
+      {name: "Terpene Profiling", branch: genetics, cost: 1000, level_req: 5,
+       requires: [tissue_culture], effects: {terpene_pct: 0.15}, description: "+15% terpene expression"}
+    marker_breeding:
+      {name: "Marker-Assisted Breeding", branch: genetics, cost: 2200, level_req: 9,
+       requires: [terpene_profiling], effects: {breeding_discount_pct: 0.25, terpene_pct: 0.1},
+       description: "-25% more breeding fee and +10% terpenes"}
+    # --- Operations: economy & scale ---
+    bulk_supplier:
+      {name: "Bulk Supplier", branch: operations, cost: 450, level_req: 2,
+       requires: [], effects: {seed_discount_pct: 0.15}, description: "-15% seed cost"}
+    vertical_racking:
+      {name: "Vertical Racking", branch: operations, cost: 1500, level_req: 6,
+       requires: [bulk_supplier], effects: {pod_capacity_bonus: 2}, description: "+2 capacity on new pods"}
+    automation_suite:
+      {name: "Automation Suite", branch: operations, cost: 2500, level_req: 10,
+       requires: [vertical_racking], effects: {pod_capacity_bonus: 2, care_discount_pct: 0.15},
+       description: "+2 pod capacity and -15% care cost"}
+  # XP awarded per research unlock.
+  xp_per_unlock: 30
+  # Flat quality cap so stacked bonuses can't exceed a realistic ceiling.
+  max_quality: 100
+
+# Equipment / consumables shop (Phase 2). One-shot boosters that are GROW sinks.
+# Effects manipulate a plant's existing simulated levels (so they flow through
+# the normal yield/quality math). `*_set` overrides a level; `*_add` adjusts it.
+# `consumable_potency_pct` research scales `health_add`. Levels clamp to 0..100.
+shop:
+  consumables:
+    cal_mag_boost:
+      {name: "Cal-Mag Boost", cost: 30, effects: {nutrient_set: 85, health_add: 4},
+       description: "Tops up nutrients and gives a small health boost"}
+    ladybugs:
+      {name: "Ladybugs (biocontrol)", cost: 45, effects: {pest_set: 0, health_add: 2},
+       description: "Biologically eliminates all pests"}
+    neem_oil:
+      {name: "Neem Oil", cost: 40, effects: {disease_set: 0, health_add: 2},
+       description: "Clears mildew and disease"}
+    bloom_booster:
+      {name: "Bloom Booster", cost: 60, stage_req: flowering, effects: {health_add: 10},
+       description: "Vigor boost during flowering (raises yield & quality via health)"}
+    rejuvenation_tonic:
+      {name: "Rejuvenation Tonic", cost: 80,
+       effects: {water_set: 70, nutrient_set: 70, pest_set: 0, disease_set: 0, health_add: 8},
+       description: "Full reset: waters, feeds, treats, and revitalizes a struggling plant"}
+
+# Seasonal / limited content (Phase 2). A strain whose `season` is "all" is
+# always buyable; otherwise it must match `current_season` (or be unlocked via a
+# limited event). Drives the seasonal-strain rotation + a future LiveOps console.
+events:
+  current_season: all   # all | spring | summer | fall | winter
+
+# Seasonal Cannabis Cup (LiveOps competition). One Cup runs per season
+# (`edition` = "<year>-<season>", keyed off events.current_season); players enter
+# unsold harvests for a fee, the best deterministic score wins, and the champion
+# earns LIFETIME prestige — a one-of-a-kind legendary trophy strain + a permanent
+# title. Entry fees are a sink; prizes are a (bounded) faucet. See
+# services/cup_service.py and docs/memory/design/05-events-and-competition.md.
+cannabis_cup:
+  enabled: true
+  duration_days: 90              # the competition window (a season)
+  entry_fee: 100                 # GROW to submit one harvest (a sink)
+  max_entries_per_player: 3
+  # Prize payouts (a faucet, gated by the entry-fee sink + real grow effort).
+  prizes:
+    first: 2500
+    second: 1200
+    third: 600
+    top_n: 10                    # ranks 4..top_n each get `top_each`
+    top_each: 200
+  champion_xp: 500               # one-time XP to the champion
+  placer_xp: 150                 # XP to 2nd/3rd (and any prized placer)
+  # Deterministic judge's scorecard (a harvest's snapshotted attributes only).
+  scoring:
+    quality_weight: 0.35
+    thc_weight: 0.20
+    terpene_weight: 0.25
+    weight_weight: 0.15
+    cbd_weight: 0.05
+    weight_norm_grams: 150       # grams that count as a "full" weight score
+    thc_norm_pct: 30             # THC% that counts as a "full" potency score
+    cbd_norm_pct: 20
+    rarity_multiplier:           # prestige multiplier on the final score
+      common: 1.0
+      uncommon: 1.25
+      rare: 1.6
+      epic: 2.2
+      legendary: 3.0
+
+# Agentic AI auto-care (Phase 3b). The Master Grower can call care tools itself,
+# bounded per invocation by a GROW budget and a max number of actions. The spend
+# guard is the safety mechanism — every tool call still goes through the normal
+# ledger-posting care path (server-authoritative).
+auto_care:
+  default_budget: 200    # GROW the agent may spend per run if the caller omits one
+  max_budget: 1000       # hard ceiling on a requested budget
+  max_actions: 8         # max tool calls per run
+
+# On-chain assets (Phase 3, Algorand). The in-game GROW currency maps to an ASA;
+# rare/stabilized strains and premium harvests can be minted as ARC-3 NFTs.
+chain:
+  token:
+    unit_name: GROW
+    asset_name: GrowCoin
+    total: 1000000000000000   # 10^15 base units
+    decimals: 6
+  nft:
+    # Harvests at/above this rarity, or stabilized strains at/above it, can mint.
+    mint_min_rarity: rare
+    strain_min_stability: 0.85
+
+# --- Feature flags -------------------------------------------------------
+# Data-driven launch gates / kill-switches for player-facing surfaces. Each is a
+# boolean default; override per-environment WITHOUT a deploy via a FEATURE_<NAME>
+# env var (e.g. FEATURE_FTUE_TUTORIAL=false). Resolved map is served read-only at
+# GET /api/game/flags. Defaults are ON, so a flag is a pure safety lever. The
+# marketplace/chain/cup_competitions/university/contracts surfaces are gated on
+# their API routes (require_feature); flip one OFF per-environment for launch.
+# No per-player targeting.
+feature_flags:
+  ftue_tutorial: true          # guided first-grow onboarding (/ftue)
+  grow_chamber: true           # whole-plant grow-chamber view
+  master_grower_advisor: true  # AI care advisor
+  marketplace: true            # player-to-player listings (gated)
+  breeding_lab: true           # strain crossbreeding
+  cup_competitions: true       # the Cup / hall of fame (gated)
+  university: true             # courses / transcript (gated)
+  daily_stipend: true          # login retention faucet
+  chain: true                  # on-chain wallet / NFT minting (gated)
+  contracts: true              # NPC contracts (gated)

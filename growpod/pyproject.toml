@@ -1,0 +1,20 @@
+# Build configuration. Project metadata still lives in setup.py; this file
+# routes builds through PEP 517/660 so editable installs (`pip install -e .`)
+# use the modern path instead of the legacy `setup.py develop`, which breaks
+# on some distro-patched setuptools ("AttributeError: install_layout").
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# Coverage gate — the third leg of "make truth automatic" (alongside the ruff
+# lint gate and scripts/check_memory.py). Operational one-shot scripts are
+# excluded; they're run by ops, not exercised by the unit suite.
+[tool.coverage.run]
+source = ["growpodempire"]
+omit = ["*/scripts/*"]
+
+[tool.coverage.report]
+show_missing = true
+# Ratchet floor: set just below current (~79%). Raise it as coverage climbs;
+# never lower it. Keeps the safety net from silently eroding.
+fail_under = 79

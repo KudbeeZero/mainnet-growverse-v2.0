@@ -1,0 +1,90 @@
+# Terpene -> effect palette — the mechanical bridge from aroma/chemotype to buffs.
+#
+# AUTHORITATIVE DESIGN SOURCE: knowledge-base/strain-classification-and-quality.md
+# §3 "Flavor Palette" (derived from *Green: A Field Guide to Marijuana*, Chronicle
+# Books 2017). The eight dominant cannabis terpenes, their flavor notes, flavor
+# family, and the source-stated therapeutic effect.
+#
+# HONESTY LAYER:
+#   - `flavor_notes` + `therapeutic` are source-stated facts (the book's palette).
+#   - `flavor_family` and the `effects` weights are INFERRED / game-tunable buff
+#     hooks — this is the tuning surface (like balance.yaml). Edit weights here,
+#     not in code. Weights are 0..1 relative contributions; a terpene at full
+#     expression (intensity 1.0) contributes weight*100 points to each effect tag.
+#
+# Canonical effect-tag vocabulary (the buff axes the engine emits):
+#   body axis : sedation, relaxation, pain_relief, sleep, recovery
+#   mind axis : euphoria, energy, focus, clarity, calm
+#   utility   : defense, stamina, appetite, cleanse, antioxidant
+
+version: 1
+
+# Tags counted toward the body<->mind axis hint (everything else is "utility").
+axis:
+  body: [sedation, relaxation, pain_relief, sleep, recovery]
+  mind: [euphoria, energy, focus, clarity, calm]
+
+# Synergy: when this many terpenes are present at >= the threshold intensity, the
+# entourage effect kicks in (a flat multiplier on every effect score).
+entourage:
+  min_terpenes: 3
+  intensity_threshold: 0.4
+  bonus_mult: 1.15
+
+terpenes:
+  myrcene:
+    flavor_notes: "earthy, musky, fruity, clove"
+    flavor_family: savory
+    therapeutic: "sedative, anti-inflammatory, antibacterial; the classic couch-lock terpene"
+    effects: { sedation: 1.0, relaxation: 0.6, pain_relief: 0.3 }
+
+  limonene:
+    flavor_notes: "citrus, juniper, lemon, mint, rosemary, tangerine"
+    flavor_family: sour
+    therapeutic: "immune stimulant, antidepressant, antianxiety"
+    effects: { euphoria: 0.9, energy: 0.7, calm: 0.4 }
+
+  pinene:
+    aliases: [alpha-pinene, a-pinene, "α-pinene"]
+    flavor_notes: "citrus, oily, spicy, piney"
+    flavor_family: spicy
+    therapeutic: "anti-inflammatory, gastric cell-protectant; associated with alertness/memory"
+    effects: { focus: 1.0, clarity: 0.8 }
+
+  linalool:
+    flavor_notes: "floral, candy, sweet, woody"
+    flavor_family: sweet
+    therapeutic: "anti-inflammatory, sedative, analgesic (pain relief)"
+    effects: { calm: 1.0, pain_relief: 0.9, sedation: 0.4 }
+
+  caryophyllene:
+    aliases: [beta-caryophyllene, b-caryophyllene, caryophyllene-oxide]
+    flavor_notes: "clove, peppery, spicy, woody"
+    flavor_family: spicy
+    therapeutic: "antifungal, skin protectant"
+    effects: { defense: 1.0, pain_relief: 0.4 }
+
+  phytol:
+    flavor_notes: "creamy, earthy, floral, vanilla"
+    flavor_family: sweet
+    therapeutic: "anti-insomnia"
+    effects: { sleep: 1.0, recovery: 0.7 }
+
+  humulene:
+    flavor_notes: "hoppy, woody, earthy"
+    flavor_family: bitter
+    therapeutic: "anti-inflammatory; associated with appetite suppression"
+    effects: { stamina: 0.8, appetite: 0.6 }
+
+  terpinolene:
+    aliases: [terpinene]
+    flavor_notes: "fruity, floral, sweet, herbal"
+    flavor_family: sweet
+    therapeutic: "antioxidant, antibacterial"
+    effects: { cleanse: 0.8, antioxidant: 0.7, recovery: 0.4 }
+
+# Catalog strains list a few `terpenes` tags qualitatively (e.g. ocimene) that
+# are outside the 8-terpene buff palette above. They are aroma-only for now
+# (no buff hook) and map to a flavor family for UI sorting/filtering.
+aroma_only:
+  ocimene: { flavor_family: sweet, flavor_notes: "sweet, herbal, woody" }
