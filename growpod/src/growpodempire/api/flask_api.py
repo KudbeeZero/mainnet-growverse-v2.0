@@ -32,7 +32,7 @@ def create_app(init_database: bool = True):
         app,
         resources={r"/api/*": {"origins": settings.cors_allowed_origins}},
         allow_headers=["Content-Type", "X-API-Key"],
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         max_age=3600,
     )
 
