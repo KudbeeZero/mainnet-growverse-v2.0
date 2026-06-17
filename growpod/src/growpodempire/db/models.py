@@ -583,6 +583,47 @@ class PlayerBadge(UUIDPrimaryKeyMixin, Base):
     )
 
 
+class StorePartner(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A dispensary / brand partner featured in the store's Partner Drops section."""
+
+    __tablename__ = "store_partners"
+
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    logo_url: Mapped[str] = mapped_column(String(512), nullable=False)
+    tagline: Mapped[str] = mapped_column(String(60), nullable=False)
+    product_type: Mapped[str] = mapped_column(String(16), nullable=False)  # "strain" | "consumable"
+    product_id: Mapped[str] = mapped_column(String(64), nullable=False)    # strain UUID or item_key
+    price_gc: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class FeaturedItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """An item pinned by admins as a 'This Week's Drops' featured shelf entry."""
+
+    __tablename__ = "featured_items"
+
+    item_type: Mapped[str] = mapped_column(String(16), nullable=False)   # "strain" | "consumable" | "seasonal"
+    item_id: Mapped[str] = mapped_column(String(64), nullable=False)     # UUID or item_key
+    label: Mapped[str] = mapped_column(String(128), nullable=False)
+    badge: Mapped[str] = mapped_column(String(16), default="limited", nullable=False)  # "seasonal" | "limited" | "new"
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    valid_through: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+
+class Bundle(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A curated bundle of consumables sold at a discount."""
+
+    __tablename__ = "bundles"
+
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    discount_pct: Mapped[float] = mapped_column(Float, nullable=False)  # 0.0–1.0
+    components: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    # Each component: {"type": "consumable", "key": "<item_key>", "qty": N}
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
 class MarketListing(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "market_listings"
 

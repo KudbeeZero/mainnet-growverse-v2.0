@@ -1406,6 +1406,251 @@ def asa_deposit(player_id):
         return _error(str(e))
 
 
+# ----- Store: partners, featured items, bundles --------------------------
+
+@game_bp.get("/store/partners")
+def store_partners():
+    from ..db.models import StorePartner, Strain
+    from ..economy.config import get_economy_config as _cfg
+    with session_scope() as s:
+        partners = (
+            s.query(StorePartner)
+            .filter(StorePartner.active.is_(True))
+            .order_by(StorePartner.display_order)
+            .all()
+        )
+        out = []
+        for p in partners:
+            product_name = p.product_id
+            if p.product_type == "strain":
+                strain = s.get(Strain, p.product_id)
+                if strain:
+                    product_name = strain.name
+            elif p.product_type == "consumable":
+                item = _cfg().shop_consumables.get(p.product_id)
+                if item:
+                    product_name = item.get("name", p.product_id)
+            out.append({
+                "id": p.id,
+                "name": p.name,
+                "logo_url": p.logo_url,
+                "tagline": p.tagline,
+                "product_type": p.product_type,
+                "product_id": p.product_id,
+                "product_name": product_name,
+                "price_gc": float(p.price_gc),
+                "display_order": p.display_order,
+            })
+    return jsonify(out)
+
+
+@game_bp.post("/admin/store/partners")
+@require_admin
+def admin_add_partner():
+    from ..db.models import StorePartner
+    from decimal import Decimal as _Dec
+    data = request.get_json(force=True, silent=True) or {}
+    for f in ["name", "logo_url", "tagline", "product_type", "product_id", "price_gc"]:
+        if not data.get(f) and data.get(f) != 0:
+            return _error(f"{f} is required")
+    if data["product_type"] not in ("strain", "consumable"):
+        return _error("product_type must be 'strain' or 'consumable'")
+    with session_scope() as s:
+        p = StorePartner(
+            name=str(data["name"])[:128],
+            logo_url=str(data["logo_url"])[:512],
+            tagline=str(data["tagline"])[:60],
+            product_type=data["product_type"],
+            product_id=str(data["product_id"])[:64],
+            price_gc=_Dec(str(data["price_gc"])),
+            active=True,
+            display_order=int(data.get("display_order", 0)),
+        )
+        s.add(p)
+        s.flush()
+        out = {k: getattr(p, k) for k in ("id", "name", "logo_url", "tagline", "product_type", "product_id", "display_order", "active")}
+        out["price_gc"] = float(p.price_gc)
+    return jsonify(out), 201
+
+
+@game_bp.delete("/admin/store/partners/<partner_id>")
+@require_admin
+def admin_delete_partner(partner_id):
+    from ..db.models import StorePartner
+    with session_scope() as s:
+        p = s.get(StorePartner, partner_id)
+        if p is None:
+            return _error("Partner not found", 404)
+        s.delete(p)
+    return jsonify({"deleted": True})
+
+
+@game_bp.get("/store/featured")
+def store_featured():
+    from ..db.models import FeaturedItem
+    with session_scope() as s:
+        items = s.query(FeaturedItem).filter(FeaturedItem.active.is_(True)).all()
+        out = [{"id": f.id, "item_type": f.item_type, "item_id": f.item_id,
+                "label": f.label, "badge": f.badge,
+                "valid_through": f.valid_through.isoformat() if f.valid_through else None}
+               for f in items]
+    return jsonify(out)
+
+
+@game_bp.post("/admin/store/featured")
+@require_admin
+def admin_add_featured():
+    from ..db.models import FeaturedItem
+    from datetime import datetime as _dt
+    data = request.get_json(force=True, silent=True) or {}
+    for f in ["item_type", "item_id", "label"]:
+        if not data.get(f):
+            return _error(f"{f} is required")
+    with session_scope() as s:
+        vt = None
+        if data.get("valid_through"):
+            try:
+                vt = _dt.fromisoformat(data["valid_through"])
+            except ValueError:
+                return _error("valid_through must be ISO datetime")
+        item = FeaturedItem(
+            item_type=str(data["item_type"])[:16],
+            item_id=str(data["item_id"])[:64],
+            label=str(data["label"])[:128],
+            badge=str(data.get("badge", "limited"))[:16],
+            active=True,
+            valid_through=vt,
+        )
+        s.add(item)
+        s.flush()
+        out = {"id": item.id, "item_type": item.item_type, "item_id": item.item_id,
+               "label": item.label, "badge": item.badge,
+               "valid_through": item.valid_through.isoformat() if item.valid_through else None}
+    return jsonify(out), 201
+
+
+@game_bp.delete("/admin/store/featured/<item_id>")
+@require_admin
+def admin_delete_featured(item_id):
+    from ..db.models import FeaturedItem
+    with session_scope() as s:
+        item = s.get(FeaturedItem, item_id)
+        if item is None:
+            return _error("Featured item not found", 404)
+        s.delete(item)
+    return jsonify({"deleted": True})
+
+
+@game_bp.get("/store/bundles")
+def store_bundles():
+    from ..db.models import Bundle
+    from ..economy.config import get_economy_config as _cfg
+    cfg = _cfg()
+    with session_scope() as s:
+        bundles = s.query(Bundle).filter(Bundle.active.is_(True)).all()
+        out = []
+        for b in bundles:
+            full_price = 0.0
+            enriched = []
+            for comp in (b.components or []):
+                key = comp.get("key", "")
+                qty = int(comp.get("qty", 1))
+                item_cfg = cfg.shop_consumables.get(key) or {}
+                cost = float(item_cfg.get("cost", 0)) * qty
+                full_price += cost
+                enriched.append({**comp, "name": item_cfg.get("name", key), "cost": cost})
+            bundle_price = round(full_price * (1 - float(b.discount_pct)), 2)
+            out.append({"id": b.id, "name": b.name, "description": b.description,
+                        "discount_pct": float(b.discount_pct), "components": enriched,
+                        "full_price": full_price, "bundle_price": bundle_price, "active": b.active})
+    return jsonify(out)
+
+
+@game_bp.post("/players/<player_id>/store/bundles/<bundle_id>/purchase")
+@require_player
+def purchase_bundle(player_id, bundle_id):
+    from ..db.models import Bundle, ConsumableInventory
+    from ..economy.ledger import post as _post
+    from ..economy.config import get_economy_config as _cfg
+    from decimal import Decimal as _Dec
+    try:
+        with session_scope() as s:
+            b = s.get(Bundle, bundle_id)
+            if b is None or not b.active:
+                return _error("Bundle not found or inactive", 404)
+            cfg = _cfg()
+            full_price = sum(
+                float((cfg.shop_consumables.get(c.get("key", "")) or {}).get("cost", 0)) * int(c.get("qty", 1))
+                for c in (b.components or [])
+            )
+            bundle_price = _Dec(str(round(full_price * (1 - float(b.discount_pct)), 6)))
+            from ..enums import LedgerEntryType
+            _post(s, player_id, -bundle_price, LedgerEntryType.SHOP_PURCHASE,
+                  ref_type="bundle", ref_id=bundle_id)
+            items_delivered = []
+            for comp in (b.components or []):
+                key = comp.get("key", "")
+                qty = int(comp.get("qty", 1))
+                if not key or qty < 1:
+                    continue
+                stack = (s.query(ConsumableInventory)
+                         .filter(ConsumableInventory.player_id == player_id,
+                                 ConsumableInventory.item_key == key)
+                         .one_or_none())
+                if stack is None:
+                    stack = ConsumableInventory(player_id=player_id, item_key=key, quantity=0)
+                    s.add(stack)
+                    s.flush()
+                stack.quantity += qty
+                items_delivered.append({"key": key, "qty": qty})
+        return jsonify({"purchased": b.name, "items_delivered": items_delivered}), 201
+    except InsufficientFundsError as e:
+        return _error(str(e))
+    except GameError as e:
+        return _error(str(e))
+
+
+@game_bp.post("/players/<player_id>/store/partners/<partner_id>/purchase")
+@require_player
+def purchase_partner_product(player_id, partner_id):
+    from ..db.models import StorePartner, ConsumableInventory, SeedInventory
+    from ..economy.ledger import post as _post
+    from ..enums import LedgerEntryType
+    try:
+        with session_scope() as s:
+            p = s.get(StorePartner, partner_id)
+            if p is None or not p.active:
+                return _error("Partner not found or inactive", 404)
+            _post(s, player_id, -p.price_gc, LedgerEntryType.SHOP_PURCHASE,
+                  ref_type="partner_product", ref_id=partner_id)
+            if p.product_type == "consumable":
+                stack = (s.query(ConsumableInventory)
+                         .filter(ConsumableInventory.player_id == player_id,
+                                 ConsumableInventory.item_key == p.product_id)
+                         .one_or_none())
+                if stack is None:
+                    stack = ConsumableInventory(player_id=player_id, item_key=p.product_id, quantity=0)
+                    s.add(stack)
+                    s.flush()
+                stack.quantity += 1
+            elif p.product_type == "strain":
+                seed_stack = (s.query(SeedInventory)
+                              .filter(SeedInventory.player_id == player_id,
+                                      SeedInventory.strain_id == p.product_id)
+                              .one_or_none())
+                if seed_stack is None:
+                    seed_stack = SeedInventory(player_id=player_id, strain_id=p.product_id,
+                                               quantity=0, source="partner")
+                    s.add(seed_stack)
+                    s.flush()
+                seed_stack.quantity += 1
+        return jsonify({"purchased": p.name, "product_type": p.product_type, "product_id": p.product_id}), 201
+    except InsufficientFundsError as e:
+        return _error(str(e))
+    except GameError as e:
+        return _error(str(e))
+
+
 @game_bp.post("/players/<player_id>/harvests/<harvest_id>/mint")
 @require_feature("chain")
 @require_player

@@ -919,6 +919,303 @@ function TableRow({
   );
 }
 
+// ---- Store Partners admin card ---------------------------------------------
+
+interface PartnerRow {
+  id: string;
+  name: string;
+  logo_url: string;
+  tagline: string;
+  product_type: string;
+  product_id: string;
+  product_name?: string;
+  price_gc: number;
+  display_order: number;
+  active: boolean;
+}
+
+function StorePartnersCard() {
+  const [partners, setPartners] = useState<PartnerRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [fName, setFName] = useState("");
+  const [fLogo, setFLogo] = useState("");
+  const [fTagline, setFTagline] = useState("");
+  const [fProductType, setFProductType] = useState<"strain" | "consumable">("consumable");
+  const [fProductId, setFProductId] = useState("");
+  const [fPrice, setFPrice] = useState(100);
+  const [fOrder, setFOrder] = useState(0);
+  const [formErr, setFormErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const loadPartners = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch<PartnerRow[]>("/store/partners");
+      setPartners(data);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load partners");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadPartners(); }, [loadPartners]);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setFormErr(null);
+    setSaving(true);
+    try {
+      await apiFetch("/admin/store/partners", {
+        method: "POST",
+        body: { name: fName, logo_url: fLogo, tagline: fTagline,
+                product_type: fProductType, product_id: fProductId,
+                price_gc: fPrice, display_order: fOrder },
+      });
+      setFName(""); setFLogo(""); setFTagline(""); setFProductId(""); setFPrice(100); setFOrder(0);
+      await loadPartners();
+    } catch (e: unknown) {
+      setFormErr(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Remove this partner?")) return;
+    try {
+      await apiFetch(`/admin/store/partners/${id}`, { method: "DELETE" });
+      setPartners((p) => p.filter((r) => r.id !== id));
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Delete failed");
+    }
+  }
+
+  const inputCls = "rounded border border-ink-700 bg-ink-900 px-2 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-grow-500";
+  const labelCls = "text-[10px] uppercase tracking-widest text-gray-500";
+
+  return (
+    <Card>
+      <CardHeader title="Store Partners" />
+      <form onSubmit={handleAdd} className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-col gap-1">
+          <label className={labelCls}>Partner Name</label>
+          <input className={inputCls} value={fName} onChange={(e) => setFName(e.target.value)} placeholder="Green Thumb Collective" required />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className={labelCls}>Logo URL</label>
+          <input className={inputCls} value={fLogo} onChange={(e) => setFLogo(e.target.value)} placeholder="https://…" required />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className={labelCls}>Tagline (≤60 chars)</label>
+          <input className={inputCls} maxLength={60} value={fTagline} onChange={(e) => setFTagline(e.target.value)} placeholder="Farm-to-bong, since 2018" required />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className={labelCls}>Product Type</label>
+          <select className={inputCls} value={fProductType} onChange={(e) => setFProductType(e.target.value as "strain" | "consumable")}>
+            <option value="consumable">Consumable</option>
+            <option value="strain">Strain (UUID)</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className={labelCls}>Product ID / Key</label>
+          <input className={inputCls} value={fProductId} onChange={(e) => setFProductId(e.target.value)} placeholder="bloom_booster or strain UUID" required />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className={labelCls}>Price (GC) · Display Order</label>
+          <div className="flex gap-2">
+            <input type="number" min={1} className={inputCls + " flex-1"} value={fPrice} onChange={(e) => setFPrice(Number(e.target.value))} required />
+            <input type="number" min={0} className={inputCls + " w-16"} value={fOrder} onChange={(e) => setFOrder(Number(e.target.value))} />
+            <button type="submit" disabled={saving} className="rounded bg-grow-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-grow-600 disabled:opacity-50">
+              {saving ? "Saving…" : "Add"}
+            </button>
+          </div>
+        </div>
+        {formErr && <p className="col-span-full text-xs text-red-400">{formErr}</p>}
+      </form>
+
+      {loading ? (
+        <p className="text-sm text-gray-500">Loading…</p>
+      ) : error ? (
+        <p className="text-sm text-red-400">{error}</p>
+      ) : partners.length === 0 ? (
+        <p className="text-sm text-gray-500">No partners configured. Add one above.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-ink-700 text-left text-xs text-gray-500">
+                <th className="pb-2 pr-4">Logo</th>
+                <th className="pb-2 pr-4">Name · Tagline</th>
+                <th className="pb-2 pr-4">Product</th>
+                <th className="pb-2 pr-4 text-right">Price</th>
+                <th className="pb-2 pr-4 text-center">Order</th>
+                <th className="pb-2 text-right"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ink-800">
+              {partners.map((p) => (
+                <tr key={p.id}>
+                  <td className="py-2 pr-4">
+                    <img src={p.logo_url} alt={p.name} className="w-8 h-8 rounded object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  </td>
+                  <td className="py-2 pr-4">
+                    <div className="text-gray-200">{p.name}</div>
+                    <div className="text-[10px] text-gray-500">{p.tagline}</div>
+                  </td>
+                  <td className="py-2 pr-4">
+                    <div className="text-gray-300 text-xs">{p.product_name ?? p.product_id}</div>
+                    <div className="text-[10px] text-gray-600 capitalize">{p.product_type}</div>
+                  </td>
+                  <td className="py-2 pr-4 text-right font-mono text-gray-300">{gcFmt(p.price_gc)}</td>
+                  <td className="py-2 pr-4 text-center text-gray-500">{p.display_order}</td>
+                  <td className="py-2 text-right">
+                    <button onClick={() => handleDelete(p.id)} className="text-xs text-red-500 hover:text-red-300">Remove</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ---- Featured Items admin card ---------------------------------------------
+
+interface FeaturedRow {
+  id: string;
+  item_type: string;
+  item_id: string;
+  label: string;
+  badge: string;
+  valid_through: string | null;
+}
+
+function FeaturedItemsCard() {
+  const [items, setItems] = useState<FeaturedRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [fType, setFType] = useState("consumable");
+  const [fId, setFId] = useState("");
+  const [fLabel, setFLabel] = useState("");
+  const [fBadge, setFBadge] = useState("limited");
+  const [formErr, setFormErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const loadItems = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch<FeaturedRow[]>("/store/featured");
+      setItems(data);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load featured items");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadItems(); }, [loadItems]);
+
+  async function handlePin(e: React.FormEvent) {
+    e.preventDefault();
+    setFormErr(null);
+    setSaving(true);
+    try {
+      await apiFetch("/admin/store/featured", {
+        method: "POST",
+        body: { item_type: fType, item_id: fId, label: fLabel, badge: fBadge },
+      });
+      setFId(""); setFLabel("");
+      await loadItems();
+    } catch (e: unknown) {
+      setFormErr(e instanceof Error ? e.message : "Failed to pin item");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleUnpin(id: string) {
+    try {
+      await apiFetch(`/admin/store/featured/${id}`, { method: "DELETE" });
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Unpin failed");
+    }
+  }
+
+  const inputCls = "rounded border border-ink-700 bg-ink-900 px-2 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-grow-500";
+  const labelCls = "text-[10px] uppercase tracking-widest text-gray-500";
+  const badgeMap: Record<string, string> = { seasonal: "text-amber-300 bg-amber-800/40", limited: "text-red-300 bg-red-800/40", new: "text-grow-300 bg-grow-800/40" };
+
+  return (
+    <Card>
+      <CardHeader title="Featured Items (This Week's Drops)" />
+      <form onSubmit={handlePin} className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex flex-col gap-1">
+          <label className={labelCls}>Item Type</label>
+          <select className={inputCls} value={fType} onChange={(e) => setFType(e.target.value)}>
+            <option value="consumable">Consumable</option>
+            <option value="strain">Strain</option>
+            <option value="seasonal">Seasonal</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className={labelCls}>Item ID / Key</label>
+          <input className={inputCls} value={fId} onChange={(e) => setFId(e.target.value)} placeholder="bloom_booster or UUID" required />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className={labelCls}>Display Label</label>
+          <input className={inputCls} value={fLabel} onChange={(e) => setFLabel(e.target.value)} placeholder="Bloom Booster — Deal of the week" required />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className={labelCls}>Badge</label>
+          <div className="flex gap-2">
+            <select className={inputCls + " flex-1"} value={fBadge} onChange={(e) => setFBadge(e.target.value)}>
+              <option value="limited">Limited</option>
+              <option value="seasonal">Seasonal</option>
+              <option value="new">New</option>
+            </select>
+            <button type="submit" disabled={saving} className="rounded bg-grow-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-grow-600 disabled:opacity-50">
+              {saving ? "…" : "Pin"}
+            </button>
+          </div>
+        </div>
+        {formErr && <p className="col-span-full text-xs text-red-400">{formErr}</p>}
+      </form>
+
+      {loading ? (
+        <p className="text-sm text-gray-500">Loading…</p>
+      ) : error ? (
+        <p className="text-sm text-red-400">{error}</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-gray-500">No featured items pinned. Use the form above to add up to 3.</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center gap-3 rounded-lg border border-ink-700 bg-ink-900/50 px-3 py-2">
+              <span className={`rounded px-1.5 py-0.5 text-[9px] uppercase tracking-widest font-semibold ${badgeMap[item.badge] ?? "text-gray-300 bg-gray-700/40"}`}>
+                {item.badge}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-200 truncate">{item.label}</p>
+                <p className="text-[10px] text-gray-500">{item.item_type} · {item.item_id}</p>
+              </div>
+              <button onClick={() => handleUnpin(item.id)} className="text-xs text-red-500 hover:text-red-300 shrink-0">Unpin</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // ---- Page root -------------------------------------------------------------
 
 function EconomyAdminInner() {
@@ -933,6 +1230,8 @@ function EconomyAdminInner() {
       <LiveSnapshotCard onSeed={handleSeed} />
       <EconomyProjectorInner seeds={projectorSeeds} />
       <SeasonalDropsCard />
+      <StorePartnersCard />
+      <FeaturedItemsCard />
     </div>
   );
 }

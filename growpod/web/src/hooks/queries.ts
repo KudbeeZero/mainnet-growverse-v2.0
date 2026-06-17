@@ -233,3 +233,27 @@ export function useProfile() {
     enabled: isAuthed,
   });
 }
+
+export function useStorePartners() {
+  return useQuery({
+    queryKey: queryKeys.storePartners(),
+    queryFn: () => api.store.partners(),
+    staleTime: 60_000,
+  });
+}
+
+export function useStoreFeatured() {
+  return useQuery({
+    queryKey: queryKeys.storeFeatured(),
+    queryFn: () => api.store.featured(),
+    staleTime: 60_000,
+  });
+}
+
+export function useStoreBundles() {
+  return useQuery({
+    queryKey: queryKeys.storeBundles(),
+    queryFn: () => api.store.bundles(),
+    staleTime: 60_000,
+  });
+}

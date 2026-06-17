@@ -14,6 +14,7 @@ import { cup } from "./cup";
 import { university } from "./university";
 import { ftue } from "./ftue";
 import { seasonal } from "./seasonal";
+import { store } from "./store";
 
 export const api = {
   players,
@@ -32,6 +33,7 @@ export const api = {
   university,
   ftue,
   seasonal,
+  store,
 };
 
 export { ApiError } from "./client";

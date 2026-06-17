@@ -34,4 +34,7 @@ export const queryKeys = {
   ftueCoaching: (id: string, step: string) => ["ftue", "coaching", id, step] as const,
   seasonalStrains: () => ["seasonal", "strains"] as const,
   profile: (id: string) => ["profile", id] as const,
+  storePartners: () => ["store", "partners"] as const,
+  storeFeatured: () => ["store", "featured"] as const,
+  storeBundles: () => ["store", "bundles"] as const,
 };
