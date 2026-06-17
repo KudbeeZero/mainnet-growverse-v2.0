@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -29,6 +29,25 @@ function DashboardInner() {
   const localPlantIds =
     useIdStore((s) => (playerId ? s.ids[playerId]?.plantIds : undefined)) ?? NO_IDS;
   const [showCreate, setShowCreate] = useState(false);
+  const [devSpeed, setDevSpeed] = useState(false);
+
+  // ⚡ Dev speed — advance 1 game-hour every 700 ms when ON, then refetch plants.
+  useEffect(() => {
+    if (!devSpeed) return;
+    const id = setInterval(async () => {
+      try {
+        await fetch("/api/dev/clock/advance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hours: 1 }),
+        });
+        plants.refetch();
+      } catch {
+        // silently ignore — button shows state is ON
+      }
+    }, 700);
+    return () => clearInterval(id);
+  }, [devSpeed, plants]);
 
   if (pods.isLoading) return <LoadingBlock label="Loading your grow…" />;
 
@@ -51,7 +70,7 @@ function DashboardInner() {
         title="Grow Dashboard"
         subtitle="Plants advance in real time as you watch. VPD, DLI and PPFD are live — keep them in band and care before they wilt."
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link href="/lab">
               <Button variant="secondary" size="sm" data-coach="buy-seeds">
                 Buy seeds
@@ -60,6 +79,18 @@ function DashboardInner() {
             <Button size="sm" data-coach="new-pod" onClick={() => setShowCreate((s) => !s)}>
               + New Pod
             </Button>
+            {/* ⚡ Dev speed toggle — advances real grow clock 10× for testing */}
+            <button
+              onClick={() => setDevSpeed((s) => !s)}
+              title={devSpeed ? "10× speed ON — tap to disable" : "10× speed OFF — tap to enable"}
+              className={`flex min-h-[36px] items-center gap-1 rounded-full border px-3 text-xs font-extrabold tracking-wide transition-all ${
+                devSpeed
+                  ? "border-green-400 bg-green-500/20 text-green-300 shadow-[0_0_12px_rgba(74,222,128,0.4)]"
+                  : "border-ink-600 bg-ink-800 text-gray-400 hover:border-green-700 hover:text-green-500"
+              }`}
+            >
+              ⚡ {devSpeed ? "10× ON" : "10×"}
+            </button>
           </div>
         }
       />
@@ -114,6 +145,16 @@ function DashboardInner() {
 
       {/* First-session guidance — points at the real UI, once per player. */}
       <CoachMarks marks={DASHBOARD_COACH_MARKS} />
+
+      {/* ⚡ Persistent floating indicator when 10× is active — always reachable */}
+      {devSpeed && (
+        <button
+          onClick={() => setDevSpeed(false)}
+          className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-green-400 bg-green-500/20 px-4 py-2 text-xs font-extrabold tracking-wide text-green-300 shadow-[0_0_16px_rgba(74,222,128,0.5)] lg:hidden"
+        >
+          ⚡ 10× SPEED ON — tap to stop
+        </button>
+      )}
     </div>
   );
 }
