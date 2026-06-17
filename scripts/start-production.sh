@@ -2,22 +2,24 @@
 set -e
 
 # Production startup script for GrowPod Empire.
-# Launches both the Python/Gunicorn API and the Next.js web frontend.
-# Both services run in the same container; the Next.js rewrites proxy
-# /api/* requests to the backend.
+#
+# Architecture:
+#   - Next.js (frontend) binds to $PORT (Autoscale-assigned, falls back to 3000).
+#     This is the only externally reachable service; external port 80 → $PORT.
+#   - Gunicorn (API) binds to 0.0.0.0:8000 — internal only.
+#     Next.js rewrites proxy /api/* and /health to http://localhost:8000.
 
 # ------------------------------------------------------------------
-# 1. Database bootstrap (idempotent — safe to re-run on restart)
+# 1. Schema init (idempotent — creates tables if missing, safe to re-run)
 # ------------------------------------------------------------------
 cd /home/runner/workspace/growpod
-PYTHONPATH=src python3 -c "from growpodempire.db.session import init_db; init_db()"
-PYTHONPATH=src python3 -m growpodempire.db.seed
+export PYTHONPATH=src
+python3 -c "from growpodempire.db.session import init_db; init_db()"
 
 # ------------------------------------------------------------------
-# 2. Start the API backend (port 8000)
+# 2. Start the Gunicorn API backend (internal, port 8000)
 # ------------------------------------------------------------------
-cd /home/runner/workspace/growpod
-PYTHONPATH=src python3 -m gunicorn server:app \
+python3 -m gunicorn server:app \
   --bind 0.0.0.0:8000 \
   --workers 2 \
   --timeout 60 \
@@ -26,14 +28,15 @@ PYTHONPATH=src python3 -m gunicorn server:app \
 API_PID=$!
 
 # ------------------------------------------------------------------
-# 3. Start the Next.js frontend (port 3000)
+# 3. Start the Next.js frontend on the Autoscale-assigned PORT
 # ------------------------------------------------------------------
 cd /home/runner/workspace/growpod/web
-BACKEND_URL=http://localhost:8000 npm run start &
+NEXT_PORT="${PORT:-3000}"
+BACKEND_URL=http://localhost:8000 npm run start -- -p "$NEXT_PORT" &
 WEB_PID=$!
 
 # ------------------------------------------------------------------
-# 4. Keep the container alive while both services run
+# 4. Keep the container alive; forward SIGTERM/SIGINT to children
 # ------------------------------------------------------------------
-trap "kill \$API_PID \$WEB_PID; exit 0" INT TERM
+trap "kill \$API_PID \$WEB_PID 2>/dev/null; wait; exit 0" INT TERM
 wait $API_PID $WEB_PID

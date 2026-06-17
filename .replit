@@ -69,13 +69,16 @@ timeoutMs = 20000
 channel = "stable-25_05"
 packages = ["libxcrypt", "libyaml"]
 
+# External port 80 → Next.js frontend (port 3000).
+# The Next.js rewrites proxy /api/* to the Gunicorn backend internally.
 [[ports]]
 localPort = 3000
-externalPort = 3000
+externalPort = 80
 
+# Gunicorn API — internal only, reached via Next.js rewrites.
 [[ports]]
 localPort = 8000
-externalPort = 80
+externalPort = 8000
 
 [[ports]]
 localPort = 8080
