@@ -1239,6 +1239,23 @@ def university_course_audio(course_key):
     )
 
 
+# ----- Admin: economy ledger summary ------------------------------------
+
+@game_bp.get("/admin/economy/ledger-summary")
+@require_admin
+def admin_economy_ledger_summary():
+    """Trailing-30-day daily ledger aggregates for the Economy dashboard.
+
+    Returns per-day minted/burned/seasonal-sink GC and aggregate projector-
+    seeding numbers so the dashboard can replace placeholder sliders with
+    values derived from actual player activity.
+    """
+    from ..services import economy_service
+    days = bounded_int(request.args.get("days"), "days", default=30, low=7, high=90)
+    with session_scope() as s:
+        return jsonify(economy_service.ledger_daily_summary(s, days=days))
+
+
 # ----- Seasonal Strain Drops ---------------------------------------------
 
 @game_bp.get("/seasonal/strains")

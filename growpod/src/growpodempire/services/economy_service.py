@@ -15,10 +15,11 @@ separately so they do not distort the inflation picture.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, List
 
-from sqlalchemy import func
+from sqlalchemy import func, case
 from sqlalchemy.orm import Session
 
 from ..db.models import LedgerEntry, Wallet
@@ -127,4 +128,169 @@ def economy_health(session: Session) -> dict:
         "inflation_ratio": inflation_ratio,
         "inflating": net_issuance > 0,
         "by_type": by_type,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Admin: trailing-N-day daily ledger aggregates (for the Economy dashboard)
+# ---------------------------------------------------------------------------
+
+_FAUCET_TYPE_VALUES = frozenset(t.value for t in FAUCET_TYPES)
+_SINK_TYPE_VALUES = frozenset(t.value for t in SINK_TYPES)
+
+
+def ledger_daily_summary(session: Session, days: int = 30) -> dict:
+    """Return per-day GC minted/burned for the trailing `days` calendar days.
+
+    Each entry in `daily` covers one UTC date and reports:
+      - minted:       total GC created by FAUCET-type entries only
+      - burned:       total GC destroyed by SINK-type entries (magnitude)
+      - seasonal_sink: subset of burned — SEED_PURCHASE with ref_type='seasonal_strain'
+
+    Transfer/chain/adjustment entries are excluded so the chart tracks true
+    money-supply changes, matching the taxonomy in economy_service.FAUCET_TYPES
+    and SINK_TYPES.
+
+    Also returns aggregate projector-seeding numbers so the admin dashboard
+    can pre-populate its sliders with real values instead of placeholders.
+    """
+    # Align cutoff to UTC midnight N days ago so every day in the window
+    # is a complete calendar day (no partial first-day data).
+    today = datetime.utcnow().date()
+    start_date = today - timedelta(days=days - 1)
+    cutoff = datetime(start_date.year, start_date.month, start_date.day)
+
+    faucet_list = list(_FAUCET_TYPE_VALUES)
+    sink_list = list(_SINK_TYPE_VALUES)
+
+    rows = (
+        session.query(
+            func.date(LedgerEntry.created_at).label("day"),
+            func.sum(
+                case(
+                    (LedgerEntry.entry_type.in_(faucet_list), LedgerEntry.amount),
+                    else_=0,
+                )
+            ).label("minted"),
+            func.sum(
+                case(
+                    (LedgerEntry.entry_type.in_(sink_list), LedgerEntry.amount),
+                    else_=0,
+                )
+            ).label("burned_raw"),
+            func.sum(
+                case(
+                    (
+                        (LedgerEntry.entry_type == L.SEED_PURCHASE.value)
+                        & (LedgerEntry.ref_type == "seasonal_strain"),
+                        LedgerEntry.amount,
+                    ),
+                    else_=0,
+                )
+            ).label("seasonal_raw"),
+        )
+        .filter(LedgerEntry.created_at >= cutoff)
+        .group_by(func.date(LedgerEntry.created_at))
+        .order_by(func.date(LedgerEntry.created_at))
+        .all()
+    )
+
+    # Build a dense day-indexed list so the chart has every date in the window
+    # even when there are no ledger entries for that day.
+    day_map: Dict[str, dict] = {}
+    for row in rows:
+        day_str = str(row.day)
+        day_map[day_str] = {
+            "date": day_str,
+            "minted": _f(row.minted or Decimal("0")),
+            "burned": _f(abs(row.burned_raw or Decimal("0"))),
+            "seasonal_sink": _f(abs(row.seasonal_raw or Decimal("0"))),
+        }
+
+    # Fill gaps: every calendar day in [start_date, today] must appear.
+    dense: List[dict] = []
+    d = start_date
+    cumulative = 0.0
+    while d <= today:
+        key = d.isoformat()
+        entry = day_map.get(key, {"date": key, "minted": 0.0, "burned": 0.0, "seasonal_sink": 0.0})
+        cumulative += entry["minted"] - entry["burned"]
+        entry["supply_delta"] = round(cumulative, 6)
+        dense.append(entry)
+        d += timedelta(days=1)
+
+    # --- Projector-seeding aggregates (real numbers for slider pre-population) ---
+    active_players = session.query(func.count(func.distinct(LedgerEntry.player_id))).scalar() or 0
+
+    # Harvest GC: HARVEST_SALE faucet entries in the window
+    harvest_gc = session.query(
+        func.coalesce(func.sum(LedgerEntry.amount), 0)
+    ).filter(
+        LedgerEntry.entry_type == L.HARVEST_SALE.value,
+        LedgerEntry.created_at >= cutoff,
+    ).scalar()
+    harvest_gc = _f(harvest_gc)
+
+    # Daily stipend: DAILY_STIPEND entries in the window
+    stipend_gc = session.query(
+        func.coalesce(func.sum(LedgerEntry.amount), 0)
+    ).filter(
+        LedgerEntry.entry_type == L.DAILY_STIPEND.value,
+        LedgerEntry.created_at >= cutoff,
+    ).scalar()
+    stipend_gc = _f(stipend_gc)
+
+    # Non-seasonal seed purchases in the window (excludes seasonal drops so the
+    # projector's "avg seed cost per grow" reflects regular marketplace prices).
+    seed_gc = session.query(
+        func.coalesce(func.sum(LedgerEntry.amount), 0)
+    ).filter(
+        LedgerEntry.entry_type == L.SEED_PURCHASE.value,
+        LedgerEntry.created_at >= cutoff,
+        (LedgerEntry.ref_type != "seasonal_strain") | (LedgerEntry.ref_type.is_(None)),
+    ).scalar()
+    seed_gc = abs(_f(seed_gc))
+
+    # Tuition in the window
+    tuition_gc = session.query(
+        func.coalesce(func.sum(LedgerEntry.amount), 0)
+    ).filter(
+        LedgerEntry.entry_type == L.TUITION.value,
+        LedgerEntry.created_at >= cutoff,
+    ).scalar()
+    tuition_gc = abs(_f(tuition_gc))
+
+    # Seasonal sink total in the window
+    seasonal_gc = session.query(
+        func.coalesce(func.sum(LedgerEntry.amount), 0)
+    ).filter(
+        LedgerEntry.entry_type == L.SEED_PURCHASE.value,
+        LedgerEntry.ref_type == "seasonal_strain",
+        LedgerEntry.created_at >= cutoff,
+    ).scalar()
+    seasonal_gc = abs(_f(seasonal_gc))
+
+    # Money supply (current total)
+    money_supply = session.query(
+        func.coalesce(func.sum(Wallet.cached_balance), 0)
+    ).scalar()
+    money_supply = _f(money_supply)
+
+    return {
+        "days": days,
+        "daily": dense,
+        "totals": {
+            "minted": sum(e["minted"] for e in dense),
+            "burned": sum(e["burned"] for e in dense),
+            "seasonal_sink": sum(e["seasonal_sink"] for e in dense),
+        },
+        "money_supply": money_supply,
+        "active_players": int(active_players),
+        "period_gc": {
+            "harvest": harvest_gc,
+            "stipend": stipend_gc,
+            "seed_purchases": seed_gc,
+            "tuition": tuition_gc,
+            "seasonal": seasonal_gc,
+        },
     }

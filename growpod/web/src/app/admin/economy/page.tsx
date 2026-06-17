@@ -47,17 +47,405 @@ function gcFmt(v: number) {
   return `${v.toFixed(0)} GC`;
 }
 
+// ---- Types -----------------------------------------------------------------
+
+interface DailyEntry {
+  date: string;
+  minted: number;
+  burned: number;
+  seasonal_sink: number;
+  supply_delta: number;
+}
+
+interface LedgerSummary {
+  days: number;
+  daily: DailyEntry[];
+  totals: { minted: number; burned: number; seasonal_sink: number };
+  money_supply: number;
+  active_players: number;
+  period_gc: {
+    harvest: number;
+    stipend: number;
+    seed_purchases: number;
+    tuition: number;
+    seasonal: number;
+  };
+}
+
+// ---- SVG Line Chart --------------------------------------------------------
+
+interface ChartSeries {
+  key: keyof DailyEntry;
+  color: string;
+  label: string;
+}
+
+function LineChart({
+  data,
+  series,
+  height = 140,
+}: {
+  data: DailyEntry[];
+  series: ChartSeries[];
+  height?: number;
+}) {
+  const width = 800;
+  const padX = 8;
+  const padY = 12;
+  const innerW = width - padX * 2;
+  const innerH = height - padY * 2;
+
+  const allValues = data.flatMap((d) => series.map((s) => d[s.key] as number));
+  const maxVal = Math.max(...allValues, 1);
+  const minVal = Math.min(...allValues, 0);
+  const range = maxVal - minVal || 1;
+
+  function toX(i: number) {
+    return padX + (i / Math.max(data.length - 1, 1)) * innerW;
+  }
+  function toY(v: number) {
+    return padY + (1 - (v - minVal) / range) * innerH;
+  }
+
+  function makePath(key: keyof DailyEntry) {
+    if (data.length === 0) return "";
+    return data
+      .map((d, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(d[key] as number).toFixed(1)}`)
+      .join(" ");
+  }
+
+  const tickCount = 4;
+  const yTicks = Array.from({ length: tickCount + 1 }, (_, i) =>
+    minVal + (i / tickCount) * range,
+  );
+
+  const xTickEvery = Math.max(1, Math.floor(data.length / 6));
+  const xTicks = data.filter((_, i) => i % xTickEvery === 0 || i === data.length - 1);
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full"
+        style={{ minWidth: "320px", display: "block" }}
+      >
+        {yTicks.map((v, i) => {
+          const y = toY(v);
+          return (
+            <g key={i}>
+              <line x1={padX} y1={y} x2={width - padX} y2={y} stroke="#2d2d2d" strokeWidth="0.5" />
+              <text x={padX} y={y - 2} fill="#4b5563" fontSize="8" textAnchor="start">
+                {gcFmt(v)}
+              </text>
+            </g>
+          );
+        })}
+        {xTicks.map((d, i) => {
+          const idx = data.indexOf(d);
+          const x = toX(idx);
+          return (
+            <text key={i} x={x} y={height - 1} fill="#4b5563" fontSize="8" textAnchor="middle">
+              {d.date.slice(5)}
+            </text>
+          );
+        })}
+        {series.map((s) => (
+          <path
+            key={s.key}
+            d={makePath(s.key)}
+            fill="none"
+            stroke={s.color}
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            opacity="0.85"
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function AreaChart({
+  data,
+  valueKey,
+  color,
+  height = 100,
+}: {
+  data: DailyEntry[];
+  valueKey: keyof DailyEntry;
+  color: string;
+  height?: number;
+}) {
+  const width = 800;
+  const padX = 8;
+  const padY = 12;
+  const innerW = width - padX * 2;
+  const innerH = height - padY * 2;
+
+  const values = data.map((d) => d[valueKey] as number);
+  const maxVal = Math.max(...values, 1);
+  const minVal = Math.min(...values, 0);
+  const range = maxVal - minVal || 1;
+
+  function toX(i: number) {
+    return padX + (i / Math.max(data.length - 1, 1)) * innerW;
+  }
+  function toY(v: number) {
+    return padY + (1 - (v - minVal) / range) * innerH;
+  }
+  const zeroY = toY(0);
+
+  const linePts = data.map((d, i) => `${toX(i).toFixed(1)},${toY(d[valueKey] as number).toFixed(1)}`);
+  const areaPath =
+    data.length > 0
+      ? `M${toX(0).toFixed(1)},${zeroY.toFixed(1)} ` +
+        linePts.map((p, i) => `${i === 0 ? "L" : "L"}${p}`).join(" ") +
+        ` L${toX(data.length - 1).toFixed(1)},${zeroY.toFixed(1)} Z`
+      : "";
+
+  const linePath =
+    data.length > 0 ? linePts.map((p, i) => `${i === 0 ? "M" : "L"}${p}`).join(" ") : "";
+
+  const xTickEvery = Math.max(1, Math.floor(data.length / 6));
+  const xTicks = data.filter((_, i) => i % xTickEvery === 0 || i === data.length - 1);
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full"
+        style={{ minWidth: "320px", display: "block" }}
+      >
+        <defs>
+          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        <line x1={padX} y1={zeroY} x2={width - padX} y2={zeroY} stroke="#374151" strokeWidth="0.5" strokeDasharray="3,2" />
+        {xTicks.map((d, i) => {
+          const idx = data.indexOf(d);
+          const x = toX(idx);
+          return (
+            <text key={i} x={x} y={height - 1} fill="#4b5563" fontSize="8" textAnchor="middle">
+              {d.date.slice(5)}
+            </text>
+          );
+        })}
+        <path d={areaPath} fill="url(#areaGrad)" />
+        <path d={linePath} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+    </div>
+  );
+}
+
+// ---- Live Snapshot card ----------------------------------------------------
+
+function LiveSnapshotCard({ onSeed }: { onSeed: (data: LedgerSummary) => void }) {
+  const [summary, setSummary] = useState<LedgerSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    apiFetch<LedgerSummary>("/admin/economy/ledger-summary", { auth: true })
+      .then((data) => {
+        if (!cancelled) {
+          setSummary(data);
+          onSeed(data);
+          setLoading(false);
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Failed to load ledger summary");
+          setLoading(false);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [onSeed]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader title="Live 30-Day Token Flow" />
+        <p className="text-sm text-gray-500 py-4">Loading real ledger data…</p>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader title="Live 30-Day Token Flow" />
+        <p className="text-sm text-red-400">{error}</p>
+      </Card>
+    );
+  }
+
+  if (!summary) return null;
+
+  const { daily, totals, money_supply, active_players } = summary;
+
+  const netFlow = totals.minted - totals.burned;
+  const netPct = totals.minted > 0 ? (netFlow / totals.minted) * 100 : 0;
+
+  const flowSeries: ChartSeries[] = [
+    { key: "minted", color: "#4ade80", label: "Minted (faucets)" },
+    { key: "burned", color: "#f87171", label: "Burned (sinks)" },
+    { key: "seasonal_sink", color: "#a78bfa", label: "Seasonal sink" },
+  ];
+
+  return (
+    <Card>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <CardHeader title="Live 30-Day Token Flow" />
+        <button
+          onClick={() => onSeed(summary)}
+          className="shrink-0 rounded bg-grow-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-grow-600"
+          title="Re-seed the projector sliders from current live data"
+        >
+          Re-seed from live data ↓
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-5">
+        <MetricBox label="Active players" value={active_players.toLocaleString()} sub="ever" />
+        <MetricBox label="Money supply" value={gcFmt(money_supply)} sub="all wallets" />
+        <MetricBox
+          label="30-day minted"
+          value={gcFmt(totals.minted)}
+          sub="faucets"
+          highlight="green"
+        />
+        <MetricBox
+          label="30-day burned"
+          value={gcFmt(totals.burned)}
+          sub={`incl. ${gcFmt(totals.seasonal_sink)} seasonal`}
+          highlight={netFlow > 0 ? "red" : "yellow"}
+        />
+      </div>
+
+      <div className="mb-1 flex items-center gap-4 flex-wrap">
+        <span className="text-[10px] uppercase tracking-widest text-gray-500">Daily flow — GC minted vs burned</span>
+        <div className="flex gap-4">
+          {flowSeries.map((s) => (
+            <span key={s.key} className="flex items-center gap-1 text-[10px] text-gray-400">
+              <span className="inline-block w-3 h-0.5 rounded" style={{ backgroundColor: s.color }} />
+              {s.label}
+            </span>
+          ))}
+        </div>
+      </div>
+      <LineChart data={daily} series={flowSeries} height={140} />
+
+      <div className="mt-5 mb-1">
+        <span className="text-[10px] uppercase tracking-widest text-gray-500">
+          Cumulative net supply delta (minted − burned)
+          <span className={`ml-2 font-mono ${netFlow >= 0 ? "text-red-400" : "text-grow-400"}`}>
+            {netFlow >= 0 ? "+" : ""}{gcFmt(netFlow)} ({netPct >= 0 ? "+" : ""}{netPct.toFixed(1)}%)
+          </span>
+        </span>
+      </div>
+      <AreaChart data={daily} valueKey="supply_delta" color={netFlow >= 0 ? "#f87171" : "#4ade80"} height={100} />
+
+      {totals.seasonal_sink > 0 && (
+        <>
+          <div className="mt-5 mb-1">
+            <span className="text-[10px] uppercase tracking-widest text-gray-500">
+              Seasonal strain sink — daily GC burned via exclusive drops
+            </span>
+          </div>
+          <AreaChart data={daily} valueKey="seasonal_sink" color="#a78bfa" height={80} />
+        </>
+      )}
+    </Card>
+  );
+}
+
 // ---- Economy Projector -----------------------------------------------------
 
-function EconomyProjectorInner() {
-  const [players, setPlayers] = useState(500);
+interface ProjectorSeeds {
+  players: number;
+  gcPerHarvest: number;
+  dailyBonusGc: number;
+  seedCostAvg: number;
+  tuitionAvgMonthly: number;
+  premiumStrainPrice: number;
+  premiumPurchaseRate: number;
+}
+
+function deriveSeeds(summary: LedgerSummary): ProjectorSeeds {
+  const { active_players, period_gc } = summary;
+  const players = Math.max(active_players, 1);
+
+  const gcPerHarvest =
+    period_gc.harvest > 0
+      ? Math.round(period_gc.harvest / Math.max(players, 1))
+      : 80;
+
+  const dailyBonusGc =
+    period_gc.stipend > 0
+      ? Math.round(period_gc.stipend / Math.max(players * 30, 1))
+      : 10;
+
+  const seedCostAvg =
+    period_gc.seed_purchases > 0
+      ? Math.round(period_gc.seed_purchases / Math.max(players, 1))
+      : 40;
+
+  const tuitionAvgMonthly =
+    period_gc.tuition > 0
+      ? Math.round(period_gc.tuition / Math.max(players, 1))
+      : 25;
+
+  const premiumStrainPrice =
+    period_gc.seasonal > 0 && players > 0
+      ? Math.max(50, Math.round(period_gc.seasonal / Math.max(players * 0.05, 1)))
+      : 250;
+
+  const premiumPurchaseRate =
+    period_gc.seasonal > 0 && period_gc.seed_purchases > 0
+      ? Math.min(0.5, period_gc.seasonal / Math.max(period_gc.seed_purchases + period_gc.seasonal, 1))
+      : 0.05;
+
+  return {
+    players,
+    gcPerHarvest: Math.min(Math.max(gcPerHarvest, 10), 500),
+    dailyBonusGc: Math.min(Math.max(dailyBonusGc, 0), 50),
+    seedCostAvg: Math.min(Math.max(seedCostAvg, 10), 500),
+    tuitionAvgMonthly: Math.min(Math.max(tuitionAvgMonthly, 0), 200),
+    premiumStrainPrice: Math.min(Math.max(premiumStrainPrice, 50), 2000),
+    premiumPurchaseRate: Math.min(Math.max(premiumPurchaseRate, 0), 0.5),
+  };
+}
+
+function EconomyProjectorInner({ seeds }: { seeds?: ProjectorSeeds }) {
+  const [players, setPlayers] = useState(seeds?.players ?? 500);
   const [growCyclesPerMonth, setGrowCyclesPerMonth] = useState(4);
-  const [gcPerHarvest, setGcPerHarvest] = useState(80);
-  const [dailyBonusGc, setDailyBonusGc] = useState(10);
-  const [seedCostAvg, setSeedCostAvg] = useState(40);
-  const [tuitionAvgMonthly, setTuitionAvgMonthly] = useState(25);
-  const [premiumStrainPrice, setPremiumStrainPrice] = useState(250);
-  const [premiumPurchaseRate, setPremiumPurchaseRate] = useState(0.05);
+  const [gcPerHarvest, setGcPerHarvest] = useState(seeds?.gcPerHarvest ?? 80);
+  const [dailyBonusGc, setDailyBonusGc] = useState(seeds?.dailyBonusGc ?? 10);
+  const [seedCostAvg, setSeedCostAvg] = useState(seeds?.seedCostAvg ?? 40);
+  const [tuitionAvgMonthly, setTuitionAvgMonthly] = useState(seeds?.tuitionAvgMonthly ?? 25);
+  const [premiumStrainPrice, setPremiumStrainPrice] = useState(seeds?.premiumStrainPrice ?? 250);
+  const [premiumPurchaseRate, setPremiumPurchaseRate] = useState(seeds?.premiumPurchaseRate ?? 0.05);
+
+  const [seededFrom, setSeededFrom] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!seeds) return;
+    setPlayers(seeds.players);
+    setGcPerHarvest(seeds.gcPerHarvest);
+    setDailyBonusGc(seeds.dailyBonusGc);
+    setSeedCostAvg(seeds.seedCostAvg);
+    setTuitionAvgMonthly(seeds.tuitionAvgMonthly);
+    setPremiumStrainPrice(seeds.premiumStrainPrice);
+    setPremiumPurchaseRate(seeds.premiumPurchaseRate);
+    setSeededFrom("real player data");
+  }, [seeds]);
 
   const harvestFaucet = players * growCyclesPerMonth * gcPerHarvest;
   const bonusFaucet = players * dailyBonusGc * 30;
@@ -82,6 +470,12 @@ function EconomyProjectorInner() {
         title="Token Economy Projector"
         subtitle="Model monthly GC issuance vs sinks at scale. Inflation warning fires when faucets exceed sinks by > 20%."
       />
+
+      {seededFrom && (
+        <div className="rounded-lg border border-grow-700/50 bg-grow-950/40 px-4 py-2 text-xs text-grow-300">
+          ✦ Sliders seeded from <strong>{seededFrom}</strong> — adjust freely to model future scenarios.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card>
@@ -165,7 +559,7 @@ function EconomyProjectorInner() {
             <TableRow label="Daily bonuses" value={bonusFaucet} total={totalFaucet} type="faucet" />
             <TableRow label="Seed purchases" value={seedSink} total={totalFaucet} type="sink" />
             <TableRow label="Tuition payments" value={tuitionSink} total={totalFaucet} type="sink" />
-            <TableRow label="Premium strain drops" value={premiumSink} total={totalFaucet} type="sink" />
+            <TableRow label="Seasonal strain drops" value={premiumSink} total={totalFaucet} type="sink" />
           </tbody>
           <tfoot>
             <tr className="border-t border-ink-600 font-semibold">
@@ -528,9 +922,16 @@ function TableRow({
 // ---- Page root -------------------------------------------------------------
 
 function EconomyAdminInner() {
+  const [projectorSeeds, setProjectorSeeds] = useState<ProjectorSeeds | undefined>(undefined);
+
+  const handleSeed = useCallback((summary: LedgerSummary) => {
+    setProjectorSeeds(deriveSeeds(summary));
+  }, []);
+
   return (
     <div className="space-y-8">
-      <EconomyProjectorInner />
+      <LiveSnapshotCard onSeed={handleSeed} />
+      <EconomyProjectorInner seeds={projectorSeeds} />
       <SeasonalDropsCard />
     </div>
   );
