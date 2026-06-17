@@ -16,6 +16,38 @@ def metadata_hash(metadata: Dict) -> bytes:
     return hashlib.sha256(canonical).digest()
 
 
+def seed_metadata(seed: Dict) -> Dict:
+    """ARC-3 metadata for a Clone Room seed NFT (minted at plant time).
+
+    The seed's genetics are deterministic — re-derivable from
+    blockHash + ownerAddress + nonce — so anchoring those entropy inputs (and
+    the derived traits) in the metadata makes the on-chain asset independently
+    verifiable. `seed` is the plant_seeds row as JSON from the TS api-server.
+    """
+    traits = seed.get("traits") or {}
+    family = traits.get("strainFamily", "seed")
+    generation = seed.get("generationNum", 0)
+    return {
+        "name": f"{family} Seed"[:32],
+        "description": (
+            f"GrowPodEmpire Clone Room seed — {family} genetics, "
+            f"generation {generation}."
+        ),
+        "decimals": 0,
+        "properties": {
+            "type": "seed",
+            "seed_id": seed.get("seedId"),
+            "owner_address": seed.get("ownerAddress"),
+            "generation": generation,
+            "parent_seed_id": seed.get("parentSeedId"),
+            # Entropy inputs — anyone can re-derive the genetics from these.
+            "block_hash": seed.get("blockHash"),
+            "nonce": seed.get("nonce"),
+            "traits": traits,
+        },
+    }
+
+
 def strain_metadata(strain) -> Dict:
     """ARC-3 metadata for a (stabilized, rare) strain NFT."""
     return {

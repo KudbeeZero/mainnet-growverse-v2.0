@@ -24,7 +24,7 @@ import {
   tendPlant,
 } from "../services/plant/plantService";
 import { selectEvent } from "../services/plant/storyEngine";
-import { mintSeed } from "../services/chain/seedService";
+import { mintSeed, mintSeedOnChain } from "../services/chain/seedService";
 import { getBlockHashProvider } from "../services/chain/blockHash";
 
 const router: IRouter = Router();
@@ -113,7 +113,18 @@ router.post("/plant/start-grow", async (req, res) => {
 
   try {
     const grow = await plantSeed(seedId, playerId, plotId);
-    res.status(201).json({ grow });
+
+    // Record the seed on-chain at plant time (CLONE-10). Best-effort: a chain
+    // failure must never block the grow — the DB row is authoritative and the
+    // seed can be minted on a later retry / reconcile. Mint is idempotent.
+    let seed = null;
+    try {
+      seed = await mintSeedOnChain(seedId);
+    } catch (mintErr) {
+      req.log?.warn({ err: mintErr, seedId }, "seed on-chain mint failed (deferred)");
+    }
+
+    res.status(201).json({ grow, seed });
   } catch (err) {
     req.log?.error({ err }, "start-grow failed");
     res.status(500).json({ error: "failed_to_start_grow" });

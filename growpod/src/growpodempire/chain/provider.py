@@ -31,6 +31,14 @@ class AssetInfo:
     url: Optional[str] = None
 
 
+@dataclass
+class AssetMint:
+    """Result of creating an asset: its id plus the creating txid when known."""
+
+    asset_id: int
+    txid: Optional[str] = None
+
+
 class ChainProvider(ABC):
     """The operations the game needs from a blockchain."""
 
@@ -54,6 +62,32 @@ class ChainProvider(ABC):
         metadata_hash: Optional[bytes] = None,
     ) -> int:
         """Create an ASA (fungible token or NFT) and return its asset id."""
+
+    def create_asset_tx(
+        self,
+        *,
+        unit_name: str,
+        asset_name: str,
+        total: int,
+        decimals: int,
+        url: Optional[str] = None,
+        metadata_hash: Optional[bytes] = None,
+    ) -> "AssetMint":
+        """Create an asset and return both its id and the creating txid.
+
+        Default implementation reuses :meth:`create_asset` and reports no txid;
+        providers that surface the transaction id override this. Additive so the
+        existing harvest/strain mint path (which only needs the id) is untouched.
+        """
+        asset_id = self.create_asset(
+            unit_name=unit_name,
+            asset_name=asset_name,
+            total=total,
+            decimals=decimals,
+            url=url,
+            metadata_hash=metadata_hash,
+        )
+        return AssetMint(asset_id=asset_id, txid=None)
 
     @abstractmethod
     def destroy_asset(self, asset_id: int) -> str:
