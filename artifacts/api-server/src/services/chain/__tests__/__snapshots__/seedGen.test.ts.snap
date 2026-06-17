@@ -1,0 +1,14 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`deriveSeedTraits matches a known golden vector (locks the byte-slicing math) 1`] = `
+{
+  "colorShift": 111.52941176470588,
+  "growthRate": 1.256470588235294,
+  "internodeSpacing": 0.5450980392156863,
+  "leafDensity": 0.2062745098039216,
+  "mutationFlag": false,
+  "parentSeedId": null,
+  "resinProfile": 0.12156862745098039,
+  "strainFamily": "sativa",
+}
+`;

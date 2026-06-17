@@ -1,6 +1,7 @@
 import { useEffect, useState, type ComponentType } from "react";
 
 import { modules as discoveredModules } from "./.generated/mockup-components";
+import CloneRoom from "./pages/clone-room";
 
 type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 
@@ -128,7 +129,22 @@ function getPreviewPath(): string | null {
   return match ? match[1] : null;
 }
 
+function isCloneRoomPath(): boolean {
+  const basePath = getBasePath();
+  const { pathname } = window.location;
+  const local =
+    basePath && pathname.startsWith(basePath)
+      ? pathname.slice(basePath.length) || "/"
+      : pathname;
+  return local === "/clone-room";
+}
+
 function App() {
+  // FRONTIER Clone Room route (CLONE-05) — isolated R3F canvas at /clone-room.
+  if (isCloneRoomPath()) {
+    return <CloneRoom />;
+  }
+
   const previewPath = getPreviewPath();
 
   if (previewPath) {

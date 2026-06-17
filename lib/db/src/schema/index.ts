@@ -17,4 +17,5 @@
 //   export type InsertPost = z.infer<typeof insertPostSchema>;
 //   export type Post = typeof postsTable.$inferSelect;
 
-export {}
+// FRONTIER Clone Room — new tables (additive only)
+export * from "./cloneRoom";
