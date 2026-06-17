@@ -35,7 +35,7 @@ export function CareButtons({ plant }: { plant: PlantState }) {
         loading={pending === "water"}
         onClick={() => doCare("water")}
       >
-        💧 Water
+        💧 Water <span className="ml-1 font-mono text-[10px] opacity-60">· 10 🌿</span>
       </Button>
       <Button
         size="sm"
@@ -45,7 +45,7 @@ export function CareButtons({ plant }: { plant: PlantState }) {
         loading={pending === "feed"}
         onClick={() => doCare("feed")}
       >
-        🧪 Feed
+        🧪 Feed <span className="ml-1 font-mono text-[10px] opacity-60">· 10 🌿</span>
       </Button>
       <Button
         size="sm"

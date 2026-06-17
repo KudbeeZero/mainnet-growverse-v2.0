@@ -10,6 +10,7 @@ import { useDevSpeedStore } from "@/lib/devSpeedStore";
 export function NavBar() {
   const pathname = usePathname();
   const { isAuthed } = useSession();
+  const { devSpeed, toggle } = useDevSpeedStore();
 
   return (
     <header className="sticky top-0 z-30 border-b border-ink-700 bg-ink-900/95 backdrop-blur">
@@ -45,7 +46,22 @@ export function NavBar() {
             </nav>
           )}
         </div>
-        <PlayerBadge />
+        <div className="flex shrink-0 items-center gap-2">
+          {isAuthed && (
+            <button
+              onClick={toggle}
+              title={devSpeed ? "10× speed ON — click to disable" : "Enable 10× time acceleration"}
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold tracking-wide transition-all ${
+                devSpeed
+                  ? "border-green-400 bg-green-500/20 text-green-300 shadow-[0_0_10px_rgba(74,222,128,0.35)]"
+                  : "border-ink-600 bg-ink-800 text-gray-500 hover:border-green-700 hover:text-green-400"
+              }`}
+            >
+              ⚡ 10×
+            </button>
+          )}
+          <PlayerBadge />
+        </div>
       </div>
     </header>
   );

@@ -59,4 +59,10 @@ export const plants = {
     apiFetch<AdvisorReport>(`/players/${playerId}/plants/${plantId}/advisor`, {
       auth: true,
     }),
+
+  // Pay 25 GROW to remove a harvested/dead plant and free the pod slot.
+  cleanup: (playerId: string, plantId: string) =>
+    apiFetch<void>(`/players/${playerId}/plants/${plantId}`, {
+      method: "DELETE",
+    }),
 };

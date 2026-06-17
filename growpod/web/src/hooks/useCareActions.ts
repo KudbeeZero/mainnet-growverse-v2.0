@@ -66,6 +66,27 @@ export function useCareActions(plantId: string) {
   return { care, harvest };
 }
 
+export function useCleanupPlant() {
+  const { playerId } = useSession();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const removePlant = useIdStore((s) => s.removePlant);
+
+  return useMutation<void, ApiError, string>({
+    mutationFn: (plantId) => api.plants.cleanup(playerId!, plantId),
+    onSuccess: (_v, plantId) => {
+      toast.success("Pod cleaned up · ready for a new seed 🌱");
+      if (playerId) {
+        removePlant(playerId, plantId);
+        qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
+        qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
+        qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+      }
+    },
+    onError: (e) => toast.error(e.message),
+  });
+}
+
 export function usePlantImport() {
   const { playerId } = useSession();
   const addPlant = useIdStore((s) => s.addPlant);

@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
-import { GrowChamber } from "@/components/viz/GrowChamber";
+import { GrowChamber, type ChamberView } from "@/components/viz/GrowChamber";
 import { StatBars } from "./StatBars";
 import { ConditionBadges } from "./ConditionBadges";
 import { CareButtons } from "./CareButtons";
@@ -13,6 +14,7 @@ import { PlantMetrics } from "./PlantMetrics";
 import { StageTimelineCompact } from "./StageTimeline";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap } from "@/hooks/queries";
+import { useCleanupPlant } from "@/hooks/useCareActions";
 import { titleCase, num } from "@/lib/format";
 import {
   morphologyFor,
@@ -36,6 +38,8 @@ export function PlantCard({
 }) {
   const { data: plant, isLoading, isError, error } = usePlantState(playerId, plantId);
   const { map } = useStrainMap();
+  const cleanup = useCleanupPlant();
+  const [chamberView, setChamberView] = useState<ChamberView>("chamber");
 
   if (isLoading) {
     return (
@@ -97,28 +101,54 @@ export function PlantCard({
         )}
       </div>
 
-      <div className="relative h-44 w-full overflow-hidden rounded-lg bg-[#050b12]">
-        <GrowChamber
-          seed={seedForPlant(plantId)}
-          day={liveNominalDay}
-          stage={plant.growth_stage}
-          morphology={morphology}
-          silhouette={silhouette}
-          dev={dev}
-          climate={{
-            fan: 45,
-            temp: pod?.temperature ?? 24,
-            hum: pod?.humidity ?? 50,
-            co2: pod?.co2_level ?? 800,
-          }}
-          conditionFlags={plant.condition_flags}
-          view="chamber"
-          budColor={budColor}
-          budDna={budDna}
-        />
-      </div>
+      {plant.harvested ? (
+        /* ---- Harvested: empty pot with cleanup CTA ---- */
+        <div className="flex h-44 w-full flex-col items-center justify-center gap-3 rounded-lg border border-ink-700 bg-[#050b12]">
+          <div className="text-center">
+            <div className="text-4xl">🪴</div>
+            <p className="mt-1 text-xs text-gray-500">Buds harvested · pod needs cleaning</p>
+          </div>
+          <button
+            onClick={() => cleanup.mutate(plant.id)}
+            disabled={cleanup.isPending}
+            className="rounded-full border border-amber-600/60 bg-amber-950/40 px-4 py-1.5 text-xs font-semibold text-amber-300 transition-colors hover:border-amber-500 hover:text-amber-200 disabled:opacity-50"
+          >
+            {cleanup.isPending ? "Cleaning…" : "🧹 Clean Up · 25 🌿"}
+          </button>
+        </div>
+      ) : (
+        /* ---- Live plant: grow chamber with bud-view toggle ---- */
+        <div className="relative h-44 w-full overflow-hidden rounded-lg bg-[#050b12]">
+          <GrowChamber
+            seed={seedForPlant(plantId)}
+            day={liveNominalDay}
+            stage={plant.growth_stage}
+            morphology={morphology}
+            silhouette={silhouette}
+            dev={dev}
+            climate={{
+              fan: 45,
+              temp: pod?.temperature ?? 24,
+              hum: pod?.humidity ?? 50,
+              co2: pod?.co2_level ?? 800,
+            }}
+            conditionFlags={plant.condition_flags}
+            view={chamberView}
+            budColor={budColor}
+            budDna={budDna}
+          />
+          {(plant.growth_stage === "flowering" || plant.growth_stage === "harvest") && (
+            <button
+              onClick={() => setChamberView((v) => (v === "chamber" ? "macro" : "chamber"))}
+              className="absolute bottom-2 right-2 z-10 rounded-full border border-ink-600 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-gray-400 backdrop-blur-sm transition-colors hover:border-grow-500 hover:text-grow-300"
+            >
+              {chamberView === "chamber" ? "🔬 Buds" : "🌿 Plant"}
+            </button>
+          )}
+        </div>
+      )}
 
-      {plant.forecast && (
+      {plant.forecast && !plant.harvested && (
         <div className="rounded-md border border-ink-700 bg-ink-900/50 px-2.5 py-2">
           <StageTimelineCompact
             forecast={plant.forecast}
@@ -129,14 +159,14 @@ export function PlantCard({
       )}
 
       <ConditionBadges flags={plant.condition_flags} />
-      {plant.metrics && (
+      {plant.metrics && !plant.harvested && (
         <div className="rounded-md border border-ink-700 bg-ink-900/50 px-2.5 py-1.5">
           <PlantMetrics plant={plant} compact />
         </div>
       )}
-      <StatBars plant={plant} />
+      {!plant.harvested && <StatBars plant={plant} />}
       <PlantActionCTA plant={plant} pod={pod} compact />
-      <CareButtons plant={plant} />
+      {!plant.harvested && <CareButtons plant={plant} />}
     </Card>
   );
 }

@@ -17,10 +17,13 @@ import { DASHBOARD_COACH_MARKS } from "@/lib/coachMarks";
 import { usePods, usePlantsList } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useIdStore } from "@/lib/localStore";
+import { useDevSpeedStore } from "@/lib/devSpeedStore";
 
 // Stable empty reference so the Zustand selector never returns a fresh array
 // (which would loop useSyncExternalStore → React #185).
 const NO_IDS: string[] = [];
+
+const TWO_WEEKS_MS = 14 * 24 * 3600 * 1000;
 
 function DashboardInner() {
   const { playerId } = useSession();
@@ -29,24 +32,41 @@ function DashboardInner() {
   const localPlantIds =
     useIdStore((s) => (playerId ? s.ids[playerId]?.plantIds : undefined)) ?? NO_IDS;
   const [showCreate, setShowCreate] = useState(false);
+  const [showNeglect, setShowNeglect] = useState(false);
 
-  // ⚡ Dev speed state — drives real backend clock + smooth decimal display
-  const [devSpeed, setDevSpeed] = useState(false);
-  const [gameHoursElapsed, setGameHoursElapsed] = useState(0);
+  // ⚡ Dev speed — state lives in the persisted store so it survives navigation + refresh
+  const { devSpeed, setDevSpeed, incrementHours, resetElapsed } = useDevSpeedStore();
   const lastTickMs = useRef<number>(0);
   const [tickFraction, setTickFraction] = useState(0);
 
-  // Main 700ms clock tick: advance 1 game-hour, then refetch plants.
+  // On mount: check for long absence, then record this visit.
+  useEffect(() => {
+    const { lastVisitMs: lv, markVisit: mv } = useDevSpeedStore.getState();
+    if (lv > 0 && Date.now() - lv > TWO_WEEKS_MS) setShowNeglect(true);
+    mv();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-stop 10× when any plant hits harvest-ready (hours_to_harvest ≤ 0).
+  useEffect(() => {
+    if (!devSpeed) return;
+    const ready = (plants.data ?? []).some(
+      (p) => p.is_alive && !p.harvested && p.growth_stage === "harvest",
+    );
+    if (ready) setDevSpeed(false);
+  }, [plants.data, devSpeed, setDevSpeed]);
+
+  // Main 700ms clock tick: advance 1 game-hour on the backend, then refetch plants.
   useEffect(() => {
     if (!devSpeed) {
-      setGameHoursElapsed(0);
+      resetElapsed();
       setTickFraction(0);
       return;
     }
     const id = setInterval(async () => {
       lastTickMs.current = Date.now();
       setTickFraction(0);
-      setGameHoursElapsed((h) => h + 1);
+      incrementHours();
       try {
         await fetch("/api/dev/clock/advance", {
           method: "POST",
@@ -59,7 +79,8 @@ function DashboardInner() {
       }
     }, 700);
     return () => clearInterval(id);
-  }, [devSpeed, plants]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devSpeed]);
 
   // Smooth 40ms interpolation between ticks — drives decimal precision on the counter.
   useEffect(() => {
@@ -69,10 +90,6 @@ function DashboardInner() {
     }, 40);
     return () => clearInterval(id);
   }, [devSpeed]);
-
-  // Total elapsed game time with smooth sub-hour precision
-  const totalGameHours = gameHoursElapsed + tickFraction;
-  const gameDays = (totalGameHours / 24).toFixed(2);
 
   if (pods.isLoading) return <LoadingBlock label="Loading your grow…" />;
 
@@ -90,6 +107,23 @@ function DashboardInner() {
 
   return (
     <div className="space-y-6">
+      {showNeglect && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-600/50 bg-amber-950/30 px-4 py-3">
+          <span className="text-xl">⏳</span>
+          <div className="flex-1 text-sm text-amber-200">
+            <span className="font-semibold">Welcome back!</span> It&apos;s been over two weeks — your
+            plants have been running their stress clock without you. Check health and
+            conditions carefully before doing anything else.
+          </div>
+          <button
+            onClick={() => setShowNeglect(false)}
+            className="mt-0.5 text-xs text-amber-400 hover:text-amber-200"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <PageHeader
         eyebrow={`⌖ ${liveCount} LIVE PLANTS · ${podList.length} PODS`}
         title="Grow Dashboard"
@@ -104,21 +138,6 @@ function DashboardInner() {
             <Button size="sm" data-coach="new-pod" onClick={() => setShowCreate((s) => !s)}>
               + New Pod
             </Button>
-            {/* ⚡ Dev speed toggle — wired to real backend clock */}
-            <button
-              onClick={() => setDevSpeed((s) => !s)}
-              title={devSpeed ? "10× speed ON — tap to disable" : "10× speed OFF — tap to enable"}
-              className={`flex min-h-[36px] items-center gap-1.5 rounded-full border px-3 font-extrabold tracking-wide transition-all text-xs ${
-                devSpeed
-                  ? "border-green-400 bg-green-500/20 text-green-300 shadow-[0_0_12px_rgba(74,222,128,0.4)]"
-                  : "border-ink-600 bg-ink-800 text-gray-400 hover:border-green-700 hover:text-green-500"
-              }`}
-            >
-              <span>⚡ 10×</span>
-              {devSpeed && (
-                <span className="font-mono text-green-200">+{gameDays}d</span>
-              )}
-            </button>
           </div>
         }
       />
@@ -173,16 +192,6 @@ function DashboardInner() {
 
       {/* First-session guidance — points at the real UI, once per player. */}
       <CoachMarks marks={DASHBOARD_COACH_MARKS} />
-
-      {/* Mobile: floating pill shows elapsed game time when 10× is active */}
-      {devSpeed && (
-        <button
-          onClick={() => setDevSpeed(false)}
-          className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-green-400 bg-green-500/20 px-4 py-2 font-mono text-xs font-extrabold text-green-300 shadow-[0_0_16px_rgba(74,222,128,0.5)] lg:hidden"
-        >
-          ⚡ 10× · +{gameDays} game days · tap to stop
-        </button>
-      )}
     </div>
   );
 }

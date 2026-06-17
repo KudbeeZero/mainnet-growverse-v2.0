@@ -438,6 +438,18 @@ def harvest(player_id, plant_id):
         return _error(str(e))
 
 
+@game_bp.delete("/players/<player_id>/plants/<plant_id>")
+@require_player
+def cleanup_plant(player_id, plant_id):
+    """Pay 25 GROW to remove a harvested/dead plant and reset the pod slot."""
+    try:
+        with session_scope() as s:
+            GameService(s).cleanup_plant(player_id, plant_id)
+        return jsonify({"status": "cleaned"}), 200
+    except (GameError, InsufficientFundsError) as e:
+        return _error(str(e))
+
+
 # ----- Harvests: inventory, curing, sale ---------------------------------
 @game_bp.get("/players/<player_id>/harvests")
 @require_player

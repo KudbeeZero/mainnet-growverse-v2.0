@@ -906,6 +906,19 @@ class GameService:
         leveling_service.award(self.session, player_id, "harvest", self.cfg)
         return harvest
 
+    def cleanup_plant(self, player_id: str, plant_id: str, cleanup_cost: int = 25) -> None:
+        """Pay GROW to remove a harvested or dead plant and free the pod slot."""
+        plant = self.session.get(Plant, plant_id)
+        if plant is None or plant.player_id != player_id:
+            raise GameError("Plant not found")
+        if plant.is_alive and not plant.harvested:
+            raise GameError("Plant must be harvested or dead before cleanup")
+        cost = Decimal(str(cleanup_cost))
+        post(self.session, player_id, -cost, LedgerEntryType.POD_CLEANUP,
+             ref_type="plant", ref_id=plant_id)
+        self.session.delete(plant)
+        self.session.flush()
+
     def _terpene_intensity(self, harvest: Harvest) -> float:
         """Strongest expressed terpene on a harvest (0..1), for the sale premium."""
         terps = harvest.terpenes or {}
