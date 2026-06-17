@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
-import { GrowChamber, type ChamberView } from "@/components/viz/GrowChamber";
+import type { ChamberView } from "@/components/viz/GrowChamber";
 import { StatBars } from "./StatBars";
 import { ConditionBadges } from "./ConditionBadges";
 import { CareButtons } from "./CareButtons";
@@ -27,6 +28,11 @@ import {
 import { silhouetteFor, budColorForStrain } from "@/lib/chamber/strainVisuals";
 import { budDnaFor } from "@/lib/chamber/budDna";
 import type { Pod } from "@/lib/types";
+
+const GrowChamber = dynamic(
+  () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
+  { ssr: false, loading: () => null },
+);
 
 export function PlantCard({
   playerId,

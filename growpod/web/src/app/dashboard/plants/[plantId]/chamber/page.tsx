@@ -2,12 +2,13 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
 import { CareButtons } from "@/components/plant/CareButtons";
-import { GrowChamber, type ChamberView } from "@/components/viz/GrowChamber";
+import type { ChamberView } from "@/components/viz/GrowChamber";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap, usePods } from "@/hooks/queries";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -31,6 +32,11 @@ import {
 import { budColorForStrain, silhouetteFor } from "@/lib/chamber/strainVisuals";
 import { budDnaFor, applyEnvironmentToBudDNA } from "@/lib/chamber/budDna";
 import { titleCase } from "@/lib/format";
+
+const GrowChamber = dynamic(
+  () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
+  { ssr: false, loading: () => null },
+);
 
 // Local climate state: the five persisted fields + a visual-only FAN.
 interface ChamberClimate extends Environment {

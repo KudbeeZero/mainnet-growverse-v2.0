@@ -2,11 +2,11 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
-import { GrowChamber } from "@/components/viz/GrowChamber";
 import { usePlantState } from "@/hooks/usePlantState";
 import { usePods, useStrainMap } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
@@ -27,6 +27,11 @@ import { EnvironmentRail } from "@/components/command/EnvironmentRail";
 import { TimeControls } from "@/components/command/TimeControls";
 import { CommandActionBar } from "@/components/command/CommandActionBar";
 import { CommandFooter } from "@/components/command/CommandFooter";
+
+const GrowChamber = dynamic(
+  () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
+  { ssr: false, loading: () => null },
+);
 
 const DEFAULT_CLIMATE: Environment = {
   temperature: 24,

@@ -2,22 +2,39 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/States";
-import { CreatePodForm } from "@/components/pod/CreatePodForm";
-import { PodCard } from "@/components/pod/PodCard";
-import { PlantCard } from "@/components/plant/PlantCard";
-import { ImportEntityForm } from "@/components/onboarding/ImportEntityForm";
-import { CoachMarks } from "@/components/onboarding/CoachMarks";
 import { DASHBOARD_COACH_MARKS } from "@/lib/coachMarks";
 import { usePods, usePlantsList } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useIdStore } from "@/lib/localStore";
 import { useDevSpeedStore } from "@/lib/devSpeedStore";
+
+const PodCard = dynamic(
+  () => import("@/components/pod/PodCard").then((m) => m.PodCard),
+  { loading: () => null },
+);
+const PlantCard = dynamic(
+  () => import("@/components/plant/PlantCard").then((m) => m.PlantCard),
+  { loading: () => null },
+);
+const CreatePodForm = dynamic(
+  () => import("@/components/pod/CreatePodForm").then((m) => m.CreatePodForm),
+  { loading: () => null },
+);
+const ImportEntityForm = dynamic(
+  () => import("@/components/onboarding/ImportEntityForm").then((m) => m.ImportEntityForm),
+  { loading: () => null },
+);
+const CoachMarks = dynamic(
+  () => import("@/components/onboarding/CoachMarks").then((m) => m.CoachMarks),
+  { loading: () => null },
+);
 
 // Stable empty reference so the Zustand selector never returns a fresh array
 // (which would loop useSyncExternalStore → React #185).

@@ -1,15 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { PlantCard } from "@/components/plant/PlantCard";
-import { PlantSeedForm } from "@/components/plant/PlantSeedForm";
-import { EnvironmentForm } from "@/components/plant/EnvironmentForm";
-import { WeatherRoller } from "@/components/plant/WeatherRoller";
 import { titleCase } from "@/lib/format";
 import type { Pod } from "@/lib/types";
+
+const PlantSeedForm = dynamic(
+  () => import("@/components/plant/PlantSeedForm").then((m) => m.PlantSeedForm),
+  { loading: () => null },
+);
+const EnvironmentForm = dynamic(
+  () => import("@/components/plant/EnvironmentForm").then((m) => m.EnvironmentForm),
+  { loading: () => null },
+);
+const WeatherRoller = dynamic(
+  () => import("@/components/plant/WeatherRoller").then((m) => m.WeatherRoller),
+  { loading: () => null },
+);
 
 export function PodCard({
   pod,
