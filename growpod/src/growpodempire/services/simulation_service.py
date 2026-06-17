@@ -70,11 +70,26 @@ class SimulationService:
         return plant
 
     def metrics(self, plant: Plant) -> dict:
-        """Scientist-grade derived readouts (VPD, DLI, PPFD) for a plant's pod."""
+        """Scientist-grade derived readouts (VPD, DLI, PPFD) for a plant's pod,
+        plus the display-only nutrient PPM and the current stage's target bands.
+
+        The PPM value and stage targets are DISPLAY ONLY — derived from the
+        existing 0..100 nutrient scalar and read from balance.yaml; they are
+        never fed back into the engine tick (see the constraint documented in
+        balance.yaml `simulation.nutrient`)."""
         from ..simulation import horticulture
         pod = self.session.get(GrowPod, plant.pod_id)
         env = engine.environment_for(plant, pod, self._sim)
-        return horticulture.derived_metrics(env, self._sim)
+        out = horticulture.derived_metrics(env, self._sim)
+        # Display-only nutrient readouts for the University Grow Console: a
+        # grower-facing PPM (scaled from the 0..100 scalar) and the PPM target
+        # window for the plant's current growth stage (None outside the fed
+        # stages, e.g. seed / germination / harvest).
+        ncfg = self._sim.get("nutrient", {})
+        scale = ncfg.get("ppm_display_scale", 12.0)
+        out["nutrient_ppm"] = round((plant.nutrient_level or 0.0) * scale, 0)
+        out["stage_targets"] = ncfg.get("stage_targets", {}).get(plant.growth_stage)
+        return out
 
     def forecast(self, plant: Plant) -> dict:
         """Lifecycle forecast: current stage, progress, and ETAs to the next stage
