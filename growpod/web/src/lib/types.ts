@@ -491,3 +491,15 @@ export interface LectureReport {
   quiz_question: string;
   audio_url?: string;
 }
+
+export interface SeasonalStrain {
+  id: string;
+  strain_id: string;
+  strain_name: string;
+  strain_rarity: string;
+  strain_thc_max: number | null;
+  strain_terpenes: string[];
+  available_month: string;
+  price_gc: number;
+  is_current: boolean;
+}

@@ -26,6 +26,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     JSON,
+    LargeBinary,
     Numeric,
     String,
     Index,
@@ -519,6 +520,49 @@ class DegreeProgress(UUIDPrimaryKeyMixin, Base):
 
     __table_args__ = (
         Index("uq_degree_progress_player_degree", "player_id", "degree_key", unique=True),
+    )
+
+
+class LectureAudio(UUIDPrimaryKeyMixin, Base):
+    """Cached TTS MP3 for a (voice_id, text_hash) pair — survives restarts."""
+
+    __tablename__ = "lecture_audio"
+
+    voice_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    text_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    mp3_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        Index("uq_lecture_audio_voice_hash", "voice_id", "text_hash", unique=True),
+    )
+
+
+class SeasonalStrain(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A strain available exclusively during a calendar month (YYYY-MM).
+
+    Once the month ends the row remains but the seed is no longer purchasable;
+    any already-planted seeds grow to completion normally."""
+
+    __tablename__ = "seasonal_strains"
+
+    strain_id: Mapped[str] = mapped_column(ForeignKey("strains.id"), nullable=False)
+    available_month: Mapped[str] = mapped_column(
+        String(7), nullable=False
+    )  # YYYY-MM
+    price_gc: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+
+    strain: Mapped["Strain"] = relationship(lazy="joined")
+
+    __table_args__ = (
+        Index(
+            "uq_seasonal_strains_strain_month",
+            "strain_id",
+            "available_month",
+            unique=True,
+        ),
     )
 
 

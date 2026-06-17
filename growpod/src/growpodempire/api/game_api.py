@@ -19,6 +19,7 @@ from ..services.weather_service import WeatherService
 from ..services.contract_service import ContractService
 from ..services.cup_service import CupService
 from ..services.university_service import UniversityService
+from ..services.seasonal_service import SeasonalService
 from ..services.research_service import ResearchService
 from ..services import leveling_service
 from ..economy.ledger import InsufficientFundsError
@@ -1127,6 +1128,80 @@ def serve_narration(course_key, level):
     if not candidates:
         return _error("Audio not yet generated", 404)
     return send_file(str(candidates[0]), mimetype="audio/mpeg")
+
+
+@game_bp.get("/university/courses/<course_key>/audio")
+@require_feature("university")
+@limiter.limit("30 per minute")
+def university_course_audio(course_key):
+    """Generate (or retrieve from DB/cache) and stream the professor's MP3 for a course.
+
+    Returns 204 No Content when no ElevenLabs key is set and no cached audio exists.
+    Audio is keyed on the static curriculum text (not the AI-generated lecture) so
+    the same MP3 is always returned for the same course, regardless of which lecture
+    variant the player last received."""
+    import logging
+    from flask import Response
+    from ..services.university_service import load_curriculum
+    from ..config import get_settings
+
+    log = logging.getLogger(__name__)
+
+    curriculum = load_curriculum()
+    course = curriculum.get("courses", {}).get(course_key)
+    if not course:
+        return _error("Course not found", 404)
+
+    try:
+        from ..ai.elevenlabs_narrator import generate_narration_for_course
+        with session_scope() as s:
+            mp3 = generate_narration_for_course(
+                course,
+                api_key=get_settings().elevenlabs_api_key,
+                session=s,
+            )
+    except Exception as exc:
+        log.warning("university_course_audio: narration error for %s: %s", course_key, exc)
+        return Response(status=204)
+
+    if not mp3:
+        return Response(status=204)
+
+    return Response(
+        mp3,
+        status=200,
+        mimetype="audio/mpeg",
+        headers={
+            "Content-Disposition": f'inline; filename="{course_key}.mp3"',
+            "Content-Length": str(len(mp3)),
+            "Cache-Control": "public, max-age=86400",
+        },
+    )
+
+
+# ----- Seasonal Strain Drops ---------------------------------------------
+
+@game_bp.get("/seasonal/strains")
+@require_feature("seasonal_strains")
+def seasonal_strains_current():
+    """List this month's exclusive strain drops. Public."""
+    with session_scope() as s:
+        payload = SeasonalService(s).current_month_strains()
+    return jsonify(payload)
+
+
+@game_bp.post("/players/<player_id>/seasonal/strains/<seasonal_id>/purchase")
+@require_feature("seasonal_strains")
+@require_player
+@limiter.limit("60 per hour")
+def seasonal_strain_purchase(player_id, seasonal_id):
+    """Purchase one seed of a seasonal exclusive strain (token sink)."""
+    try:
+        with session_scope() as s:
+            payload = SeasonalService(s).purchase(player_id, seasonal_id)
+        return jsonify(payload), 201
+    except (GameError, InsufficientFundsError) as e:
+        return _error(str(e))
 
 
 # ----- On-chain: wallet linking, NFT minting, metadata -------------------

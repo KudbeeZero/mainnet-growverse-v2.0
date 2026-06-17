@@ -16,6 +16,8 @@ py-algorand-sdk==2.11.1
 # AI "Master Grower" advisor. The app runs without an ANTHROPIC_API_KEY (falls
 # back to an offline mock advisor); this is required for real Claude advice.
 anthropic>=0.49.0
+# HTTP client used by the ElevenLabs TTS narrator.
+requests>=2.31.0
 # Postgres driver for production (Render). Local/dev/test default to SQLite and
 # do not require this; safe to skip if the binary wheel is unavailable.
 psycopg2-binary==2.9.9

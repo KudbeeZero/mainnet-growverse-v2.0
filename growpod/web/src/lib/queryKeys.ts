@@ -32,4 +32,5 @@ export const queryKeys = {
     ["university", "lecture", id, courseKey, level] as const,
   ftueStatus: (id: string) => ["ftue", "status", id] as const,
   ftueCoaching: (id: string, step: string) => ["ftue", "coaching", id, step] as const,
+  seasonalStrains: () => ["seasonal", "strains"] as const,
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
@@ -57,7 +57,10 @@ function CourseInner({ courseKey }: { courseKey: string }) {
           <div className="instrument-label mb-1">{dept}</div>
           <h1 className="text-2xl font-bold text-gray-50">{course.name}</h1>
         </div>
-        <Badge className="border-ink-600 bg-ink-700 text-gray-300">{titleCase(course.status)}</Badge>
+        <div className="flex items-center gap-2">
+          <CourseAudioPlayer courseKey={courseKey} />
+          <Badge className="border-ink-600 bg-ink-700 text-gray-300">{titleCase(course.status)}</Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -131,6 +134,93 @@ function CourseInner({ courseKey }: { courseKey: string }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function CourseAudioPlayer({ courseKey }: { courseKey: string }) {
+  const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const audioUrl = `/api/game/university/courses/${courseKey}/audio`;
+
+  // Cleanup on unmount: pause and release the audio element.
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  function handlePlay() {
+    if (unavailable) return;
+
+    // If already loaded — toggle play/pause.
+    if (audioRef.current) {
+      if (playing) {
+        audioRef.current.pause();
+        setPlaying(false);
+      } else {
+        audioRef.current.play().catch(() => setPlaying(false));
+        setPlaying(true);
+      }
+      return;
+    }
+
+    // First play: HEAD-check for 204, then create and load the Audio element.
+    setLoading(true);
+    fetch(audioUrl, { method: "HEAD" })
+      .then((r) => {
+        if (r.status === 204 || !r.ok) {
+          setUnavailable(true);
+          setLoading(false);
+          return;
+        }
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+
+        audio.addEventListener("canplaythrough", () => {
+          setLoading(false);
+          setPlaying(true);
+          audio.play().catch(() => setPlaying(false));
+        });
+        audio.addEventListener("ended", () => setPlaying(false));
+        audio.addEventListener("error", () => {
+          setLoading(false);
+          setUnavailable(true);
+          audioRef.current = null;
+        });
+        audio.load();
+      })
+      .catch(() => {
+        setUnavailable(true);
+        setLoading(false);
+      });
+  }
+
+  if (unavailable) return null;
+
+  return (
+    <button
+      onClick={handlePlay}
+      disabled={loading}
+      aria-label={playing ? "Pause professor narration" : "Play professor narration"}
+      title={playing ? "Pause narration" : "Play professor narration"}
+      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+        loading
+          ? "border-ink-600 text-gray-500 cursor-wait"
+          : playing
+          ? "border-grow-500 bg-grow-900/40 text-grow-200"
+          : "border-ink-600 bg-ink-800 text-gray-300 hover:border-grow-600 hover:text-grow-200"
+      }`}
+    >
+      <span>{loading ? "⏳" : playing ? "⏸" : "🔊"}</span>
+      <span>{loading ? "Loading…" : playing ? "Pause" : "Listen"}</span>
+    </button>
   );
 }
 

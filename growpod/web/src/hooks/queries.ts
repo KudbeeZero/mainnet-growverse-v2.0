@@ -216,3 +216,11 @@ export function useTranscript() {
     enabled: isAuthed,
   });
 }
+
+export function useSeasonalStrains() {
+  return useQuery({
+    queryKey: queryKeys.seasonalStrains(),
+    queryFn: () => api.seasonal.currentStrains(),
+    staleTime: 60_000,
+  });
+}
