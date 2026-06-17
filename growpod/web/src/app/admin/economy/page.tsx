@@ -953,7 +953,7 @@ function StorePartnersCard() {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch<PartnerRow[]>("/admin/store/partners");
+      const data = await apiFetch<PartnerRow[]>("/admin/store/partners", { auth: true });
       setPartners(data);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load partners");

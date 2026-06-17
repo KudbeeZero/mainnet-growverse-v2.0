@@ -32,7 +32,7 @@ const ALL_NAV_LINKS: NavLink[] = [
   { href: "/lab", label: "Lab", icon: "🧬", primary: true },
   { href: "/market", label: "Market", icon: "🛒", primary: true, feature: "marketplace" },
   { href: "/cup", label: "Cup", icon: "🏆", primary: true, feature: "cup" },
-  { href: "/store", label: "Store", icon: "🏪", primary: true },
+  { href: "/store", label: "Store", icon: "🏪" },
   { href: "/university", label: "University", icon: "🎓", feature: "university" },
   { href: "/leaderboards", label: "Leaderboards", icon: "📊" },
   { href: "/profile", label: "Profile", icon: "👤" },

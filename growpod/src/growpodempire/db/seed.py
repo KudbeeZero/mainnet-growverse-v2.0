@@ -114,9 +114,9 @@ def seed_store(session=None) -> None:
                 "name": "Pacific Peaks Dispensary",
                 "logo_url": "https://placehold.co/80x80/0a2a3a/60a5fa?text=PPD",
                 "tagline": "Summit-quality genetics, every drop",
-                "product_type": "consumable",
-                "product_id": "bloom_booster",
-                "price_gc": Decimal("55"),
+                "product_type": "strain",
+                "product_id": uncommon_strain.id if uncommon_strain else (common_strain.id if common_strain else ""),
+                "price_gc": Decimal("175"),
                 "display_order": 1,
             },
             {
