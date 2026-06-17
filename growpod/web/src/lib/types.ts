@@ -489,4 +489,5 @@ export interface LectureReport {
   content: string;
   key_takeaways: string[];
   quiz_question: string;
+  audio_url?: string;
 }

@@ -69,6 +69,40 @@ def degree_effects(
     return effects
 
 
+def _completed_course_keys(session: Session, player_id: str) -> set:
+    rows = (
+        session.query(CourseEnrollment)
+        .filter(
+            CourseEnrollment.player_id == player_id,
+            CourseEnrollment.status == "completed",
+        )
+        .all()
+    )
+    return {r.course_key for r in rows}
+
+
+def course_effects(
+    session: Session, player_id: str, cfg: Optional[EconomyConfig] = None
+) -> Dict[str, float]:
+    """Aggregate the perks of every *course* a player has completed (additive).
+
+    Course perks are distinct from degree perks — they fire on individual course
+    completion, not when an entire degree is claimed.  Both are summed in
+    GameService._research() so every existing apply-site (harvest, care cost,
+    breeding) picks them up automatically.
+    """
+    courses = load_curriculum().get("courses", {})
+    effects: Dict[str, float] = {k: 0.0 for k in _EFFECT_KEYS}
+    for key in _completed_course_keys(session, player_id):
+        course = courses.get(key)
+        if not course:
+            continue
+        for ek, ev in (course.get("perks") or {}).items():
+            if ek in effects:
+                effects[ek] += float(ev)
+    return effects
+
+
 class UniversityService:
     def __init__(
         self,

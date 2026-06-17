@@ -86,13 +86,15 @@ class GameService:
         self.clock = clock or active_clock()
 
     def _research(self, player_id: str) -> dict:
-        """Aggregated player perks = research-tree effects + earned-degree effects
-        (lazy imports avoid a circular dependency). Both use the same effect keys,
-        so every apply-site picks up university degrees automatically."""
+        """Aggregated player perks = research-tree + earned-degree + completed-course effects.
+        Lazy imports avoid circular dependencies. Every apply-site (harvest yield/quality,
+        care/breeding discounts, terpenes) picks up all three layers automatically."""
         from .research_service import research_effects
-        from .university_service import degree_effects
+        from .university_service import degree_effects, course_effects
         fx = research_effects(self.session, player_id, self.cfg)
         for k, v in degree_effects(self.session, player_id, self.cfg).items():
+            fx[k] = fx.get(k, 0.0) + v
+        for k, v in course_effects(self.session, player_id, self.cfg).items():
             fx[k] = fx.get(k, 0.0) + v
         return fx
 

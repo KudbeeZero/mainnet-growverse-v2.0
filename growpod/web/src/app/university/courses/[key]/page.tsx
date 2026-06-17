@@ -203,6 +203,20 @@ function LectureReader({ courseKey, topic }: { courseKey: string; topic: string 
         <article className="space-y-3">
           <h3 className="text-lg font-semibold text-gray-50">{lecture.data.title}</h3>
           <p className="text-sm italic text-gray-400">{lecture.data.summary}</p>
+
+          {/* 🎙 Audio player — only shown when ElevenLabs key is set server-side */}
+          {lecture.data.audio_url && (
+            <div className="flex items-center gap-3 rounded-lg border border-grow-800 bg-grow-950/40 px-3 py-2">
+              <span className="text-base">🎙</span>
+              <audio
+                controls
+                src={lecture.data.audio_url}
+                className="h-8 w-full"
+                aria-label="Professor audio narration"
+              />
+            </div>
+          )}
+
           <div className="space-y-2 whitespace-pre-line text-sm leading-relaxed text-gray-300">
             {lecture.data.content}
           </div>

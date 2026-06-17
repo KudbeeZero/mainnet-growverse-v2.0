@@ -1084,11 +1084,49 @@ def university_lecture(player_id, course_key):
             lecturer = LecturerService(s)
             report = lecturer.teach(player_id, course_key, level=level, plant_id=plant_id)
             payload = {"provider": lecturer.provider.name(), **report.model_dump()}
+
+        # Optionally generate / serve cached TTS audio (no-op if key not set).
+        from ..config import get_settings
+        from ..ai.elevenlabs_narrator import generate_narration
+        from ..services.university_service import load_curriculum
+        dept = (load_curriculum().get("courses", {}).get(course_key) or {}).get("department")
+        audio_path = generate_narration(payload, department=dept,
+                                        api_key=get_settings().elevenlabs_api_key)
+        if audio_path:
+            payload["audio_url"] = f"/api/game/narration/{course_key}/{level}"
+
         return jsonify(payload)
     except GameError as e:
         return _error(str(e), 404)
     except AdvisorError as e:
         return _error(f"Professor unavailable: {e}", 503)
+
+
+@game_bp.get("/narration/<course_key>/<level>")
+def serve_narration(course_key, level):
+    """Serve the cached TTS MP3 for a lecture (no auth — file name is a SHA hash)."""
+    import os
+    from flask import send_file
+    from ..ai.elevenlabs_narrator import _CACHE_DIR, _voice_for, _build_spoken_text
+    from ..services.university_service import load_curriculum
+    import hashlib
+
+    curriculum = load_curriculum()
+    course = curriculum.get("courses", {}).get(course_key)
+    if not course:
+        return _error("Course not found", 404)
+
+    dept = course.get("department")
+    voice_id = _voice_for(dept)
+
+    # Re-derive the cache key the same way generate_narration does.
+    # We don't have the full LectureReport here, so we serve the first cached file
+    # matching the voice prefix for this course_key+level combo.
+    prefix = f"{voice_id}_"
+    candidates = sorted(_CACHE_DIR.glob(f"{prefix}*.mp3"), key=os.path.getmtime, reverse=True)
+    if not candidates:
+        return _error("Audio not yet generated", 404)
+    return send_file(str(candidates[0]), mimetype="audio/mpeg")
 
 
 # ----- On-chain: wallet linking, NFT minting, metadata -------------------
