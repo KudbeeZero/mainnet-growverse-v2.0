@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -29,12 +29,24 @@ function DashboardInner() {
   const localPlantIds =
     useIdStore((s) => (playerId ? s.ids[playerId]?.plantIds : undefined)) ?? NO_IDS;
   const [showCreate, setShowCreate] = useState(false);
-  const [devSpeed, setDevSpeed] = useState(false);
 
-  // ⚡ Dev speed — advance 1 game-hour every 700 ms when ON, then refetch plants.
+  // ⚡ Dev speed state — drives real backend clock + smooth decimal display
+  const [devSpeed, setDevSpeed] = useState(false);
+  const [gameHoursElapsed, setGameHoursElapsed] = useState(0);
+  const lastTickMs = useRef<number>(0);
+  const [tickFraction, setTickFraction] = useState(0);
+
+  // Main 700ms clock tick: advance 1 game-hour, then refetch plants.
   useEffect(() => {
-    if (!devSpeed) return;
+    if (!devSpeed) {
+      setGameHoursElapsed(0);
+      setTickFraction(0);
+      return;
+    }
     const id = setInterval(async () => {
+      lastTickMs.current = Date.now();
+      setTickFraction(0);
+      setGameHoursElapsed((h) => h + 1);
       try {
         await fetch("/api/dev/clock/advance", {
           method: "POST",
@@ -43,11 +55,24 @@ function DashboardInner() {
         });
         plants.refetch();
       } catch {
-        // silently ignore — button shows state is ON
+        // dev clock may not be available
       }
     }, 700);
     return () => clearInterval(id);
   }, [devSpeed, plants]);
+
+  // Smooth 40ms interpolation between ticks — drives decimal precision on the counter.
+  useEffect(() => {
+    if (!devSpeed) return;
+    const id = setInterval(() => {
+      setTickFraction(Math.min((Date.now() - lastTickMs.current) / 700, 1));
+    }, 40);
+    return () => clearInterval(id);
+  }, [devSpeed]);
+
+  // Total elapsed game time with smooth sub-hour precision
+  const totalGameHours = gameHoursElapsed + tickFraction;
+  const gameDays = (totalGameHours / 24).toFixed(2);
 
   if (pods.isLoading) return <LoadingBlock label="Loading your grow…" />;
 
@@ -79,17 +104,20 @@ function DashboardInner() {
             <Button size="sm" data-coach="new-pod" onClick={() => setShowCreate((s) => !s)}>
               + New Pod
             </Button>
-            {/* ⚡ Dev speed toggle — advances real grow clock 10× for testing */}
+            {/* ⚡ Dev speed toggle — wired to real backend clock */}
             <button
               onClick={() => setDevSpeed((s) => !s)}
               title={devSpeed ? "10× speed ON — tap to disable" : "10× speed OFF — tap to enable"}
-              className={`flex min-h-[36px] items-center gap-1 rounded-full border px-3 text-xs font-extrabold tracking-wide transition-all ${
+              className={`flex min-h-[36px] items-center gap-1.5 rounded-full border px-3 font-extrabold tracking-wide transition-all text-xs ${
                 devSpeed
                   ? "border-green-400 bg-green-500/20 text-green-300 shadow-[0_0_12px_rgba(74,222,128,0.4)]"
                   : "border-ink-600 bg-ink-800 text-gray-400 hover:border-green-700 hover:text-green-500"
               }`}
             >
-              ⚡ {devSpeed ? "10× ON" : "10×"}
+              <span>⚡ 10×</span>
+              {devSpeed && (
+                <span className="font-mono text-green-200">+{gameDays}d</span>
+              )}
             </button>
           </div>
         }
@@ -146,13 +174,13 @@ function DashboardInner() {
       {/* First-session guidance — points at the real UI, once per player. */}
       <CoachMarks marks={DASHBOARD_COACH_MARKS} />
 
-      {/* ⚡ Persistent floating indicator when 10× is active — always reachable */}
+      {/* Mobile: floating pill shows elapsed game time when 10× is active */}
       {devSpeed && (
         <button
           onClick={() => setDevSpeed(false)}
-          className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-green-400 bg-green-500/20 px-4 py-2 text-xs font-extrabold tracking-wide text-green-300 shadow-[0_0_16px_rgba(74,222,128,0.5)] lg:hidden"
+          className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-green-400 bg-green-500/20 px-4 py-2 font-mono text-xs font-extrabold text-green-300 shadow-[0_0_16px_rgba(74,222,128,0.5)] lg:hidden"
         >
-          ⚡ 10× SPEED ON — tap to stop
+          ⚡ 10× · +{gameDays} game days · tap to stop
         </button>
       )}
     </div>

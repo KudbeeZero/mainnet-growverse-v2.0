@@ -91,6 +91,9 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   // preview that day on the cycle. Preview never mutates server state.
   const [previewDay, setPreviewDay] = useState<number | null>(null);
   const [devSpeed, setDevSpeed] = useState(false);
+  // Smooth decimal countdown — interpolates between 700ms server ticks at 40ms (25fps)
+  const lastTickMs = useRef<number>(0);
+  const [tickFraction, setTickFraction] = useState(0);
 
   const pod = pods?.find((p) => p.id === plant?.pod_id);
 
@@ -139,8 +142,10 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   // ⚡ Dev speed: advance test clock 1 game-hour every 700ms while ON.
   // Requires GROW_TEST_CLOCK=true on the API (set in dev env).
   useEffect(() => {
-    if (!devSpeed) return;
+    if (!devSpeed) { setTickFraction(0); return; }
     const id = setInterval(async () => {
+      lastTickMs.current = Date.now();
+      setTickFraction(0);
       try {
         await fetch("/api/dev/clock/advance", {
           method: "POST",
@@ -152,6 +157,15 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     }, 700);
     return () => clearInterval(id);
   }, [devSpeed, refetch]);
+
+  // Smooth 40ms interpolation: drives decimal display between server ticks.
+  useEffect(() => {
+    if (!devSpeed) return;
+    const id = setInterval(() => {
+      setTickFraction(Math.min((Date.now() - lastTickMs.current) / 700, 1));
+    }, 40);
+    return () => clearInterval(id);
+  }, [devSpeed]);
 
   function onSlide(key: keyof ChamberClimate, value: number) {
     setClimate((c) => {
@@ -214,6 +228,13 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     : strain
       ? Math.round(daysToHarvest(plant.growth_stage, strain.flowering_days, plant.health))
       : null;
+  // Decimal-smooth countdown: server value minus in-progress tick fraction (0→1 per 700ms).
+  // Gives e.g. "4.83d" ticking smoothly instead of "5d" jumping each full hour.
+  const hoursSmooth = devSpeed && plant.forecast?.hours_to_harvest !== undefined
+    ? Math.max(0, plant.forecast.hours_to_harvest - tickFraction)
+    : null;
+  const daysSmooth = hoursSmooth !== null ? (hoursSmooth / 24).toFixed(2) : null;
+
   const c = climateModel({ fan: climate.fan, temp: climate.temperature, hum: climate.humidity, co2: climate.co2_level });
   const health = clamp(plant.health, 0, 100);
   const ended = !plant.is_alive || plant.harvested;
@@ -261,7 +282,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           {previewing && <span className="text-grow-300"> · preview</span>}
         </div>
         <div className="pointer-events-none absolute right-2 top-2 flex flex-col gap-1.5">
-          <ReadoutCard k="TO HARVEST" v={harvestDays ?? "—"} unit="d" />
+          <ReadoutCard k="TO HARVEST" v={daysSmooth ?? harvestDays ?? "—"} unit="d" />
           <ReadoutCard k="TEMP" v={climate.temperature} unit="°C" alert={Math.abs(climate.temperature - 24) > 5} />
           <ReadoutCard k="HUM" v={climate.humidity} unit="%" alert={Math.abs(climate.humidity - 50) > 15} />
           <ReadoutCard k="CO₂" v={climate.co2_level} />
@@ -458,17 +479,20 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       </div>
       </div>
 
-      {/* ⚡ Dev speed toggle — fixed bottom-right. ON = 1 game-hour every 700ms. */}
+      {/* ⚡ Dev speed toggle — fixed bottom-right. Shows live decimal harvest countdown when ON. */}
       <button
         onClick={() => setDevSpeed((s) => !s)}
         title={devSpeed ? "10× speed ON — tap to disable" : "10× speed OFF — tap to enable"}
-        className={`fixed bottom-4 right-4 z-50 flex h-9 w-16 items-center justify-center rounded-full border text-[11px] font-extrabold tracking-wide transition-all ${
+        className={`fixed bottom-4 right-4 z-50 flex h-9 items-center justify-center rounded-full border font-extrabold tracking-wide transition-all ${
           devSpeed
-            ? "border-green-400 bg-green-500/20 text-green-300 shadow-[0_0_14px_rgba(74,222,128,0.45)]"
-            : "border-[#1c3447] bg-[#0d1d2b] text-[#7fa9bf] hover:border-green-700 hover:text-green-500"
+            ? "gap-1 px-3 border-green-400 bg-green-500/20 text-[11px] text-green-300 shadow-[0_0_14px_rgba(74,222,128,0.45)]"
+            : "w-16 border-[#1c3447] bg-[#0d1d2b] text-[11px] text-[#7fa9bf] hover:border-green-700 hover:text-green-500"
         }`}
       >
-        ⚡ 10×
+        <span>⚡ 10×</span>
+        {devSpeed && daysSmooth !== null && (
+          <span className="font-mono text-green-200">· {daysSmooth}d</span>
+        )}
       </button>
     </div>
   );
