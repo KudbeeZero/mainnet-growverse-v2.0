@@ -8,7 +8,7 @@ move balances, txids are deterministic. No network, no secrets.
 import itertools
 from typing import Dict, Optional, Tuple
 
-from .provider import ChainProvider, AssetInfo, ChainError, TREASURY
+from .provider import ChainProvider, AssetInfo, AssetMint, ChainError, TREASURY
 
 
 class MockChainProvider(ChainProvider):
@@ -44,6 +44,19 @@ class MockChainProvider(ChainProvider):
         )
         self.balances[asset_id] = {TREASURY: total}
         return asset_id
+
+    def create_asset_tx(
+        self, *, unit_name, asset_name, total, decimals, url=None, metadata_hash=None
+    ) -> AssetMint:
+        asset_id = self.create_asset(
+            unit_name=unit_name,
+            asset_name=asset_name,
+            total=total,
+            decimals=decimals,
+            url=url,
+            metadata_hash=metadata_hash,
+        )
+        return AssetMint(asset_id=asset_id, txid=self._txid())
 
     def destroy_asset(self, asset_id: int) -> str:
         if asset_id not in self.assets:

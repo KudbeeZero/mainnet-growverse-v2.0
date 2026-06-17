@@ -12,7 +12,7 @@ tests use MockChainProvider so CI needs no network or funded account.
 
 from typing import Optional, Tuple
 
-from .provider import ChainProvider, AssetInfo, ChainError, TREASURY
+from .provider import ChainProvider, AssetInfo, AssetMint, ChainError, TREASURY
 
 _CONFIRM_ROUNDS = 6
 
@@ -52,6 +52,31 @@ class AlgorandProvider(ChainProvider):
     def create_asset(
         self, *, unit_name, asset_name, total, decimals, url=None, metadata_hash=None
     ) -> int:
+        return self._create_asset(
+            unit_name=unit_name,
+            asset_name=asset_name,
+            total=total,
+            decimals=decimals,
+            url=url,
+            metadata_hash=metadata_hash,
+        )["asset-index"]
+
+    def create_asset_tx(
+        self, *, unit_name, asset_name, total, decimals, url=None, metadata_hash=None
+    ) -> AssetMint:
+        result = self._create_asset(
+            unit_name=unit_name,
+            asset_name=asset_name,
+            total=total,
+            decimals=decimals,
+            url=url,
+            metadata_hash=metadata_hash,
+        )
+        return AssetMint(asset_id=result["asset-index"], txid=result["txid"])
+
+    def _create_asset(
+        self, *, unit_name, asset_name, total, decimals, url=None, metadata_hash=None
+    ) -> dict:
         from algosdk import transaction
 
         sp = self.client.suggested_params()
@@ -68,8 +93,7 @@ class AlgorandProvider(ChainProvider):
             reserve=self.treasury_addr,
             metadata_hash=metadata_hash,
         )
-        result = self._send(txn)
-        return result["asset-index"]
+        return self._send(txn)
 
     def destroy_asset(self, asset_id: int) -> str:
         from algosdk import transaction

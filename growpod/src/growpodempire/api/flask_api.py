@@ -11,6 +11,7 @@ from .. import __version__
 from ..config import get_settings
 from ..db.session import init_db
 from .game_api import game_bp
+from .chain_api import chain_bp
 from .errors import register_error_handlers
 from .observability import register_observability
 from .openapi import register_openapi
@@ -61,6 +62,9 @@ def create_app(init_database: bool = True):
 
     # DB-backed game layer (players, economy, strains, breeding, market).
     app.register_blueprint(game_bp)
+
+    # Internal chain helpers (seed minting) called by the TS api-server.
+    app.register_blueprint(chain_bp)
 
     # Monthly auto-rollover: carry forward all auto_renew seasonal strains into
     # the next calendar month.  Runs immediately at startup (catches any missed
