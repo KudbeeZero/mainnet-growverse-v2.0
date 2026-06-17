@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session";
 import { NAV_LINKS, isActiveLink } from "./navLinks";
 import { PlayerBadge } from "./PlayerBadge";
+import { useDevSpeedStore } from "@/lib/devSpeedStore";
 
 export function NavBar() {
   const pathname = usePathname();
