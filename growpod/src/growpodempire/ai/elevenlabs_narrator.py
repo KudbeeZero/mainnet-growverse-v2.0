@@ -2,8 +2,27 @@
 ElevenLabs narration provider for GrowPod University lectures.
 
 Converts a LectureReport's spoken text to MP3 audio via the ElevenLabs TTS API
-and caches the result in the database (primary) and /tmp (secondary) so the same
-lecture is only generated once, and the cache survives restarts.
+and caches the result across three layers so the same lecture is only generated
+once and audio survives container restarts / deployments.
+
+Cache hierarchy (fastest → slowest)
+-------------------------------------
+  L1  /tmp on-disk — fast in-process serving; wiped on each deploy.
+  L2  App Storage (GCS) — durable CDN-backed object store; persists across
+      deploys.  Keyed as  audio/<voice_id>_<hash>.mp3.
+  L3  DB `lecture_audio` table — durable BLOB fallback; used when object
+      storage is not yet configured (local dev) or to backfill L2.
+
+Flow when ElevenLabs key is present
+-------------------------------------
+  Hit L1 → return /tmp bytes
+  Hit L2 → download from GCS → write /tmp → return bytes
+  Hit L3 → upload to GCS (backfill L2) → write /tmp → return bytes
+  Miss all → call ElevenLabs → upload to GCS → write DB → write /tmp → return
+
+Flow without key (serve-from-cache only)
+-----------------------------------------
+  Same order, but returns None rather than calling ElevenLabs on a full miss.
 
 Activated when ELEVENLABS_API_KEY is set in the environment; otherwise the app
 falls back to text-only mode with no audio_url.
@@ -111,9 +130,10 @@ def generate_narration(
     Returns None if no API key is available or if generation fails.
 
     Caching order:
-      1. Database `lecture_audio` table (if *session* is provided) — survives restarts.
-      2. /tmp on-disk cache — fast secondary cache.
-      3. ElevenLabs API call — writes to both caches on success.
+      1. /tmp on-disk cache (L1) — fast in-process serving.
+      2. App Storage / GCS (L2) — durable across deploys; checked via DB row.
+      3. Database `lecture_audio` table (L3) — durable BLOB; backfills L2.
+      4. ElevenLabs API call — writes to all three caches on success.
 
     Parameters
     ----------
@@ -122,23 +142,13 @@ def generate_narration(
     api_key:    ElevenLabs API key; falls back to ELEVENLABS_API_KEY env var
     session:    optional SQLAlchemy Session for DB-level caching
     """
+    from .object_storage import gcs_get, gcs_put
+
     key = api_key or os.environ.get("ELEVENLABS_API_KEY")
-    if not key:
-        # No key — still serve from cache if a previous call stored audio.
-        voice_id = _voice_for(department)
-        text = _build_spoken_text(lecture)
-        path = _cache_path(voice_id, text)
-        if path.exists():
-            return str(path)
-        if session is not None:
-            mp3 = _db_get(session, voice_id, text)
-            if mp3:
-                _write_tmp_cache(path, mp3)
-                return str(path)
-        return None
 
     voice_id = _voice_for(department)
     text = _build_spoken_text(lecture)
+    digest = _text_hash(text)
     path = _cache_path(voice_id, text)
 
     # 1. /tmp hit
@@ -146,20 +156,37 @@ def generate_narration(
         logger.info("narration /tmp cache hit: %s", path.name)
         return str(path)
 
-    # 2. DB hit
+    # 2. GCS / DB hit
     if session is not None:
-        mp3 = _db_get(session, voice_id, text)
-        if mp3:
-            logger.info("narration DB cache hit for hash %s", _text_hash(text))
-            _write_tmp_cache(path, mp3)
-            return str(path)
+        row = _db_get_row(session, voice_id, text)
+        if row:
+            mp3: Optional[bytes] = None
+            # Try object storage first (L2)
+            if row.object_path:
+                mp3 = gcs_get(row.object_path)
+                if mp3:
+                    logger.info("narration GCS cache hit: %s", row.object_path)
+            # Fall back to DB BLOB (L3) and backfill GCS
+            if mp3 is None and row.mp3_data:
+                mp3 = row.mp3_data
+                logger.info("narration DB cache hit for hash %s", digest)
+                obj_path = gcs_put(voice_id, digest, mp3)
+                if obj_path:
+                    _db_set_object_path(session, row, obj_path)
+            if mp3:
+                _write_tmp_cache(path, mp3)
+                return str(path)
+
+    if not key:
+        return None
 
     # 3. Generate
     try:
         mp3 = _call_elevenlabs(voice_id, text, key)
         _write_tmp_cache(path, mp3)
+        obj_path = gcs_put(voice_id, digest, mp3)
         if session is not None:
-            _db_put(session, voice_id, text, mp3)
+            _db_put(session, voice_id, text, mp3, object_path=obj_path)
         logger.info("narration generated and cached: %s", path.name)
         return str(path)
     except Exception as exc:
@@ -168,10 +195,13 @@ def generate_narration(
 
 
 def is_course_audio_cached(course: dict, session=None) -> bool:
-    """Return True if MP3 bytes for this course are already in /tmp or the DB cache.
+    """Return True if MP3 bytes for this course are already cached.
 
+    Checks /tmp, then GCS (via DB object_path), then DB BLOB.
     Used by the audio endpoint to set the X-Audio-Cache-Status response header
     without modifying the generation pipeline."""
+    from .object_storage import gcs_exists
+
     department = course.get("department")
     voice_id = _voice_for(department)
     text = build_course_spoken_text(course)
@@ -179,7 +209,12 @@ def is_course_audio_cached(course: dict, session=None) -> bool:
     if path.exists():
         return True
     if session is not None:
-        return bool(_db_get(session, voice_id, text))
+        row = _db_get_row(session, voice_id, text)
+        if row:
+            if row.object_path and gcs_exists(row.object_path):
+                return True
+            if row.mp3_data:
+                return True
     return False
 
 
@@ -193,76 +228,152 @@ def generate_narration_for_course(
     Uses `build_course_spoken_text` so the hash is stable across AI lecture
     variants and can be served by the /audio endpoint without re-generation.
 
+    Caching order:
+      1. /tmp on-disk cache (L1) — fast in-process serving.
+      2. App Storage / GCS (L2) — durable across deploys; survives restarts.
+      3. Database `lecture_audio` BLOB (L3) — backfills GCS on miss.
+      4. ElevenLabs API — writes to GCS + DB + /tmp on success.
+
     Returns raw MP3 bytes on success, None if unavailable.
     """
+    from .object_storage import gcs_get, gcs_put
+
     key = api_key or os.environ.get("ELEVENLABS_API_KEY")
     department = course.get("department")
     voice_id = _voice_for(department)
     text = build_course_spoken_text(course)
+    digest = _text_hash(text)
     path = _cache_path(voice_id, text)
 
-    # 1. /tmp hit
+    # 1. /tmp hit (L1)
     if path.exists():
+        logger.info("course narration /tmp hit: %s", path.name)
         return path.read_bytes()
 
-    # 2. DB hit
+    # 2. GCS hit or DB hit (L2 / L3)
     if session is not None:
-        mp3 = _db_get(session, voice_id, text)
-        if mp3:
-            _write_tmp_cache(path, mp3)
-            return mp3
+        row = _db_get_row(session, voice_id, text)
+        if row:
+            mp3: Optional[bytes] = None
+            # Try object storage first (L2)
+            if row.object_path:
+                mp3 = gcs_get(row.object_path)
+                if mp3:
+                    logger.info("course narration GCS hit: %s", row.object_path)
+            # Fall back to DB BLOB (L3) and backfill GCS
+            if mp3 is None and row.mp3_data:
+                mp3 = row.mp3_data
+                logger.info("course narration DB hit for hash %s", digest)
+                obj_path = gcs_put(voice_id, digest, mp3)
+                if obj_path:
+                    _db_set_object_path(session, row, obj_path)
+            if mp3:
+                _write_tmp_cache(path, mp3)
+                return mp3
 
     if not key:
         return None
 
-    # 3. Generate
+    # 3. Generate via ElevenLabs (L4)
     try:
         mp3 = _call_elevenlabs(voice_id, text, key)
         _write_tmp_cache(path, mp3)
+        obj_path = gcs_put(voice_id, digest, mp3)
         if session is not None:
-            _db_put(session, voice_id, text, mp3)
+            _db_put(session, voice_id, text, mp3, object_path=obj_path)
+        logger.info(
+            "course narration generated: hash=%s gcs=%s bytes=%d",
+            digest, obj_path, len(mp3),
+        )
         return mp3
     except Exception as exc:
         logger.warning("ElevenLabs course narration failed: %s", exc)
         return None
 
 
+def get_course_audio_object_path(course: dict, session=None) -> Optional[str]:
+    """Return the GCS object_path for a course if one is stored in the DB.
+
+    Used by the audio endpoint to check whether it can stream from object
+    storage before falling through to on-demand generation.  Returns None
+    when object storage is not available or no path is recorded yet.
+    """
+    department = course.get("department")
+    voice_id = _voice_for(department)
+    text = build_course_spoken_text(course)
+    if session is None:
+        return None
+    row = _db_get_row(session, voice_id, text)
+    return row.object_path if row else None
+
+
 # --------------------------------------------------------------------------
 # DB helpers (imported lazily to avoid circular imports at module load time).
 # --------------------------------------------------------------------------
 
-def _db_get(session, voice_id: str, text: str) -> Optional[bytes]:
+def _db_get_row(session, voice_id: str, text: str):
+    """Return the full LectureAudio ORM row, or None."""
     try:
         from ..db.models import LectureAudio
         digest = _text_hash(text)
-        row = (
+        return (
             session.query(LectureAudio)
             .filter(LectureAudio.voice_id == voice_id, LectureAudio.text_hash == digest)
             .first()
         )
-        return row.mp3_data if row else None
     except Exception as exc:
-        logger.warning("DB narration cache get failed: %s", exc)
+        logger.warning("DB narration row get failed: %s", exc)
         return None
 
 
-def _db_put(session, voice_id: str, text: str, mp3: bytes) -> None:
+def _db_get(session, voice_id: str, text: str) -> Optional[bytes]:
+    """Return cached MP3 bytes from the DB BLOB, or None."""
+    row = _db_get_row(session, voice_id, text)
+    if row is None:
+        return None
+    return row.mp3_data
+
+
+def _db_put(session, voice_id: str, text: str, mp3: bytes, object_path: Optional[str] = None) -> None:
     try:
         from ..db.models import LectureAudio
         from ..db.base import new_uuid
+        from sqlalchemy.exc import IntegrityError
         digest = _text_hash(text)
-        existing = (
-            session.query(LectureAudio)
-            .filter(LectureAudio.voice_id == voice_id, LectureAudio.text_hash == digest)
-            .first()
-        )
+        existing = _db_get_row(session, voice_id, text)
         if existing is None:
-            session.add(LectureAudio(
-                id=new_uuid(), voice_id=voice_id, text_hash=digest, mp3_data=mp3
-            ))
+            try:
+                session.add(LectureAudio(
+                    id=new_uuid(),
+                    voice_id=voice_id,
+                    text_hash=digest,
+                    mp3_data=mp3,
+                    object_path=object_path,
+                ))
+                session.flush()
+            except IntegrityError:
+                # Another concurrent request already inserted this row — roll
+                # back the flush and try to backfill the object_path instead.
+                session.rollback()
+                existing = _db_get_row(session, voice_id, text)
+                if existing and object_path and not existing.object_path:
+                    existing.object_path = object_path
+                    session.flush()
+        elif object_path and not existing.object_path:
+            existing.object_path = object_path
             session.flush()
     except Exception as exc:
         logger.warning("DB narration cache put failed: %s", exc)
+
+
+def _db_set_object_path(session, row, object_path: str) -> None:
+    """Update an existing LectureAudio row with a GCS object_path."""
+    try:
+        row.object_path = object_path
+        session.flush()
+        logger.info("DB narration object_path set: %s", object_path)
+    except Exception as exc:
+        logger.warning("DB narration set object_path failed: %s", exc)
 
 
 def _write_tmp_cache(path: Path, mp3: bytes) -> None:

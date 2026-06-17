@@ -1,17 +1,23 @@
 """
 Background audio pre-warm: generates ElevenLabs MP3 for every curriculum
-course at server startup so the first player request always hits the DB cache.
+course at server startup so the first player request always hits the cache.
+
+Cache layers touched during prewarm
+-------------------------------------
+  L1  /tmp on-disk — fast in-process serving; wiped on each deploy.
+  L2  App Storage (GCS) — durable across deploys; keyed per (voice, hash).
+  L3  DB `lecture_audio` table — durable BLOB and object_path pointer.
 
 Design
 ------
 * `start_prewarm_thread()` spawns a daemon thread so startup is never blocked.
 * A module-level `threading.Event` (`PREWARM_DONE`) lets callers wait for
   completion with a short timeout before falling through to live generation.
-* Each course is checked in two layers:
-    1. DB (`lecture_audio` table) — the durable, restart-safe cache.
-    2. /tmp on-disk cache — fast secondary layer.
-  If /tmp has a file but the DB row is missing, the row is backfilled so
-  subsequent server restarts hit the DB and don't need to call ElevenLabs.
+* Each course is checked in the three-layer order above:
+    1. GCS object_path present in DB row → download to /tmp (if missing).
+    2. DB BLOB present without object_path → upload to GCS, restore /tmp.
+    3. /tmp only → backfill DB and upload to GCS.
+    4. Nothing → call ElevenLabs, write all three layers.
 * Any individual course failure is logged and skipped; the rest continue.
 """
 
@@ -31,13 +37,15 @@ PREWARM_DONE.set()  # default: no prewarm running → return immediately
 
 def prewarm_course_audio() -> None:
     """
-    Iterate every course in the curriculum and ensure MP3 bytes exist in both
-    the DB (`lecture_audio` table) and the /tmp on-disk cache.
+    Iterate every course in the curriculum and ensure MP3 bytes exist in the
+    DB (`lecture_audio` table), GCS (App Storage), and the /tmp on-disk cache.
 
     Guarantees
     ----------
-    * DB row is always written (even when /tmp already had a file) so the
-      cache survives restarts without hitting ElevenLabs again.
+    * GCS object is always written so the cache survives deploys without hitting
+      ElevenLabs again.
+    * DB row always has object_path set (once GCS upload succeeds) so the audio
+      endpoint can redirect to GCS rather than stream from the DB BLOB.
     * /tmp file is always written so in-process requests are served off disk.
     * `PREWARM_DONE` is set whether all courses succeeded or not so callers
       don't block indefinitely on partial failures.
@@ -58,10 +66,12 @@ def prewarm_course_audio() -> None:
             _voice_for,
             _text_hash,
             _cache_path,
-            _db_get,
+            _db_get_row,
             _db_put,
+            _db_set_object_path,
             _write_tmp_cache,
         )
+        from ..ai.object_storage import gcs_get, gcs_put, gcs_exists
         from ..db.session import session_scope
     except Exception as exc:
         logger.warning("audio_prewarm: failed to import dependencies: %s", exc)
@@ -90,34 +100,62 @@ def prewarm_course_audio() -> None:
             with session_scope() as s:
                 text = build_course_spoken_text(course)
                 voice_id = _voice_for(course.get("department"))
+                digest = _text_hash(text)
                 path = _cache_path(voice_id, text)
 
-                db_mp3: Optional[bytes] = _db_get(s, voice_id, text)
+                row = _db_get_row(s, voice_id, text)
                 tmp_exists: bool = path.exists()
 
-                if db_mp3 and tmp_exists:
-                    # Both layers warm — nothing to do.
-                    already_ok += 1
-                    logger.debug("audio_prewarm: fully cached — %s", course_key)
+                # ── Case 1: GCS object_path recorded in DB ──────────────────
+                if row and row.object_path:
+                    if tmp_exists:
+                        already_ok += 1
+                        logger.debug("audio_prewarm: fully cached — %s", course_key)
+                        continue
+                    # Restore /tmp from GCS
+                    mp3 = gcs_get(row.object_path)
+                    if mp3:
+                        _write_tmp_cache(path, mp3)
+                        backfilled += 1
+                        logger.info(
+                            "audio_prewarm: restored /tmp from GCS for %s", course_key
+                        )
+                        continue
+                    # GCS object missing despite object_path — fall through to
+                    # re-generate or re-upload below.
+                    logger.warning(
+                        "audio_prewarm: GCS object missing for %s (object_path=%s) — "
+                        "will re-upload",
+                        course_key, row.object_path,
+                    )
+
+                # ── Case 2: DB BLOB present, no GCS path yet ────────────────
+                if row and row.mp3_data:
+                    mp3_bytes = row.mp3_data
+                    obj_path = gcs_put(voice_id, digest, mp3_bytes)
+                    if obj_path:
+                        _db_set_object_path(s, row, obj_path)
+                    if not tmp_exists:
+                        _write_tmp_cache(path, mp3_bytes)
+                    backfilled += 1
+                    logger.info(
+                        "audio_prewarm: uploaded DB BLOB to GCS for %s (path=%s)",
+                        course_key, obj_path,
+                    )
                     continue
 
-                if tmp_exists and not db_mp3:
-                    # /tmp present but DB missing — backfill DB so the cache
-                    # survives the next restart without calling ElevenLabs.
+                # ── Case 3: /tmp only, DB and GCS missing ───────────────────
+                if tmp_exists:
                     mp3_bytes = path.read_bytes()
-                    _db_put(s, voice_id, text, mp3_bytes)
+                    obj_path = gcs_put(voice_id, digest, mp3_bytes)
+                    _db_put(s, voice_id, text, mp3_bytes, object_path=obj_path)
                     backfilled += 1
-                    logger.info("audio_prewarm: backfilled DB for %s", course_key)
+                    logger.info(
+                        "audio_prewarm: backfilled DB+GCS from /tmp for %s", course_key
+                    )
                     continue
 
-                if db_mp3 and not tmp_exists:
-                    # DB present but /tmp missing — write /tmp for fast serving.
-                    _write_tmp_cache(path, db_mp3)
-                    backfilled += 1
-                    logger.info("audio_prewarm: restored /tmp for %s", course_key)
-                    continue
-
-                # Neither layer has audio — call ElevenLabs.
+                # ── Case 4: All caches cold — call ElevenLabs ───────────────
                 mp3 = generate_narration_for_course(course, api_key=api_key, session=s)
                 if mp3:
                     generated += 1

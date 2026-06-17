@@ -546,13 +546,19 @@ class DegreeProgress(UUIDPrimaryKeyMixin, Base):
 
 
 class LectureAudio(UUIDPrimaryKeyMixin, Base):
-    """Cached TTS MP3 for a (voice_id, text_hash) pair — survives restarts."""
+    """Cached TTS MP3 for a (voice_id, text_hash) pair — survives restarts.
+
+    object_path — GCS App Storage path (e.g. ``audio/<voice>_<hash>.mp3``).
+    When set the audio endpoint streams from object storage rather than
+    reading mp3_data from the DB, reducing BLOB traffic.
+    """
 
     __tablename__ = "lecture_audio"
 
     voice_id: Mapped[str] = mapped_column(String(64), nullable=False)
     text_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     mp3_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    object_path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )
