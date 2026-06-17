@@ -85,15 +85,29 @@ def seed_store(session=None) -> None:
     from decimal import Decimal
 
     def _run(s):
-        # --- Partners (idempotent by name) ---
+        # Resolve strain IDs for strain-type partners
+        common_strain = (
+            s.query(Strain)
+            .filter(Strain.is_base_catalog.is_(True), Strain.rarity == Rarity.COMMON)
+            .order_by(Strain.created_at)
+            .first()
+        )
+        uncommon_strain = (
+            s.query(Strain)
+            .filter(Strain.is_base_catalog.is_(True), Strain.rarity == Rarity.UNCOMMON)
+            .order_by(Strain.created_at)
+            .first()
+        )
+
+        # --- Partners (upsert by name — update product type/id if it changed) ---
         PARTNERS = [
             {
                 "name": "Green Thumb Collective",
                 "logo_url": "https://placehold.co/80x80/1a3a1a/4ade80?text=GTC",
                 "tagline": "Farm-to-bong, since 2018",
-                "product_type": "consumable",
-                "product_id": "bloom_booster",
-                "price_gc": Decimal("55"),
+                "product_type": "strain",
+                "product_id": common_strain.id if common_strain else "",
+                "price_gc": Decimal("150"),
                 "display_order": 0,
             },
             {
@@ -101,26 +115,32 @@ def seed_store(session=None) -> None:
                 "logo_url": "https://placehold.co/80x80/0a2a3a/60a5fa?text=PPD",
                 "tagline": "Summit-quality genetics, every drop",
                 "product_type": "consumable",
-                "product_id": "rejuvenation_tonic",
-                "price_gc": Decimal("75"),
+                "product_id": "bloom_booster",
+                "price_gc": Decimal("55"),
                 "display_order": 1,
             },
             {
                 "name": "Urban Harvest Co.",
                 "logo_url": "https://placehold.co/80x80/2a1a3a/a78bfa?text=UHC",
                 "tagline": "City-grown, craft-curated",
-                "product_type": "consumable",
-                "product_id": "cal_mag_boost",
-                "price_gc": Decimal("28"),
+                "product_type": "strain",
+                "product_id": uncommon_strain.id if uncommon_strain else "",
+                "price_gc": Decimal("200"),
                 "display_order": 2,
             },
         ]
         for p_data in PARTNERS:
+            if not p_data.get("product_id"):
+                continue  # Skip if no strain found
             existing = (
                 s.query(StorePartner).filter(StorePartner.name == p_data["name"]).one_or_none()
             )
             if existing is None:
                 s.add(StorePartner(**p_data))
+            else:
+                # Update in case product type/id changed from a prior run
+                for k, v in p_data.items():
+                    setattr(existing, k, v)
 
         # --- Featured items (idempotent by item_id+item_type) ---
         FEATURED = [

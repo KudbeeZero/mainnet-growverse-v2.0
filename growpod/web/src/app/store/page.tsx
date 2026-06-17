@@ -63,78 +63,111 @@ function FeaturedShelf() {
   const { playerId, isAuthed } = useSession();
   const qc = useQueryClient();
   const [buying, setBuying] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msgs, setMsgs] = useState<Record<string, string>>({});
+
+  function setMsg(id: string, msg: string) {
+    setMsgs((prev) => ({ ...prev, [id]: msg }));
+  }
+
+  // Merge pinned featured items with seasonal drops
+  const pinnedItems = (featured.data ?? []).map((f: FeaturedItem) => ({
+    id: f.id,
+    item_type: f.item_type,
+    item_id: f.item_id,
+    label: f.label,
+    badge: f.badge,
+    price_gc: f.price_gc,
+    product_name: f.product_name,
+    source: "pinned" as const,
+  }));
 
   const seasonalItems = (seasonal.data ?? []).map((s) => ({
     id: `seasonal-${s.id}`,
     item_type: "seasonal" as const,
     item_id: s.id,
-    label: `${s.strain_name} — Seasonal drop · ${gcFmt(s.price_gc)}`,
+    label: `${s.strain_name} — Seasonal genetics`,
     badge: "seasonal" as const,
-    valid_through: null,
-    price_gc: s.price_gc,
-    strain_id: s.strain_id,
+    price_gc: s.price_gc as number,
+    product_name: s.strain_name,
+    source: "seasonal" as const,
   }));
 
-  const pinnedItems = (featured.data ?? []).map((f: FeaturedItem) => ({
-    ...f,
-    price_gc: null as number | null,
-    strain_id: null as string | null,
-  }));
-
-  const allItems = [...pinnedItems, ...seasonalItems];
+  // Pinned items take priority; seasonal fills to cap of 5 display slots
+  const allItems = [...pinnedItems, ...seasonalItems].slice(0, 5);
 
   if (featured.isLoading) return <LoadingBlock />;
   if (allItems.length === 0) return null;
 
-  async function buySeasonal(seasonalId: string, strainId: string, label: string) {
+  async function handleBuy(item: typeof allItems[number]) {
     if (!isAuthed || !playerId) return;
-    setBuying(seasonalId);
-    setMsg(null);
+    setBuying(item.id);
+    setMsg(item.id, "");
     try {
-      await api.seasonal.purchase(playerId, seasonalId);
-      await qc.invalidateQueries({ queryKey: queryKeys.seeds(playerId) });
-      setMsg(`✓ ${label} added to your seed inventory`);
+      if (item.source === "seasonal") {
+        await api.seasonal.purchase(playerId, item.item_id);
+        await qc.invalidateQueries({ queryKey: queryKeys.seeds(playerId) });
+        setMsg(item.id, "✓ Seed added to inventory");
+      } else if (item.item_type === "consumable") {
+        const { apiFetch } = await import("@/lib/api/client");
+        await apiFetch(`/players/${playerId}/shop/buy`, {
+          method: "POST",
+          body: { item_key: item.item_id, quantity: 1 },
+        });
+        setMsg(item.id, "✓ Consumable purchased");
+      } else if (item.item_type === "strain") {
+        const { apiFetch } = await import("@/lib/api/client");
+        await apiFetch(`/players/${playerId}/seeds/buy`, {
+          method: "POST",
+          body: { strain_id: item.item_id, quantity: 1 },
+        });
+        await qc.invalidateQueries({ queryKey: queryKeys.seeds(playerId) });
+        setMsg(item.id, "✓ Seed added to inventory");
+      }
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : "Purchase failed");
+      setMsg(item.id, e instanceof Error ? e.message : "Purchase failed");
     } finally {
       setBuying(null);
     }
   }
 
+  const canBuy = (item: typeof allItems[number]) =>
+    item.source === "seasonal" ||
+    item.item_type === "consumable" ||
+    item.item_type === "strain";
+
   return (
     <section>
-      <SectionHeader icon="⭐" title="This Week's Drops" subtitle="Curated picks — seasonal and limited items" />
+      <SectionHeader icon="⭐" title="This Week's Drops" subtitle="Curated picks — limited, seasonal, and pinned items" />
       <div className="flex gap-4 overflow-x-auto pb-2">
         {allItems.map((item) => (
           <div
             key={item.id}
             className="shrink-0 w-56 rounded-xl border border-ink-700 bg-ink-900/70 p-4 flex flex-col gap-3 hover:border-grow-600 transition-colors"
           >
-            <div className="flex items-start justify-between gap-2">
-              <BadgeChip badge={item.badge} />
-            </div>
+            <BadgeChip badge={item.badge} />
             <p className="text-sm text-gray-200 leading-snug">{item.label}</p>
             {item.price_gc != null && (
               <div className="font-mono text-grow-300 text-sm">{gcFmt(item.price_gc)}</div>
             )}
-            {"strain_id" in item && item.strain_id && item.price_gc != null && isAuthed && (
+            {msgs[item.id] && (
+              <p className={`text-xs ${msgs[item.id].startsWith("✓") ? "text-grow-400" : "text-red-400"}`}>
+                {msgs[item.id]}
+              </p>
+            )}
+            {isAuthed && canBuy(item) && item.price_gc != null ? (
               <button
-                onClick={() => buySeasonal(item.item_id, item.strain_id!, item.label)}
-                disabled={buying === item.item_id}
+                onClick={() => handleBuy(item)}
+                disabled={buying === item.id}
                 className="mt-auto rounded bg-grow-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-grow-600 disabled:opacity-50"
               >
-                {buying === item.item_id ? "Buying…" : "Buy Seeds"}
+                {buying === item.id ? "Buying…" : `Buy · ${gcFmt(item.price_gc)}`}
               </button>
-            )}
+            ) : !isAuthed ? (
+              <span className="mt-auto text-xs text-gray-500">Sign in to buy</span>
+            ) : null}
           </div>
         ))}
       </div>
-      {msg && (
-        <p className={`mt-2 text-xs ${msg.startsWith("✓") ? "text-grow-400" : "text-red-400"}`}>
-          {msg}
-        </p>
-      )}
     </section>
   );
 }

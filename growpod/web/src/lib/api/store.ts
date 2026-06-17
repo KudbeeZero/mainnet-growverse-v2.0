@@ -21,6 +21,15 @@ export interface FeaturedItem {
   badge: "seasonal" | "limited" | "new";
   active: boolean;
   valid_through: string | null;
+  price_gc: number | null;
+  product_name: string;
+}
+
+export interface StorePartnerUpdate {
+  active?: boolean;
+  display_order?: number;
+  price_gc?: number;
+  tagline?: string;
 }
 
 export interface BundleComponent {
@@ -73,6 +82,9 @@ export const store = {
     price_gc: number;
     display_order?: number;
   }) => apiFetch<StorePartner>("/admin/store/partners", { method: "POST", body: data }),
+
+  adminUpdatePartner: (id: string, data: StorePartnerUpdate) =>
+    apiFetch<StorePartner>(`/admin/store/partners/${id}`, { method: "PATCH", body: data }),
 
   adminDeletePartner: (id: string) =>
     apiFetch<{ deleted: boolean }>(`/admin/store/partners/${id}`, { method: "DELETE" }),

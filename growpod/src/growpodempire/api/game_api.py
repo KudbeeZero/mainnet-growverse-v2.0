@@ -1473,6 +1473,30 @@ def admin_add_partner():
     return jsonify(out), 201
 
 
+@game_bp.patch("/admin/store/partners/<partner_id>")
+@require_admin
+def admin_update_partner(partner_id):
+    """Toggle active flag or update fields on a partner."""
+    from ..db.models import StorePartner
+    from decimal import Decimal as _Dec
+    data = request.get_json(force=True, silent=True) or {}
+    with session_scope() as s:
+        p = s.get(StorePartner, partner_id)
+        if p is None:
+            return _error("Partner not found", 404)
+        if "active" in data:
+            p.active = bool(data["active"])
+        if "display_order" in data:
+            p.display_order = int(data["display_order"])
+        if "price_gc" in data:
+            p.price_gc = _Dec(str(data["price_gc"]))
+        if "tagline" in data:
+            p.tagline = str(data["tagline"])[:60]
+        out = {k: getattr(p, k) for k in ("id", "name", "logo_url", "tagline", "product_type", "product_id", "display_order", "active")}
+        out["price_gc"] = float(p.price_gc)
+    return jsonify(out)
+
+
 @game_bp.delete("/admin/store/partners/<partner_id>")
 @require_admin
 def admin_delete_partner(partner_id):
@@ -1487,13 +1511,45 @@ def admin_delete_partner(partner_id):
 
 @game_bp.get("/store/featured")
 def store_featured():
-    from ..db.models import FeaturedItem
+    """Return up to 3 active, non-expired featured shelf items, enriched with price info."""
+    from ..db.models import FeaturedItem, Strain
+    from ..economy.config import get_economy_config as _cfg
+    from datetime import datetime as _dt
+    cfg = _cfg()
+    now = _dt.utcnow()
     with session_scope() as s:
-        items = s.query(FeaturedItem).filter(FeaturedItem.active.is_(True)).all()
-        out = [{"id": f.id, "item_type": f.item_type, "item_id": f.item_id,
-                "label": f.label, "badge": f.badge,
-                "valid_through": f.valid_through.isoformat() if f.valid_through else None}
-               for f in items]
+        items = (
+            s.query(FeaturedItem)
+            .filter(FeaturedItem.active.is_(True))
+            .order_by(FeaturedItem.created_at.asc())
+            .all()
+        )
+        # Enforce expiry; cap display to 3
+        valid_items = [
+            f for f in items
+            if f.valid_through is None or f.valid_through > now
+        ][:3]
+        out = []
+        for f in valid_items:
+            price = None
+            name = f.item_id
+            if f.item_type == "consumable":
+                item_cfg = cfg.shop_consumables.get(f.item_id) or {}
+                price = float(item_cfg.get("cost", 0)) if item_cfg else None
+                name = item_cfg.get("name", f.item_id)
+            elif f.item_type == "strain":
+                strain = s.get(Strain, f.item_id)
+                name = strain.name if strain else f.item_id
+            out.append({
+                "id": f.id,
+                "item_type": f.item_type,
+                "item_id": f.item_id,
+                "label": f.label,
+                "badge": f.badge,
+                "valid_through": f.valid_through.isoformat() if f.valid_through else None,
+                "price_gc": price,
+                "product_name": name,
+            })
     return jsonify(out)
 
 
@@ -1507,6 +1563,18 @@ def admin_add_featured():
         if not data.get(f):
             return _error(f"{f} is required")
     with session_scope() as s:
+        # Enforce 3-item cap
+        now = _dt.utcnow()
+        active_count = (
+            s.query(FeaturedItem)
+            .filter(
+                FeaturedItem.active.is_(True),
+                (FeaturedItem.valid_through.is_(None)) | (FeaturedItem.valid_through > now),
+            )
+            .count()
+        )
+        if active_count >= 3:
+            return _error("Featured shelf is full (3/3). Unpin an item before adding another.", 409)
         vt = None
         if data.get("valid_through"):
             try:

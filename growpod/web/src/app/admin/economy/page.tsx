@@ -984,6 +984,18 @@ function StorePartnersCard() {
     }
   }
 
+  async function handleToggleActive(id: string, current: boolean) {
+    try {
+      const updated = await apiFetch<PartnerRow>(`/admin/store/partners/${id}`, {
+        method: "PATCH",
+        body: { active: !current },
+      });
+      setPartners((prev) => prev.map((r) => (r.id === id ? { ...r, active: updated.active } : r)));
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Update failed");
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Remove this partner?")) return;
     try {
@@ -1072,6 +1084,14 @@ function StorePartnersCard() {
                   </td>
                   <td className="py-2 pr-4 text-right font-mono text-gray-300">{gcFmt(p.price_gc)}</td>
                   <td className="py-2 pr-4 text-center text-gray-500">{p.display_order}</td>
+                  <td className="py-2 pr-3 text-center">
+                    <button
+                      onClick={() => handleToggleActive(p.id, p.active)}
+                      className={`rounded px-2 py-0.5 text-[10px] font-medium ${p.active ? "bg-grow-800/60 text-grow-300 hover:bg-red-800/40 hover:text-red-300" : "bg-gray-800/60 text-gray-500 hover:bg-grow-800/40 hover:text-grow-300"}`}
+                    >
+                      {p.active ? "Active" : "Inactive"}
+                    </button>
+                  </td>
                   <td className="py-2 text-right">
                     <button onClick={() => handleDelete(p.id)} className="text-xs text-red-500 hover:text-red-300">Remove</button>
                   </td>
