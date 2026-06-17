@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
+import { Tabs } from "@/components/ui/Tabs";
+import { store as storeApi } from "@/lib/api/store";
+import type { GearItem, GearCategory } from "@/lib/api/store";
+import type { Pod } from "@/lib/types";
 import {
   useStorePartners,
   useStoreFeatured,
@@ -613,16 +617,221 @@ function ResearchSection() {
   );
 }
 
+const GEAR_TABS: { key: GearCategory; label: string }[] = [
+  { key: "light", label: "💡 Lights" },
+  { key: "fan", label: "🌀 Fans" },
+  { key: "soil", label: "🪴 Soil & Amendments" },
+];
+
+const GEAR_EMOJI: Record<GearCategory, string> = { light: "💡", fan: "🌀", soil: "🪴" };
+
+function gearSpecLine(item: GearItem): string {
+  const s = item.specs ?? {};
+  if (item.category === "light") return `${s.watts}W · ${s.ppfd} PPFD · ${s.coverage}`;
+  if (item.category === "fan") return `${s.cfm} CFM · ${s.coverage}`;
+  return `NPK ${s.npk} · ${s.base}`;
+}
+
+function GearCard({
+  item,
+  pods,
+  onBuy,
+  onEquip,
+  busy,
+}: {
+  item: GearItem;
+  pods: Pod[];
+  onBuy: (key: string) => void;
+  onEquip: (key: string, podId: string) => void;
+  busy: string | null;
+}) {
+  const [podId, setPodId] = useState<string>("");
+  const equippedPod = pods.find((p) => p.id === item.equipped_pod_id);
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-ink-700 bg-ink-900/70 p-4">
+      <div className="relative flex h-28 items-center justify-center overflow-hidden rounded-lg bg-ink-950/60">
+        <span className="absolute text-4xl opacity-40">{GEAR_EMOJI[item.category]}</span>
+        {item.image && (
+          <img
+            src={`/store/gear/${item.image}`}
+            alt={item.name}
+            className="relative h-full w-full object-contain"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        )}
+      </div>
+      <div className="flex items-start justify-between gap-2">
+        <h4 className="text-sm font-semibold text-gray-100">{item.name}</h4>
+        {item.owned > 0 && (
+          <span className="shrink-0 rounded bg-ink-800 px-1.5 py-0.5 text-[10px] text-gray-400">
+            Own {item.owned}
+          </span>
+        )}
+      </div>
+      <p className="font-mono text-[11px] text-accent-300">{gearSpecLine(item)}</p>
+      <p className="flex-1 text-xs text-gray-500">{item.description}</p>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <span className="font-mono font-bold text-grow-300">{gcFmt(item.cost)}</span>
+        <button
+          onClick={() => onBuy(item.key)}
+          disabled={busy === item.key}
+          className="rounded bg-grow-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-grow-600 disabled:opacity-50"
+        >
+          {busy === item.key ? "…" : "Buy"}
+        </button>
+      </div>
+      {item.category === "light" && item.owned > 0 && (
+        <div className="mt-1 border-t border-ink-700 pt-2">
+          {equippedPod ? (
+            <p className="text-[11px] text-grow-400">✓ Powering “{equippedPod.name}”</p>
+          ) : (
+            <p className="text-[11px] text-gray-500">Not equipped</p>
+          )}
+          {pods.length > 0 && (
+            <div className="mt-1 flex items-center gap-1.5">
+              <select
+                value={podId}
+                onChange={(e) => setPodId(e.target.value)}
+                className="flex-1 rounded border border-ink-600 bg-ink-900 px-1.5 py-1 text-[11px] text-gray-200"
+              >
+                <option value="">Equip to pod…</option>
+                {pods.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => podId && onEquip(item.key, podId)}
+                disabled={!podId || busy === item.key}
+                className="rounded bg-accent-700 px-2 py-1 text-[11px] text-white hover:bg-accent-600 disabled:opacity-40"
+              >
+                Equip
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GrowRoomGearSection() {
+  const { playerId, isAuthed } = useSession();
+  const [tab, setTab] = useState<GearCategory>("light");
+  const [items, setItems] = useState<GearItem[] | null>(null);
+  const [pods, setPods] = useState<Pod[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthed || !playerId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [gear, podList] = await Promise.all([
+          storeApi.gear(playerId),
+          api.pods.list(playerId),
+        ]);
+        if (!cancelled) {
+          setItems(gear);
+          setPods(podList);
+        }
+      } catch {
+        /* leave items null → section stays quiet */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthed, playerId]);
+
+  async function buy(key: string) {
+    if (!playerId) return;
+    setBusy(key);
+    setMsg(null);
+    try {
+      setItems(await storeApi.purchaseGear(playerId, key));
+      setMsg("✓ Purchased");
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : "Purchase failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function equip(key: string, podId: string) {
+    if (!playerId) return;
+    setBusy(key);
+    setMsg(null);
+    try {
+      await storeApi.equipLight(playerId, podId, key);
+      setItems(await storeApi.gear(playerId));
+      setMsg("✓ Light equipped — it now drives that pod's light level");
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : "Equip failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const shown = (items ?? []).filter((i) => i.category === tab);
+
+  return (
+    <section>
+      <SectionHeader
+        icon="🛠️"
+        title="Grow Room Gear"
+        subtitle="Lights, fans, and soil — equip a light to a pod to power its canopy"
+      />
+      {!isAuthed ? (
+        <p className="text-sm text-gray-500">Sign in to browse grow-room gear.</p>
+      ) : items === null ? (
+        <LoadingBlock label="Loading gear…" />
+      ) : (
+        <>
+          <Tabs
+            tabs={GEAR_TABS}
+            active={tab}
+            onChange={(k) => setTab(k as GearCategory)}
+            className="mb-4"
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {shown.map((item) => (
+              <GearCard
+                key={item.key}
+                item={item}
+                pods={pods}
+                onBuy={buy}
+                onEquip={equip}
+                busy={busy}
+              />
+            ))}
+          </div>
+          {msg && (
+            <p className={`mt-2 text-xs ${msg.startsWith("✓") ? "text-grow-400" : "text-red-400"}`}>
+              {msg}
+            </p>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 function StoreInner() {
   return (
     <div className="space-y-10">
       <PageHeader
         eyebrow="GROWPOD EMPIRE"
         title="Store"
-        subtitle="Seeds, consumables, bundles, and partner drops — all in one place"
+        subtitle="Seeds, gear, consumables, bundles, and partner drops — all in one place"
       />
       <FeaturedShelf />
       <PartnerDropsSection />
+      <GrowRoomGearSection />
       <BundlesSection />
       <SeedsSection />
       <ConsumablesSection />

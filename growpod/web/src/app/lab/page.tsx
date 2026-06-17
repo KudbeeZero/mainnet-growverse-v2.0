@@ -140,6 +140,9 @@ function LabInner() {
         subtitle="Browse the catalog, study the encyclopedia, breed new lines, and verify any cultivar's pedigree."
         action={
           <div className="flex items-center gap-2">
+            <Link href="/lab/microscope">
+              <Button variant="secondary">🔬 Microscope</Button>
+            </Link>
             <Link href="/lab/genbank">
               <Button variant="secondary">✦ GenBank</Button>
             </Link>
