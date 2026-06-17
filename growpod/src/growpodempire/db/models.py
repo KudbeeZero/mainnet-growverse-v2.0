@@ -252,6 +252,28 @@ class ConsumableInventory(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class GearInventory(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A stack of durable grow-room gear (light/fan/soil) owned by a player.
+
+    Catalog defs live in balance.yaml (`shop.gear`). Lights are the one
+    functional category: when equipped, `equipped_pod_id` points at the pod and
+    the light's PPFD is written to that pod's `light_intensity` (the sim reads
+    it). Fans/soils are owned-only for now."""
+
+    __tablename__ = "gear_inventory"
+
+    player_id: Mapped[str] = mapped_column(ForeignKey("players.id"), nullable=False)
+    gear_key: Mapped[str] = mapped_column(String(48), nullable=False)
+    category: Mapped[str] = mapped_column(String(16), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Set only for an equipped light (the pod it currently powers).
+    equipped_pod_id: Mapped[Optional[str]] = mapped_column(ForeignKey("grow_pods.id"))
+
+    __table_args__ = (
+        Index("ix_gear_player_key", "player_id", "gear_key", unique=True),
+    )
+
+
 class GrowPod(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "grow_pods"
 

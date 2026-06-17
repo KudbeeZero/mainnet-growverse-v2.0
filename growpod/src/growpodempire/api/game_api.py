@@ -1788,6 +1788,50 @@ def purchase_partner_product(player_id, partner_id):
         return _error(str(e))
 
 
+# ----- Store: grow-room gear (lights/fans/soils) -------------------------
+@game_bp.get("/players/<player_id>/store/gear")
+@require_player
+def list_gear(player_id):
+    """Gear catalog merged with the player's owned counts + equipped state."""
+    try:
+        with session_scope() as s:
+            items = GameService(s).list_gear(player_id)
+        return jsonify(items)
+    except GameError as e:
+        return _error(str(e), 404)
+
+
+@game_bp.post("/players/<player_id>/store/gear/<gear_key>/purchase")
+@require_player
+def purchase_gear(player_id, gear_key):
+    data = request.get_json(force=True, silent=True) or {}
+    qty = bounded_int(data.get("quantity", 1), "quantity", default=1, low=1, high=99)
+    try:
+        with session_scope() as s:
+            svc = GameService(s)
+            svc.buy_gear(player_id, gear_key, qty)
+            items = svc.list_gear(player_id)
+        return jsonify(items), 201
+    except (GameError, InsufficientFundsError) as e:
+        return _error(str(e))
+
+
+@game_bp.post("/players/<player_id>/pods/<pod_id>/equip-light")
+@require_player
+def equip_light(player_id, pod_id):
+    data = request.get_json(force=True, silent=True) or {}
+    gear_key = data.get("gear_key")
+    if not gear_key:
+        return _error("gear_key is required")
+    try:
+        with session_scope() as s:
+            pod = GameService(s).equip_light(player_id, pod_id, gear_key)
+            payload = S.pod_dict(pod)
+        return jsonify(payload)
+    except (GameError, InsufficientFundsError) as e:
+        return _error(str(e))
+
+
 @game_bp.post("/players/<player_id>/harvests/<harvest_id>/mint")
 @require_feature("chain")
 @require_player

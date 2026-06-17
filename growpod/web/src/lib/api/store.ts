@@ -51,9 +51,38 @@ export interface StoreBundle {
   active: boolean;
 }
 
+export type GearCategory = "light" | "fan" | "soil";
+
+export interface GearItem {
+  key: string;
+  name: string;
+  category: GearCategory;
+  cost: number;
+  description: string;
+  image: string | null;
+  specs: Record<string, string | number>;
+  owned: number;
+  equipped_pod_id: string | null;
+}
+
 export const store = {
   partners: () =>
     apiFetch<StorePartner[]>("/store/partners"),
+
+  gear: (playerId: string) =>
+    apiFetch<GearItem[]>(`/players/${playerId}/store/gear`, { auth: true }),
+
+  purchaseGear: (playerId: string, gearKey: string, quantity = 1) =>
+    apiFetch<GearItem[]>(`/players/${playerId}/store/gear/${gearKey}/purchase`, {
+      method: "POST",
+      body: { quantity },
+    }),
+
+  equipLight: (playerId: string, podId: string, gearKey: string) =>
+    apiFetch<unknown>(`/players/${playerId}/pods/${podId}/equip-light`, {
+      method: "POST",
+      body: { gear_key: gearKey },
+    }),
 
   featured: () =>
     apiFetch<FeaturedItem[]>("/store/featured"),

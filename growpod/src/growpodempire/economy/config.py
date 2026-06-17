@@ -87,6 +87,17 @@ class EconomyConfig:
         return self.raw.get("shop", {}).get("consumables", {})
 
     @property
+    def shop_gear(self) -> Dict[str, Dict[str, Any]]:
+        """Grow-room gear catalog, flattened to {gear_key: item} across the
+        lights/fans/soils groups in balance.yaml (`shop.gear`)."""
+        groups = self.raw.get("shop", {}).get("gear", {})
+        flat: Dict[str, Any] = {}
+        for group in groups.values():
+            if isinstance(group, dict):
+                flat.update(group)
+        return flat
+
+    @property
     def current_season(self) -> str:
         return self.raw.get("events", {}).get("current_season", "all")
 

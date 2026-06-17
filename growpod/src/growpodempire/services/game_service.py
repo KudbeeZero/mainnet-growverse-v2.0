@@ -46,6 +46,7 @@ from ..db.models import (
     MarketListing,
     LedgerEntry,
     ConsumableInventory,
+    GearInventory,
     GrantClaim,
 )
 from ..db.seed import slugify
@@ -418,6 +419,105 @@ class GameService:
             self.session.flush()
         stack.quantity += quantity
         return stack
+
+    # ----- Store: grow-room gear (lights/fans/soils) ----------------------
+    def list_gear(self, player_id: str) -> List[dict]:
+        """Catalog of buyable gear merged with the player's owned counts and,
+        for lights, which pod each is equipped to."""
+        self.get_player(player_id)
+        owned = {
+            r.gear_key: r
+            for r in self.session.query(GearInventory).filter(
+                GearInventory.player_id == player_id
+            )
+        }
+        out = []
+        for key, item in self.cfg.shop_gear.items():
+            stack = owned.get(key)
+            out.append({
+                "key": key,
+                "name": item.get("name", key),
+                "category": item.get("category", "gear"),
+                "cost": float(item.get("cost", 0)),
+                "description": item.get("description", ""),
+                "image": item.get("image"),
+                "specs": item.get("specs", {}),
+                "owned": stack.quantity if stack else 0,
+                "equipped_pod_id": stack.equipped_pod_id if stack else None,
+            })
+        return out
+
+    def buy_gear(self, player_id: str, gear_key: str, quantity: int = 1) -> GearInventory:
+        if quantity < 1:
+            raise GameError("quantity must be >= 1")
+        self.get_player(player_id)
+        item = self.cfg.shop_gear.get(gear_key)
+        if item is None:
+            raise GameError(f"Unknown gear '{gear_key}'")
+
+        cost = to_money(Decimal(str(item.get("cost", 0))) * quantity)
+        post(
+            self.session, player_id, -cost, LedgerEntryType.SHOP_PURCHASE,
+            ref_type="gear", ref_id=gear_key,
+        )
+        stack = (
+            self.session.query(GearInventory)
+            .filter(
+                GearInventory.player_id == player_id,
+                GearInventory.gear_key == gear_key,
+            )
+            .one_or_none()
+        )
+        if stack is None:
+            stack = GearInventory(
+                player_id=player_id, gear_key=gear_key,
+                category=item.get("category", "gear"), quantity=0,
+            )
+            self.session.add(stack)
+            self.session.flush()
+        stack.quantity += quantity
+        return stack
+
+    def equip_light(self, player_id: str, pod_id: str, gear_key: str) -> GrowPod:
+        """Equip an owned light to a pod: writes the light's PPFD to the pod's
+        `light_intensity` (the sim reads it as the light level). Only lights are
+        functional; fans/soils are owned-only for now."""
+        item = self.cfg.shop_gear.get(gear_key)
+        if item is None:
+            raise GameError(f"Unknown gear '{gear_key}'")
+        if item.get("category") != "light":
+            raise GameError("Only lights can be equipped to a pod")
+
+        stack = (
+            self.session.query(GearInventory)
+            .filter(
+                GearInventory.player_id == player_id,
+                GearInventory.gear_key == gear_key,
+            )
+            .one_or_none()
+        )
+        if stack is None or stack.quantity < 1:
+            raise GameError("You don't own this light")
+
+        pod = self.session.get(GrowPod, pod_id)
+        if pod is None or pod.player_id != player_id:
+            raise GameError("Pod not found")
+
+        ppfd = float(item.get("specs", {}).get("ppfd", 0))
+        pod.light_intensity = ppfd
+        # A pod runs one light at a time: clear any other light equipped here.
+        # Sessions run autoflush=False, so flush pending equip changes first or
+        # the filter below won't see a light equipped earlier in this txn.
+        self.session.flush()
+        for other in self.session.query(GearInventory).filter(
+            GearInventory.player_id == player_id,
+            GearInventory.category == "light",
+            GearInventory.equipped_pod_id == pod_id,
+        ):
+            if other.gear_key != gear_key:
+                other.equipped_pod_id = None
+        stack.equipped_pod_id = pod_id
+        return pod
 
     # ----- Pods & planting ------------------------------------------------
     def create_pod(

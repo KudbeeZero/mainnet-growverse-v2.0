@@ -332,6 +332,69 @@ shop:
        effects: {water_set: 70, nutrient_set: 70, pest_set: 0, disease_set: 0, health_add: 8},
        description: "Full reset: waters, feeds, treats, and revitalizes a struggling plant"}
 
+  # Grow-room gear (Phase 2). Durable equipment you buy & own (a GROW sink),
+  # tracked in `gear_inventory`. Lights are the one *functional* category: an
+  # equipped light writes its `ppfd` to the pod's `light_intensity`, which the
+  # simulation already turns into PPFD/DLI/light-stress. Fans and soils are
+  # owned/catalog for now (no sim hook yet) — see docs BACKLOG for the follow-up.
+  # `image` is a filename under web/public/store/gear/.
+  gear:
+    lights:
+      led_125w:
+        {name: "SeedSpark 125W LED", category: light, cost: 150, image: "led_125w.png",
+         description: "Entry panel for a single plant or a 2×2 footprint.",
+         specs: {watts: 125, ppfd: 300, coverage: "2×2 ft", spectrum: "full"}}
+      led_320w:
+        {name: "VegPro 320W LED", category: light, cost: 380, image: "led_320w.png",
+         description: "Balanced veg/bloom board for a 3×3 tent.",
+         specs: {watts: 320, ppfd: 600, coverage: "3×3 ft", spectrum: "full"}}
+      led_480w:
+        {name: "BloomLine 480W LED", category: light, cost: 620, image: "led_480w.png",
+         description: "High-output bar light tuned for dense flower in a 4×4.",
+         specs: {watts: 480, ppfd: 750, coverage: "4×4 ft", spectrum: "full + far-red"}}
+      led_700w:
+        {name: "CanopyMax 700W LED", category: light, cost: 950, image: "led_700w.png",
+         description: "Commercial-grade coverage and penetration for a 5×5.",
+         specs: {watts: 700, ppfd: 900, coverage: "5×5 ft", spectrum: "full + far-red + UV"}}
+      led_800w:
+        {name: "SunForge 800W LED", category: light, cost: 1200, image: "led_800w.png",
+         description: "Flagship fixture — maximum DLI for a packed 6×6 canopy.",
+         specs: {watts: 800, ppfd: 1000, coverage: "6×6 ft", spectrum: "full + far-red + UV"}}
+    fans:
+      clip_fan:
+        {name: "Clip-On Circulator", category: fan, cost: 60, image: "clip_fan.png",
+         description: "Gentle airflow for a single plant — strengthens stems.",
+         specs: {cfm: 120, coverage: "1 plant", type: "clip"}}
+      oscillating_fan:
+        {name: "Oscillating Tower Fan", category: fan, cost: 140, image: "oscillating_fan.png",
+         description: "Sweeping breeze that keeps a small tent's air moving.",
+         specs: {cfm: 400, coverage: "small tent", type: "oscillating"}}
+      inline_exhaust_6in:
+        {name: "6\" Inline Exhaust + Carbon Filter", category: fan, cost: 260, image: "inline_exhaust_6in.png",
+         description: "Pulls hot, humid, smelly air out — full-tent ventilation.",
+         specs: {cfm: 440, coverage: "full tent", type: "inline exhaust"}}
+    soils:
+      worm_castings:
+        {name: "Worm Castings", category: soil, cost: 50, image: "worm_castings.png",
+         description: "Living, microbe-rich castings — gentle slow-release nitrogen.",
+         specs: {npk: "1-0-0", base: "amendment", notes: "won't burn roots"}}
+      bat_guano:
+        {name: "Bat Guano (high-P)", category: soil, cost: 70, image: "bat_guano.png",
+         description: "Phosphorus-heavy bloom amendment for fat, dense flowers.",
+         specs: {npk: "3-10-1", base: "amendment", notes: "top-dress in flower"}}
+      coco_coir:
+        {name: "Coco Coir Brick", category: soil, cost: 40, image: "coco_coir.png",
+         description: "Inert, airy coco substrate with excellent water retention.",
+         specs: {npk: "0-0-0", base: "substrate", notes: "needs feeding"}}
+      super_soil:
+        {name: "Super Soil (living)", category: soil, cost: 180, image: "super_soil.png",
+         description: "Pre-amended living soil — plant and grow, no bottled nutrients.",
+         specs: {npk: "amended", base: "living soil", notes: "no-till friendly"}}
+      perlite_mix:
+        {name: "Perlite Aeration Mix", category: soil, cost: 30, image: "perlite_mix.png",
+         description: "Lightweight aeration to keep roots oxygenated and draining.",
+         specs: {npk: "0-0-0", base: "amendment", notes: "blend into any mix"}}
+
 # Seasonal / limited content (Phase 2). A strain whose `season` is "all" is
 # always buyable; otherwise it must match `current_season` (or be unlocked via a
 # limited event). Drives the seasonal-strain rotation + a future LiveOps console.
