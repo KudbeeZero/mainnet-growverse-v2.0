@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
-import { PlantVisual } from "./PlantVisual";
+import { GrowChamber } from "@/components/viz/GrowChamber";
 import { StatBars } from "./StatBars";
 import { ConditionBadges } from "./ConditionBadges";
 import { CareButtons } from "./CareButtons";
@@ -14,6 +14,15 @@ import { StageTimelineCompact } from "./StageTimeline";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap } from "@/hooks/queries";
 import { titleCase, num } from "@/lib/format";
+import {
+  morphologyFor,
+  ageDays,
+  previewDev,
+  nominalGrowDay,
+  seedForPlant,
+} from "@/lib/chamber/morphology";
+import { silhouetteFor, budColorForStrain } from "@/lib/chamber/strainVisuals";
+import { budDnaFor } from "@/lib/chamber/budDna";
 import type { Pod } from "@/lib/types";
 
 export function PlantCard({
@@ -48,6 +57,23 @@ export function PlantCard({
   const strain = map.get(plant.strain_id);
   const stageLabel = titleCase(plant.growth_stage);
 
+  const indicaRatio = strain?.indica_ratio ?? 0.5;
+  const morphology = morphologyFor(indicaRatio);
+  const silhouette = silhouetteFor(strain?.slug ?? strain?.name, indicaRatio);
+  const budColor = budColorForStrain(
+    strain?.slug ?? strain?.name,
+    morphology.hue,
+    seedForPlant(plant.strain_id),
+  );
+  const budDna = budDnaFor(strain?.slug ?? strain?.name, budColor);
+  const flMid = strain
+    ? (strain.flowering_days[0] + strain.flowering_days[1]) / 2
+    : 60;
+  const liveNominalDay = plant.forecast
+    ? nominalGrowDay(plant.growth_stage, plant.forecast.stage_progress_pct, flMid)
+    : ageDays(plant.planted_at);
+  const dev = previewDev(liveNominalDay, flMid);
+
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex items-start justify-between">
@@ -71,8 +97,25 @@ export function PlantCard({
         )}
       </div>
 
-      <div className="flex items-center justify-center rounded-lg bg-ink-900/60 py-2">
-        <PlantVisual stage={plant.growth_stage} flags={plant.condition_flags} size={120} />
+      <div className="relative h-44 w-full overflow-hidden rounded-lg bg-[#050b12]">
+        <GrowChamber
+          seed={seedForPlant(plantId)}
+          day={liveNominalDay}
+          stage={plant.growth_stage}
+          morphology={morphology}
+          silhouette={silhouette}
+          dev={dev}
+          climate={{
+            fan: 45,
+            temp: pod?.temperature ?? 24,
+            hum: pod?.humidity ?? 50,
+            co2: pod?.co2_level ?? 800,
+          }}
+          conditionFlags={plant.condition_flags}
+          view="chamber"
+          budColor={budColor}
+          budDna={budDna}
+        />
       </div>
 
       {plant.forecast && (
