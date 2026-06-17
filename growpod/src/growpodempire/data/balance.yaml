@@ -10,7 +10,7 @@ currency:
 # One-time grant credited when a player account is created (a faucet).
 starting_balance: 500
 # Small, fixed login bonus (retention faucet, intentionally not a wealth pump).
-daily_stipend: 50
+daily_stipend: 5000
 
 seeds:
   base_cost: 25            # price of a COMMON seed
