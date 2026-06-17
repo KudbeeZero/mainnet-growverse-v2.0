@@ -59,8 +59,10 @@ __pycache__/
 htmlcov/
 *.egg-info/
 
-# Local dev database (SQLite)
+# Local dev database (SQLite) and WAL/shared-memory journal files
 *.db
+*.db-wal
+*.db-shm
 growpod.db
 
 # Environment files (may hold secrets: API keys, treasury mnemonic, etc.).
