@@ -1,0 +1,80 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "O716pMATdD6lBSxgKC_u8"
+uri = "file://growpod/web/canonical-stages/gelato__chamber__0-seed.png"
+type = "image"
+title = "Gelato — Seed"
+
+[[outputs]]
+id = "oCfbXZjkiVvXmaV2EQufd"
+uri = "file://growpod/web/canonical-stages/gelato__chamber__1-germination.png"
+type = "image"
+title = "Gelato — Germination"
+
+[[outputs]]
+id = "cmkUZB4ShP3y76Ca5vQWM"
+uri = "file://growpod/web/canonical-stages/gelato__chamber__2-seedling.png"
+type = "image"
+title = "Gelato — Seedling"
+
+[[outputs]]
+id = "HqKw4DUvrKCmDLak4WVaT"
+uri = "file://growpod/web/canonical-stages/gelato__chamber__3-vegetative.png"
+type = "image"
+title = "Gelato — Vegetative"
+
+[[outputs]]
+id = "Dy-x3ieQT830KiVeHrSv-"
+uri = "file://growpod/web/canonical-stages/gelato__chamber__4-early-flower.png"
+type = "image"
+title = "Gelato — Early Flower"
+
+[[outputs]]
+id = "7osPLUaDnYOK_E_hauJfg"
+uri = "file://growpod/web/canonical-stages/gelato__chamber__5-late-flower.png"
+type = "image"
+title = "Gelato — Late Flower"
+
+[[outputs]]
+id = "RHixrvP1aJGB67JceX1Su"
+uri = "file://growpod/web/canonical-stages/gelato__chamber__6-harvest.png"
+type = "image"
+title = "Gelato — Harvest"
+
+[[outputs]]
+id = "-pMh-3_HAcDLiEfu6FuYk"
+uri = "file://growpod/web/canonical-stages/g13__chamber__0-seed.png"
+type = "image"
+title = "G13 — Seed"
+
+[[outputs]]
+id = "ZxbsMoSHmThOEV3lCc81X"
+uri = "file://growpod/web/canonical-stages/g13__chamber__1-germination.png"
+type = "image"
+title = "G13 — Germination"
+
+[[outputs]]
+id = "_UlcEBzTXed-SHot44VEc"
+uri = "file://growpod/web/canonical-stages/g13__chamber__2-seedling.png"
+type = "image"
+title = "G13 — Seedling"
+
+[[outputs]]
+id = "NGM0d7ddwAXlncsWHesDP"
+uri = "file://growpod/web/canonical-stages/purple-diddy-punch__chamber__2-seedling.png"
+type = "image"
+title = "Purple Diddy Punch — Seedling"
+
+[[outputs]]
+id = "7OkGmoYyLVIuyt4hmiqCg"
+uri = "file://growpod/web/canonical-stages/purple-diddy-punch__chamber__3-vegetative.png"
+type = "image"
+title = "Purple Diddy Punch — Vegetative"
+
+[[outputs]]
+id = "9ha6NvwFJrz9uqbWgYfln"
+uri = "file://growpod/web/canonical-stages/purple-diddy-punch__chamber__6-harvest.png"
+type = "image"
+title = "Purple Diddy Punch — Harvest"

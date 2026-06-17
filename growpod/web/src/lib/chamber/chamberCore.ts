@@ -1169,6 +1169,117 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     const wind = Math.sin(windPhase) * CL.windAmp;
     const claw = (CL.tooMuchFan ? 0.35 : 0) + condClaw;
     const sw0 = clamp(p.A * 0.012 * (0.5 + p.stemH / p.A), 2, 8) * (CL.tooLowFan ? 0.8 : 1);
+    // ── SEED ─────────────────────────────────────────────────────────────────
+    // A dark brown bean sitting on the medium surface. Nothing green visible —
+    // the seed is soaking up moisture and hasn't cracked yet.
+    if (p.stage === "seed") {
+      const cx = p.cx, by = p.baseY, soilR = scene!.soilR;
+      const bW = soilR * 0.30, bH = soilR * 0.175;
+      // Moisture halo — dark damp ring around the base of the seed.
+      const mhalo = ctx!.createRadialGradient(cx, by - bH * 0.1, 0, cx, by, soilR * 0.54);
+      mhalo.addColorStop(0, "rgba(55,88,78,0.24)");
+      mhalo.addColorStop(1, "rgba(55,88,78,0)");
+      ctx!.fillStyle = mhalo;
+      ctx!.beginPath();
+      ctx!.ellipse(cx, by, soilR * 0.54, soilR * 0.16, 0, 0, TAU);
+      ctx!.fill();
+      // Bean body — radial gradient gives depth (lighter face, dark edge).
+      ctx!.save();
+      ctx!.translate(cx, by - bH * 0.62);
+      ctx!.rotate(-0.18);
+      const sg = ctx!.createRadialGradient(-bW * 0.18, -bH * 0.22, bW * 0.04, 0, 0, bW);
+      sg.addColorStop(0,    "hsl(28, 38%, 28%)");
+      sg.addColorStop(0.45, "hsl(22, 42%, 20%)");
+      sg.addColorStop(1,    "hsl(18, 46%, 13%)");
+      ctx!.fillStyle = sg;
+      ctx!.beginPath();
+      ctx!.ellipse(0, 0, bW, bH, 0, 0, TAU);
+      ctx!.fill();
+      // Centre ridge — the longitudinal seam of a cannabis seed.
+      ctx!.strokeStyle = "rgba(0,0,0,0.30)";
+      ctx!.lineWidth = bH * 0.13;
+      ctx!.lineCap = "round";
+      ctx!.beginPath();
+      ctx!.moveTo(-bW * 0.68, 0);
+      ctx!.bezierCurveTo(-bW * 0.2, -bH * 0.40, bW * 0.2, -bH * 0.40, bW * 0.68, 0);
+      ctx!.stroke();
+      // Faint highlight along the top shoulder.
+      ctx!.strokeStyle = "rgba(120,90,60,0.22)";
+      ctx!.lineWidth = bH * 0.18;
+      ctx!.beginPath();
+      ctx!.moveTo(-bW * 0.48, -bH * 0.18);
+      ctx!.bezierCurveTo(-bW * 0.14, -bH * 0.64, bW * 0.14, -bH * 0.64, bW * 0.48, -bH * 0.18);
+      ctx!.stroke();
+      ctx!.restore();
+      return;
+    }
+
+    // ── GERMINATION ──────────────────────────────────────────────────────────
+    // The seed has cracked; a white taproot curls into the medium while the
+    // pale green hypocotyl arch (the "hook") pushes up through the surface,
+    // cotyledons still folded shut at its tip.
+    if (p.stage === "germination") {
+      const cx = p.cx, by = p.baseY, soilR = scene!.soilR;
+      const hookH = p.A * 0.17;
+      // Taproot hint — barely visible below the medium surface.
+      ctx!.save();
+      ctx!.globalAlpha = 0.42;
+      ctx!.strokeStyle = "rgb(236,228,210)";
+      ctx!.lineWidth = 2.2;
+      ctx!.lineCap = "round";
+      ctx!.beginPath();
+      ctx!.moveTo(cx, by);
+      ctx!.bezierCurveTo(
+        cx + soilR * 0.22, by + soilR * 0.18,
+        cx + soilR * 0.14, by + soilR * 0.44,
+        cx - soilR * 0.06, by + soilR * 0.55,
+      );
+      ctx!.stroke();
+      ctx!.globalAlpha = 1;
+      ctx!.restore();
+      // Two cracked seed-shell halves resting at the medium surface.
+      const bW = soilR * 0.23, bH = soilR * 0.13;
+      ctx!.fillStyle = "hsl(22, 40%, 18%)";
+      for (const s of [-1, 1]) {
+        ctx!.save();
+        ctx!.translate(cx + s * bW * 0.30, by - bH * 0.28);
+        ctx!.rotate(s * 0.44);
+        ctx!.beginPath();
+        ctx!.ellipse(0, 0, bW * 0.56, bH, 0, 0, Math.PI);
+        ctx!.fill();
+        ctx!.restore();
+      }
+      // Hypocotyl arch — pale green hook curving up from the soil and over.
+      const archHue = S.hue + 8;
+      const archSat = Math.round(S.sat * 0.72);
+      const archLit = Math.round(S.lit + 20);
+      ctx!.strokeStyle = `hsl(${archHue}, ${archSat}%, ${archLit}%)`;
+      ctx!.lineWidth = 3.8;
+      ctx!.lineCap = "round";
+      ctx!.beginPath();
+      ctx!.moveTo(cx, by);
+      ctx!.bezierCurveTo(
+        cx + soilR * 0.50, by - hookH * 0.16,
+        cx + soilR * 0.46, by - hookH * 0.84,
+        cx, by - hookH,
+      );
+      ctx!.stroke();
+      // Cotyledon nub — two tiny folded teardrops at the arch tip, still closed.
+      const nubR = soilR * 0.115;
+      ctx!.fillStyle = `hsl(${archHue}, ${archSat}%, ${archLit - 4}%)`;
+      for (const s of [-1, 1]) {
+        ctx!.save();
+        ctx!.translate(cx + s * nubR * 0.92, by - hookH - nubR * 0.18);
+        ctx!.rotate(s * 0.58);
+        ctx!.beginPath();
+        ctx!.ellipse(0, 0, nubR * 0.42, nubR * 0.78, 0, 0, TAU);
+        ctx!.fill();
+        ctx!.restore();
+      }
+      return;
+    }
+
+    // ── STEM (seedling → vegetative → flowering → harvest) ───────────────────
     for (let i = 0; i < p.spine.length - 1; i++) {
       const a = p.spine[i], b = p.spine[i + 1];
       if (b.y < p.baseY - p.stemH) break;
@@ -1180,17 +1291,46 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.lineTo(b.x, b.y);
       ctx!.stroke();
     }
-    if (p.stage === "seed" || p.stage === "germination" || p.stage === "seedling") {
-      const top = p.spine[24], sz = p.A * 0.05 + p.stemH * 0.35;
-      ctx!.fillStyle = `hsl(${S.hue}, ${S.sat}%, ${S.lit + 10}%)`;
+
+    // ── SEEDLING ──────────────────────────────────────────────────────────────
+    // The stem is visible; two round oval cotyledons spread open at the apex,
+    // and a single tiny true-leaf blade just emerges from between them.
+    if (p.stage === "seedling") {
+      const top = p.spine[24]; // apex of the stem
+      const soilR = scene!.soilR;
+      const cotyL = soilR * 0.50, cotyW = soilR * 0.30;
+      const cotyHue = S.hue + 6;
+      const cotySat = Math.round(S.sat * 0.82);
+      const cotyLit = Math.round(S.lit + 17);
+      // Round-oval cotyledons splayed open — lighter and rounder than true leaves.
       for (const s of [-1, 1]) {
+        ctx!.save();
+        ctx!.translate(top.x + s * cotyL * 0.53, top.y + cotyL * 0.14);
+        ctx!.rotate(s * 0.52);
+        ctx!.fillStyle = `hsl(${cotyHue}, ${cotySat}%, ${cotyLit}%)`;
         ctx!.beginPath();
-        ctx!.ellipse(top.x + s * sz * 0.5, top.y + 3, sz * 0.42, sz * 0.2, s * 0.3, 0, TAU);
+        ctx!.ellipse(0, 0, cotyW * 0.55, cotyL * 0.50, 0, 0, TAU);
         ctx!.fill();
+        // Midrib vein.
+        ctx!.strokeStyle = `hsl(${cotyHue}, ${Math.round(cotySat * 0.78)}%, ${cotyLit - 8}%)`;
+        ctx!.lineWidth = 0.8;
+        ctx!.lineCap = "round";
+        ctx!.beginPath();
+        ctx!.moveTo(0,  cotyL * 0.43);
+        ctx!.lineTo(0, -cotyL * 0.43);
+        ctx!.stroke();
+        ctx!.restore();
       }
+      // First true leaf — one narrow serrated blade growing up from the apex.
+      const tlSz = soilR * 0.30;
       ctx!.save();
-      ctx!.translate(top.x, top.y);
-      drawFan(sz * 1.15, 3, 1, 0);
+      ctx!.translate(top.x, top.y - tlSz * 0.06);
+      ctx!.fillStyle = `hsl(${S.hue + 2}, ${S.sat}%, ${S.lit + 12}%)`;
+      ctx!.strokeStyle = `hsl(${S.hue}, ${Math.round(S.sat * 0.70)}%, ${Math.round(S.lit * 0.82)}%)`;
+      ctx!.lineWidth = 0.6;
+      leafletPath(tlSz, tlSz * 0.30);
+      ctx!.fill();
+      ctx!.stroke();
       ctx!.restore();
       return;
     }

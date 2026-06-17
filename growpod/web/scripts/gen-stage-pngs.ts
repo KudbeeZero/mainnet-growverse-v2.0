@@ -46,12 +46,15 @@ const STRAINS = [
 
 // Nominal-day scale matches devParams thresholds (buds 34→66, ripe 40→62, etc.),
 // the same scale <GrowChamber> is fed (the strain hero passes day≈62 for flower).
+// Seed and germination use their own stage gates so they render the new visuals.
 const STAGES: Array<{ label: string; stage: GrowthStage; day: number }> = [
-  { label: "1-seedling", stage: "seedling", day: 14 },
-  { label: "2-vegetative", stage: "vegetative", day: 30 },
-  { label: "3-early-flower", stage: "flowering", day: 46 },
-  { label: "4-late-flower", stage: "flowering", day: 62 },
-  { label: "5-harvest", stage: "harvest", day: 72 },
+  { label: "0-seed",        stage: "seed",        day:  1 },
+  { label: "1-germination", stage: "germination",  day:  5 },
+  { label: "2-seedling",    stage: "seedling",     day: 14 },
+  { label: "3-vegetative",  stage: "vegetative",   day: 30 },
+  { label: "4-early-flower",stage: "flowering",    day: 46 },
+  { label: "5-late-flower", stage: "flowering",    day: 62 },
+  { label: "6-harvest",     stage: "harvest",      day: 72 },
 ];
 
 const CLIMATE: ClimateInput = { fan: 45, temp: 24, hum: 50, co2: 900 };
