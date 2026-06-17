@@ -199,7 +199,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   // purple, UV → frost, light stress → foxtails, drought → tight). Read from the
   // pod's COMMITTED environment (not the live in-drag slider) so the bud reacts to
   // the real saved conditions and doesn't rebuild on every slider pixel.
-  const budDna = applyEnvironmentToBudDNA(budDnaFor(strain?.slug ?? strain?.name, budColor), {
+  const budDna = applyEnvironmentToBudDNA(budDnaFor(strain?.slug ?? strain?.name, budColor, strain?.bud_dna), {
     temp: pod?.temperature ?? 24,
     light: pod?.light_intensity ?? 600,
     humidity: pod?.humidity ?? 50,

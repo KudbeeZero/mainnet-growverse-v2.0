@@ -45,6 +45,7 @@ def wallet_dict(wallet) -> dict:
 
 
 def strain_dict(strain) -> dict:
+    from ..genetics.traits import bud_dna_from_genome
     return {
         "id": strain.id,
         "name": strain.name,
@@ -65,6 +66,7 @@ def strain_dict(strain) -> dict:
         "parent_b_id": strain.parent_b_id,
         "is_base_catalog": strain.is_base_catalog,
         "genome": strain.genome,
+        "bud_dna": bud_dna_from_genome(strain.genome) if strain.genome else None,
         "nft_asset_id": strain.nft_asset_id,
         "nft_status": strain.nft_status,
     }

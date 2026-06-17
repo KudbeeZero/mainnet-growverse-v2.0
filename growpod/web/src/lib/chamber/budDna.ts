@@ -6,6 +6,7 @@
 
 import { clamp, type BudColor } from "./morphology";
 import { slugify } from "./strainVisuals";
+import type { GenomeBudDNA } from "@/lib/types";
 
 export interface PaletteColor { hue: number; sat: number; lit: number; weight: number }
 
@@ -110,8 +111,55 @@ const AUTHORED: Record<string, BudDNA> = {
   },
 };
 
-/** Authored DNA for curated strains, else a default derived from the bud colour. */
-export function budDnaFor(slugOrName: string | undefined, color: BudColor): BudDNA {
+/**
+ * Build a palette from a genome-derived BudDNA profile. The palette is composed
+ * from the calyx hue + anthocyanin + dominant terpene signals, creating a
+ * unique colour signature for each strain based on its genetics.
+ */
+function paletteFromGenomeBudDNA(gbd: GenomeBudDNA, color: BudColor): PaletteColor[] {
+  const palette: PaletteColor[] = [
+    { hue: gbd.calyx_hue, sat: gbd.calyx_sat, lit: 38, weight: 3 },
+    { hue: gbd.calyx_hue, sat: gbd.calyx_sat, lit: 28, weight: 1.5 },
+  ];
+  if (gbd.anthocyanin > 0.3) {
+    palette.push({ hue: 282, sat: 56, lit: 36, weight: gbd.anthocyanin * 5 });
+    if (gbd.anthocyanin > 0.5) {
+      palette.push({ hue: 270, sat: 54, lit: 30, weight: (gbd.anthocyanin - 0.5) * 4 });
+    }
+  } else if (gbd.anthocyanin > 0.1) {
+    palette.push({ hue: gbd.calyx_hue, sat: gbd.calyx_sat, lit: 30, weight: 1 });
+  }
+  return palette;
+}
+
+/**
+ * Build a full BudDNA from the genome-derived profile the backend computed.
+ * This overrides the generic fallback with per-genome shape, size, colour,
+ * and frost — every strain gets a unique phenotype based on its genetics.
+ */
+export function budDnaFromGenome(gbd: GenomeBudDNA, color: BudColor): BudDNA {
+  return {
+    budHeight: gbd.bud_height,
+    maxBudWidth: gbd.max_bud_width,
+    rows: gbd.rows,
+    calyxPerRowMin: gbd.calyx_per_row_min,
+    calyxPerRowMax: gbd.calyx_per_row_max,
+    calyxSizeMin: gbd.calyx_size_min,
+    calyxSizeMax: gbd.calyx_size_max,
+    overlap: gbd.overlap,
+    pistilChance: gbd.pistil_chance,
+    sugarLeafChance: gbd.sugar_leaf_chance,
+    trichomeDensity: gbd.trichome_density,
+    palette: paletteFromGenomeBudDNA(gbd, color),
+    foxtailBias: gbd.foxtail_bias,
+  };
+}
+
+/** Authored DNA for curated strains, else genome-derived or default fallback. */
+export function budDnaFor(slugOrName: string | undefined, color: BudColor, genomeBud?: GenomeBudDNA | null): BudDNA {
+  if (genomeBud) {
+    return budDnaFromGenome(genomeBud, color);
+  }
   if (slugOrName) {
     const key = AUTHORED[slugOrName] ? slugOrName : slugify(slugOrName);
     if (AUTHORED[key]) return AUTHORED[key];

@@ -114,7 +114,7 @@ function StrainHero({ strain }: { strain: Strain }) {
   const morphology = morphologyFor(strain.indica_ratio);
   const silhouette = silhouetteFor(strain.slug ?? strain.name, strain.indica_ratio);
   const budColor = budColorForStrain(strain.slug ?? strain.name, morphology.hue, seedForPlant(strain.id));
-  const budDna = budDnaFor(strain.slug ?? strain.name, budColor);
+  const budDna = budDnaFor(strain.slug ?? strain.name, budColor, strain.bud_dna);
   return (
     <div className="h-[420px] w-full overflow-hidden rounded-xl border border-ink-700 bg-[#050b12]">
       <GrowChamber

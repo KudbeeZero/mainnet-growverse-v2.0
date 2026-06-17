@@ -48,7 +48,7 @@ export function plantRender(
     morphology.hue,
     seedForPlant(plant.strain_id),
   );
-  const budDna = applyEnvironmentToBudDNA(budDnaFor(strain?.slug ?? strain?.name, budColor), {
+  const budDna = applyEnvironmentToBudDNA(budDnaFor(strain?.slug ?? strain?.name, budColor, strain?.bud_dna), {
     temp: pod?.temperature ?? 24,
     light: pod?.light_intensity ?? 600,
     humidity: pod?.humidity ?? 50,

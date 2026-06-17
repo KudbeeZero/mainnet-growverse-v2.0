@@ -71,7 +71,7 @@ export function PlantCard({
     morphology.hue,
     seedForPlant(plant.strain_id),
   );
-  const budDna = budDnaFor(strain?.slug ?? strain?.name, budColor);
+  const budDna = budDnaFor(strain?.slug ?? strain?.name, budColor, strain?.bud_dna);
   const flMid = strain
     ? (strain.flowering_days[0] + strain.flowering_days[1]) / 2
     : 60;

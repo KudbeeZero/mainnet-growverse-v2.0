@@ -93,6 +93,25 @@ export interface PlayerProfile {
   medals: Achievement[];
 }
 
+export interface GenomeBudDNA {
+  bud_height: number;
+  max_bud_width: number;
+  rows: number;
+  calyx_per_row_min: number;
+  calyx_per_row_max: number;
+  calyx_size_min: number;
+  calyx_size_max: number;
+  overlap: number;
+  pistil_chance: number;
+  sugar_leaf_chance: number;
+  trichome_density: number;
+  anthocyanin: number;
+  calyx_hue: number;
+  calyx_sat: number;
+  pistil_magenta: number;
+  foxtail_bias: number;
+}
+
 export interface Strain {
   id: string;
   name: string;
@@ -112,6 +131,7 @@ export interface Strain {
   parent_b_id: string | null;
   is_base_catalog: boolean;
   genome: Record<string, { value: number; dominance: string }> | null;
+  bud_dna: GenomeBudDNA | null;
   nft_asset_id: number | null;
   nft_status: NftStatus;
 }
