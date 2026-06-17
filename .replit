@@ -4,6 +4,15 @@ modules = ["nodejs-24", "python-3.11"]
 router = "application"
 deploymentTarget = "autoscale"
 
+# Build — runs once per deployment before the container starts
+[deployment.build]
+args = ["sh", "scripts/build-production.sh"]
+env = { "CI" = "true" }
+
+# Run — runs every time the container boots
+[deployment.run]
+args = ["sh", "scripts/start-production.sh"]
+
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
