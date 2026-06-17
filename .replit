@@ -45,7 +45,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /home/runner/workspace/growpod && DATABASE_URL='sqlite:////home/runner/workspace/growpod/growpod.db' USE_MOCK_AI=true USE_MOCK_CHAIN=true PYTHONPATH=src sh -c 'python3 -c \"from growpodempire.db.session import init_db; init_db()\" && python3 -m gunicorn server:app --bind 0.0.0.0:8000 --workers 2 --timeout 60'"
+args = "cd /home/runner/workspace/growpod && DATABASE_URL='sqlite:////home/runner/workspace/growpod/growpod.db' USE_MOCK_AI=true USE_MOCK_CHAIN=true PYTHONPATH=src sh -c 'python3 -c \"from growpodempire.db.session import init_db; init_db()\" && python3 -m growpodempire.db.seed && python3 -m gunicorn server:app --bind 0.0.0.0:8000 --workers 2 --timeout 60'"
 waitForPort = 8000
 
 [agent]
