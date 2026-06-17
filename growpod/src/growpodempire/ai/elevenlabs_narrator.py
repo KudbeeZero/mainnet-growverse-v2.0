@@ -27,10 +27,14 @@ Flow without key (serve-from-cache only)
 Activated when ELEVENLABS_API_KEY is set in the environment; otherwise the app
 falls back to text-only mode with no audio_url.
 
-Voice personas (Professor Flora default; add more per faculty):
-  - Professor Flora  (Cultivation & Horticulture)  — voice_id: EXAVITQu4vr4xnSDxMaL (Rachel)
-  - Vera Lindqvist  (Plant Genetics)               — voice_id: ErXwobaYiN019PkySvjV (Antoni)
-  - defaults to "Rachel" for all other departments
+Voice personas (one per faculty; default is Adam for unknown departments):
+  - Professor Flora   (Cultivation & Horticulture)  — Rachel  EXAVITQu4vr4xnSDxMaL
+  - Vera Lindqvist   (Plant Genetics)               — Antoni  ErXwobaYiN019PkySvjV
+  - Dr. Sage Harlow  (Soil & Nutrient Science)      — Bella   EXAVITQu4vr4xnSDxMaL (alias)
+  - Dr. Mira Okafor  (Integrated Pest Management)   — Elli    MF3mGyEYCl7XYWbV9V6O
+  - Dr. Chem Torres  (Cannabis Chemistry)           — Domi    AZnzlk1XvdvUeBnXmlld
+  - Dr. Petra Nance  (Post-Harvest & Processing)    — Josh    TxGEqnHWrfWFTfGW9XjX
+  - (unknown dept)   fallback                       — Adam    pNInz6obpgDQGcFmaJgB
 """
 
 import hashlib
@@ -46,16 +50,20 @@ logger = logging.getLogger(__name__)
 # Secondary on-disk cache (survives the process but not a clean deploy).
 _CACHE_DIR = Path(os.environ.get("NARRATION_CACHE_DIR", "/tmp/growpod_narration"))
 
-# Map curriculum department keys → ElevenLabs voice IDs
+# Map curriculum department keys → ElevenLabs voice IDs.
+# Each department must map to a voice that differs from _DEFAULT_VOICE so that
+# unknown future departments are audibly distinguishable from named faculty.
 _DEPT_VOICES = {
     "cultivation":  "EXAVITQu4vr4xnSDxMaL",   # Rachel — Professor Flora
     "genetics":     "ErXwobaYiN019PkySvjV",    # Antoni — Vera Lindqvist
-    "nutrients":    "EXAVITQu4vr4xnSDxMaL",
-    "ipm":          "EXAVITQu4vr4xnSDxMaL",
-    "chemistry":    "ErXwobaYiN019PkySvjV",
-    "postharvest":  "EXAVITQu4vr4xnSDxMaL",
+    "nutrients":    "EXAVITQu4vr4xnSDxMaL",   # Rachel — Dr. Sage Harlow
+    "ipm":          "MF3mGyEYCl7XYWbV9V6O",   # Elli   — Dr. Mira Okafor
+    "chemistry":    "AZnzlk1XvdvUeBnXmlld",   # Domi   — Dr. Chem Torres
+    "postharvest":  "TxGEqnHWrfWFTfGW9XjX",   # Josh   — Dr. Petra Nance
 }
-_DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL"
+# Fallback for any department key not yet mapped above (Adam).
+# Must be a voice ID not used by any named faculty in _DEPT_VOICES.
+_DEFAULT_VOICE = "pNInz6obpgDQGcFmaJgB"
 
 
 def _voice_for(department: str | None) -> str:
