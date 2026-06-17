@@ -24,7 +24,7 @@ from ..services.research_service import ResearchService
 from ..services import leveling_service
 from ..economy.ledger import InsufficientFundsError
 from ..feature_flags import all_flags, FeatureDisabledError, feature_required as require_feature
-from .auth import require_player
+from .auth import require_player, require_admin
 from .ratelimit import limiter
 from .validation import positive_int, bounded_int, positive_money, number
 from . import serialize as S
@@ -1224,6 +1224,82 @@ def seasonal_strain_purchase(player_id, seasonal_id):
         return jsonify(payload), 201
     except (GameError, InsufficientFundsError) as e:
         return _error(str(e))
+
+
+# ----- Admin: seasonal strain management --------------------------------
+
+@game_bp.get("/admin/seasonal/strains")
+@require_admin
+def admin_seasonal_strains_list():
+    """List all seasonal strain entries across all months (admin view)."""
+    with session_scope() as s:
+        payload = SeasonalService(s).all_seasonal_strains()
+    return jsonify({"strains": payload})
+
+
+@game_bp.post("/admin/seasonal/strains")
+@require_admin
+def admin_seasonal_strains_upsert():
+    """Create or update a seasonal strain entry.
+
+    Body: { strain_id, available_month (YYYY-MM), price_gc, auto_renew? }
+    Always returns 201; the response body indicates the current state whether
+    the entry was newly created or an existing one was updated.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    strain_id = data.get("strain_id", "").strip()
+    available_month = data.get("available_month", "").strip()
+    price_gc = data.get("price_gc")
+    auto_renew = bool(data.get("auto_renew", False))
+
+    if not strain_id:
+        return _error("strain_id is required")
+    if not available_month or len(available_month) != 7 or available_month[4] != "-":
+        return _error("available_month must be YYYY-MM")
+    if price_gc is None:
+        return _error("price_gc is required")
+    try:
+        price_gc = positive_money(price_gc, "price_gc")
+    except GameError as e:
+        return _error(str(e))
+
+    try:
+        with session_scope() as s:
+            payload = SeasonalService(s).upsert(
+                strain_id=strain_id,
+                available_month=available_month,
+                price_gc=price_gc,
+                auto_renew=auto_renew,
+            )
+        return jsonify(payload), 201
+    except GameError as e:
+        return _error(str(e))
+
+
+@game_bp.delete("/admin/seasonal/strains/<seasonal_id>")
+@require_admin
+def admin_seasonal_strains_delete(seasonal_id):
+    """Remove a seasonal strain entry."""
+    try:
+        with session_scope() as s:
+            SeasonalService(s).delete(seasonal_id)
+        from flask import Response
+        return Response(status=204)
+    except GameError as e:
+        return _error(str(e), 404)
+
+
+@game_bp.post("/admin/seasonal/strains/rollover")
+@require_admin
+def admin_seasonal_strains_rollover():
+    """Manually trigger the auto-renew rollover for the current month.
+
+    The same rollover also runs automatically at startup and once per month
+    via the background scheduler (see flask_api.py: start_seasonal_rollover).
+    """
+    with session_scope() as s:
+        created = SeasonalService(s).rollover_renewals()
+    return jsonify({"created": created, "count": len(created)})
 
 
 # ----- On-chain: wallet linking, NFT minting, metadata -------------------

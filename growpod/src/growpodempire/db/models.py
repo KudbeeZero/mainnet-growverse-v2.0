@@ -553,6 +553,7 @@ class SeasonalStrain(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         String(7), nullable=False
     )  # YYYY-MM
     price_gc: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    auto_renew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     strain: Mapped["Strain"] = relationship(lazy="joined")
 

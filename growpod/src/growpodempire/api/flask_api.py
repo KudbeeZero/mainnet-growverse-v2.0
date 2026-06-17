@@ -62,6 +62,12 @@ def create_app(init_database: bool = True):
     # DB-backed game layer (players, economy, strains, breeding, market).
     app.register_blueprint(game_bp)
 
+    # Monthly auto-rollover: carry forward all auto_renew seasonal strains into
+    # the next calendar month.  Runs immediately at startup (catches any missed
+    # boundary) and then sleeps until the 1st of each subsequent month.
+    from .seasonal_rollover import start_rollover_thread
+    start_rollover_thread()
+
     # Pre-warm ElevenLabs audio for all curriculum courses in the background
     # so the first player request always hits the DB cache instead of waiting
     # on a live API call.  Only runs when ELEVENLABS_API_KEY is set.

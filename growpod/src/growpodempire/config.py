@@ -143,6 +143,14 @@ class Settings:
             os.environ.get("ENABLE_AUTO_CARE", "true").lower() == "true"
         )
 
+        # --- Admin secret (optional, for admin API endpoints) -----------------
+        # When ADMIN_SECRET is set, the admin game endpoints (/api/game/admin/*)
+        # require the `X-API-Key` header to equal this value exactly, preventing
+        # any regular player from modifying seasonal drop prices or catalog.
+        # If not set (dev / local), any valid player key is accepted as a
+        # convenience so the admin UI works out of the box without extra config.
+        self.admin_secret: str | None = os.environ.get("ADMIN_SECRET") or None
+
         # NOTE: Feature flags are NOT defined here. The single source of truth is
         # balance.yaml `feature_flags:` (data-driven, per the tuning-surface
         # convention), resolved by growpodempire.feature_flags with per-env

@@ -25,6 +25,14 @@ def _current_month() -> str:
     return datetime.utcnow().strftime("%Y-%m")
 
 
+def _next_month(month: str) -> str:
+    """Return YYYY-MM for the month following `month`."""
+    year, mon = int(month[:4]), int(month[5:7])
+    if mon == 12:
+        return f"{year + 1}-01"
+    return f"{year}-{mon + 1:02d}"
+
+
 class SeasonalService:
     def __init__(self, session: Session):
         self.session = session
@@ -106,13 +114,14 @@ class SeasonalService:
             "price_gc": float(row.price_gc),
         }
 
-    # ----- admin: seed the table --------------------------------------------
+    # ----- admin: seed / manage the table ----------------------------------
 
     def upsert(
         self,
         strain_id: str,
         available_month: str,
         price_gc: Decimal,
+        auto_renew: bool = False,
     ) -> dict:
         """Create or update a seasonal strain entry (admin / seeding use)."""
         strain = self.session.get(Strain, strain_id)
@@ -129,6 +138,7 @@ class SeasonalService:
         )
         if existing:
             existing.price_gc = to_money(price_gc)
+            existing.auto_renew = auto_renew
             self.session.flush()
             return _seasonal_dict(existing)
 
@@ -136,10 +146,65 @@ class SeasonalService:
             strain_id=strain_id,
             available_month=available_month,
             price_gc=to_money(price_gc),
+            auto_renew=auto_renew,
         )
         self.session.add(row)
         self.session.flush()
         return _seasonal_dict(row)
+
+    def delete(self, seasonal_id: str) -> None:
+        """Remove a seasonal strain entry by ID.
+
+        Raises GameError if the record does not exist.
+        """
+        row = self.session.get(SeasonalStrain, seasonal_id)
+        if row is None:
+            raise GameError("Seasonal strain not found")
+        self.session.delete(row)
+        self.session.flush()
+
+    def rollover_renewals(self) -> List[dict]:
+        """Carry forward all auto_renew=True strains into the next calendar month.
+
+        For each current-month strain with auto_renew set, creates (or skips if
+        already present) an entry for the following month with the same price and
+        auto_renew flag.  Returns the list of newly created rows.
+        """
+        current = _current_month()
+        upcoming = _next_month(current)
+
+        renewables = (
+            self.session.query(SeasonalStrain)
+            .filter(
+                SeasonalStrain.available_month == current,
+                SeasonalStrain.auto_renew.is_(True),
+            )
+            .all()
+        )
+
+        created = []
+        for r in renewables:
+            already = (
+                self.session.query(SeasonalStrain)
+                .filter(
+                    SeasonalStrain.strain_id == r.strain_id,
+                    SeasonalStrain.available_month == upcoming,
+                )
+                .first()
+            )
+            if already:
+                continue
+            new_row = SeasonalStrain(
+                strain_id=r.strain_id,
+                available_month=upcoming,
+                price_gc=r.price_gc,
+                auto_renew=r.auto_renew,
+            )
+            self.session.add(new_row)
+            self.session.flush()
+            created.append(_seasonal_dict(new_row))
+
+        return created
 
 
 def _seasonal_dict(row: SeasonalStrain) -> dict:
@@ -153,5 +218,6 @@ def _seasonal_dict(row: SeasonalStrain) -> dict:
         "strain_terpenes": strain.terpenes if strain else [],
         "available_month": row.available_month,
         "price_gc": float(row.price_gc),
+        "auto_renew": bool(row.auto_renew),
         "is_current": row.available_month == _current_month(),
     }
