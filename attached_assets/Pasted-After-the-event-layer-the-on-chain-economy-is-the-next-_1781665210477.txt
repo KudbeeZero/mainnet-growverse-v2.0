@@ -1,0 +1,22 @@
+After the event layer, the on-chain economy is the next major — but the thing to nail first isn't staking or breeding, it's **what actually becomes an asset vs what stays game state.** Get that wrong and you're minting everything and drowning in gas.
+
+Here's the split I'd lock:
+
+**Stays off-chain** — the live grow (water, feed, stress, day, quality). Fast, free, testable with your 10× button. Never touches chain.
+
+**Becomes the token (fungible)** — harvest yield × quality → tokens. This is what you stake. Staking = lock tokens for a passive drip + maybe a boost (faster grow, better pheno odds).
+
+**Becomes an NFT — genetics only.** A seed/strain is the NFT (traits: yield, quality ceiling, flower time, resistance, lineage). **Not** every plant, not the grow. You mint on-demand only at a real moment: unlocking a strain, or hitting a standout keeper pheno worth preserving. That's the bridge from the fun layer — phenotype variation is what makes a keeper worth minting.
+
+**Breeding** — two genetic NFTs → cross their traits with variation/mutation → mint a new seed NFT with inherited traits + on-chain lineage. That's your deep replay engine and your main NFT sink.
+
+So the lifecycle: seed (NFT) → grow (off-chain) → harvest (→ tokens) → keeper (→ mint NFT) → breed two NFTs (→ new seed) → repeat, staking along the way.
+
+Build order:
+1. **Staking** first — tokens already exist, button's stubbed, low complexity, proves the on-chain loop.
+2. **Genetics-as-NFT** — mint-on-demand for strains and keepers.
+3. **Breeding** last — it needs genetics-as-NFT to exist before it can combine anything.
+
+The call that'll save you: build the whole conversion — token mint, NFT mint, breeding — against a **mock ledger first** so you can test it all with the speed button and fake mints, then swap in the real chain behind an adapter. Stays chain-agnostic so you drop in Algorand or Base when you decide, and you're not paying real mint costs to test breeding logic.
+
+Want the conversion spec (trait schema + exactly what mints when), or the staking prompt first?
