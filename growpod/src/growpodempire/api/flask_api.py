@@ -62,6 +62,13 @@ def create_app(init_database: bool = True):
     # DB-backed game layer (players, economy, strains, breeding, market).
     app.register_blueprint(game_bp)
 
+    # Pre-warm ElevenLabs audio for all curriculum courses in the background
+    # so the first player request always hits the DB cache instead of waiting
+    # on a live API call.  Only runs when ELEVENLABS_API_KEY is set.
+    if settings.elevenlabs_api_key:
+        from .audio_prewarm import start_prewarm_thread
+        start_prewarm_thread()
+
     # DEV/TEST ONLY: the simulation test clock (/api/dev/clock/*). Registered
     # only when explicitly enabled on a non-production environment, so it can
     # never exist on a live deployment.

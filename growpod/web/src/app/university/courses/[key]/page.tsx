@@ -139,70 +139,107 @@ function CourseInner({ courseKey }: { courseKey: string }) {
 
 function CourseAudioPlayer({ courseKey }: { courseKey: string }) {
   const [playing, setPlaying] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [unavailable, setUnavailable] = useState(false);
+  // Optimistic default: show the button right away.  Hide it only when we
+  // confirm audio is unavailable (no API key / 204 from the server).
+  // "ready"       — preloaded and available; click plays instantly
+  // "buffering"   — user clicked before canplaythrough; waiting on browser
+  // "unavailable" — server returned 204; button is hidden
+  const [status, setStatus] = useState<"ready" | "buffering" | "unavailable">("ready");
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const audioUrl = `/api/game/university/courses/${courseKey}/audio`;
 
-  // Cleanup on unmount: pause and release the audio element.
+  // On mount: start pre-loading the Audio element immediately (optimistic).
+  // A background HEAD probe confirms availability; if the server returns 204
+  // we tear down the element and hide the button.  When the prewarm cache is
+  // warm the HEAD probe returns quickly and the audio is already buffered by
+  // the time the user clicks — zero wait.
   useEffect(() => {
+    let cancelled = false;
+
+    // Create the element and start loading in parallel with the HEAD probe.
+    const audio = new Audio(audioUrl);
+    audio.preload = "auto";
+    audioRef.current = audio;
+
+    audio.addEventListener("ended", () => {
+      if (!cancelled) setPlaying(false);
+    });
+    audio.addEventListener("error", () => {
+      if (!cancelled) {
+        setStatus("unavailable");
+        audioRef.current = null;
+      }
+    });
+    audio.load();
+
+    // HEAD probe: if the server returns 204 (no ElevenLabs key / not cached)
+    // tear down the element and hide the button.
+    fetch(audioUrl, { method: "HEAD" })
+      .then((r) => {
+        if (cancelled) return;
+        if (r.status === 204 || !r.ok) {
+          audio.pause();
+          audio.src = "";
+          audioRef.current = null;
+          setStatus("unavailable");
+        }
+        // 200 → already loading; nothing extra to do.
+      })
+      .catch(() => {
+        // Network error — keep the button visible; worst case the audio element
+        // fires its own error event and we hide then.
+      });
+
     return () => {
+      cancelled = true;
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = "";
         audioRef.current = null;
       }
     };
-  }, []);
+  }, [audioUrl]);
 
   function handlePlay() {
-    if (unavailable) return;
+    if (status === "unavailable" || !audioRef.current) return;
 
-    // If already loaded — toggle play/pause.
-    if (audioRef.current) {
-      if (playing) {
-        audioRef.current.pause();
-        setPlaying(false);
-      } else {
-        audioRef.current.play().catch(() => setPlaying(false));
-        setPlaying(true);
-      }
+    if (playing) {
+      audioRef.current.pause();
+      setPlaying(false);
       return;
     }
 
-    // First play: HEAD-check for 204, then create and load the Audio element.
-    setLoading(true);
-    fetch(audioUrl, { method: "HEAD" })
-      .then((r) => {
-        if (r.status === 204 || !r.ok) {
-          setUnavailable(true);
-          setLoading(false);
-          return;
-        }
-        const audio = new Audio(audioUrl);
-        audioRef.current = audio;
-
-        audio.addEventListener("canplaythrough", () => {
-          setLoading(false);
+    // If the browser hasn't buffered enough yet, wait for canplaythrough.
+    if (audioRef.current.readyState < 3) {
+      setStatus("buffering");
+      audioRef.current.addEventListener(
+        "canplaythrough",
+        () => {
+          setStatus("ready");
           setPlaying(true);
-          audio.play().catch(() => setPlaying(false));
-        });
-        audio.addEventListener("ended", () => setPlaying(false));
-        audio.addEventListener("error", () => {
-          setLoading(false);
-          setUnavailable(true);
+          audioRef.current?.play().catch(() => setPlaying(false));
+        },
+        { once: true },
+      );
+      audioRef.current.addEventListener(
+        "error",
+        () => {
+          setStatus("unavailable");
           audioRef.current = null;
-        });
-        audio.load();
-      })
-      .catch(() => {
-        setUnavailable(true);
-        setLoading(false);
-      });
+        },
+        { once: true },
+      );
+      return;
+    }
+
+    audioRef.current.play().catch(() => setPlaying(false));
+    setPlaying(true);
   }
 
-  if (unavailable) return null;
+  if (status === "unavailable") return null;
+
+  const loading = status === "buffering";
 
   return (
     <button

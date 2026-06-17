@@ -1139,13 +1139,35 @@ def university_course_audio(course_key):
     Returns 204 No Content when no ElevenLabs key is set and no cached audio exists.
     Audio is keyed on the static curriculum text (not the AI-generated lecture) so
     the same MP3 is always returned for the same course, regardless of which lecture
-    variant the player last received."""
+    variant the player last received.
+
+    If the startup prewarm thread is still running, this endpoint waits up to 8 s
+    for it to complete so that early requests hit the DB cache instead of making a
+    live ElevenLabs call."""
     import logging
     from flask import Response
     from ..services.university_service import load_curriculum
     from ..config import get_settings
 
     log = logging.getLogger(__name__)
+
+    # When ElevenLabs is configured, wait briefly for the prewarm thread to
+    # populate the DB cache so this request doesn't race ahead and trigger a
+    # live API call.  No-op (returns immediately) when no key is set because
+    # PREWARM_DONE starts in its set state and is only cleared when a prewarm
+    # thread is actually started.
+    settings = get_settings()
+    if settings.elevenlabs_api_key:
+        try:
+            from .audio_prewarm import wait_for_prewarm
+            if not wait_for_prewarm(timeout=8.0):
+                log.info(
+                    "university_course_audio: prewarm still running after 8 s for %s — "
+                    "falling through to on-demand generation",
+                    course_key,
+                )
+        except Exception:
+            pass  # Never let an import error block audio serving
 
     curriculum = load_curriculum()
     course = curriculum.get("courses", {}).get(course_key)
