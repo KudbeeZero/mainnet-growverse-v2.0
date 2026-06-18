@@ -47,13 +47,16 @@
 >    `9d44efb` "fix" re-forked it). This broke deploy **and** `scripts/testenv-up.sh §1`. Removed the
 >    duplicate `502de4114faa`; single head `fd1100254612`; `check_single_head` ✅; clean `upgrade head`
 >    on a fresh DB. Gates after fix: **848 passed / 95.02%**, `make lint` ✅, `make check-memory` ✅.
-> 2. **OPEN (owner/CI action — network-blocked here) — `web/package-lock.json` out of sync.** When the
->    web test scripts were un-stubbed, `vitest` + `@playwright/test` were added to `web/package.json`
->    but the lock was never regenerated (resolved `node_modules/vitest`, `node_modules/@playwright/test`
->    nodes absent). **CI's `npm ci` will fail.** Fix: `cd growpod/web && npm install` then commit the
->    regenerated `package-lock.json`. Couldn't run here — npm registry unreachable from this container
->    (`ENOTFOUND package-firewall.replit.local`). Until then web typecheck/lint/Vitest/build/Playwright
->    are **agent-unverified** (deferred to CI/owner device). **This now gates RISK #8's web side.**
+> 2. **FIXED — `web/package-lock.json` was poisoned + out of sync (would have failed CI `npm ci`
+>    everywhere).** Root cause (found via `/debug`): the committed lock had **90 `resolved` URLs hard-
+>    coded to `http://package-firewall.replit.local`** (a dead Replit-internal host baked in when the
+>    lock was generated inside a firewalled env) **and** was missing the `vitest`/`@playwright/test`
+>    nodes added when the test scripts were un-stubbed. The public registry was actually reachable, so
+>    regenerated the lock cleanly (`npm install --registry=https://registry.npmjs.org/`): **0 firewall
+>    URLs, deps in sync, `npm ci --dry-run` ✅.** Then ran the **full web suite green locally**:
+>    `typecheck` ✅ · `lint` ✅ (warnings only) · **Vitest 217/217** ✅ · `build` ✅ · **Playwright e2e
+>    3/3** ✅. **RISK #8 web side is now genuinely verified (not just wired).** The 217 unit + 3 e2e
+>    will run in CI once Actions is enabled + PR #14 merged.
 
 ---
 
