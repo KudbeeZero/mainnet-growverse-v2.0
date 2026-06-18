@@ -1,0 +1,150 @@
+name: Ask Grok
+
+# Ask xAI's Grok a question for assistance, two ways:
+#   1. Manually from the Actions tab (Run workflow) — type your question.
+#   2. Comment "/grok <your question>" on any issue or pull request — Grok
+#      replies in a comment on that thread.
+#
+# SETUP (one-time): add a repository secret named XAI_API_KEY
+#   Settings -> Secrets and variables -> Actions -> New repository secret
+#   Get a key at https://console.x.ai . The runner needs outbound access to
+#   https://api.x.ai (it does, on GitHub-hosted runners).
+#
+# This workflow only READS secrets and POSTs to the xAI API + writes a comment;
+# it never touches the codebase.
+
+on:
+  workflow_dispatch:
+    inputs:
+      question:
+        description: "Question to ask Grok"
+        required: true
+        type: string
+      model:
+        description: "xAI model (e.g. grok-4, grok-3, grok-3-mini)"
+        required: false
+        default: "grok-4"
+        type: string
+  issue_comment:
+    types: [created]
+
+# Least privilege: only what posting a reply needs.
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+# Don't pile up runs on a busy thread.
+concurrency:
+  group: ask-grok-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  ask-grok:
+    runs-on: ubuntu-latest
+    # Manual dispatch always runs; comment runs only when it starts with "/grok".
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       startsWith(github.event.comment.body, '/grok'))
+    steps:
+      - name: Resolve the question
+        id: q
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_Q: ${{ github.event.inputs.question }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            question="$DISPATCH_Q"
+          else
+            # Strip the leading "/grok" command token.
+            question="${COMMENT_BODY#/grok}"
+          fi
+          # Trim leading/trailing whitespace.
+          question="$(printf '%s' "$question" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [ -z "$question" ]; then
+            echo "::error::No question provided. Use the 'question' input, or '/grok <question>'."
+            exit 1
+          fi
+          {
+            echo "question<<GROK_Q_EOF"
+            echo "$question"
+            echo "GROK_Q_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ask Grok (xAI API)
+        id: grok
+        env:
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          MODEL: ${{ github.event.inputs.model || 'grok-4' }}
+          QUESTION: ${{ steps.q.outputs.question }}
+        run: |
+          set -euo pipefail
+          if [ -z "${XAI_API_KEY:-}" ]; then
+            echo "::error::XAI_API_KEY secret is not set. Add it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+          payload="$(jq -n --arg model "$MODEL" --arg q "$QUESTION" '{
+            model: $model,
+            messages: [
+              { role: "system", content: "You are Grok, assisting on the GROWv2 (growpodempire) software project. Be concise, concrete, and technical." },
+              { role: "user", content: $q }
+            ],
+            temperature: 0.3
+          }')"
+
+          resp="$(curl -sS -w $'\n%{http_code}' https://api.x.ai/v1/chat/completions \
+            -H "Authorization: Bearer ${XAI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$payload")"
+
+          http_code="$(printf '%s' "$resp" | tail -n1)"
+          body="$(printf '%s' "$resp" | sed '$d')"
+
+          if [ "$http_code" != "200" ]; then
+            echo "::error::xAI API returned HTTP ${http_code}"
+            printf '%s\n' "$body"
+            exit 1
+          fi
+
+          answer="$(printf '%s' "$body" | jq -r '.choices[0].message.content // empty')"
+          if [ -z "$answer" ]; then
+            echo "::error::Empty response from Grok."
+            printf '%s\n' "$body"
+            exit 1
+          fi
+
+          {
+            echo "answer<<GROK_A_EOF"
+            printf '%s\n' "$answer"
+            echo "GROK_A_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # Always surface the answer in the run summary.
+          {
+            echo "## 🤖 Grok (${MODEL})"
+            echo ""
+            echo "**Q:** ${QUESTION}"
+            echo ""
+            printf '%s\n' "$answer"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post Grok's answer as a comment
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        env:
+          ANSWER: ${{ steps.grok.outputs.answer }}
+          MODEL: ${{ github.event.inputs.model || 'grok-4' }}
+          QUESTION: ${{ steps.q.outputs.question }}
+        with:
+          script: |
+            const { ANSWER, MODEL, QUESTION } = process.env;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `🤖 **Grok (${MODEL})** — replying to: _${QUESTION}_\n\n${ANSWER}`,
+            });
