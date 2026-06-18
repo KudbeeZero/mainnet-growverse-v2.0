@@ -18,12 +18,19 @@ migrations are single-head and applied in CI before the suite runs.
 What is solid:
 - Optimistic locking (`version_id_col`) on the two high-contention rows — `Wallet` and
   `MarketListing` — plus `CHECK`/`UNIQUE` constraints as hard DB backstops.
-- A single-head Alembic graph, enforced by a CI gate, with `alembic upgrade head` run in CI.
+- A single-head Alembic graph (21 revisions, head `fd1100254612`), with a gate script
+  (`scripts/check_single_head.py`) and `alembic upgrade head` *defined* in the CI workflow.
 - Test DB is always **local SQLite**, isolated per test, with FK enforcement turned on to match prod
   Postgres. Coverage ratchet at `fail_under = 79`, no `# pragma: no cover` hiding DB code.
 - Secrets are environment-only; production Postgres is injected by Render and never committed.
 
 What needs follow-up (none block the off-chain MVP):
+- **⛔ The CI workflow is not actually wired to run.** `ci.yml` lives at
+  `growpod/.github/workflows/ci.yml`, but GitHub Actions only discovers workflows in the
+  **repository-root** `.github/workflows/` (which here holds only `grok.yml`). So the lint / memory /
+  single-head / `upgrade head` / pytest+coverage gates **do not execute on PRs** — they are only run if
+  someone invokes `make` locally. PR #22 shows zero status checks for this reason. **This is the top
+  process risk:** every "CI enforces X" guarantee in this audit is currently a *local-only* guarantee.
 - **Minting idempotency is app-side only** — no DB guard against a concurrent double-mint.
 - **Settlement chain transfer is not transactional with the ledger** — a rolled-back DB tx can leave
   an already-sent (mock) chain transfer. Tied to the carried **RISK #4/7** (no on-chain txid-replay
@@ -33,8 +40,9 @@ What needs follow-up (none block the off-chain MVP):
 - A set of **bare foreign-key columns lack single-column indexes** (perf, pre-Phase-2).
 
 **Highest database risk:** double-mint / settlement-vs-ledger divergence once a *real* chain is wired
-(currently mock-gated). **Highest process risk:** drift between ORM models and migrations going
-unnoticed because tests bypass migrations.
+(currently mock-gated). **Highest process risk:** the gates above are **not enforced by GitHub** because
+the CI workflow is nested under `growpod/` instead of the repo root — so model↔migration drift, a
+fork, or a failing test can merge unblocked.
 
 ---
 
@@ -54,7 +62,7 @@ unnoticed because tests bypass migrations.
 | Minting | `src/growpodempire/services/minting_service.py` | Mint harvest/strain as NFT | 🟡 MED | App-side idempotency only; no DB guard |
 | Game service | `src/growpodempire/services/game_service.py` | Buy/seed/harvest/bid/grant flows | LOW | Wraps work in `session_scope()` |
 | Test harness | `tests/conftest.py` | Per-test temp SQLite, `init_db()` + seed | LOW | `reset_engine_for_tests` rebinds engine |
-| CI | `.github/workflows/ci.yml` | lint → check_memory → check_single_head → upgrade → pytest+cov | LOW | Backend on SQLite; web is a separate DB-free lane |
+| CI | `growpod/.github/workflows/ci.yml` | lint → check_memory → check_single_head → upgrade → pytest+cov | **MED** | Well-formed but **nested under `growpod/` → Actions never runs it** (root has only `grok.yml`); gates are local-only. See §7 |
 | Deploy | `render.yaml` | Prod Postgres + pre-deploy `alembic upgrade head` && seed | LOW | Secret injected by Render |
 | Dead scaffold | `lib/db/` (Drizzle), root `lib/db/` | Unused TS schema | ⚪ NONE | Not imported by the Python backend |
 
@@ -173,19 +181,31 @@ This is exactly carried **RISK #4/7** and is the reason real-value settlement is
 
 ## 7. CI / Process Review
 
-`.github/workflows/ci.yml` — **✅ safe and well-structured:**
+**⛔ Critical wiring gap — the workflow is well-authored but does not run on GitHub.**
+The backend workflow is at **`growpod/.github/workflows/ci.yml`**, nested under the `growpod/`
+subdirectory. GitHub Actions only discovers workflow files in the **repository root**
+`.github/workflows/`, which in this repo contains only `grok.yml` (a `/grok` comment bot, triggered by
+`issue_comment` / `workflow_dispatch` — never by PRs). Confirmed empirically: PR #22 reports
+`total_count: 0` status checks. **Therefore every gate below is currently local-only and is not
+enforced on pull requests** — a fork, a model↔migration drift, a lint break, or a failing test can
+merge without any check turning red.
+
+The workflow *content* itself — were it wired up — is **safe and well-structured:**
 1. Ruff lint gate (E9,F63,F7,F82) · 2. `scripts/check_memory.py` (memory-layer integrity) ·
 3. `scripts/check_single_head.py` (no migration forks) · 4. `alembic upgrade head` (migrations apply
 from scratch) · 5. `pytest -q --cov` (suite + 79% gate). `DATABASE_URL` pinned to `sqlite:////tmp/ci.db`
 (`:24`) — no network DB. Web job is a **separate Node lane** (typecheck/lint/build/vitest), no DB.
 
-- **Required checks:** the suite and gates are mandatory; failure blocks merge.
-- **Migrations in CI:** ✅ applied every run; single-head enforced first.
+- **Required checks:** ⛔ none currently run on PRs (see wiring gap). The gates are mandatory *by
+  convention* (`make test` etc.) but nothing on GitHub blocks a merge.
+- **Migrations in CI:** ✅ defined (`alembic upgrade head`, single-head first) — but only executes if the
+  workflow is relocated to the root, or if run locally.
 - **Deploy separation:** ✅ no Cloudflare; Render (`render.yaml`) is the only deploy target and runs
-  `alembic upgrade head && seed` as a **pre-deploy** step (migrations land before the new code goes
-  live). No deploy noise mixed into backend CI.
-- **🟡 Improvement:** add a migration round-trip / model-drift check (Next PR #2); consider promoting a
-  named DB check to a required GitHub status if not already required at the branch-protection level.
+  `alembic upgrade head && seed` as a **pre-deploy** step (migrations land before new code goes live).
+- **Fix (Next PR #0, highest priority):** move/forward `ci.yml` to the repo-root `.github/workflows/`
+  (scoped with `paths: ['growpod/**']` and a `working-directory: growpod` default) so the gates run on
+  PRs, then mark the backend job a **required** status check at branch protection.
+- **🟡 Also:** add a migration round-trip / model-drift check (Next PR #2).
 
 ---
 
@@ -218,20 +238,26 @@ from scratch) · 5. `pytest -q --cov` (suite + 79% gate). `DATABASE_URL` pinned 
 - Correctly gated real on-chain value OFF while the mock chain carries the MVP.
 
 **What the team should stop doing**
+- Trusting "CI" that **does not run.** The single biggest process illusion here is a polished `ci.yml`
+  that GitHub never executes because it is nested under `growpod/`. Stop assuming PRs are gated until a
+  red/green check actually appears on the PR.
 - Relying on `create_all` for tests while prod uses migrations, with **nothing** asserting the two
   agree. Stop treating "CI ran `upgrade head`" as proof the schema matches the models.
 - Adding economic flows (mint/settlement) whose only idempotency is an app-side status check — assume
   a race will happen.
 
 **What the team should do next**
-- Add the concurrency cases that are currently missing (mint, settlement, grant-claim) and a migration
-  round-trip/drift test. Backfill single-column indexes on hot bare FKs before Phase-2 sim load.
+- **Relocate `ci.yml` to the repo root so the gates run on PRs**, then require the backend job at
+  branch protection. Add the concurrency cases that are currently missing (mint, settlement,
+  grant-claim) and a migration round-trip/drift test. Backfill single-column indexes on hot bare FKs
+  before Phase-2 sim load.
 
 **What the owner should decide**
+- Approve relocating the CI workflow to the root + making the backend job a **required** status check
+  (this is the highest-leverage process fix).
 - Whether to schedule the **RISK #4/7** hardening (txid-replay guard + address validation +
   reconciliation) now or hold until just before any real-value launch — it is the gate for turning the
   chain on.
-- Whether DB CI should be a **required** GitHub status check at branch protection.
 - Whether to add FK indexes now (small migration, protected surface) or defer to Phase 2.
 
 ---
@@ -242,6 +268,7 @@ from scratch) · 5. `pytest -q --cov` (suite + 79% gate). `DATABASE_URL` pinned 
 
 | Priority | PR idea | Why | Risk | Expected tests |
 |---|---|---|---|---|
+| **0** | **Relocate `ci.yml` to repo-root `.github/workflows/`** (scope `paths: ['growpod/**']`, `working-directory: growpod`); make the backend job a required check | The gates don't run on PRs today — CI is defined but never executes | Low (CI config only) | Workflow runs green on the PR that moves it |
 | 1 | Concurrency test matrix expansion: concurrent mint, double-withdraw settlement, grant-claim race | Proves existing constraints and surfaces the minting-idempotency gap with evidence | Low (test-only) | New cases in `tests/test_concurrency.py` / `test_marketplace_concurrency.py` |
 | 2 | Migration round-trip + drift guard: `upgrade head` from scratch, `downgrade` one step, assert migrated schema == ORM metadata | Tests bypass migrations today, so drift is unguarded | Low (CI/test-only) | Migration smoke test + metadata-diff assert |
 | 3 | FK index pass for hot `player_id` / `strain_id` / `pod_id` lookups | Avoid table scans before Phase-2 simulation load | Low–Med (**migration = protected surface; needs owner OK**) | Query plan / migration smoke test |
