@@ -268,7 +268,14 @@ export function stageForDay(day: number, floweringDays = 60): GrowthStage {
 
 /** Total nominal length of one grow cycle (days) for a given flowering window. */
 export function cycleDays(floweringDays = 60): number {
-  return STAGE_DAYS.seed + STAGE_DAYS.germination + STAGE_DAYS.seedling + STAGE_DAYS.vegetative + floweringDays;
+  return (
+    STAGE_DAYS.seed +
+    STAGE_DAYS.germination +
+    STAGE_DAYS.seedling +
+    STAGE_DAYS.vegetative +
+    floweringDays +
+    STAGE_DAYS.late_flower
+  );
 }
 
 /**
