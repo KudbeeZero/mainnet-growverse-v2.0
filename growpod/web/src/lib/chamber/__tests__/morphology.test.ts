@@ -120,8 +120,9 @@ describe("daysToHarvest", () => {
     expect(vegetative).toBeGreaterThan(flowering);
   });
 
-  it("estimates a healthy flowering plant near the flowering midpoint", () => {
-    expect(daysToHarvest("flowering", fl, 100)).toBeCloseTo(60, 0);
+  it("estimates a healthy flowering plant: flowering midpoint + the late_flower finish", () => {
+    // 60 (flowering mid) + 14 (the additive late_flower ripening stage) = 74.
+    expect(daysToHarvest("flowering", fl, 100)).toBeCloseTo(74, 0);
   });
 
   it("lengthens the estimate when health is poor", () => {

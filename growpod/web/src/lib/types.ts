@@ -8,6 +8,7 @@ export type GrowthStage =
   | "seedling"
   | "vegetative"
   | "flowering"
+  | "late_flower"
   | "harvest";
 
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
