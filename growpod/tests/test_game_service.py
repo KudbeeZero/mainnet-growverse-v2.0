@@ -12,6 +12,12 @@ from growpodempire.db.session import session_scope
 from growpodempire.db.models import Strain, SeedInventory, Plant
 from growpodempire.services.game_service import GameService, GameError
 from growpodempire.economy.ledger import InsufficientFundsError, balance
+from launch_economy import launch_config
+
+# Live balance.yaml is in "free testing mode" (free seeds); economic-invariant
+# tests (debits, insufficient funds, marketplace currency flow) inject the launch
+# config so they guard real launch economics regardless of the live tuning.
+LAUNCH_CFG = launch_config()
 
 
 def _strain(session, slug):
@@ -27,7 +33,7 @@ def test_create_player_grants_starting_balance(db):
 
 def test_buy_seed_debits_and_adds_inventory(db):
     with session_scope() as s:
-        svc = GameService(s)
+        svc = GameService(s, config=LAUNCH_CFG)
         p = svc.create_player("bob")
         common = _strain(s, "blue-dream")  # common -> 25
         stack = svc.buy_seed(p.id, common.id, quantity=2)
@@ -37,7 +43,7 @@ def test_buy_seed_debits_and_adds_inventory(db):
 
 def test_buy_seed_insufficient_funds(db):
     with session_scope() as s:
-        svc = GameService(s)
+        svc = GameService(s, config=LAUNCH_CFG)
         p = svc.create_player("broke")
         legendary_like = _strain(s, "gorilla-glue-no-4")  # rare -> 150
         # Drain the wallet first.
@@ -146,7 +152,7 @@ def test_list_pods_unknown_player_raises(db):
 
 def test_marketplace_transfers_seeds_and_currency(db):
     with session_scope() as s:
-        svc = GameService(s)
+        svc = GameService(s, config=LAUNCH_CFG)
         seller = svc.create_player("seller")
         buyer = svc.create_player("buyer")
         strain = _strain(s, "blue-dream")  # 25 common

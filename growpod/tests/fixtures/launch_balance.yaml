@@ -1,0 +1,21 @@
+# Canonical LAUNCH economy values — the "restore before launch" reference.
+#
+# The live src/growpodempire/data/balance.yaml is intentionally in "free testing
+# mode" (free seeds, boosted daily stipend) so the test environment is frictionless.
+# These are the values that MUST be restored in balance.yaml before launch.
+#
+# tests/launch_economy.py overlays these onto the live config to produce the
+# LAUNCH config, so the launch economic invariants stay guarded regardless of the
+# live testing tuning. tests/test_economy.py::test_launch_balance_values is the
+# automated tripwire that keeps THIS file honest.
+
+daily_stipend: 50          # small retention faucet (NOT a wealth pump)
+
+seeds:
+  base_cost: 25            # price of a COMMON seed
+  rarity_multiplier:
+    common: 1.0
+    uncommon: 2.5
+    rare: 6.0
+    epic: 15.0
+    legendary: 40.0
