@@ -12,7 +12,7 @@ import {
   type AgentFinding,
 } from "./introScript";
 
-const PLANT_SIZE = 190;
+const PLANT_SIZE = 180;
 const TICK_MS = 120;
 
 /** Read the user's reduced-motion preference (SSR-safe). */
@@ -83,21 +83,28 @@ export function GrowthIntroScene() {
 
   return (
     <div className="select-none">
+      {/* Plant (hero) beside a clean scout column on desktop; stacked on mobile.
+          Normal flow keeps the scout cards from ever overlapping the wordmark,
+          each other, or clipping off-screen. The column reserves its final
+          height so the plant doesn't jump as cards pop in. */}
       <div
-        className="relative mx-auto"
-        style={{ width: PLANT_SIZE, height: PLANT_SIZE * 1.2 }}
+        className="mx-auto flex max-w-[460px] flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-center sm:gap-6"
         aria-label="A growing plant inspected by AI scouts"
       >
-        <PlantVisual stage={stage} flags={flags} size={PLANT_SIZE} />
+        <div className="shrink-0">
+          <PlantVisual stage={stage} flags={flags} size={PLANT_SIZE} />
+        </div>
 
-        {visibleFindings.map((f) => (
-          <AgentBubble
-            key={`${runId}-${f.id}`}
-            finding={f}
-            reduced={reduced}
-            onRequest={setActive}
-          />
-        ))}
+        <div className="flex w-full max-w-[230px] flex-col gap-2 sm:min-h-[360px] sm:justify-center">
+          {visibleFindings.map((f) => (
+            <AgentBubble
+              key={`${runId}-${f.id}`}
+              finding={f}
+              reduced={reduced}
+              onRequest={setActive}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Replay affordance once the scene settles (hidden under reduced motion). */}

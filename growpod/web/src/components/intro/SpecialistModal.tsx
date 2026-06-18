@@ -63,15 +63,19 @@ export function SpecialistModal({
             Summon a {finding.specialist.toLowerCase()} to diagnose and treat this for
             you.
           </p>
-          <div className="mt-5 flex items-center justify-between">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
             <span className="instrument-label text-gray-400">
               Consult fee · {finding.feeGrow} 🌿
             </span>
             <div className="flex gap-2">
-              <Button variant="ghost" onClick={handleClose}>
+              <Button variant="ghost" onClick={handleClose} className="whitespace-nowrap">
                 Not now
               </Button>
-              <Button variant="primary" onClick={() => setDispatched(true)}>
+              <Button
+                variant="primary"
+                onClick={() => setDispatched(true)}
+                className="whitespace-nowrap"
+              >
                 Request specialist · {finding.feeGrow} 🌿
               </Button>
             </div>

@@ -10,8 +10,12 @@ const SCAN_MS = 900;
 const THINK_MS = 1100;
 
 /**
- * A little AI agent that pops up over the plant, scans, "thinks", then reveals
- * the condition it recognized with a button to summon a specialist.
+ * A little AI scout card that pops in, scans, "thinks", then reveals the
+ * condition it recognized with a button to summon a specialist.
+ *
+ * Laid out in normal flow inside the scene's scout column (see
+ * GrowthIntroScene), so cards can never overlap each other, the wordmark, or
+ * clip off-screen on mobile — they simply stack.
  *
  * `reduced` skips the timed phases and renders the resolved "found" state
  * immediately (no looping animation), mirroring the scene's reduced-motion path.
@@ -41,57 +45,50 @@ export function AgentBubble({
 
   return (
     <div
-      className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2"
-      style={{ left: `${finding.anchor.xPct}%`, top: `${finding.anchor.yPct}%` }}
+      className={`${reduced ? "" : "gpe-agent-pop"} w-full rounded-lg border border-ink-600 bg-ink-800/95 p-2.5 text-left shadow-lg backdrop-blur`}
     >
-      {/* Anchor dot on the plant + scan pulse while analyzing. */}
-      <span className="absolute left-0 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-grow-300 shadow-[0_0_8px_rgba(120,220,120,0.9)]" />
-      {phase === "scanning" && !reduced && (
-        <span className="gpe-scan-ring absolute left-0 top-0 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-grow-300" />
+      <div className="flex items-center gap-1.5">
+        <span className="relative inline-flex text-sm">
+          🤖
+          {phase === "scanning" && !reduced && (
+            <span className="gpe-scan-ring absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-grow-300" />
+          )}
+        </span>
+        <span className="instrument-label text-gray-400">AI Scout</span>
+      </div>
+
+      {phase === "scanning" && (
+        <p className="mt-1 text-xs text-gray-400">Analyzing leaf surface…</p>
       )}
 
-      {/* The chip floats up-and-right of the anchor so it never covers it. */}
-      <div
-        className={`${reduced ? "" : "gpe-agent-pop"} pointer-events-auto absolute bottom-2 left-2 w-max max-w-[15rem] rounded-lg border border-ink-600 bg-ink-800/95 p-2.5 text-left shadow-xl backdrop-blur`}
-      >
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm">🤖</span>
-          <span className="instrument-label text-gray-400">AI Scout</span>
-        </div>
-
-        {phase === "scanning" && (
-          <p className="mt-1 text-xs text-gray-400">Analyzing leaf surface…</p>
-        )}
-
-        {phase === "thinking" && (
-          <div className="mt-1 flex items-center gap-1" aria-label="Thinking">
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="gpe-think-dot h-1.5 w-1.5 rounded-full bg-grow-300"
-                style={{ animationDelay: `${i * 0.18}s` }}
-              />
-            ))}
-          </div>
-        )}
-
-        {phase === "found" && (
-          <div className="mt-1">
+      {phase === "thinking" && (
+        <div className="mt-1 flex items-center gap-1" aria-label="Thinking">
+          {[0, 1, 2].map((i) => (
             <span
-              className={`inline-block rounded-full border px-2 py-0.5 text-[11px] ${visual.badgeClass}`}
-            >
-              {visual.label}
-            </span>
-            <p className="mt-1.5 text-xs text-gray-300">{finding.note}</p>
-            <button
-              onClick={() => onRequest(finding)}
-              className="mt-2 w-full rounded-md border border-grow-500 bg-grow-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-grow-500"
-            >
-              Request specialist · {finding.feeGrow} 🌿
-            </button>
-          </div>
-        )}
-      </div>
+              key={i}
+              className="gpe-think-dot h-1.5 w-1.5 rounded-full bg-grow-300"
+              style={{ animationDelay: `${i * 0.18}s` }}
+            />
+          ))}
+        </div>
+      )}
+
+      {phase === "found" && (
+        <div className="mt-1">
+          <span
+            className={`inline-block rounded-full border px-2 py-0.5 text-[11px] ${visual.badgeClass}`}
+          >
+            {visual.label}
+          </span>
+          <p className="mt-1.5 text-xs text-gray-300">{finding.note}</p>
+          <button
+            onClick={() => onRequest(finding)}
+            className="mt-2 w-full whitespace-nowrap rounded-md border border-grow-500 bg-grow-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-grow-500"
+          >
+            Request specialist · {finding.feeGrow} 🌿
+          </button>
+        </div>
+      )}
     </div>
   );
 }
