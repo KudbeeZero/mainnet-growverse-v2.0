@@ -56,13 +56,23 @@ revert; that's what review and git are for.
   destructive git denied (force/refspec-force/branch-delete/amend/reset-hard/clean/checkout-discard).
 
 ## End-of-chat report (every chat, no exceptions)
-End your **final message** of every chat with this, and keep it SHORT:
-> **Asked:** one sentence — what the owner originally requested.
-> **Done:** 1–2 sentences — what actually shipped (or didn't, and why).
-> **Needs you:** only decisions that genuinely alter the project's direction, else "nothing".
-No walls of text. If a detail doesn't change what the owner does next, it belongs in the PR
-body or the baton, not the report. This is the chat-facing summary; the repo-facing closeout
-(baton rewrite, audit receipt, Summary→Next) is defined in `docs/SESSION_PROTOCOL.md`.
+End **every** status update, handoff, PR report, audit result, or stopping-point message with
+this **exact** closeout format, and keep it SHORT:
+
+> **Asked:**
+> * Briefly state what the assignment/request was.
+>
+> **Done:**
+> * Briefly state what was completed, verified, opened, merged, frozen, or checked.
+>
+> **Needs you:**
+> * State the next human decision/action needed.
+> * If no action is needed, say: "Nothing right now — holding/subscribed/standing by."
+
+Keep it short and concrete. Do **not** mix future work into "Done." Do **not** hide required
+decisions inside paragraphs. If a detail doesn't change what the owner does next, it belongs in
+the PR body or the baton, not the report. This is the chat-facing summary; the repo-facing
+closeout (baton rewrite, audit receipt, Summary→Next) is defined in `docs/SESSION_PROTOCOL.md`.
 
 ## Memory layer map (read deeper as needed)
 | Layer | File | Purpose | Volatility |
