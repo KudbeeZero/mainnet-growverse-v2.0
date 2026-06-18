@@ -5,6 +5,10 @@
 > which govern the *code*) and the [Session Relay Protocol](SESSION_PROTOCOL.md) (which governs
 > the *handoff between chats*). Where this file and the relay protocol overlap, they agree by
 > design — this file is the "what is safe to change and how do I prove it" layer.
+>
+> The layer *above* this one — reconcile memory ↔ evidence ↔ confidence and label every
+> finding before recommending — is the [Global Evidence + Memory Layer](GLOBAL_EVIDENCE_MEMORY_LAYER.md).
+> That decides *what's true and what to do*; this decides *what is safe to change and how to prove it*.
 
 ## Prime directive
 

@@ -81,6 +81,13 @@ before new features, **protect the foundation**. One PR = one purpose. Migration
 surfaces — touch them only with the checks and stop-conditions spelled out in the
 [Global Build Rules — Safety Charter](docs/BUILD_RULES.md). When in doubt, stop and ask.
 
+**Reason before you recommend.** Above the safety charter sits the
+[Global Evidence + Memory Layer](docs/GLOBAL_EVIDENCE_MEMORY_LAYER.md) — the decision loop
+every run follows *before* recommending: reconcile project memory ↔ current repo evidence ↔
+decision confidence, label each finding (Verified / Memory conflict / Needs owner decision /
+Unsafe to proceed, …), and gate on the owner where required. BUILD_RULES is *what is safe to
+change*; this is *how to decide what's true and what to do next*.
+
 ## Memory layer map (read deeper as needed)
 | Layer | File | Purpose | Volatility |
 |------|------|---------|-----------|
