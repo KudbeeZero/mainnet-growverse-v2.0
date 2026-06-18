@@ -35,6 +35,25 @@
 > GCS upload/download + sidecar token, `ai/elevenlabs_narrator.py` real TTS HTTP, and a few
 > `game_api.py` success-serializer arms covered indirectly. All on PR #14 — **95.02% appears to be the
 > honest offline floor** (further gains need live keys/network or the chain/AI seams the owner declined).
+>
+> **Playtest dry-run (2026-06-18, same chat) — booted the build in the real tester config and drove
+> the core loop end-to-end over HTTP (headless; no browser/tunnel here).** Receipt:
+> `/health` 200 · `/readiness` 200 (DB ok) · 29 strains seeded · dev-clock enabled · debug off.
+> **Core loop PASS:** provision (skip-login equiv) → starter pod+seed → plant → water/feed/climate →
+> dev-clock grow → harvest → cure → sell; **GROW moved 495 → 824.29 (+329.29)**, ledger consistent,
+> no-API-key write → 401. Two real "reds" caught before a tester would hit them:
+> 1. **FIXED — Alembic multiple-heads fork.** `alembic upgrade head` failed (`502de4114faa` +
+>    `fd1100254612` were duplicate no-op merges of the same pair `a7b8c9d0e1f2`+`c8d9e0f1a2b3`; the
+>    `9d44efb` "fix" re-forked it). This broke deploy **and** `scripts/testenv-up.sh §1`. Removed the
+>    duplicate `502de4114faa`; single head `fd1100254612`; `check_single_head` ✅; clean `upgrade head`
+>    on a fresh DB. Gates after fix: **848 passed / 95.02%**, `make lint` ✅, `make check-memory` ✅.
+> 2. **OPEN (owner/CI action — network-blocked here) — `web/package-lock.json` out of sync.** When the
+>    web test scripts were un-stubbed, `vitest` + `@playwright/test` were added to `web/package.json`
+>    but the lock was never regenerated (resolved `node_modules/vitest`, `node_modules/@playwright/test`
+>    nodes absent). **CI's `npm ci` will fail.** Fix: `cd growpod/web && npm install` then commit the
+>    regenerated `package-lock.json`. Couldn't run here — npm registry unreachable from this container
+>    (`ENOTFOUND package-firewall.replit.local`). Until then web typecheck/lint/Vitest/build/Playwright
+>    are **agent-unverified** (deferred to CI/owner device). **This now gates RISK #8's web side.**
 
 ---
 
