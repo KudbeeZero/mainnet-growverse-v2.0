@@ -1,11 +1,15 @@
 name: CI
 
 # The "make truth automatic" gate: lint + memory-integrity + single-head +
-# migrations + the full test suite (with the coverage ratchet). Mirrors the
-# Makefile targets so `make test && make lint && make check-memory` locally is
-# the same contract CI enforces. Never skipped.
-# push on main covers post-merge; pull_request covers branches (avoids the
-# double-run a branch push would otherwise trigger).
+# migrations + the full test suite (with the coverage ratchet) + the web checks.
+# Mirrors the growpod/Makefile targets so `make test && make lint &&
+# make check-memory` locally is the same contract CI enforces. Never skipped.
+#
+# This file lives at the REPOSITORY ROOT (.github/workflows/) because GitHub only
+# runs workflows found there. The project itself lives under growpod/, so every
+# `run:` step executes with working-directory: growpod (the `uses:` checkout still
+# lands at the repo root). push on main covers post-merge; pull_request covers
+# branches (avoids the double-run a branch push would otherwise trigger).
 on:
   push:
     branches: [main]
@@ -19,6 +23,9 @@ jobs:
   backend:
     name: backend (lint · memory · migrations · tests)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: growpod
     env:
       PYTHONPATH: src
       DATABASE_URL: "sqlite:////tmp/ci.db"
@@ -29,6 +36,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: growpod/requirements*.txt
 
       - name: Install deps (runtime + dev + the package, editable)
         run: |
@@ -56,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: web
+        working-directory: growpod/web
     steps:
       - uses: actions/checkout@v4
 
@@ -64,7 +72,7 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: growpod/web/package-lock.json
 
       - name: Install
         run: npm ci
