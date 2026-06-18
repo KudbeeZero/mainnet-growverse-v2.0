@@ -12,6 +12,14 @@ from growpodempire.db.session import session_scope
 from growpodempire.db.models import Strain, SeedInventory, Plant
 from growpodempire.services.game_service import GameService, GameError
 from growpodempire.economy.ledger import InsufficientFundsError, balance
+from growpodempire.economy.config import load_economy_config
+
+# Seed purchases are free in the current dev economy (balance.yaml
+# `seeds.base_cost: 0`), so the debit/insufficient-funds/marketplace assertions
+# can't hold. These tests guard the LAUNCH economy and auto-reactivate when
+# base_cost is restored to 25. See DECISIONS 2026-06-18.
+_FREE_SEEDS = load_economy_config().seed_base_cost() == 0
+_FREE_SEED_REASON = "dev free-seed economy (balance.yaml seeds.base_cost: 0); restore to 25 to enforce launch pricing"
 
 
 def _strain(session, slug):
@@ -25,6 +33,7 @@ def test_create_player_grants_starting_balance(db):
         assert balance(s, p.id) == Decimal("500.000000")
 
 
+@pytest.mark.skipif(_FREE_SEEDS, reason=_FREE_SEED_REASON)
 def test_buy_seed_debits_and_adds_inventory(db):
     with session_scope() as s:
         svc = GameService(s)
@@ -35,6 +44,7 @@ def test_buy_seed_debits_and_adds_inventory(db):
         assert balance(s, p.id) == Decimal("450.000000")  # 500 - 2*25
 
 
+@pytest.mark.skipif(_FREE_SEEDS, reason=_FREE_SEED_REASON)
 def test_buy_seed_insufficient_funds(db):
     with session_scope() as s:
         svc = GameService(s)
@@ -144,6 +154,7 @@ def test_list_pods_unknown_player_raises(db):
             GameService(s).list_pods("does-not-exist")
 
 
+@pytest.mark.skipif(_FREE_SEEDS, reason=_FREE_SEED_REASON)
 def test_marketplace_transfers_seeds_and_currency(db):
     with session_scope() as s:
         svc = GameService(s)

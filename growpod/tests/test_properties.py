@@ -11,6 +11,8 @@ import random
 import sys
 from decimal import Decimal
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from growpodempire.db.session import session_scope
@@ -112,6 +114,10 @@ def test_harvest_value_monotonic_in_weight_and_quality():
     assert high_q > low_q
 
 
+@pytest.mark.skipif(
+    CFG.seed_base_cost() == 0,
+    reason="dev free-seed economy (balance.yaml seeds.base_cost: 0); restore to 25 to enforce launch pricing",
+)
 def test_seed_price_monotonic_in_rarity():
     prices = [pricing.seed_price(r.value, CFG) for r in RARITY_ORDER]
     assert prices == sorted(prices)

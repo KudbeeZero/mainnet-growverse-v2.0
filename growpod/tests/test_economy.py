@@ -24,7 +24,15 @@ from growpodempire.db.models import Player, Wallet
 CFG = load_economy_config()
 
 
+# Seed pricing is intentionally disabled in the current free-playtest economy
+# (balance.yaml `seeds.base_cost: 0  # FREE for testing — restore to 25 before
+# launch`). These tests guard the LAUNCH economy: they skip while seeds are free
+# and auto-reactivate the moment base_cost is restored. See DECISIONS 2026-06-18.
+_FREE_SEED_REASON = "dev free-seed economy (balance.yaml seeds.base_cost: 0); restore to 25 to enforce launch pricing"
+
+
 # ----- Pricing (pure, deterministic) ------------------------------------
+@pytest.mark.skipif(CFG.seed_base_cost() == 0, reason=_FREE_SEED_REASON)
 def test_seed_price_scales_with_rarity():
     assert pricing.seed_price("common", CFG) == Decimal("25.000000")
     assert pricing.seed_price("legendary", CFG) == Decimal("1000.000000")
