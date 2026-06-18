@@ -15,7 +15,7 @@
 
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, plantGrows, storyEvents } from "@workspace/db";
+import { db, plantGrows, plantSeeds, storyEvents } from "@workspace/db";
 import { requireAdminKey } from "../middlewares/requireAdminKey";
 import {
   checkStageProgress,
@@ -23,9 +23,12 @@ import {
   plantSeed,
   tendPlant,
 } from "../services/plant/plantService";
-import { selectEvent } from "../services/plant/storyEngine";
+import { selectEvent, type StoryEventType } from "../services/plant/storyEngine";
 import { mintSeed, mintSeedOnChain } from "../services/chain/seedService";
 import { getBlockHashProvider } from "../services/chain/blockHash";
+import { cutClone } from "../services/plant/cloneService";
+import { resolveStoryEvent } from "../services/plant/storyService";
+import { harvestPlant } from "../services/plant/harvestService";
 
 const router: IRouter = Router();
 
@@ -189,6 +192,146 @@ router.get("/plant/grow/:growId", async (req, res) => {
   } catch (err) {
     req.log?.error({ err }, "get grow failed");
     res.status(500).json({ error: "failed_to_get_grow" });
+  }
+});
+
+/**
+ * POST /api/plant/resolve-event/:growId
+ * Body: { eventType: StoryEventType, choiceId: string }
+ *
+ * Persist the player's choice for a pending story event. The write is
+ * permanent (Section 4) and feeds the Harvest NFT's proof-of-play record.
+ */
+router.post("/plant/resolve-event/:growId", async (req, res) => {
+  const { growId } = req.params;
+  const { eventType, choiceId } = req.body ?? {};
+
+  if (typeof eventType !== "string" || eventType.length === 0) {
+    res.status(400).json({ error: "eventType is required" });
+    return;
+  }
+  if (typeof choiceId !== "string" || choiceId.length === 0) {
+    res.status(400).json({ error: "choiceId is required" });
+    return;
+  }
+
+  try {
+    const [existing] = await db
+      .select({ growId: plantGrows.growId })
+      .from(plantGrows)
+      .where(eq(plantGrows.growId, growId))
+      .limit(1);
+    if (!existing) {
+      res.status(404).json({ error: "grow_not_found" });
+      return;
+    }
+
+    const event = await resolveStoryEvent(
+      growId,
+      eventType as StoryEventType,
+      choiceId,
+    );
+    if (!event) {
+      res.status(400).json({ error: "unknown_event_or_choice" });
+      return;
+    }
+
+    res.status(201).json({ event });
+  } catch (err) {
+    req.log?.error({ err }, "resolve-event failed");
+    res.status(500).json({ error: "failed_to_resolve_event" });
+  }
+});
+
+/**
+ * POST /api/plant/clone-cut/:growId
+ *
+ * Cut a clone from a growing plant (Section 2.2). Derives the clone's genetics
+ * from the parent ±5%, mints the Clone NFT immediately, and starts the clone's
+ * own grow at the `seedling` stage. One cut per stage is enforced.
+ */
+router.post("/plant/clone-cut/:growId", async (req, res) => {
+  const { growId } = req.params;
+
+  try {
+    const result = await cutClone(growId);
+
+    if (result === "grow_not_found" || result === "seed_not_found") {
+      res.status(404).json({ error: result });
+      return;
+    }
+    if (result === "not_eligible") {
+      res.status(409).json({ error: "clone_not_eligible" });
+      return;
+    }
+
+    res.status(201).json(result);
+  } catch (err) {
+    req.log?.error({ err }, "clone-cut failed");
+    res.status(500).json({ error: "failed_to_cut_clone" });
+  }
+});
+
+/**
+ * POST /api/plant/harvest/:growId
+ * Body: { biome?: string, perfectPh?: boolean }
+ *
+ * Trigger harvest (Sections 5 & 8.3): compute the rarity tier, mint the Harvest
+ * NFT proof-of-play token, stamp harvestNftId + rarityTier and mark the grow
+ * `complete`. Idempotent — a second call returns the same recorded snapshot.
+ */
+router.post("/plant/harvest/:growId", async (req, res) => {
+  const { growId } = req.params;
+  const { biome, perfectPh } = req.body ?? {};
+
+  if (biome !== undefined && typeof biome !== "string") {
+    res.status(400).json({ error: "biome must be a string" });
+    return;
+  }
+  if (perfectPh !== undefined && typeof perfectPh !== "boolean") {
+    res.status(400).json({ error: "perfectPh must be a boolean" });
+    return;
+  }
+
+  try {
+    const result = await harvestPlant(growId, {
+      biome: typeof biome === "string" ? biome : null,
+      perfectPh: perfectPh === true,
+    });
+
+    if (result === "grow_not_found" || result === "seed_not_found") {
+      res.status(404).json({ error: result });
+      return;
+    }
+    if (result === "not_ready") {
+      res.status(409).json({ error: "harvest_not_ready" });
+      return;
+    }
+
+    res.status(result.minted ? 201 : 200).json(result);
+  } catch (err) {
+    req.log?.error({ err }, "harvest failed");
+    res.status(500).json({ error: "failed_to_harvest" });
+  }
+});
+
+/**
+ * GET /api/plant/seeds/:playerId
+ * List every Seed NFT owned by a player (the seed-vault shelf, Section 7.2).
+ */
+router.get("/plant/seeds/:playerId", async (req, res) => {
+  const { playerId } = req.params;
+
+  try {
+    const seeds = await db
+      .select()
+      .from(plantSeeds)
+      .where(eq(plantSeeds.ownerPlayerId, playerId));
+
+    res.status(200).json({ seeds });
+  } catch (err) {
+    req.log?.error({ err }, "list seeds failed");
+    res.status(500).json({ error: "failed_to_list_seeds" });
   }
 });
 

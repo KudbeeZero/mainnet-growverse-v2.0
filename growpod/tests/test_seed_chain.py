@@ -99,3 +99,52 @@ def test_mint_seed_requires_admin(client):
 def test_mint_seed_validates_body(client, admin_key):
     resp = client.post("/api/chain/mint-seed", json={"ownerAddress": "X"}, headers={"X-API-Key": admin_key})
     assert resp.status_code == 400
+
+
+# ----- Clone Room harvest NFT (proof-of-play) -----------------------------
+HARVEST = {
+    "growId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "seedId": SEED["seedId"],
+    "parentSeedId": SEED["seedId"],
+    "ownerAddress": SEED["ownerAddress"],
+    "rarityTier": "rare",
+    "tendActions": 5,
+    "parentPlotBiome": "forest",
+    "storyEvents": [
+        {"type": "unexpected_mutation", "choice": "study_it", "outcome": {"rarityMod": 1}},
+    ],
+}
+
+
+def test_clone_room_harvest_metadata_records_proof_of_play():
+    meta = md.clone_room_harvest_metadata(HARVEST)
+    props = meta["properties"]
+    assert props["type"] == "harvest"
+    assert props["grow_id"] == HARVEST["growId"]
+    assert props["parent_seed_id"] == HARVEST["parentSeedId"]
+    assert props["rarity"] == "rare"
+    assert props["story_events"] == HARVEST["storyEvents"]
+    assert len(md.metadata_hash(meta)) == 32
+
+
+def test_mint_harvest_endpoint_returns_asset(client, admin_key):
+    resp = client.post(
+        "/api/chain/mint-harvest", json=HARVEST, headers={"X-API-Key": admin_key}
+    )
+    assert resp.status_code == 201
+    body = resp.get_json()
+    assert isinstance(body["assetId"], int)
+    assert body["txId"] is not None
+    assert body["network"] == "mock"
+
+
+def test_mint_harvest_requires_admin(client):
+    resp = client.post("/api/chain/mint-harvest", json=HARVEST)
+    assert resp.status_code == 401
+
+
+def test_mint_harvest_validates_body(client, admin_key):
+    resp = client.post(
+        "/api/chain/mint-harvest", json={"ownerAddress": "X"}, headers={"X-API-Key": admin_key}
+    )
+    assert resp.status_code == 400

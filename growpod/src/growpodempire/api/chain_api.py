@@ -65,3 +65,48 @@ def mint_seed():
         ),
         201,
     )
+
+
+@chain_bp.post("/mint-harvest")
+@require_feature("chain")
+@require_admin
+def mint_harvest():
+    """Mint a Clone Room Harvest NFT (proof-of-play) as an ASA.
+
+    Body: the harvest snapshot as JSON (growId, parentSeedId, ownerAddress,
+    rarityTier, tendActions, parentPlotBiome, storyEvents). Returns
+    { assetId, txId, network }. Stateless, mirroring /mint-seed: the TS caller
+    stamps harvestNftId onto the grow only when it is null, so this stays
+    idempotency-free.
+    """
+    harvest = request.get_json(force=True, silent=True) or {}
+
+    if not harvest.get("growId"):
+        return _error("growId is required")
+    if not harvest.get("ownerAddress"):
+        return _error("ownerAddress is required")
+
+    metadata = md.clone_room_harvest_metadata(harvest)
+    try:
+        provider = shared_provider()
+        mint = provider.create_asset_tx(
+            unit_name="GPHARV",
+            asset_name=metadata["name"][:32],
+            total=1,
+            decimals=0,
+            url=None,
+            metadata_hash=md.metadata_hash(metadata),
+        )
+    except ChainError as exc:
+        return _error(f"On-chain mint failed: {exc}", 502)
+
+    return (
+        jsonify(
+            {
+                "assetId": mint.asset_id,
+                "txId": mint.txid,
+                "network": provider.network(),
+            }
+        ),
+        201,
+    )

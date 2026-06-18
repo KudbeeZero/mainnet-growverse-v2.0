@@ -6,7 +6,19 @@
 // key supplied via the `x-admin-key` header is checked against ADMIN_KEY.
 // ============================================================================
 
+import { timingSafeEqual } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
+
+/** Constant-time string compare (avoids a timing side-channel on the key). */
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  // timingSafeEqual requires equal-length buffers; compare a fixed-size digest
+  // surrogate by length-guarding first, but still run the compare to keep the
+  // timing flat for equal-length mismatches.
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
 
 export function requireAdminKey(
   req: Request,
@@ -22,7 +34,7 @@ export function requireAdminKey(
   }
 
   const provided = req.header("x-admin-key");
-  if (!provided || provided !== expected) {
+  if (!provided || !safeEqual(provided, expected)) {
     res.status(401).json({ error: "unauthorized" });
     return;
   }
