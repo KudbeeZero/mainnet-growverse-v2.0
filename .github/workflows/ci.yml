@@ -70,12 +70,11 @@ jobs:
           cache: npm
           cache-dependency-path: growpod/web/package-lock.json
 
-      # `npm install` (not `npm ci`): the vitest/playwright test deps were added
-      # in an offline environment where the lockfile could not be regenerated, so
-      # install resolves them here and refreshes the lock. Switch back to `npm ci`
-      # once the lockfile is regenerated with network access.
+      # Strict, reproducible install against the committed lockfile (regenerated
+      # against the public registry — vitest/playwright deps in sync, no stale
+      # firewall URLs). Fails fast if package.json and the lock drift.
       - name: Install
-        run: npm install
+        run: npm ci
 
       - name: Typecheck
         run: npm run typecheck
