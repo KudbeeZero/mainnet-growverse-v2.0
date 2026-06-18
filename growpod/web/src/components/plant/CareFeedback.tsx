@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState, type CSSProperties } from "react";
-import { CARE_FX, buildParticles, type CareKind, type Particle } from "./careFeedback";
+import { CARE_FX, buildParticles, type CareKind, type Particle } from "./careFeedbackData";
 import { haptic } from "@/lib/haptics";
 
 interface Burst {

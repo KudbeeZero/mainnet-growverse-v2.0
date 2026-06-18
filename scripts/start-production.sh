@@ -9,10 +9,15 @@ set -e
 #   - Gunicorn (API) binds to 0.0.0.0:8000 — internal only.
 #     Next.js rewrites proxy /api/* and /health to http://localhost:8000.
 
+# Resolve paths relative to this script so it works on any host
+# (not tied to a specific deploy platform's directory layout).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # ------------------------------------------------------------------
 # 1. Schema init (idempotent — creates tables if missing, safe to re-run)
 # ------------------------------------------------------------------
-cd /home/runner/workspace/growpod
+cd "$REPO_ROOT/growpod"
 export PYTHONPATH=src
 python3 -c "from growpodempire.db.session import init_db; init_db()"
 
@@ -30,7 +35,7 @@ API_PID=$!
 # ------------------------------------------------------------------
 # 3. Start the Next.js frontend on the Autoscale-assigned PORT
 # ------------------------------------------------------------------
-cd /home/runner/workspace/growpod/web
+cd "$REPO_ROOT/growpod/web"
 NEXT_PORT="${PORT:-3000}"
 BACKEND_URL=http://localhost:8000 npm run start -- -p "$NEXT_PORT" &
 WEB_PID=$!

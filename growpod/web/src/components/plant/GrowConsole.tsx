@@ -6,7 +6,7 @@
 // metrics; it never writes and never feeds back into the simulation.
 
 import { bandPct } from "@/lib/envBands";
-import { growConsoleRows, hasMetrics, type ConsoleRow } from "@/components/plant/growConsole";
+import { growConsoleRows, hasMetrics, type ConsoleRow } from "@/components/plant/growConsoleData";
 import type { PlantState, Pod } from "@/lib/types";
 
 const VAL_COLOR = ["text-grow-300", "text-amber-300", "text-red-300"] as const;
