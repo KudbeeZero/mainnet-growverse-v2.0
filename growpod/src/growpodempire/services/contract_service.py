@@ -105,6 +105,7 @@ class ContractService:
         post(
             self.session, player_id, contract.reward_grow, LedgerEntryType.REWARD,
             ref_type="contract", ref_id=contract.id,
+            idempotency_key=f"reward:contract:{player_id}:{contract.id}",
         )
         if contract.reward_xp:
             leveling_service.award_xp(self.session, player_id, contract.reward_xp, self.cfg)

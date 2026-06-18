@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from ..economy.config import get_economy_config, EconomyConfig
 from ..economy.ledger import post, balance
 from ..enums import LedgerEntryType
-from ..db.models import LedgerEntry, Harvest, BreedingEvent
+from ..db.models import LedgerEntry, Harvest, BreedingEvent, Wallet
 from ..simulation.clock import Clock, SystemClock
 from .game_service import GameService, GameError
 
@@ -33,6 +33,21 @@ class ProgressionService:
     # ----- Daily stipend --------------------------------------------------
     def claim_daily(self, player_id: str) -> dict:
         GameService(self.session).get_player(player_id)  # validates existence
+        # Serialize concurrent claims: take a row lock on the player's wallet
+        # (a stable row that always exists) before reading the cooldown, so the
+        # cooldown check, ledger insert, and balance mutation are one atomic
+        # unit. On Postgres a racing claim blocks here until this commits, then
+        # sees the fresh stipend entry and is rejected by the cooldown below; on
+        # SQLite (tests) FOR UPDATE is a no-op but the wallet's optimistic
+        # version lock still guarantees exactly one claim wins. The recurring
+        # stipend keeps its 22h-rolling cooldown — no fixed-window idempotency
+        # key (that would change player-facing behavior).
+        (
+            self.session.query(Wallet)
+            .filter(Wallet.player_id == player_id)
+            .with_for_update()
+            .one()
+        )
         self.session.flush()  # make prior pending entries visible to the query
         last = (
             self.session.query(LedgerEntry)
@@ -87,6 +102,7 @@ class ProgressionService:
         post(
             self.session, player_id, reward, LedgerEntryType.REWARD,
             ref_type="achievement", ref_id=key,
+            idempotency_key=f"reward:achievement:{player_id}:{key}",
         )
         return {"key": key, "reward": reward, "balance": float(balance(self.session, player_id))}
 

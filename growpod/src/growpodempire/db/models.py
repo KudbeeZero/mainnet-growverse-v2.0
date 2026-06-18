@@ -109,12 +109,19 @@ class LedgerEntry(UUIDPrimaryKeyMixin, Base):
     ref_type: Mapped[Optional[str]] = mapped_column(String(32))
     ref_id: Mapped[Optional[str]] = mapped_column(String(64))
     onchain_txid: Mapped[Optional[str]] = mapped_column(String(80))
+    # Optional idempotency guard for one-shot reward/claim faucets. When set, the
+    # unique index below makes a duplicate credit (replay or race) impossible at
+    # the DB layer. Left NULL for ordinary movements (sinks, harvest sales,
+    # recurring faucets) — both SQLite and Postgres allow multiple NULLs in a
+    # unique index, so only tagged rows are constrained.
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(120))
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )
 
     __table_args__ = (
         Index("ix_ledger_player_created", "player_id", "created_at"),
+        Index("uq_ledger_idempotency_key", "idempotency_key", unique=True),
     )
 
 
