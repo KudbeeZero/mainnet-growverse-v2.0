@@ -14,8 +14,12 @@ from growpodempire.services.game_service import GameService, GameError
 from growpodempire.services.progression_service import ProgressionService
 from growpodempire.economy.config import load_economy_config
 from growpodempire.simulation.clock import FrozenClock
+from launch_economy import launch_config
 
 BASE = datetime(2025, 1, 1, 12, 0, 0)
+# Live balance.yaml boosts daily_stipend for testing; the launch config restores
+# the canonical 50 GROW so the launch-faucet invariant stays guarded.
+LAUNCH_CFG = launch_config()
 
 
 @pytest.mark.skipif(
@@ -26,7 +30,7 @@ def test_daily_stipend_cooldown(db):
     with session_scope() as s:
         p = GameService(s).create_player("daily")
         clock = FrozenClock(BASE)
-        prog = ProgressionService(s, clock=clock)
+        prog = ProgressionService(s, config=LAUNCH_CFG, clock=clock)
         first = prog.claim_daily(p.id)
         assert first["claimed"] == 50.0
         with pytest.raises(GameError):

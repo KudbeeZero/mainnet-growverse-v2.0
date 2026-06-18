@@ -9,6 +9,8 @@ import { useToast } from "@/components/ui/Toast";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Field, TextInput } from "@/components/ui/Field";
+import { isDevBypassEnabled } from "@/lib/features";
+import { DevSkipLoginButton } from "./DevSkipLoginButton";
 import type { Player } from "@/lib/types";
 
 type Tab = "create" | "import";
@@ -22,25 +24,29 @@ export function OnboardingPanel() {
   }
 
   return (
-    <Card className="mx-auto max-w-md">
-      <CardHeader
-        title="Welcome to GrowPod Empire"
-        subtitle="Create a grower account to start cultivating."
-      />
-      <div className="mb-4 flex gap-2">
-        <TabButton active={tab === "create"} onClick={() => setTab("create")}>
-          New account
-        </TabButton>
-        <TabButton active={tab === "import"} onClick={() => setTab("import")}>
-          I have a key
-        </TabButton>
-      </div>
-      {tab === "create" ? (
-        <CreateForm onCreated={(player, key) => setCreatedKey({ player, key })} />
-      ) : (
-        <ImportForm />
-      )}
-    </Card>
+    <>
+      <Card className="mx-auto max-w-md">
+        <CardHeader
+          title="Welcome to GrowPod Empire"
+          subtitle="Create a grower account to start cultivating."
+        />
+        <div className="mb-4 flex gap-2">
+          <TabButton active={tab === "create"} onClick={() => setTab("create")}>
+            New account
+          </TabButton>
+          <TabButton active={tab === "import"} onClick={() => setTab("import")}>
+            I have a key
+          </TabButton>
+        </div>
+        {tab === "create" ? (
+          <CreateForm onCreated={(player, key) => setCreatedKey({ player, key })} />
+        ) : (
+          <ImportForm />
+        )}
+      </Card>
+      {/* Dev/test-only shortcut — invisible in production (flag default off). */}
+      {isDevBypassEnabled() && <DevSkipLoginButton />}
+    </>
   );
 }
 

@@ -4,8 +4,65 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-06-14 · **By:** records chat — CEO ratified PR #63; #61 closed; FF-RECON-001 EXECUTED
-**Active branch:** `main` (PR #63 squash-merged this chat).
+**Last rewritten:** 2026-06-18 · **By:** testing-prep chat — green-build + test-env tunnel + skip-login bypass
+**Active branch:** `claude/paul-testing-prep-xk78mz` (open PR; was identical to `main` at start).
+
+> **This chat (2026-06-18) — testing-prep pass.** Pre-flight check-in caught that `main` had gone
+> **RED** (the baton below was stale: it claimed "287 passed, 84.55%" but merges #4–#7 left
+> **6 failures + coverage 73.45% < 79%**). Fixed both: (1) economy is in deliberate **free testing
+> mode** (commit `573b78a`: free seeds, 5000 stipend) — kept the testing values live and guarded the
+> **launch** values via `tests/fixtures/launch_balance.yaml` + a `test_launch_balance_values`
+> tripwire (**restore the launch values in `balance.yaml` before launch**); (2) added launch-critical
+> tests (seasonal sink, ledger summary, badges, branded store) → coverage back to **79.37% ≥ 79%, no
+> floor change**. Then: **web safety net** wired into CI (vitest + Playwright un-stubbed; RISK #8
+> web-side closed pending the first CI run), a one-command **`make testenv`** full-stack cloudflared
+> tunnel (debug off, dev clock on), a dev/test-only **skip-login** button
+> (`NEXT_PUBLIC_ENABLE_DEV_BYPASS`, default OFF), `docs/TESTER_RUNBOOK.md`, and a bug-report template.
+> Gates: `make test` **349 passed, 79.37%** · `make lint` ✅ · `make check-memory` ✅.
+> **Note for the owner:** `.github/` lives under `growpod/.github` while the git root is the repo
+> parent — GitHub reads workflows/templates from the **repo root**, so confirm CI actually runs (the
+> issue template was placed at the repo-root `.github/ISSUE_TEMPLATE/` to be picked up).
+>
+> **Coverage push (2026-06-18, same chat).** Took the suite from 79.37% → **95.02%** across four
+> **test-only** waves (route groups → edge branches → mocked-SDK providers → an honest Round-2 pass):
+> **848 passed**, `make lint` ✅, `make check-memory` ✅. **No `fail_under` change (still 79), no
+> `src/` edits, no deep cloud-SDK/network mocks** — coverage was raised only on real offline logic
+> (route validation/404/feature-gate/bundle branches, `db/session` cold-start, `object_storage`
+> path/config/guards, `audio_prewarm` guards+threading, `elevenlabs` course-cache + IntegrityError,
+> `algorand` constructor guard). Remaining ~297 uncovered lines are the **documented honest live
+> boundary**, left deliberately untested rather than vanity-mocked: `ai/autocare.py` live Claude
+> tool-runner (115-168), `chain/algorand.py` txn-build/`_send` SDK calls, `ai/object_storage.py` real
+> GCS upload/download + sidecar token, `ai/elevenlabs_narrator.py` real TTS HTTP, and a few
+> `game_api.py` success-serializer arms covered indirectly. All on PR #14 — **95.02% appears to be the
+> honest offline floor** (further gains need live keys/network or the chain/AI seams the owner declined).
+>
+> **Playtest dry-run (2026-06-18, same chat) — booted the build in the real tester config and drove
+> the core loop end-to-end over HTTP (headless; no browser/tunnel here).** Receipt:
+> `/health` 200 · `/readiness` 200 (DB ok) · 29 strains seeded · dev-clock enabled · debug off.
+> **Core loop PASS:** provision (skip-login equiv) → starter pod+seed → plant → water/feed/climate →
+> dev-clock grow → harvest → cure → sell; **GROW moved 495 → 824.29 (+329.29)**, ledger consistent,
+> no-API-key write → 401. Two real "reds" caught before a tester would hit them:
+> 1. **FIXED — Alembic multiple-heads fork.** `alembic upgrade head` failed (`502de4114faa` +
+>    `fd1100254612` were duplicate no-op merges of the same pair `a7b8c9d0e1f2`+`c8d9e0f1a2b3`; the
+>    `9d44efb` "fix" re-forked it). This broke deploy **and** `scripts/testenv-up.sh §1`. Removed the
+>    duplicate `502de4114faa`; single head `fd1100254612`; `check_single_head` ✅; clean `upgrade head`
+>    on a fresh DB. Gates after fix: **848 passed / 95.02%**, `make lint` ✅, `make check-memory` ✅.
+> 2. **FIXED — `web/package-lock.json` was poisoned + out of sync (would have failed CI `npm ci`
+>    everywhere).** Root cause (found via `/debug`): the committed lock had **90 `resolved` URLs hard-
+>    coded to `http://package-firewall.replit.local`** (a dead Replit-internal host baked in when the
+>    lock was generated inside a firewalled env) **and** was missing the `vitest`/`@playwright/test`
+>    nodes added when the test scripts were un-stubbed. The public registry was actually reachable, so
+>    regenerated the lock cleanly (`npm install --registry=https://registry.npmjs.org/`): **0 firewall
+>    URLs, deps in sync, `npm ci --dry-run` ✅.** Then ran the **full web suite green locally**:
+>    `typecheck` ✅ · `lint` ✅ (warnings only) · **Vitest 217/217** ✅ · `build` ✅ · **Playwright e2e
+>    3/3** ✅. **RISK #8 web side is now genuinely verified (not just wired).** The 217 unit + 3 e2e
+>    will run in CI once Actions is enabled + PR #14 merged.
+
+---
+
+### Prior baton (pre-2026-06-18, now stale on test counts — see above)
+**By:** records chat — CEO ratified PR #63; #61 closed; FF-RECON-001 EXECUTED
+**Was active branch:** `main` (PR #63 squash-merged that chat).
 **Just merged (this chat): PR #63 — BE-003 feature-flag reconciliation.** `main` had carried **two**
 contradictory flag systems (#42's `config.py ENABLE_*` / `feature_gates.py` gating routes OFF while
 `GET /api/game/flags` reported ON from #55's `balance.yaml`). #63 collapses to the single
@@ -139,7 +196,7 @@ Shipped by PR #47 (authored across the BE-002 + BE-004 sessions):
 | 1 | MED | **Cure/auction not dev-clock-drivable.** `GameService` defaulted to `SystemClock`, so the dev clock couldn't fast-forward cure/auction over HTTP. | `services/game_service.py` (now `active_clock()`) | ✅ **CLOSED** — STEP 4.5 merged as **PR #59** (`5d44d35`); verified live in the BE-004.5 playtest + `test_cure_advances_under_dev_clock`. |
 | 3 | HIGH | Idempotency on mutations — general `Idempotency-Key` header (duplicate → original response, not a 409). | `api/game_api.py` | PARTIAL — concurrency core + one-shot grants shipped (`grant_claims`, harvest-once index); FTUE `advance` replay-guarded. General header absent (WIP PR #16 closed unmerged). |
 | 4/7 | HIGH | **Chain settlement not real** — deposit trusts no on-chain proof; treasury-drain path; no txid replay protection / reconciliation / address validation. | `services/settlement_service.py`, `db/models.py` | OPEN — blocks any real value moving (Sprint 4 gate). |
-| 8 | HIGH | **Safety net** — **backend HTTP boundary now covered (PR #47: withdraw/deposit/mint/nft, `tests/test_http_boundary.py`)**; **web** Playwright real e2e still a stub; treasury-cap + chain-failure-rollback UI tests absent. | `web/package.json`, `.github/workflows/ci.yml`, `tests/test_http_boundary.py` | PARTIAL (backend ↑; relates to open PR #32). |
+| 8 | HIGH | **Safety net** — backend HTTP boundary covered (PR #47). **Web vitest + Playwright now un-stubbed and wired into CI (2026-06-18)**; treasury-cap + chain-failure-rollback UI tests still absent. | `web/package.json`, `.github/workflows/ci.yml`, `tests/test_http_boundary.py` | NEAR-CLOSED — web CI wired 2026-06-18, **validation pending the first CI run** (no web npm network locally). |
 | 9 | MED | **Sim dormancy semantics** — large `max_catchup_hours` gaps can delay an earned harvest / skip lethal decay; needs a design decision + knob guard. (FTUE sidesteps it for the tutorial plant via `last_tick_at = now`.) | `simulation/engine.py` | OPEN. |
 | 11 | LOW | Rate-limiter `memory://` per-worker (set Redis for multi-worker); `get_level` public oracle. | fleet-sweep audit | PARTIAL. |
 

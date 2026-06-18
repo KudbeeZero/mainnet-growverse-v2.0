@@ -261,10 +261,17 @@ def test_long_idle_read_is_bounded_and_converges(session, monkeypatch):
     engine.catch_up(session, plant, now + timedelta(minutes=30), cfg)
     assert calls["n"] == 0
 
-    # The stage clock paused with the plant: the dormant gap must not be
-    # counted as time-in-stage, so the next hours don't cascade stage changes.
+    # The stage clock paused with the plant: the dormant gap must NOT be counted as
+    # time-in-stage. Assert this directly (deterministic) rather than via boundary
+    # proximity — whether a short read lands on a real stage boundary depends on the
+    # plant's RNG-driven health trajectory, so "no stage_change" was flaky. After the
+    # skip, time-in-current-stage stays within the cap window (≤ the 240h simulated),
+    # never the ~5-year gap that the dormancy bug would leak in.
+    hours_in_stage = (plant.last_tick_at - plant.stage_entered_at).total_seconds() / 3600.0
+    assert 0 <= hours_in_stage <= 240
+    # And a short read still advances at most one stage (normal growth, no cascade).
     events2 = engine.catch_up(session, plant, now + timedelta(hours=5), cfg)
-    assert not any(e.event_type == "stage_change" for e in events2)
+    assert len([e for e in events2 if e.event_type == "stage_change"]) <= 1
 
 
 def test_cap_leaves_normal_reads_untouched(session):

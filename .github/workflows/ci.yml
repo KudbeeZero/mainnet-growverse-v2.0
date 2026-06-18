@@ -1,9 +1,9 @@
 name: CI
 
 # The "make truth automatic" gate: lint + memory-integrity + single-head +
-# migrations + the full test suite (with the coverage ratchet). Mirrors the
-# Makefile targets so `make test && make lint && make check-memory` locally is
-# the same contract CI enforces. Never skipped.
+# migrations + the full test suite (with the coverage ratchet) + the web checks.
+# The project lives in growpod/, so jobs set working-directory accordingly (this
+# workflow must sit at the repo root for GitHub to run it).
 # push on main covers post-merge; pull_request covers branches (avoids the
 # double-run a branch push would otherwise trigger).
 on:
@@ -19,6 +19,9 @@ jobs:
   backend:
     name: backend (lint · memory · migrations · tests)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: growpod
     env:
       PYTHONPATH: src
       DATABASE_URL: "sqlite:////tmp/ci.db"
@@ -29,6 +32,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: growpod/requirements*.txt
 
       - name: Install deps (runtime + dev + the package, editable)
         run: |
@@ -52,11 +56,11 @@ jobs:
         run: python -m pytest -q --cov --cov-report=term-missing
 
   web:
-    name: web (typecheck · lint · build · test)
+    name: web (typecheck · lint · build · test · e2e)
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: web
+        working-directory: growpod/web
     steps:
       - uses: actions/checkout@v4
 
@@ -64,8 +68,11 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: growpod/web/package-lock.json
 
+      # Strict, reproducible install against the committed lockfile (regenerated
+      # against the public registry — vitest/playwright deps in sync, no stale
+      # firewall URLs). Fails fast if package.json and the lock drift.
       - name: Install
         run: npm ci
 
@@ -80,3 +87,8 @@ jobs:
 
       - name: Test (vitest)
         run: npm run test
+
+      - name: E2E (Playwright, mocked API)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e

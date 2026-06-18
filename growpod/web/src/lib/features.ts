@@ -62,3 +62,15 @@ export const FEATURES: Record<FeatureName, boolean> = {
 export function isFeatureEnabled(name: FeatureName): boolean {
   return FEATURES[name];
 }
+
+/**
+ * Dev/test-only "skip login" bypass.
+ *
+ * OFF unless `NEXT_PUBLIC_ENABLE_DEV_BYPASS=true` is set at build time (the
+ * test-env launch script sets it). When on, the onboarding screen shows an
+ * "Enter as tester" button that auto-provisions a throwaway player and drops
+ * straight into the game — no password, no wallet. NEVER enable in production.
+ */
+export function isDevBypassEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ENABLE_DEV_BYPASS === "true";
+}

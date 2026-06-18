@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from growpodempire.economy.config import load_economy_config
 from growpodempire.economy import pricing
+from launch_economy import launch_config, launch_overrides
 from growpodempire.economy.ledger import (
     post,
     balance,
@@ -22,6 +23,28 @@ from growpodempire.db.models import Player, Wallet
 
 
 CFG = load_economy_config()
+# Launch config: live balance.yaml is in "free testing mode"; LAUNCH_CFG overlays
+# the canonical launch values so launch pricing math stays guarded.
+LAUNCH_CFG = launch_config()
+
+
+# ----- Launch-value tripwire --------------------------------------------
+def test_launch_balance_values():
+    """Keeps tests/fixtures/launch_balance.yaml honest — the values to RESTORE in
+    balance.yaml before launch. If these drift, the guard below must be updated
+    deliberately (it is the 'restore before launch' contract)."""
+    over = launch_overrides()
+    assert over["daily_stipend"] == 50
+    assert over["seeds"]["base_cost"] == 25
+    mult = over["seeds"]["rarity_multiplier"]
+    assert set(mult) == {"common", "uncommon", "rare", "epic", "legendary"}
+    assert [mult[r] for r in ("common", "uncommon", "rare", "epic", "legendary")] == [
+        1.0,
+        2.5,
+        6.0,
+        15.0,
+        40.0,
+    ]
 
 
 # Seed pricing is intentionally disabled in the current free-playtest economy
@@ -34,8 +57,8 @@ _FREE_SEED_REASON = "dev free-seed economy (balance.yaml seeds.base_cost: 0); re
 # ----- Pricing (pure, deterministic) ------------------------------------
 @pytest.mark.skipif(CFG.seed_base_cost() == 0, reason=_FREE_SEED_REASON)
 def test_seed_price_scales_with_rarity():
-    assert pricing.seed_price("common", CFG) == Decimal("25.000000")
-    assert pricing.seed_price("legendary", CFG) == Decimal("1000.000000")
+    assert pricing.seed_price("common", LAUNCH_CFG) == Decimal("25.000000")
+    assert pricing.seed_price("legendary", LAUNCH_CFG) == Decimal("1000.000000")
 
 
 def test_breeding_fee_scales_with_avg_rarity():

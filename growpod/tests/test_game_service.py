@@ -12,12 +12,14 @@ from growpodempire.db.session import session_scope
 from growpodempire.db.models import Strain, SeedInventory, Plant
 from growpodempire.services.game_service import GameService, GameError
 from growpodempire.economy.ledger import InsufficientFundsError, balance
+from launch_economy import launch_config
 from growpodempire.economy.config import load_economy_config
 
-# Seed purchases are free in the current dev economy (balance.yaml
-# `seeds.base_cost: 0`), so the debit/insufficient-funds/marketplace assertions
-# can't hold. These tests guard the LAUNCH economy and auto-reactivate when
-# base_cost is restored to 25. See DECISIONS 2026-06-18.
+# Live balance.yaml is in "free testing mode" (free seeds). Economic-invariant
+# tests are both (a) skipped while seeds are free (`_FREE_SEEDS`) and (b) given the
+# launch config (`LAUNCH_CFG`) so they assert real launch economics when they run.
+# Both auto-reactivate when balance.yaml `seeds.base_cost` is restored to 25.
+LAUNCH_CFG = launch_config()
 _FREE_SEEDS = load_economy_config().seed_base_cost() == 0
 _FREE_SEED_REASON = "dev free-seed economy (balance.yaml seeds.base_cost: 0); restore to 25 to enforce launch pricing"
 
@@ -36,7 +38,7 @@ def test_create_player_grants_starting_balance(db):
 @pytest.mark.skipif(_FREE_SEEDS, reason=_FREE_SEED_REASON)
 def test_buy_seed_debits_and_adds_inventory(db):
     with session_scope() as s:
-        svc = GameService(s)
+        svc = GameService(s, config=LAUNCH_CFG)
         p = svc.create_player("bob")
         common = _strain(s, "blue-dream")  # common -> 25
         stack = svc.buy_seed(p.id, common.id, quantity=2)
@@ -47,7 +49,7 @@ def test_buy_seed_debits_and_adds_inventory(db):
 @pytest.mark.skipif(_FREE_SEEDS, reason=_FREE_SEED_REASON)
 def test_buy_seed_insufficient_funds(db):
     with session_scope() as s:
-        svc = GameService(s)
+        svc = GameService(s, config=LAUNCH_CFG)
         p = svc.create_player("broke")
         legendary_like = _strain(s, "gorilla-glue-no-4")  # rare -> 150
         # Drain the wallet first.
@@ -157,7 +159,7 @@ def test_list_pods_unknown_player_raises(db):
 @pytest.mark.skipif(_FREE_SEEDS, reason=_FREE_SEED_REASON)
 def test_marketplace_transfers_seeds_and_currency(db):
     with session_scope() as s:
-        svc = GameService(s)
+        svc = GameService(s, config=LAUNCH_CFG)
         seller = svc.create_player("seller")
         buyer = svc.create_player("buyer")
         strain = _strain(s, "blue-dream")  # 25 common

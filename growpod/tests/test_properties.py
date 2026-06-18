@@ -25,8 +25,13 @@ from growpodempire.enums import LedgerEntryType, Rarity, RARITY_ORDER
 from growpodempire.services.game_service import GameService
 from growpodempire.genetics.traits import TRAIT_SPECS, genome_from_traits, Dominance
 from growpodempire.genetics.breeding import cross
+from launch_economy import launch_config
 
 CFG = load_economy_config()
+# Launch config: live balance.yaml is in "free testing mode" (flat seed prices);
+# LAUNCH_CFG overlays canonical launch values so the monotonic-pricing invariant
+# stays guarded.
+LAUNCH_CFG = launch_config()
 
 
 # ----- Ledger invariants -------------------------------------------------
@@ -119,6 +124,6 @@ def test_harvest_value_monotonic_in_weight_and_quality():
     reason="dev free-seed economy (balance.yaml seeds.base_cost: 0); restore to 25 to enforce launch pricing",
 )
 def test_seed_price_monotonic_in_rarity():
-    prices = [pricing.seed_price(r.value, CFG) for r in RARITY_ORDER]
+    prices = [pricing.seed_price(r.value, LAUNCH_CFG) for r in RARITY_ORDER]
     assert prices == sorted(prices)
     assert prices[0] < prices[-1]
