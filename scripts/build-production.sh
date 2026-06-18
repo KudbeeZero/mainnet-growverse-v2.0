@@ -4,16 +4,21 @@ set -e
 # Production build script for GrowPod Empire.
 # Runs once per deployment before the container starts.
 
+# Resolve paths relative to this script so it works on any host
+# (not tied to a specific deploy platform's directory layout).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # ------------------------------------------------------------------
 # 1. Install Python dependencies
 # ------------------------------------------------------------------
-cd /home/runner/workspace/growpod
+cd "$REPO_ROOT/growpod"
 pip install -r requirements.txt
 
 # ------------------------------------------------------------------
 # 2. Install npm dependencies for the frontend
 # ------------------------------------------------------------------
-cd /home/runner/workspace/growpod/web
+cd "$REPO_ROOT/growpod/web"
 npm install
 
 # ------------------------------------------------------------------

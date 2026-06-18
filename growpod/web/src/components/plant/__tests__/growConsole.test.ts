@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { growConsoleRows } from "@/components/plant/growConsole";
+import { growConsoleRows } from "@/components/plant/growConsoleData";
 import type { PlantState, Pod } from "@/lib/types";
 
 // Minimal fixtures — the console logic only reads metrics, growth_stage and the

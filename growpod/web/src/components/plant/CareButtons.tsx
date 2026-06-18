@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/Button";
 import { useCareActions } from "@/hooks/useCareActions";
 import { useCareFeedback } from "./CareFeedback";
-import type { CareKind } from "./careFeedback";
+import type { CareKind } from "./careFeedbackData";
 import type { PlantState } from "@/lib/types";
 
 export function CareButtons({ plant }: { plant: PlantState }) {

@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useCareActions } from "@/hooks/useCareActions";
 import { useCareFeedback } from "./CareFeedback";
 import { nextPlantAction } from "@/lib/plantAction";
-import type { CareKind } from "./careFeedback";
+import type { CareKind } from "./careFeedbackData";
 import type { Plant, Pod } from "@/lib/types";
 
 const ACCENT: Record<"critical" | "due" | "calm", string> = {

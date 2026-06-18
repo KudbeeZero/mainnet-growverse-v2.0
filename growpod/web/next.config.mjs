@@ -54,7 +54,8 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
 const nextConfig = {
   reactStrictMode: true,
-  outputFileTracingRoot: "/home/runner/workspace/web",
+  // Pin output file tracing to this app's directory (portable across hosts).
+  outputFileTracingRoot: import.meta.dirname,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

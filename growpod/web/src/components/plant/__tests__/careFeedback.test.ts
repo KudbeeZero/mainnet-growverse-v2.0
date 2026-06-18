@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CARE_FX, buildParticles, type CareKind } from "@/components/plant/careFeedback";
+import { CARE_FX, buildParticles, type CareKind } from "@/components/plant/careFeedbackData";
 import { haptic } from "@/lib/haptics";
 
 const KINDS: CareKind[] = ["water", "feed", "treatPests", "treatDisease", "harvest"];
