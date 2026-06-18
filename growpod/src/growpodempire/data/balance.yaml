@@ -104,6 +104,21 @@ simulation:
     optimal_high: 82
     burn_threshold: 95
     deficient_threshold: 20
+    # Display-only nutrient surface for the University Grow Console. The engine
+    # stores nutrient as a 0..100 scalar; `ppm_display_scale` converts that to a
+    # grower-facing PPM reading and `stage_targets` are the PPM windows a grower
+    # actually aims for, per growth stage. DISPLAY ONLY — never read by the
+    # engine tick / decay / stress math (see simulation/engine.py), so it can
+    # never feed back into health or growth.
+    ppm_display_scale: 12.0
+    stage_targets:
+      seedling:   [100, 400]
+      vegetative: [400, 700]
+      flowering:  [700, 1000]
+      # `late_flower` is not a distinct engine GrowthStage today (flowering runs
+      # to harvest); kept here as a forward-looking band so the console already
+      # has a window if the stage is ever split out.
+      late_flower: [500, 700]
 
   # Pod environment optimal bands; deviations sap health.
   environment:

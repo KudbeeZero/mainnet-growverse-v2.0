@@ -98,6 +98,35 @@ def test_metrics_exposes_vpd_and_dli(session):
     assert m["vpd_kpa"] > 0 and m["dli_mol"] > 0 and m["ppfd"] == 500
 
 
+def test_metrics_exposes_nutrient_ppm_and_flowering_stage_targets(session):
+    """Grow Console surface: a display-only PPM (the 0..100 nutrient scalar times
+    the configured scale) plus the PPM target band for the current stage."""
+    from growpodempire.services.simulation_service import SimulationService
+
+    _, _, plant = _plant(session)
+    plant.growth_stage = "flowering"
+    plant.nutrient_level = 60.0
+    session.flush()
+
+    m = SimulationService(session).metrics(plant)
+    ncfg = CFG.raw["simulation"]["nutrient"]
+    assert m["nutrient_ppm"] == round(60.0 * ncfg["ppm_display_scale"], 0)
+    # The flowering band from balance.yaml, surfaced verbatim for the UI.
+    assert m["stage_targets"] == ncfg["stage_targets"]["flowering"]
+    assert m["stage_targets"] == [700, 1000]
+
+
+def test_metrics_stage_targets_none_outside_fed_stages(session):
+    """Stages with no PPM band (seed / germination / harvest) report None so the
+    UI can show an honest 'no target for this stage' instead of a fake window."""
+    from growpodempire.services.simulation_service import SimulationService
+
+    _, _, plant = _plant(session)
+    plant.growth_stage = "seed"  # the default for a freshly planted seed
+    session.flush()
+    assert SimulationService(session).metrics(plant)["stage_targets"] is None
+
+
 # ----- helpers ----------------------------------------------------------------
 def _pod_env(session):
     _, pod, plant = _plant(session)

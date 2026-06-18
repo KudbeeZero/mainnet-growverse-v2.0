@@ -199,6 +199,11 @@ export interface PlantMetrics {
   dli_mol: number | null;
   ppfd: number | null;
   photoperiod_hours: number | null;
+  /** Display-only nutrient PPM (derived from the 0..100 nutrient scalar). */
+  nutrient_ppm?: number | null;
+  /** Optimal PPM window [min, max] for the plant's current growth stage, or
+   *  null outside the fed stages (seed / germination / harvest). */
+  stage_targets?: readonly [number, number] | null;
 }
 
 /** Lifecycle forecast exposed on GET .../state: where the plant is and when it

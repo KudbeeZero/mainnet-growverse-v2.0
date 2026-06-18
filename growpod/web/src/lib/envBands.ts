@@ -27,6 +27,11 @@ export const BANDS = {
   dli_mol: { optimal: [20, 45], range: [0, 65], unit: "mol/m²" },
   water_level: { optimal: [50, 100], range: [0, 100], unit: "%" },
   nutrient_level: { optimal: [50, 100], range: [0, 100], unit: "%" },
+  // Display-only nutrient PPM (mirrors balance.yaml `nutrient.ppm_display_scale`
+  // and `stage_targets`). The `optimal` here is a stage-agnostic fallback that
+  // spans the seedling→flowering targets; the Grow Console overrides it with the
+  // plant's live per-stage window from `/state`.
+  nutrient_ppm: { optimal: [400, 1000], range: [0, 1200], unit: "ppm" },
 } as const satisfies Record<string, Band>;
 
 export type EnvSource =

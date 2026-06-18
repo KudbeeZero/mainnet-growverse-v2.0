@@ -24,6 +24,7 @@ import { StageProgressBar } from "@/components/command/StageProgressBar";
 import { HeroStatChips, PodStatusTag, StageHeader } from "@/components/command/HeroParts";
 import { PlantDnaRail } from "@/components/command/PlantDnaRail";
 import { EnvironmentRail } from "@/components/command/EnvironmentRail";
+import { GrowConsole } from "@/components/plant/GrowConsole";
 import { TimeControls } from "@/components/command/TimeControls";
 import { CommandActionBar } from "@/components/command/CommandActionBar";
 import { CommandFooter } from "@/components/command/CommandFooter";
@@ -227,8 +228,8 @@ function CommandScreen({ plantId }: { plantId: string }) {
             <PlantDnaRail strain={strain} plantId={plantId} stage={renderStage} />
           </div>
 
-          {/* right rail */}
-          <div className="min-h-0 xl:col-start-3 xl:row-start-1">
+          {/* right rail: environment controls + read-only grow console */}
+          <div className="flex min-h-0 flex-col gap-3 xl:col-start-3 xl:row-start-1 xl:overflow-y-auto">
             <EnvironmentRail
               climate={climate}
               plant={plant}
@@ -236,6 +237,7 @@ function CommandScreen({ plantId }: { plantId: string }) {
               disabled={ended}
               onSlide={onSlide}
             />
+            <GrowConsole plant={plant} pod={pod} />
           </div>
         </div>
       </div>
