@@ -4,6 +4,10 @@
 > *verified artifact*, not trust. This protocol sits on top of the Layer 0–4 memory
 > system (see `docs/memory/README.md`); it does not replace it. The baton
 > (`docs/HANDOFF.md`) is the live tip of that stack — what the *next* chat does first.
+>
+> The reasoning *above* this loop — reconcile memory ↔ evidence ↔ confidence, label every
+> finding, gate on the owner — is the [Global Evidence + Memory Layer](GLOBAL_EVIDENCE_MEMORY_LAYER.md).
+> This protocol is how that reasoning becomes one audited, mergeable unit of work per chat.
 
 ## The loop
 
