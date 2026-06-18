@@ -84,6 +84,7 @@ class LedgerEntryType(str, Enum):
     CUP_PRIZE_PAYOUT = "cup_prize_payout"  # faucet: awarded to cup placers
     TUITION = "tuition"                    # sink: GrowPod University course enrollment
     POD_CLEANUP = "pod_cleanup"            # sink: paid to clear a harvested/dead plant
+    MINT_FEE = "mint_fee"                  # sink: paid to mint a harvest/strain NFT
 
 
 class ListingStatus(str, Enum):

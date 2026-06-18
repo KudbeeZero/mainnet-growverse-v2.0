@@ -10,13 +10,15 @@ If the chain call fails the row is marked FAILED and a GameError is raised. An
 already-MINTED asset is returned unchanged (no double-mint).
 """
 
+from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..economy.config import get_economy_config, EconomyConfig
-from ..enums import NFTStatus, Rarity, rarity_index
+from ..economy.ledger import post
+from ..enums import LedgerEntryType, NFTStatus, Rarity, rarity_index
 from ..db.models import Harvest, Strain
 from ..chain.provider import ChainProvider, ChainError
 from ..chain import metadata as md
@@ -45,6 +47,18 @@ class MintingService:
     def _min_rarity_index(self) -> int:
         return rarity_index(Rarity(self._nft_cfg.get("mint_min_rarity", "rare")))
 
+    def _charge_mint_fee(self, player_id: str, ref_type: str, ref_id: str) -> None:
+        """Debit the GROW mint fee (a sink), if configured. Absent/0 in the
+        free-playtest profile (minting stays free); set `chain.nft.mint_fee_grow`
+        in the launch overlay. Charged before the chain call inside the same
+        transaction, so an insufficient balance or a failed mint leaves no fee."""
+        fee = float(self._nft_cfg.get("mint_fee_grow", 0) or 0)
+        if fee > 0:
+            post(
+                self.session, player_id, -Decimal(str(fee)),
+                LedgerEntryType.MINT_FEE, ref_type=ref_type, ref_id=ref_id,
+            )
+
     def _nft_url(self, kind: str, obj_id: str) -> str:
         base = self.settings.nft_metadata_base_url.rstrip("/")
         path = f"/api/game/nft/{kind}/{obj_id}.json"
@@ -64,6 +78,7 @@ class MintingService:
                 f"threshold '{self._nft_cfg.get('mint_min_rarity', 'rare')}'"
             )
 
+        self._charge_mint_fee(player_id, "harvest", harvest.id)
         strain = self.session.get(Strain, harvest.strain_id)
         metadata = md.harvest_metadata(harvest, strain)
         minted = self._mint(
@@ -96,6 +111,7 @@ class MintingService:
                 f"Strain rarity '{strain.rarity}' is below the mint threshold"
             )
 
+        self._charge_mint_fee(player_id, "strain", strain.id)
         metadata = md.strain_metadata(strain)
         minted = self._mint(
             strain,

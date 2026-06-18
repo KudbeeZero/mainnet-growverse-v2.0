@@ -84,6 +84,13 @@ def harvest_value(
         * terpene_bonus(terpene_intensity, cfg)
         * quality_factor(quality, cfg)
     )
+    # Absolute payout ceiling (launch-profile guard): caps a single sale so the
+    # stacked rarity x THC x terpene x quality multipliers can't mint a runaway
+    # amount. Absent in the free-playtest profile (uncapped); set in the launch
+    # overlay (`harvest_sale.max_payout_grow`).
+    cap = h.get("max_payout_grow")
+    if cap is not None:
+        value = min(value, float(cap))
     return to_money(value)
 
 

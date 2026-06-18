@@ -60,26 +60,30 @@ can't be sold twice, and negative/oversized inputs are rejected.
 > reduction**. Making the stipend cooldown clock-aware would let the recurring
 > faucet be load-tested via fast-forward (see deltas below).
 
-## 3. Recommended retune deltas BEFORE final live approval (owner-ratified)
+## 3. Pre-live deltas — IMPLEMENTED & LOCKED to the launch profile (owner-ratified)
 
-The three ratified values are applied and pass the guards. The following are
-**recommended** (NOT applied here — they are player-facing economy changes needing
-owner sign-off) before flipping live:
+All three are now enforced, gated to the launch profile (playtest unchanged), and
+**locked by `validate_launch_profile()`** so the launch economy cannot boot without
+them:
 
-1. **Bound Cup prizes by the collected entry-fee pool** (audit H3) — currently a
-   fixed payout that can exceed fees, i.e. a net faucet leak.
-2. **Add a mint sink (or formally treat mint as the intended sink)** (audit M3) —
-   minting currently costs no GROW yet `first_nft` pays 250.
-3. **Confirm an absolute harvest-payout cap** — sims show bounded sales at `rare`
-   (~800–1050), but the `legendary` 8× multiplier stacks with THC/terpene/quality;
-   verify a ceiling before live.
-4. **Make the daily-stipend cooldown clock-aware** — removes wall-clock coupling
-   and makes the recurring faucet load-testable via the sim clock.
-5. **DB-level faucet idempotency** (audit H1) — add unique constraints for the
-   stipend/achievement faucets (a hardening step; the app-level guard holds today
-   but lacks a concurrency backstop).
+1. **Cup prizes bounded to the entry-fee pool** (audit H3) — `cup_service.judge()`
+   pays at most the collected `prize_pool` when `cannabis_cup.bound_prizes_to_pool`
+   is set. The Cup can no longer be a net faucet. Test: `test_economy_launch_deltas.py`.
+2. **Mint sink** (audit M3) — `minting_service` charges `chain.nft.mint_fee_grow`
+   (launch: 250) as a `MINT_FEE` ledger sink, before the chain call; insufficient
+   balance blocks the mint. Free in playtest.
+3. **Absolute harvest-payout cap** (audit M) — `pricing.harvest_value` clamps to
+   `harvest_sale.max_payout_grow` (launch: 2500). Normal rare sales (~800) are
+   unaffected; a maximal legendary is capped. Uncapped in playtest.
 
-Items 1–3 affect tuning/payout and need owner ratification; 4–5 are hardening.
+> The two numbers (mint fee 250, harvest cap 2500) are the recommended launch
+> defaults. The guards only require them present and safe (bound on, fee > 0,
+> cap > 0); the owner may retune the numbers before the go-live flip.
+
+Still recommended as follow-up hardening (NOT blocking this PR):
+- Make the daily-stipend cooldown clock-aware (removes wall-clock coupling; lets the
+  recurring faucet be load-tested via the sim clock).
+- DB-level unique constraints for the stipend/achievement faucets (audit H1).
 
 ## 4. Web feature-flag restore
 
@@ -90,6 +94,13 @@ disabled per-environment with `NEXT_PUBLIC_ENABLE_<NAME>=false` for launch. Test
 `web/src/lib/__tests__/features.test.ts` (updated to the restored polarity).
 *Note:* the web test runner (vitest) is not installed in this environment (no
 network), so the web test is corrected but executed by CI on `npm i`.
+
+## 4a. Coverage
+
+The repo arrived with a RED coverage gate (73.98% < 79%, 6 failing economy tests).
+PR-1 fixed the 6 tests; PR-2 adds targeted, test-only backfill on the launch-critical
+API surface (store, seasonal, economy dashboard) and the three deltas, clearing the
+floor: **coverage 80.30% ≥ 79%**. No production refactors were made for coverage.
 
 ## 5. Path to live (still owner-gated — NOT done here)
 1. ✅ Control plane (PR-1) + ✅ launch profile + sims + web restore (PR-2, this PR).

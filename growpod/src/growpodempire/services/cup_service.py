@@ -198,16 +198,26 @@ class CupService:
             .all()
         )
         prizes = self._cfg.get("prizes", {})
+        # Launch-profile guard: bound total prize payout to the collected entry-fee
+        # pool so the Cup can never be a net faucet (pay out more than it took in).
+        # `remaining` is None in the free-playtest profile (fixed prizes, unbounded);
+        # set `cannabis_cup.bound_prizes_to_pool: true` in the launch overlay to cap.
+        bound = bool(self._cfg.get("bound_prizes_to_pool", False))
+        remaining = cup.prize_pool if bound else None
         for i, entry in enumerate(entries):
             rank = i + 1
             entry.rank = rank
-            prize = self._prize_for(rank, prizes)
+            prize = Decimal(str(self._prize_for(rank, prizes)))
+            if remaining is not None:
+                prize = min(prize, remaining)
             if prize > 0:
-                entry.prize_grow = Decimal(str(prize))
+                entry.prize_grow = prize
                 post(
                     self.session, entry.player_id, entry.prize_grow,
                     LedgerEntryType.CUP_PRIZE_PAYOUT, ref_type="cup", ref_id=cup.id,
                 )
+                if remaining is not None:
+                    remaining -= prize
                 xp = int(self._cfg.get("champion_xp", 0)) if rank == 1 else int(self._cfg.get("placer_xp", 0))
                 if xp:
                     leveling_service.award_xp(self.session, entry.player_id, xp, self.cfg)

@@ -270,6 +270,28 @@ def validate_launch_profile(cfg: EconomyConfig) -> None:
             f"simulation.time_scale must be {LAUNCH_REQUIRED_TIME_SCALE} in the "
             f"launch profile (no accelerated testing pace), got {time_scale}"
         )
+
+    # Required pre-live deltas (owner-ratified): the launch economy must close the
+    # audit's faucet leaks — Cup prizes bounded to the entry-fee pool, a non-zero
+    # mint sink, and an absolute harvest-payout ceiling.
+    if not raw.get("cannabis_cup", {}).get("bound_prizes_to_pool", False):
+        errors.append(
+            "cannabis_cup.bound_prizes_to_pool must be true in the launch profile "
+            "(Cup must not be a net faucet)"
+        )
+    mint_fee = float(raw.get("chain", {}).get("nft", {}).get("mint_fee_grow", 0) or 0)
+    if mint_fee <= 0:
+        errors.append(
+            f"chain.nft.mint_fee_grow must be > 0 in the launch profile "
+            f"(minting must be a sink), got {mint_fee}"
+        )
+    max_payout = raw.get("harvest_sale", {}).get("max_payout_grow")
+    if max_payout is None or float(max_payout) <= 0:
+        errors.append(
+            f"harvest_sale.max_payout_grow must be set (> 0) in the launch profile "
+            f"(absolute harvest-payout ceiling), got {max_payout}"
+        )
+
     if errors:
         raise EconomyConfigError(
             "launch economy profile failed safety guards:\n  - " + "\n  - ".join(errors)

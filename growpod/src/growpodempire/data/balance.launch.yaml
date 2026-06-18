@@ -11,7 +11,8 @@
 #   - simulation.time_scale: 1.0  (real-time pace, no accelerated testing scale)
 #
 # validate_launch_profile() enforces these as hard guards on load:
-#   base_cost >= 25, daily_stipend <= 50, time_scale == 1.0.
+#   base_cost >= 25, daily_stipend <= 50, time_scale == 1.0,
+#   cup prizes bounded to pool, mint_fee_grow > 0, harvest max_payout_grow > 0.
 # Everything else (prices, rewards, multipliers, fees) inherits balance.yaml.
 
 daily_stipend: 50
@@ -21,3 +22,21 @@ seeds:
 
 simulation:
   time_scale: 1.0
+
+# --- Required pre-live deltas (owner-ratified; LOCKED by validate_launch_profile) ---
+# These close the audit's faucet leaks. The two numbers are the recommended launch
+# defaults — the owner may retune them, but the guards require them present & safe.
+
+# Cup can never pay out more GROW than it collected in entry fees (no net faucet).
+cannabis_cup:
+  bound_prizes_to_pool: true
+
+# Minting an NFT costs GROW (a sink). 250 offsets the one-time first_nft reward.
+chain:
+  nft:
+    mint_fee_grow: 250
+
+# Absolute ceiling on a single harvest sale, so stacked rarity x THC x terpene x
+# quality multipliers can't mint a runaway amount (normal rare sales are well under).
+harvest_sale:
+  max_payout_grow: 2500

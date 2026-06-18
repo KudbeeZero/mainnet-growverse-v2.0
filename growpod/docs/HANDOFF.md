@@ -21,12 +21,14 @@
 > is unchanged. Launch guards refuse unsafe values; **production refuses any profile but `launch`**.
 > Sims (`tests/test_economy_sim.py`) show launch cuts per-cycle net issuance ~6.8× and lifts sink/faucet
 > ~16× vs playtest, ledger reconciles. Web `computeFeatures` restored (default ON, `=false` to disable
-> per-env). **Economy still NOT live** — go-live is a separate owner-approved flip to
-> `ECONOMY_PROFILE=launch` after the recommended deltas (cup-prize bound, mint sink, harvest cap) are
-> ratified. **Carried risk:** the coverage gate was already RED on arrival (73.98% < 79% floor; repo
-> shipped with 6 failing economy tests). This work fixed those 6 and raised coverage to 74.29%, but the
-> ~5pt gap is pre-existing debt in non-economy modules (seasonal/minting/settlement) — owner to decide
-> targeted backfill vs floor note. `make lint` ✅ · `make check-memory` ✅.
+> per-env). **The 3 owner-ratified pre-live deltas are IMPLEMENTED & LOCKED to the launch profile**
+> (`validate_launch_profile` requires them): Cup prizes bounded to the entry-fee pool, a `MINT_FEE`
+> sink (launch 250), and a harvest payout cap (launch 2500); all playtest-unchanged
+> (`tests/test_economy_launch_deltas.py`). **Economy still NOT live** — go-live is a separate
+> owner-approved flip to `ECONOMY_PROFILE=launch`. **Coverage:** the gate was RED on arrival (73.98%);
+> PR-1 fixed the 6 failing tests and PR-2 adds targeted test-only API backfill (store/seasonal/economy
+> dashboard) — now **80.30% ≥ 79%**, no production refactors for coverage. Gates: `pytest` 379 passed ·
+> coverage 80.30% · `ruff` ✅ · `check-memory` ✅ (alembic single-head/web build run in CI).
 
 **Last rewritten:** 2026-06-14 · **By:** records chat — CEO ratified PR #63; #61 closed; FF-RECON-001 EXECUTED
 **Active branch:** `main` (PR #63 squash-merged this chat).

@@ -139,9 +139,12 @@ def test_launch_guard_rejects_free_seeds():
 @pytest.mark.parametrize(
     "mutate",
     [
-        lambda r: r["seeds"].__setitem__("base_cost", 10),          # below floor
-        lambda r: r.__setitem__("daily_stipend", 500),               # above ceiling
-        lambda r: r["simulation"].__setitem__("time_scale", 0.5),    # accelerated
+        lambda r: r["seeds"].__setitem__("base_cost", 10),                    # below floor
+        lambda r: r.__setitem__("daily_stipend", 500),                        # above ceiling
+        lambda r: r["simulation"].__setitem__("time_scale", 0.5),             # accelerated
+        lambda r: r["cannabis_cup"].__setitem__("bound_prizes_to_pool", False),  # cup leak
+        lambda r: r["chain"]["nft"].__setitem__("mint_fee_grow", 0),          # no mint sink
+        lambda r: r["harvest_sale"].__setitem__("max_payout_grow", 0),        # no harvest cap
     ],
 )
 def test_launch_guard_rejects_each_unsafe_value(mutate):
