@@ -207,6 +207,7 @@ class CupService:
                 post(
                     self.session, entry.player_id, entry.prize_grow,
                     LedgerEntryType.CUP_PRIZE_PAYOUT, ref_type="cup", ref_id=cup.id,
+                    idempotency_key=f"reward:cup_prize:{cup.id}:{entry.player_id}",
                 )
                 xp = int(self._cfg.get("champion_xp", 0)) if rank == 1 else int(self._cfg.get("placer_xp", 0))
                 if xp:

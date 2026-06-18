@@ -45,6 +45,7 @@ def post(
     *,
     ref_type: Optional[str] = None,
     ref_id: Optional[str] = None,
+    idempotency_key: Optional[str] = None,
     allow_negative: bool = False,
 ) -> LedgerEntry:
     """Post a signed currency movement and update the wallet balance.
@@ -52,6 +53,11 @@ def post(
     `amount` is positive for credits (faucets) and negative for debits (sinks).
     Raises InsufficientFundsError if a debit would overdraw, unless
     `allow_negative` is set (reserved for administrative adjustments).
+
+    `idempotency_key`, when provided, is persisted under a unique index so a
+    one-shot reward/claim can never be credited twice (replay or concurrent
+    double-submit): the duplicate insert fails at commit/flush and that
+    transaction rolls back, leaving exactly one credit.
     """
     amount = to_money(amount)
     entry_type = (
@@ -78,6 +84,7 @@ def post(
         balance_after=new_balance,
         ref_type=ref_type,
         ref_id=ref_id,
+        idempotency_key=idempotency_key,
     )
     session.add(entry)
     return entry
