@@ -145,7 +145,8 @@ once they appear here. Last reconciled: **2026-06-14** (REC-004 full repository 
   (PR #29/#30) were already done. *Validation pending the first CI run (no web npm network locally).*
 - 🔴 ✅ **Make the integrity/CI gates REAL** (2026-06-10) — a chat found that
   `scripts/check_memory.py`, `scripts/check_single_head.py`, the SessionStart hook, **and
-  `.github/workflows/ci.yml` did not exist on disk**, despite being claimed ✅ below and in
+  the CI workflow did not exist on disk** (it was later built, and on 2026-06-18 relocated to the
+  repository root so GitHub actually runs it), despite being claimed ✅ below and in
   `CLAUDE.md`/`MAP.md`. Built all four for real and verified locally: `make check-memory`,
   `make check-migrations`, `make lint`, and `make test` (**182 passed, 79.1% ≥ 78 gate**) all
   green; the two checkers carry a teeth-test. The four stale entries below are annotated. Also
