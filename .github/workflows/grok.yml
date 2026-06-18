@@ -42,11 +42,15 @@ concurrency:
 jobs:
   ask-grok:
     runs-on: ubuntu-latest
-    # Manual dispatch always runs; comment runs only when it starts with "/grok".
+    # Manual dispatch always runs (only write-access users can dispatch).
+    # Comment runs only when it starts with "/grok" AND the commenter is a
+    # repo owner / member / collaborator — so a public commenter cannot fire
+    # the action and burn the xAI key.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'issue_comment' &&
-       startsWith(github.event.comment.body, '/grok'))
+       startsWith(github.event.comment.body, '/grok') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     steps:
       - name: Resolve the question
         id: q
