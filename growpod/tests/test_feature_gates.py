@@ -75,3 +75,38 @@ def test_core_loop_unaffected_when_all_disabled(db, monkeypatch):
         FEATURE_CONTRACTS="false",
     )
     assert client.get("/api/game/strains").status_code == 200
+
+
+# ----- economy master kill-switch ---------------------------------------
+# A representative core-loop WRITE per economy faucet/sink. These are the routes
+# the audit flagged as ungated; the `economy` flag now gates them.
+ECONOMY_WRITES = [
+    "/api/game/players/nobody/seeds/buy",
+    "/api/game/players/nobody/harvests/h1/sell",
+    "/api/game/players/nobody/shop/buy",
+    "/api/game/players/nobody/breed",
+    "/api/game/players/nobody/daily",
+]
+
+
+@pytest.mark.parametrize("path", ECONOMY_WRITES)
+def test_economy_off_freezes_core_loop_before_auth(db, monkeypatch, path):
+    """OFF → a core money route 404s even with no API key (gate precedes auth):
+    the whole economy can be frozen in an incident, no deploy required."""
+    client = _client(monkeypatch, FEATURE_ECONOMY="false")
+    assert client.post(path, json={}).status_code == 404
+
+
+@pytest.mark.parametrize("path", ECONOMY_WRITES)
+def test_economy_on_by_default_lets_core_loop_through_to_auth(db, path):
+    """Default ON → the gate passes and the request reaches auth (not 404), which
+    preserves current free-playtest behavior. (No env override set here.)"""
+    client = create_app(init_database=False).test_client()
+    # Bogus player + no key → auth rejects (401/403), but crucially NOT a 404 gate.
+    assert client.post(path, json={}).status_code != 404
+
+
+def test_flags_endpoint_reports_economy(db):
+    client = create_app(init_database=False).test_client()
+    flags = client.get("/api/game/flags").get_json()["flags"]
+    assert flags["economy"] is True

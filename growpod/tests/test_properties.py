@@ -114,5 +114,10 @@ def test_harvest_value_monotonic_in_weight_and_quality():
 
 def test_seed_price_monotonic_in_rarity():
     prices = [pricing.seed_price(r.value, CFG) for r in RARITY_ORDER]
+    # Price must never DECREASE as rarity rises (the load-bearing invariant).
+    # Strict increase only holds when rarity multipliers differ AND base_cost > 0;
+    # under the free-playtest config (base_cost 0, flat multipliers) prices are
+    # equal, which is valid — final balance is owner-ratified, not asserted here.
     assert prices == sorted(prices)
-    assert prices[0] < prices[-1]
+    if CFG.seed_base_cost() > 0 and len({CFG.seed_rarity_multiplier(r.value) for r in RARITY_ORDER}) > 1:
+        assert prices[0] < prices[-1]

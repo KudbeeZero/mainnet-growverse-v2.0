@@ -1,5 +1,6 @@
 """End-to-end game flows over a real (SQLite) database."""
 
+import copy
 import os
 import sys
 from decimal import Decimal
@@ -11,11 +12,23 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from growpodempire.db.session import session_scope
 from growpodempire.db.models import Strain, SeedInventory, Plant
 from growpodempire.services.game_service import GameService, GameError
-from growpodempire.economy.ledger import InsufficientFundsError, balance
+from growpodempire.economy import pricing
+from growpodempire.economy.config import EconomyConfig, load_economy_config
+from growpodempire.economy.ledger import InsufficientFundsError, balance, to_money
+
+CFG = load_economy_config()
 
 
 def _strain(session, slug):
     return session.query(Strain).filter(Strain.slug == slug).one()
+
+
+def _config_with_seed_cost(cost):
+    """A copy of the canonical config with seeds.base_cost overridden, for
+    mechanism tests that need a non-zero cost regardless of live playtest tuning."""
+    raw = copy.deepcopy(load_economy_config().raw)
+    raw["seeds"]["base_cost"] = cost
+    return EconomyConfig(raw=raw)
 
 
 def test_create_player_grants_starting_balance(db):
@@ -29,21 +42,24 @@ def test_buy_seed_debits_and_adds_inventory(db):
     with session_scope() as s:
         svc = GameService(s)
         p = svc.create_player("bob")
-        common = _strain(s, "blue-dream")  # common -> 25
+        common = _strain(s, "blue-dream")
+        unit = pricing.seed_price(common.rarity, CFG)  # canonical price, not a literal
         stack = svc.buy_seed(p.id, common.id, quantity=2)
         assert stack.quantity == 2
-        assert balance(s, p.id) == Decimal("450.000000")  # 500 - 2*25
+        # Debit must equal price x quantity (mechanism), whatever the tuned price.
+        assert balance(s, p.id) == to_money(Decimal(str(CFG.starting_balance)) - unit * 2)
 
 
 def test_buy_seed_insufficient_funds(db):
+    # Use an injected config whose seed cost exceeds the starting grant so the
+    # affordability guard is exercised regardless of the live (free) playtest price.
+    cfg = _config_with_seed_cost(CFG.starting_balance + 100)
     with session_scope() as s:
-        svc = GameService(s)
+        svc = GameService(s, config=cfg)
         p = svc.create_player("broke")
-        legendary_like = _strain(s, "gorilla-glue-no-4")  # rare -> 150
-        # Drain the wallet first.
-        svc.buy_seed(p.id, legendary_like.id, quantity=3)  # 450
+        strain = _strain(s, "blue-dream")
         with pytest.raises(InsufficientFundsError):
-            svc.buy_seed(p.id, legendary_like.id, quantity=1)  # would need 150, only 50
+            svc.buy_seed(p.id, strain.id, quantity=1)
 
 
 def test_plant_seed_consumes_seed_and_copies_genome(db):
@@ -145,22 +161,30 @@ def test_list_pods_unknown_player_raises(db):
 
 
 def test_marketplace_transfers_seeds_and_currency(db):
+    # Fees/tax are derived from canonical config so the transfer mechanism is
+    # asserted independent of the seed price (which is free in playtest).
+    start = Decimal(str(CFG.starting_balance))
+    price = Decimal("100")
+    listing_fee = to_money(price * Decimal(str(CFG.market["listing_fee_pct"])))
+    sale_tax = to_money(price * Decimal(str(CFG.market["sale_tax_pct"])))
     with session_scope() as s:
         svc = GameService(s)
         seller = svc.create_player("seller")
         buyer = svc.create_player("buyer")
-        strain = _strain(s, "blue-dream")  # 25 common
+        strain = _strain(s, "blue-dream")
+        unit = pricing.seed_price(strain.rarity, CFG)
 
-        stack = svc.buy_seed(seller.id, strain.id)        # seller: 475
-        listing = svc.create_seed_listing(seller.id, stack.id, 1, 100)
-        # listing fee 100*0.03 = 3 -> seller 472, seed escrowed
-        assert balance(s, seller.id) == Decimal("472.000000")
+        stack = svc.buy_seed(seller.id, strain.id)
+        listing = svc.create_seed_listing(seller.id, stack.id, 1, int(price))
+        # seller paid the seed cost + listing fee; seed is escrowed.
+        seller_after_list = to_money(start - unit - listing_fee)
+        assert balance(s, seller.id) == seller_after_list
         assert s.get(SeedInventory, stack.id).quantity == 0
 
         svc.buy_listing(buyer.id, listing.id)
-        # buyer pays 100 -> 400; tax 5 burned; seller +95 -> 567
-        assert balance(s, buyer.id) == Decimal("400.000000")
-        assert balance(s, seller.id) == Decimal("567.000000")
+        # buyer pays the full price; sale tax is burned; seller nets price - tax.
+        assert balance(s, buyer.id) == to_money(start - price)
+        assert balance(s, seller.id) == to_money(seller_after_list + price - sale_tax)
         # buyer received the seed
         buyer_stack = (
             s.query(SeedInventory)

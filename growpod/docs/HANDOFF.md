@@ -4,6 +4,17 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
+> **⚑ In-flight (Economy Readiness, branch `claude/economy-readiness-audit-1gr574`):** an
+> **Economy Readiness Audit** ([`docs/audits/ECONOMY_READINESS_AUDIT.md`](audits/ECONOMY_READINESS_AUDIT.md))
+> plus **PR-1, the Economy Control Plane** ([`docs/ECONOMY_CONTROL_PLANE.md`](ECONOMY_CONTROL_PLANE.md)) —
+> a **safety-only** scaffold. Handoff facts:
+> **(1) current behavior preserved**, **(2) no tuning changed** (`balance.yaml` values byte-for-byte intact),
+> **(3) economy remains free-playtest** (seeds still free), **(4) the new `economy` flag defaults ON
+> *only* to avoid any behavior change — this is NOT live-economy approval**, **(5) live economy stays
+> BLOCKED** until the simulation + exploit hardening (PR-2) lands. PR-1 adds: `validate_economy_config()`
+> on load, the `economy` master kill-switch gating the core money loop (default ON), and de-hardcoded
+> economy tests. Gates: `make test` 351 passed · `make lint` ✅ · `make check-memory` ✅.
+
 **Last rewritten:** 2026-06-14 · **By:** records chat — CEO ratified PR #63; #61 closed; FF-RECON-001 EXECUTED
 **Active branch:** `main` (PR #63 squash-merged this chat).
 **Just merged (this chat): PR #63 — BE-003 feature-flag reconciliation.** `main` had carried **two**

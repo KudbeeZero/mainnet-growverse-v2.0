@@ -314,6 +314,7 @@ def list_plants(player_id):
 
 
 @game_bp.post("/players/<player_id>/seeds/buy")
+@require_feature("economy")
 @require_player
 def buy_seed(player_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -330,6 +331,7 @@ def buy_seed(player_id):
 
 
 @game_bp.post("/players/<player_id>/pods")
+@require_feature("economy")
 @require_player
 def create_pod(player_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -352,6 +354,7 @@ def create_pod(player_id):
 
 
 @game_bp.post("/players/<player_id>/pods/<pod_id>/upgrade")
+@require_feature("economy")
 @require_player
 def upgrade_pod(player_id, pod_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -385,6 +388,7 @@ def plant_seed(player_id):
 
 # ----- Breeding ----------------------------------------------------------
 @game_bp.post("/players/<player_id>/breed")
+@require_feature("economy")
 @require_player
 def breed(player_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -409,6 +413,7 @@ def breed(player_id):
 
 # ----- Harvest -----------------------------------------------------------
 @game_bp.post("/players/<player_id>/strains/<strain_id>/stabilize")
+@require_feature("economy")
 @require_player
 def stabilize_strain(player_id, strain_id):
     # RNG seed is server-generated (anti seed-shopping); not read from the body.
@@ -422,6 +427,7 @@ def stabilize_strain(player_id, strain_id):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/harvest")
+@require_feature("economy")
 @require_player
 def harvest(player_id, plant_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -443,6 +449,7 @@ def harvest(player_id, plant_id):
 
 
 @game_bp.delete("/players/<player_id>/plants/<plant_id>")
+@require_feature("economy")
 @require_player
 def cleanup_plant(player_id, plant_id):
     """Pay 25 GROW to remove a harvested/dead plant and reset the pod slot."""
@@ -480,6 +487,7 @@ def start_cure(player_id, harvest_id):
 
 
 @game_bp.post("/players/<player_id>/harvests/<harvest_id>/cure/finish")
+@require_feature("economy")
 @require_player
 def finish_cure(player_id, harvest_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -495,6 +503,7 @@ def finish_cure(player_id, harvest_id):
 
 
 @game_bp.post("/players/<player_id>/harvests/<harvest_id>/sell")
+@require_feature("economy")
 @require_player
 def sell_harvest(player_id, harvest_id):
     try:
@@ -516,6 +525,7 @@ def research_tree(player_id):
 
 
 @game_bp.post("/players/<player_id>/research/<node_key>/unlock")
+@require_feature("economy")
 @require_player
 def research_unlock(player_id, node_key):
     try:
@@ -537,6 +547,7 @@ def shop_list(player_id):
 
 
 @game_bp.post("/players/<player_id>/shop/buy")
+@require_feature("economy")
 @require_player
 def shop_buy(player_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -555,6 +566,7 @@ def shop_buy(player_id):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/apply")
+@require_feature("economy")
 @require_player
 def apply_consumable(player_id, plant_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -659,6 +671,7 @@ def ftue_advance(player_id):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/advisor/auto-care")
+@require_feature("economy")
 @require_player
 @limiter.limit("10 per minute")
 def plant_auto_care(player_id, plant_id):
@@ -721,6 +734,7 @@ def _care_action(player_id, plant_id, method_name, **kwargs):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/water")
+@require_feature("economy")
 @require_player
 def water_plant(player_id, plant_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -728,6 +742,7 @@ def water_plant(player_id, plant_id):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/feed")
+@require_feature("economy")
 @require_player
 def feed_plant(player_id, plant_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -735,6 +750,7 @@ def feed_plant(player_id, plant_id):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/treat-pests")
+@require_feature("economy")
 @require_player
 def treat_pests(player_id, plant_id):
     try:
@@ -749,6 +765,7 @@ def treat_pests(player_id, plant_id):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/treat-disease")
+@require_feature("economy")
 @require_player
 def treat_disease(player_id, plant_id):
     return _care_action(player_id, plant_id, "treat_disease")
@@ -924,6 +941,7 @@ def player_profile(player_id):
 
 # ----- Progression: daily stipend & achievements -------------------------
 @game_bp.post("/players/<player_id>/daily")
+@require_feature("economy")
 @require_player
 @limiter.limit("30 per hour")
 def claim_daily(player_id):
@@ -944,6 +962,7 @@ def list_achievements(player_id):
 
 
 @game_bp.post("/players/<player_id>/achievements/<key>/claim")
+@require_feature("economy")
 @require_player
 def claim_achievement(player_id, key):
     try:

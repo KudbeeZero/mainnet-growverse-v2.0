@@ -10,25 +10,30 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from growpodempire.db.session import session_scope
 from growpodempire.db.models import Strain
+from growpodempire.economy.config import load_economy_config
 from growpodempire.services.game_service import GameService, GameError
 from growpodempire.services.progression_service import ProgressionService
 from growpodempire.simulation.clock import FrozenClock
 
 BASE = datetime(2025, 1, 1, 12, 0, 0)
+CFG = load_economy_config()
 
 
 def test_daily_stipend_cooldown(db):
+    # The stipend amount comes from balance.yaml (canonical), not a hardcoded
+    # literal — so the cooldown mechanic is tested independent of the tuned value.
+    stipend = CFG.daily_stipend
     with session_scope() as s:
         p = GameService(s).create_player("daily")
         clock = FrozenClock(BASE)
         prog = ProgressionService(s, clock=clock)
         first = prog.claim_daily(p.id)
-        assert first["claimed"] == 50.0
+        assert first["claimed"] == stipend
         with pytest.raises(GameError):
             prog.claim_daily(p.id)            # still on cooldown
         clock.advance(hours=23)
         again = prog.claim_daily(p.id)         # cooldown elapsed
-        assert again["claimed"] == 50.0
+        assert again["claimed"] == stipend
 
 
 def test_achievement_unlock_and_claim_once(db):

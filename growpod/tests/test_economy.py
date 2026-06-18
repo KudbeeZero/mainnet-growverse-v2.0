@@ -25,9 +25,14 @@ CFG = load_economy_config()
 
 
 # ----- Pricing (pure, deterministic) ------------------------------------
-def test_seed_price_scales_with_rarity():
-    assert pricing.seed_price("common", CFG) == Decimal("25.000000")
-    assert pricing.seed_price("legendary", CFG) == Decimal("1000.000000")
+def test_seed_price_derives_from_canonical_config():
+    # Pricing must read balance.yaml (base_cost x rarity multiplier), never
+    # hardcode — so a future owner-ratified retune flows through with no code
+    # change. Asserting the formula keeps this true at any tuning, including the
+    # current free-playtest values.
+    for rarity in ("common", "rare", "legendary"):
+        expected = to_money(CFG.seed_base_cost() * CFG.seed_rarity_multiplier(rarity))
+        assert pricing.seed_price(rarity, CFG) == expected
 
 
 def test_breeding_fee_scales_with_avg_rarity():

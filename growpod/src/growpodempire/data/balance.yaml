@@ -484,6 +484,14 @@ chain:
 # their API routes (require_feature); flip one OFF per-environment for launch.
 # No per-player targeting.
 feature_flags:
+  # MASTER economy kill-switch for the core money loop (buy/sell/claim/breed/
+  # research/shop/care/pods/cleanup). Default ON, which PRESERVES the current
+  # free-playtest behavior exactly — ON does NOT mean live-economy approval.
+  # Final balance values are owner-ratified and intentionally unchanged here;
+  # going live is a separate, owner-approved step that stays BLOCKED until the
+  # simulation + exploit hardening lands. Flip OFF (FEATURE_ECONOMY=false) to
+  # freeze all GROW movement in an incident, no deploy required.
+  economy: true
   ftue_tutorial: true          # guided first-grow onboarding (/ftue)
   grow_chamber: true           # whole-plant grow-chamber view
   master_grower_advisor: true  # AI care advisor

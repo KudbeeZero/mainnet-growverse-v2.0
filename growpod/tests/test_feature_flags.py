@@ -82,6 +82,28 @@ def test_feature_required_decorator(monkeypatch):
         view()
 
 
+def test_economy_flag_declared_and_default_on():
+    # The master economy kill-switch is declared in balance.yaml and defaults ON,
+    # so introducing it changes NO current behavior. Default ON is NOT live-economy
+    # approval — it merely preserves the existing free-playtest behavior.
+    flags = all_flags()
+    assert "economy" in flags
+    assert flags["economy"] is True
+    assert is_enabled("economy") is True
+
+
+def test_economy_flag_toggles_via_env(monkeypatch):
+    # OFF freezes the economy; the guard raises so gated routes can 404.
+    monkeypatch.setenv("FEATURE_ECONOMY", "false")
+    assert is_enabled("economy") is False
+    with pytest.raises(FeatureDisabledError):
+        require_feature("economy")
+    # Explicit ON works too.
+    monkeypatch.setenv("FEATURE_ECONOMY", "true")
+    assert is_enabled("economy") is True
+    require_feature("economy")  # no raise
+
+
 def test_flags_endpoint(client):
     r = client.get("/api/game/flags")
     assert r.status_code == 200
