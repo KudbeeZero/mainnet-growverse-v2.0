@@ -22,6 +22,19 @@
 > **Note for the owner:** `.github/` lives under `growpod/.github` while the git root is the repo
 > parent — GitHub reads workflows/templates from the **repo root**, so confirm CI actually runs (the
 > issue template was placed at the repo-root `.github/ISSUE_TEMPLATE/` to be picked up).
+>
+> **Coverage push (2026-06-18, same chat).** Took the suite from 79.37% → **95.02%** across four
+> **test-only** waves (route groups → edge branches → mocked-SDK providers → an honest Round-2 pass):
+> **848 passed**, `make lint` ✅, `make check-memory` ✅. **No `fail_under` change (still 79), no
+> `src/` edits, no deep cloud-SDK/network mocks** — coverage was raised only on real offline logic
+> (route validation/404/feature-gate/bundle branches, `db/session` cold-start, `object_storage`
+> path/config/guards, `audio_prewarm` guards+threading, `elevenlabs` course-cache + IntegrityError,
+> `algorand` constructor guard). Remaining ~297 uncovered lines are the **documented honest live
+> boundary**, left deliberately untested rather than vanity-mocked: `ai/autocare.py` live Claude
+> tool-runner (115-168), `chain/algorand.py` txn-build/`_send` SDK calls, `ai/object_storage.py` real
+> GCS upload/download + sidecar token, `ai/elevenlabs_narrator.py` real TTS HTTP, and a few
+> `game_api.py` success-serializer arms covered indirectly. All on PR #14 — **95.02% appears to be the
+> honest offline floor** (further gains need live keys/network or the chain/AI seams the owner declined).
 
 ---
 
