@@ -517,3 +517,20 @@ monetization, no tokenomics** introduced; the earned-mastery moat is unchanged (
 stay non-economic). Approved future build order: Framework → `bio-101` → Professor System → ElevenLabs →
 Labs → Assessments → Certifications → Transcripts → Advanced Courses → Degree Programs. No
 implementation is scheduled yet; these docs are the authoritative reference when it is.
+
+### 2026-06-18 — `late_flower` promoted to a live, ADDITIVE engine stage
+**Decision:** Split the lifecycle's final pre-harvest span by inserting a real `late_flower`
+GrowthStage between `flowering` and `harvest`. It is **additive** — a fixed `late_flower_days`
+(default 14, in `balance.yaml:simulation.stages`) appended *after* the genetic flowering window, not
+carved out of it — so total seed→harvest time lengthens by `late_flower_days × time_scale`. The
+previously inert `nutrient.stage_targets.late_flower: [500, 700]` band (added display-only by the
+University Grow Console, PR #6) now resolves for real plants in that stage.
+**Why:** Models the real ripening/flush phase growers care about and lights up the band the Grow
+Console already shipped. Additive (vs. carve-out) was the **owner's explicit choice** — the
+stop-and-ask sign-off CLAUDE.md requires for a player-facing pacing change.
+**Consequences:** Harvest payoff (a faucet) arrives later by the late_flower duration; tune or
+disable via `late_flower_days` (set 0 to revert to the old flowering→harvest flow). The chamber
+renderer treats `late_flower` exactly like `flowering` (buds/frost keep progressing — no new art);
+the engine's `_stage_duration_hours`/`_growth_cm_per_hour`, the forecast, the web stage maps, and
+the `harvest_plant` gate (which never required a specific stage) all handle it. The economy's
+faucet/sink *rates* are unchanged — only the cadence of the harvest faucet shifts.

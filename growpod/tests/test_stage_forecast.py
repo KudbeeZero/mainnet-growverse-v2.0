@@ -28,7 +28,8 @@ def test_seed_start_has_full_remaining_lifecycle(session):
     f = engine.stage_forecast(plant, CFG, BASE)
     assert f["stage"] == GrowthStage.SEED.value
     assert f["stage_index"] == 0
-    assert f["stage_count"] == 6
+    # seed · germination · seedling · vegetative · flowering · late_flower · harvest
+    assert f["stage_count"] == 7
     assert f["next_stage"] == GrowthStage.GERMINATION.value
     assert f["stage_progress_pct"] == 0.0
     assert f["is_harvest_ready"] is False
@@ -38,7 +39,8 @@ def test_seed_start_has_full_remaining_lifecycle(session):
     assert f["stage_base_hours"] == round(72.0 * scale, 1)
     assert f["stage_total_hours"] == round(72.0 * scale, 1)
     # Harvest is the whole lifecycle out: the fixed pre-flower stages
-    # (72+120+240+624) plus flowering, all under the same pacing scale.
+    # (72+120+240+624) plus flowering plus the new late_flower finish, all under
+    # the same pacing scale.
     assert f["hours_to_harvest"] > 1056 * scale
     eta = datetime.fromisoformat(f["harvest_eta"])
     assert abs((eta - BASE).total_seconds() / 3600.0 - f["hours_to_harvest"]) < 0.1
@@ -89,6 +91,34 @@ def test_harvest_stage_is_terminal(session):
     assert f["harvest_eta"] is None
     assert f["stage_progress_pct"] == 100.0
     assert f["hours_to_harvest"] == 0.0
+
+
+def test_flowering_now_precedes_late_flower(session):
+    """Flowering is no longer the last pre-harvest stage: it hands off to the
+    additive late_flower (ripening) finish before harvest."""
+    _, _, plant = _plant(session)
+    plant.growth_stage = GrowthStage.FLOWERING.value
+    session.flush()
+    f = engine.stage_forecast(plant, CFG, BASE)
+    assert f["next_stage"] == GrowthStage.LATE_FLOWER.value
+    assert f["is_harvest_ready"] is False
+
+
+def test_late_flower_is_non_terminal_and_finite(session):
+    """late_flower counts down to harvest by its configured `late_flower_days`
+    (× the launch pacing scale); it is not the terminal harvest-ready state."""
+    _, _, plant = _plant(session)
+    plant.health = 100.0
+    plant.growth_stage = GrowthStage.LATE_FLOWER.value
+    session.flush()
+    f = engine.stage_forecast(plant, CFG, BASE)
+    assert f["stage"] == GrowthStage.LATE_FLOWER.value
+    assert f["next_stage"] == GrowthStage.HARVEST.value
+    assert f["is_harvest_ready"] is False
+    scale = float(CFG.raw["simulation"].get("time_scale", 1.0))
+    late_days = CFG.raw["simulation"]["stages"]["late_flower_days"]
+    # At full health the whole remaining time is just this stage's duration.
+    assert f["hours_to_harvest"] == pytest.approx(late_days * 24 * scale, abs=0.1)
 
 
 def test_service_forecast_uses_its_clock(session):

@@ -54,6 +54,23 @@ def test_catch_up_advances_growth_stage(session):
     assert plant.height > 0 or plant.growth_stage != "seed"
 
 
+def test_late_flower_advances_to_harvest(session):
+    """late_flower is a real, finite stage — the engine must advance through it to
+    harvest rather than stall (regression guard for the additive ripening stage)."""
+    from growpodempire.enums import GrowthStage
+
+    _, _, plant = _plant(session)
+    plant.growth_stage = GrowthStage.LATE_FLOWER.value
+    plant.health = 100.0
+    plant.stage_entered_at = BASE
+    plant.last_tick_at = BASE
+    session.flush()
+    # late_flower runs ~late_flower_days × 24 × time_scale hours; 5 days clears it
+    # deterministically even if a pest spawn stretches it.
+    engine.catch_up(session, plant, BASE + timedelta(days=5), CFG)
+    assert plant.growth_stage == GrowthStage.HARVEST.value
+
+
 def test_time_scale_compresses_every_stage_uniformly(session):
     # The launch pacing knob scales pre-flower stages AND the genetic flowering
     # window by the same factor, preserving their proportions. A plant's genetics

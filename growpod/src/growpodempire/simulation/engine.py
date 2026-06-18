@@ -26,6 +26,7 @@ _STAGE_ORDER = [
     GrowthStage.SEEDLING,
     GrowthStage.VEGETATIVE,
     GrowthStage.FLOWERING,
+    GrowthStage.LATE_FLOWER,
     GrowthStage.HARVEST,
 ]
 
@@ -55,6 +56,12 @@ def _stage_duration_hours(plant: Plant, stage: GrowthStage, sim: Dict) -> float:
     elif stage == GrowthStage.FLOWERING:
         # Flowering length is genetic.
         base = _gene(plant, "flowering_time", 60) * 24
+    elif stage == GrowthStage.LATE_FLOWER:
+        # Ripening/finish — an additive block appended after flowering (a fixed
+        # number of days, NOT carved out of the genetic flowering window), so it
+        # lengthens total seed->harvest time by `late_flower_days` (× time_scale).
+        # Player-facing pacing change, owner-ratified (see DECISIONS 2026-06-18).
+        base = stages.get("late_flower_days", 14) * 24
     else:
         return 0.0
     # Launch pacing: a single global multiplier compresses (or expands) the whole
@@ -145,6 +152,9 @@ def _growth_cm_per_hour(stage: GrowthStage, sim: Dict, health: float) -> float:
         GrowthStage.SEEDLING: growth.get("seedling_cm_per_day", 0.6),
         GrowthStage.VEGETATIVE: growth.get("vegetative_cm_per_day", 2.2),
         GrowthStage.FLOWERING: growth.get("flowering_cm_per_day", 0.5),
+        # Late flower is the ripening finish — buds fatten but vertical growth
+        # all but stops, so the slowest rate of the cycle.
+        GrowthStage.LATE_FLOWER: growth.get("late_flower_cm_per_day", 0.2),
     }.get(stage, 0.0)
     return rate / 24.0 * (health / 100.0)
 
