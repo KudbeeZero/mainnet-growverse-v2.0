@@ -15,6 +15,7 @@ import { EventLog } from "@/components/plant/EventLog";
 import { PlantMetrics } from "@/components/plant/PlantMetrics";
 import { StageTimeline } from "@/components/plant/StageTimeline";
 import { AdvisorPanel } from "@/components/plant/AdvisorPanel";
+import { LiveScoutOverlay } from "@/components/intro/LiveScoutOverlay";
 import { PlantActionCTA } from "@/components/plant/PlantActionCTA";
 import { StickyActionBar } from "@/components/ui/StickyActionBar";
 import { nextPlantAction } from "@/lib/plantAction";
@@ -104,8 +105,14 @@ function PlantDetail({ plantId }: { plantId: string }) {
             }
             subtitle={`${titleCase(plant.growth_stage)} · ${num(plant.height, 1)} cm`}
           />
-          <div className="flex items-center justify-center rounded-lg bg-ink-900/60 py-4">
+          {/* Relative wrapper so the live AI scouts can overlay the plant. */}
+          <div className="relative flex items-center justify-center rounded-lg bg-ink-900/60 py-4">
             <PlantVisual stage={plant.growth_stage} flags={plant.condition_flags} size={200} />
+            <LiveScoutOverlay
+              playerId={playerId!}
+              plantId={plant.id}
+              flags={plant.condition_flags}
+            />
           </div>
           <div className="mt-3">
             <ConditionBadges flags={plant.condition_flags} />

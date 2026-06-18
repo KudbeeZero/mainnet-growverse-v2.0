@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CONDITION_VISUALS } from "@/lib/conditionVisuals";
-import type { AgentFinding } from "./introScript";
+import type { ScoutFinding } from "./introScript";
 
 type Phase = "scanning" | "thinking" | "found";
 
@@ -21,9 +21,9 @@ export function AgentBubble({
   reduced,
   onRequest,
 }: {
-  finding: AgentFinding;
+  finding: ScoutFinding;
   reduced: boolean;
-  onRequest: (finding: AgentFinding) => void;
+  onRequest: (finding: ScoutFinding) => void;
 }) {
   const [phase, setPhase] = useState<Phase>(reduced ? "found" : "scanning");
 

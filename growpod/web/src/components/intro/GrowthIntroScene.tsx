@@ -5,28 +5,16 @@ import { PlantVisual } from "@/components/plant/PlantVisual";
 import type { ConditionFlag, GrowthStage } from "@/lib/types";
 import { AgentBubble } from "./AgentBubble";
 import { SpecialistModal } from "./SpecialistModal";
+import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 import {
   AGENT_FINDINGS,
   SCENE_DURATION_MS,
   STAGE_TIMELINE,
-  type AgentFinding,
+  type ScoutFinding,
 } from "./introScript";
 
 const PLANT_SIZE = 190;
 const TICK_MS = 120;
-
-/** Read the user's reduced-motion preference (SSR-safe). */
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return reduced;
-}
 
 /** Last stage whose start time has elapsed. */
 function stageAt(elapsed: number): GrowthStage {
@@ -47,7 +35,7 @@ export function GrowthIntroScene() {
   const reduced = usePrefersReducedMotion();
   const [elapsed, setElapsed] = useState(0);
   const [runId, setRunId] = useState(0); // bump to replay (also remounts agents)
-  const [active, setActive] = useState<AgentFinding | null>(null);
+  const [active, setActive] = useState<ScoutFinding | null>(null);
 
   // Drive the timeline. Reduced motion jumps straight to the resolved frame.
   useEffect(() => {

@@ -20,21 +20,30 @@ export interface StageStep {
   stage: GrowthStage;
 }
 
-/** One AI agent that pops up, recognizes a condition, and offers a specialist. */
-export interface AgentFinding {
+/**
+ * One AI scout finding: a recognized condition + the specialist a player can
+ * summon for it. Shared by the scripted intro (`/onboarding`) and the live
+ * dashboard overlay (Phase 2A) — neither path needs the timeline cue, so that
+ * lives only on `AgentFinding` below.
+ */
+export interface ScoutFinding {
   id: string;
-  /** Milliseconds from scene start when this agent appears. */
-  atMs: number;
   /** Anchor position over the plant, as percentages of the stage box. */
   anchor: { xPct: number; yPct: number };
-  /** The thing this agent "recognizes" — drives the badge label + colour. */
+  /** The thing this scout "recognizes" — drives the badge label + colour. */
   condition: ConditionKind;
-  /** Short human note shown while the agent reports its finding. */
+  /** Short human note shown while the scout reports its finding. */
   note: string;
   /** The specialist a player can summon for this finding. */
   specialist: string;
-  /** Mock consult fee in GROW (Phase 2 turns this into a real ledger debit). */
+  /** Mock consult fee in GROW (Phase 2B turns this into a real ledger debit). */
   feeGrow: number;
+}
+
+/** A scripted scout finding with a timeline cue (used by the /onboarding scene). */
+export interface AgentFinding extends ScoutFinding {
+  /** Milliseconds from scene start when this scout appears. */
+  atMs: number;
 }
 
 // The plant climbs from a seed to flowering over ~6s of the intro.

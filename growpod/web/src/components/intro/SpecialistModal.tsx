@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { CONDITION_VISUALS } from "@/lib/conditionVisuals";
-import type { AgentFinding } from "./introScript";
+import type { ScoutFinding } from "./introScript";
 
 /**
  * Confirm dialog for summoning a specialist about an agent's finding.
@@ -19,7 +19,7 @@ export function SpecialistModal({
   open,
   onClose,
 }: {
-  finding: AgentFinding | null;
+  finding: ScoutFinding | null;
   open: boolean;
   onClose: () => void;
 }) {
