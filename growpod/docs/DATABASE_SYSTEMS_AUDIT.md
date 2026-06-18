@@ -6,6 +6,20 @@
 > `file:line` evidence. No schema/migration/economy/chain changes were made.
 > **Evidence labels:** ✅ Verified · 🟡 Partially verified · ⚪ Not tested · ⛔ Out of scope / N/A.
 
+> [!IMPORTANT]
+> **ERRATUM — 2026-06-18 (added by the audit/baton repair pass).** This audit's headline claim
+> that `ci.yml` was nested under `growpod/` and that GitHub Actions never ran it is now
+> **stale/false**. By the time PR #22 (this document) merged, **PR #14 had relocated the workflow
+> to the repo-root `.github/workflows/ci.yml`**, and CI runs **green** there — verified via the
+> `main` push runs (`231c00b`, `56f0033`, `2ed4c9b` all ✅) and PR #14's own PR run (incl. the web
+> `typecheck·lint·build·test·e2e` job). PR #22's own *zero pre-merge checks* were caused by its
+> branch predating that relocation and not being rebased (so the `pull_request` trigger never
+> fired) — **not** by a nested workflow. For current CI status, active-PR state, and process rules,
+> use the canonical baton **`growpod/docs/HANDOFF.md`**. Everything below this note is preserved
+> as **historical evidence** from the repo state when PR #22 was written — its other findings
+> (money-path DB protections, single-head migrations, model↔migration drift gap, FK indexes,
+> RISK #4/7) are unchanged.
+
 ---
 
 ## 1. Executive Summary

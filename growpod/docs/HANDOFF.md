@@ -4,224 +4,107 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-06-18 · **By:** testing-prep chat — green-build + test-env tunnel + skip-login bypass
-**Active branch:** `claude/paul-testing-prep-xk78mz` (open PR; was identical to `main` at start).
+**Last rewritten:** 2026-06-18 · **By:** audit/baton-repair chat — retro-audit of the latest merged PR.
+**Active branch:** `claude/growverse-audit-baton-yqd63o` (this chat; **one draft PR**, doc-only).
+**`main` is at `231c00b`** (= the PR #22 merge) and **CI-green** (push run `231c00b` ✅).
 
-> **This chat (2026-06-18) — testing-prep pass.** Pre-flight check-in caught that `main` had gone
-> **RED** (the baton below was stale: it claimed "287 passed, 84.55%" but merges #4–#7 left
-> **6 failures + coverage 73.45% < 79%**). Fixed both: (1) economy is in deliberate **free testing
-> mode** (commit `573b78a`: free seeds, 5000 stipend) — kept the testing values live and guarded the
-> **launch** values via `tests/fixtures/launch_balance.yaml` + a `test_launch_balance_values`
-> tripwire (**restore the launch values in `balance.yaml` before launch**); (2) added launch-critical
-> tests (seasonal sink, ledger summary, badges, branded store) → coverage back to **79.37% ≥ 79%, no
-> floor change**. Then: **web safety net** wired into CI (vitest + Playwright un-stubbed; RISK #8
-> web-side closed pending the first CI run), a one-command **`make testenv`** full-stack cloudflared
-> tunnel (debug off, dev clock on), a dev/test-only **skip-login** button
-> (`NEXT_PUBLIC_ENABLE_DEV_BYPASS`, default OFF), `docs/TESTER_RUNBOOK.md`, and a bug-report template.
-> Gates: `make test` **349 passed, 79.37%** · `make lint` ✅ · `make check-memory` ✅.
-> **Note for the owner:** `.github/` lives under `growpod/.github` while the git root is the repo
-> parent — GitHub reads workflows/templates from the **repo root**, so confirm CI actually runs (the
-> issue template was placed at the repo-root `.github/ISSUE_TEMPLATE/` to be picked up).
->
-> **Coverage push (2026-06-18, same chat).** Took the suite from 79.37% → **95.02%** across four
-> **test-only** waves (route groups → edge branches → mocked-SDK providers → an honest Round-2 pass):
-> **848 passed**, `make lint` ✅, `make check-memory` ✅. **No `fail_under` change (still 79), no
-> `src/` edits, no deep cloud-SDK/network mocks** — coverage was raised only on real offline logic
-> (route validation/404/feature-gate/bundle branches, `db/session` cold-start, `object_storage`
-> path/config/guards, `audio_prewarm` guards+threading, `elevenlabs` course-cache + IntegrityError,
-> `algorand` constructor guard). Remaining ~297 uncovered lines are the **documented honest live
-> boundary**, left deliberately untested rather than vanity-mocked: `ai/autocare.py` live Claude
-> tool-runner (115-168), `chain/algorand.py` txn-build/`_send` SDK calls, `ai/object_storage.py` real
-> GCS upload/download + sidecar token, `ai/elevenlabs_narrator.py` real TTS HTTP, and a few
-> `game_api.py` success-serializer arms covered indirectly. All on PR #14 — **95.02% appears to be the
-> honest offline floor** (further gains need live keys/network or the chain/AI seams the owner declined).
->
-> **Playtest dry-run (2026-06-18, same chat) — booted the build in the real tester config and drove
-> the core loop end-to-end over HTTP (headless; no browser/tunnel here).** Receipt:
-> `/health` 200 · `/readiness` 200 (DB ok) · 29 strains seeded · dev-clock enabled · debug off.
-> **Core loop PASS:** provision (skip-login equiv) → starter pod+seed → plant → water/feed/climate →
-> dev-clock grow → harvest → cure → sell; **GROW moved 495 → 824.29 (+329.29)**, ledger consistent,
-> no-API-key write → 401. Two real "reds" caught before a tester would hit them:
-> 1. **FIXED — Alembic multiple-heads fork.** `alembic upgrade head` failed (`502de4114faa` +
->    `fd1100254612` were duplicate no-op merges of the same pair `a7b8c9d0e1f2`+`c8d9e0f1a2b3`; the
->    `9d44efb` "fix" re-forked it). This broke deploy **and** `scripts/testenv-up.sh §1`. Removed the
->    duplicate `502de4114faa`; single head `fd1100254612`; `check_single_head` ✅; clean `upgrade head`
->    on a fresh DB. Gates after fix: **848 passed / 95.02%**, `make lint` ✅, `make check-memory` ✅.
-> 2. **FIXED — `web/package-lock.json` was poisoned + out of sync (would have failed CI `npm ci`
->    everywhere).** Root cause (found via `/debug`): the committed lock had **90 `resolved` URLs hard-
->    coded to `http://package-firewall.replit.local`** (a dead Replit-internal host baked in when the
->    lock was generated inside a firewalled env) **and** was missing the `vitest`/`@playwright/test`
->    nodes added when the test scripts were un-stubbed. The public registry was actually reachable, so
->    regenerated the lock cleanly (`npm install --registry=https://registry.npmjs.org/`): **0 firewall
->    URLs, deps in sync, `npm ci --dry-run` ✅.** Then ran the **full web suite green locally**:
->    `typecheck` ✅ · `lint` ✅ (warnings only) · **Vitest 217/217** ✅ · `build` ✅ · **Playwright e2e
->    3/3** ✅. **RISK #8 web side is now genuinely verified (not just wired).** The 217 unit + 3 e2e
->    will run in CI once Actions is enabled + PR #14 merged.
+> **Owner rule now in force: ONE active PR at a time.** No stacked PRs, no parallel feature PRs,
+> no multi-PR chains unless the owner explicitly approves an exception. If another unit is
+> discovered, **queue it below — do not open it.**
 
 ---
 
-### Prior baton (pre-2026-06-18, now stale on test counts — see above)
-**By:** records chat — CEO ratified PR #63; #61 closed; FF-RECON-001 EXECUTED
-**Was active branch:** `main` (PR #63 squash-merged that chat).
-**Just merged (this chat): PR #63 — BE-003 feature-flag reconciliation.** `main` had carried **two**
-contradictory flag systems (#42's `config.py ENABLE_*` / `feature_gates.py` gating routes OFF while
-`GET /api/game/flags` reported ON from #55's `balance.yaml`). #63 collapses to the single
-balance.yaml-canonical system: deletes `api/feature_gates.py` + the `config.py ENABLE_*` block + the
-`app.config["FEATURE_*"]` mirror; re-points the ~25 route decorators to `feature_required` from
-`growpodempire.feature_flags`; adds `chain`/`contracts` to `balance.yaml`; renames `cup` →
-`cup_competitions`; adds a regression test asserting each route's gate == its `/flags` value.
-Gates: `make test` **287 passed, 84.55%** · `make lint` ✅ · `make check-memory` ✅.
-**Prior context (BE-004.5 / playtest chats):** **PR #59** (STEP 4.5 — `GameService` on `active_clock()`
-+ cure e2e) merged (`5d44d35`); **RISK #1 CLOSED** (cure/auction dev-clock-drivable). Playtest done
-(`docs/playtesting/BE-004.5-playtest-report.md`, zero product defects; device/web matrix
-owner-verifiable). **PR #62** (playtesting docs) merged.
-**Just merged to main (this chat):** **PR #47 — Simulation Test Clock (BE-002, STEP 3) + e2e Grow Loop
-(BE-004, STEP 4).** The dev/test-only `OffsetClock`/`active_clock()` seam, the `/api/dev/clock/*`
-endpoints (force-disabled in production), **plus** the full core-loop e2e (seed → plant → flower →
-harvest → sell over the HTTP API, fast-forwarded with the dev clock) and HTTP-boundary coverage for
-the value-bearing routes (RISK #8, backend side). **Test-only / no production behaviour change.**
-**Closed this chat:** **PR #44** (the competing STEP 3 test-clock) — **superseded by PR #47** per the
-Director's BE-004A reconciliation decision.
-**Recently merged (per `main` / REC-004 sweep):** FTUE epic (**#34/#35/#39**), Dashboard wiring
-(**#29/#30**), Launch Strain Pack (**#33** → 29-strain catalog), mobile-first nav (**#36**), OMNI
-Charter (**#38**), DX-001 Care Feedback (**#41**), FP-3 Primary CTA (**#45**), REC-003 Studio Agent
-Registry (**#46**), REC-004 memory reconciliation (**#50**), University curriculum docs (**#51**).
-**Parked (open PRs, green — do NOT modify):** **PR #27** Phenotype Generator Foundation,
-**PR #28** Circadian Leaf Motion.
-**Other open PRs (owner decision):** **PR #32** E2E grow-loop CI (service-layer + a CI gate step) —
-**now overlaps PR #47's HTTP e2e**; the owner should decide *merge for the CI gate* vs *close as
-overlapping*. **PR #42** *MVP Feature Flag Layer* (the NEXT ACTION).
+## This chat (2026-06-18) — retro-audit + baton repair (doc-only)
 
-> **Launch-Readiness path (Builder Dept):** Feature Flags → STEP 3 Simulation Test Clock ✅ → STEP 4
-> e2e Grow Loop ✅ → **Feature Flags (#42, NEXT)** → Playtesting → Retention Validation → MVP Launch
-> Candidate. The backend OPEN RISKS below were **not** re-audited beyond RISK #1/#8; re-verify against
-> current code before acting. The authoritative consolidated Records ledger is
-> `docs/memory/CANONICAL_STATE.md`; live cross-agent coordination is `docs/STUDIO_AGENT_REGISTRY.md`.
+A read-only audit of the **most recently merged PR** plus a repair of this stale baton. No product,
+engine, economy, token, wallet, minting, db, simulation, strain, morphology, chamber, CI, or
+player-facing behavior changed — **three markdown files only**.
+
+**Audited: PR #22 — "docs: Database Systems + Process Coach audit (read-only)"** — `merged:true`,
+merged 2026-06-18T22:39:06Z, merge commit `231c00b` = current HEAD of `main`.
+
+| Claim (PR/handoff) | Repo evidence | Label |
+|---|---|---|
+| #22 changed exactly one additive markdown file, no behavior | `git show 231c00b --stat` → 1 file, **+290** (`docs/DATABASE_SYSTEMS_AUDIT.md`) | **Verified** |
+| Branch `claude/website-content-audit-*` is a pre-pivot rename, not a website task | PR #22 body documents the pivot to a DB audit | **Verified** |
+| #22 was gated by CI before merge | `get_check_runs #22` → **0 checks**; only validated *after* merge by the `main` push run | **Not verified → merged blind** |
+| #22's headline "top process risk": *`ci.yml` is nested under `growpod/`, Actions never runs* | **False on current main** — root `.github/workflows/ci.yml` exists (no `growpod/.github/`), and CI is green on `main` pushes + PR #14. Cause of #22's 0 checks was a **stale, un-rebased branch**, not nesting. | **Scope mismatch (doc vs evidence)** → erratum added to the doc |
+| Prior baton: PR #14 is an "open PR" / active branch | PR #14 `merged:true` 22:22Z (`2ed4c9b`) | **Memory conflict (stale)** |
+| Prior baton: RISK #8 web safety net "pending the first CI run" | PR #14 PR run + `main` pushes ran the web `typecheck·lint·build·test·e2e` job **green** | **Verified → closeable** |
+| Prior baton "prior baton" block cites PRs **#42/#47/#59/#63** | This repo's PRs only reach **#23**; those numbers do not exist here | **No evidence (phantom) → removed** |
+
+**Tests/checks this pass:** read-only git + GitHub Actions API evidence (above) and `make check-memory`
+to keep doc-link integrity green. No source touched, so lint/test are behavior-unaffected.
 
 ---
 
-## NEXT ACTION (the one scoped item the next chat does)
+## Merged on `main` (real, verified) — recent PR ledger
 
-**Playtesting → Retention Validation → MVP Launch Candidate.** **Feature Flags are DONE** — one
-canonical `balance.yaml`/`feature_flags.py` system (**PR #63, CEO-ratified 2026-06-14**): gated routes
-via `feature_required`, `GET /api/game/flags`, a route-gate==`/flags` regression test; #42's
-`feature_gates.py` + config `FEATURE_*` removed. The competing **PR #61** (delete #55) was **closed as
-superseded**. **Do NOT reopen the flag architecture** unless a production defect appears (CEO). Next
-chat resumes the launch path: the web/device playtest pass, then Retention Validation, then MVP Launch
-Candidate.
-- **Launch polarity:** gated routes default **ON** (balance.yaml); the launch build turns non-MVP
-  surfaces OFF per-env (`FEATURE_MARKETPLACE/CHAIN/CUP_COMPETITIONS/UNIVERSITY/CONTRACTS=false`) —
-  deploy config, not code.
-- **Deferred (not now, no defect):** the web layer still uses build-time `NEXT_PUBLIC_ENABLE_*`; a
-  future runtime `useFlag` over `/api/game/flags` could unify it — **out of scope per CEO** ("no
-  additional refactors").
-- **Owner-pending (REC-004):** the §3 branch prune still has **not** run (destructive git is
-  owner-only). After the owner prunes, refresh `CANONICAL_STATE.md` §3.
+| PR | Title | Merged | Note |
+|----|-------|--------|------|
+| **#22** | docs: Database Systems + Process Coach audit | 22:39Z (`231c00b`, HEAD) | doc-only; **0 pre-merge CI** (see audit) |
+| #23 | docs: Global Evidence + Memory Layer charter | 22:31Z (`56f0033`) | doc-only; 0 pre-merge CI (stale branch) |
+| #14 | Testing-prep: green build + test-env + skip-login | 22:22Z (`2ed4c9b`) | big (54 files); **CI green** on its PR run (`f3d1d99` ✅) |
+| #17 | backup/local-changes merge | — (`cc32548`) | — |
+| #16 | "Ask Grok" GitHub Action | — (`5ea3307`) | adds repo-root `.github/workflows/grok.yml` |
 
-> **Also queued (owner/device):** the web playtest pass — run `cd web && npm i && npm run dev` and verify
-> the device-only matrix the headless playtest could not (mobile viewport/safe-area, reduced-motion,
-> keyboard a11y, refresh-mid-action, stale cache) + stand up the Playwright real-e2e (RISK #8 web side).
-- **Off-limits:** no economy / chain / breeding / factions / combat / new crop families. No new
-  Phase-2 systems. No per-player flag table (deferred). Do NOT modify the parked PRs (#27, #28).
-- **Reuse, don't rebuild:** the chamber renders through `web/src/lib/chamber/chamberCore.ts`
-  (single source for the live component + the headless `npm run gen:stages` generator) — keep it
-  intact. The flat `GET …/plants/<id>/state` wire is canonical (see DECISIONS 2026-06-14); do not
-  build the aspirational `GameState/EnvironmentState/UIState` aggregate.
-- **Follow the registry:** claim file surfaces in `docs/STUDIO_AGENT_REGISTRY.md` and rebase onto
-  `main` first (this chat's collision — BE-004 built on #47's branch while a separate branch was
-  planned — is exactly what the registry exists to prevent).
-
-> **In flight (owner-approved):** **STEP 4.5 — `GameService` on `active_clock()` + cure e2e**
-> (directive BE-004.5) is an **open PR** on `claude/be-step45-active-clock`: the one-line
-> `GameService` → `active_clock()` change (mirroring `simulation_service.py`) so cure + auction expiry
-> fast-forward under the dev clock, plus `test_cure_advances_under_dev_clock`. Production-behaviour
-> identical (`active_clock()` → `SystemClock` when the test clock is off). Awaiting review/merge; clears
-> RISK #1. After it lands, the path is Playtesting → Retention Validation → MVP Launch Candidate.
-
-</details>
-
-> **✅ Update:** STEP 4.5 **merged as PR #59** (`5d44d35`); **RISK #1 closed**; Playtesting **done**.
-> **Feature Flags EXECUTED** — #63 canonical (`balance.yaml`), #61 closed (CEO-ratified). The path is now
-> **web/device playtest pass → Retention Validation → MVP Launch Candidate.**
+**CI reality:** the backend + web gates live at the **repo root** `.github/workflows/ci.yml` and **do
+run** — `main` push runs `231c00b` / `56f0033` / `2ed4c9b` are all ✅, and PR #14's PR run was ✅.
+**Process gap:** #22 and #23 merged with **zero pre-merge checks** because their branches predated
+#14's root-CI landing and were not rebased, so the `pull_request` trigger never fired. **Rebase every
+PR onto post-#14 `main` before merge** so CI gates it pre-merge, not just after.
 
 ---
 
-## What THIS chat did (BE-004A reconciliation + PR #47 landing)
+## NEXT ACTION (single-lane)
 
-Reconciled the three overlapping Builder-Dept PRs and landed the canonical one, per the Director's
-BE-004A decision:
-- **Reviewed PRs #32 / #44 / #47** and recommended #47 as canonical (the only one delivering the
-  `/api/dev/clock/*` HTTP endpoints + `APP_ENV` prod-gate that BE-004 requires); confirmed BE-004's
-  e2e + HTTP-boundary work was **already built on #47's branch** (commit `e9df323`), test-only and
-  green.
-- **Resolved #47's merge conflicts against current `main`** — docs-only (`HANDOFF.md`,
-  `DECISIONS.md`; `BACKLOG.md` auto-merged); **zero source-code conflicts** — and merged #47.
-- **Closed PR #44** as superseded by #47.
-- Folded the STEP 3 (BE-002) and STEP 4 (BE-004) ADRs into `DECISIONS.md` alongside main's FTUE /
-  mobile-nav / OMNI ADRs; recorded the landing in `BACKLOG.md` (STEP 3 ✅ / STEP 4 ✅).
+**Owner reviews this doc-only audit/baton PR.** Nothing else is started this lane. After it is
+reviewed/merged, the owner picks the **one** next PR. Per the new rule, any newly discovered unit is
+**queued here, not opened.**
 
-Shipped by PR #47 (authored across the BE-002 + BE-004 sessions):
-- **`tests/test_e2e_grow_loop.py` (3)** — full HTTP-API loop, dev-clock fast-forward; asserts balance
-  rises by exactly the `harvest_sale` entry, no double-sell, and **ledger integrity** (advancing the
-  clock posts zero ledger entries — BE-A08).
-- **`tests/test_http_boundary.py` (13)** — RISK #8 HTTP coverage: withdraw/deposit (happy + validation
-  + auth + insufficient), mint (happy/idempotent/not-found), strain non-breeder, ARC-3 metadata +
-  unknown-kind 404. Offline `MockChainProvider`.
-- **`tests/test_test_clock.py` (15)** — the OffsetClock primitive, config gating (off by default /
-  on in dev / **force-off in prod**), the `active_clock()` selector, and the endpoints.
-- **Docs:** `docs/SIMULATION_TEST_CLOCK.md`, `docs/STEP4_E2E_GROW_LOOP_VALIDATION.md`,
-  `docs/audits/PR-47-simulation-test-clock.md`, standups `2026-06-14-lut-report-be002.md` /
-  `-be004.md`.
+**Queued (not started — owner picks one next):**
+- **Process P0 (from #22's audit, still valid):** make the repo-root backend CI job a **required**
+  status check on branch protection, and add a PR-template/checklist reminder to **rebase onto `main`
+  before merge** (prevents future 0-check merges). CI-config/process only.
+- **DB follow-ups (from #22, owner-gated):** model↔migration drift guard (tests bypass migrations via
+  `create_all`); FK single-column indexes on hot `player_id`/`strain_id`/`pod_id` lookups (touches a
+  protected migration surface — needs owner OK); concurrency test-matrix expansion (test-only).
+- **RISK #4/7 hardening** (real on-chain value) — owner-gated, pre-launch only (see ledger below).
+
+**Off-limits this lane:** no economy / chain / breeding / minting / simulation / strain / morphology /
+chamber / player-facing change; no new feature unit; no second PR; no merge.
+
+---
+
+## OPEN RISKS (carried ledger) — re-verify against current code before acting
+
+> Only **RISK #8 (web CI)** was independently re-verified this pass. The rest are **carried from prior
+> batons and NOT re-audited here** — treat their status as unproven until checked with `file:line` +
+> a gate run. Phantom PR-number citations from the old baton (#47/#59/#63 — not in this repo) were removed.
+
+| # | Sev | Risk | Evidence anchor | Status (this pass) |
+|---|-----|------|-----------------|--------------------|
+| 8 | HIGH | **Safety net.** Backend HTTP boundary + web vitest/Playwright wired into CI. | `.github/workflows/ci.yml`, `web/package.json` | ✅ **Web CI verified green** (PR #14 run + `main` pushes ran the web `typecheck·lint·build·test·e2e` job). Treasury-cap + chain-failure-rollback UI tests still absent → keep open at lower sev. |
+| 4/7 | HIGH | **Chain settlement not real** — deposit trusts no on-chain proof; no txid-replay/reconciliation/address validation. Real value stays gated OFF. | `services/settlement_service.py`, `db/models.py` | **Carried, not re-verified.** Pre-launch gate. |
+| 3 | HIGH | Idempotency on mutations — no general `Idempotency-Key` header (duplicate → 409). | `api/game_api.py` | **Carried, not re-verified.** |
+| 9 | MED | **Sim dormancy semantics** — large catch-up gaps can delay an earned harvest / skip lethal decay; needs a knob guard. | `simulation/engine.py` | **Carried, not re-verified.** |
+| 11 | LOW | Rate-limiter `memory://` per-worker (set Redis for multi-worker); `get_level` public oracle. | fleet-sweep audit | **Carried, not re-verified.** |
+
+---
 
 ## Verification split (this chat)
 
-**Agent-verifiable (proven):**
-- Post-merge gates on the merge result: `make test` ✅ · `make lint` ✅ · `make check-memory` ✅
-  (re-run after conflict resolution — see the closeout report). PR #47's own suite: **262 passed,
-  83.63% ≥ 79**; settlement 87% / minting 73% HTTP-boundary coverage.
+**Agent-verifiable (proven this pass):** the audit table above — diff stat, PR merge state, CI check
+counts, and `main`/PR Actions run conclusions, all from git + the GitHub API. `make check-memory` kept
+green for the doc edits.
 
-**Device/human-verifiable (owner):**
-- `GROW_TEST_CLOCK=true APP_ENV=development make serve`; `POST /api/dev/clock/advance {"days":40}` →
-  plant flowers on next `/state`; harvest + sell succeed; `/api/dev/clock/*` 404 with flags unset.
-  (Automated equivalents of all four are in the suite above.)
+**Owner / not-this-pass:** the full DB-audit content in `DATABASE_SYSTEMS_AUDIT.md` (money-path
+constraints, single-head migrations, FK-index list, RISK #4/7) is preserved as historical evidence and
+was **not** independently re-audited here — only its stale CI headline was corrected via an erratum.
 
 ---
 
-## OPEN RISKS (carried) — re-verify against current code before acting
-
-> A risk clears only when VERIFIED FIXED (test-backed). Risk #1 is new (STEP 4).
-
-| # | Sev | Risk | Evidence | Status |
-|---|-----|------|----------|--------|
-| 1 | MED | **Cure/auction not dev-clock-drivable.** `GameService` defaulted to `SystemClock`, so the dev clock couldn't fast-forward cure/auction over HTTP. | `services/game_service.py` (now `active_clock()`) | ✅ **CLOSED** — STEP 4.5 merged as **PR #59** (`5d44d35`); verified live in the BE-004.5 playtest + `test_cure_advances_under_dev_clock`. |
-| 3 | HIGH | Idempotency on mutations — general `Idempotency-Key` header (duplicate → original response, not a 409). | `api/game_api.py` | PARTIAL — concurrency core + one-shot grants shipped (`grant_claims`, harvest-once index); FTUE `advance` replay-guarded. General header absent (WIP PR #16 closed unmerged). |
-| 4/7 | HIGH | **Chain settlement not real** — deposit trusts no on-chain proof; treasury-drain path; no txid replay protection / reconciliation / address validation. | `services/settlement_service.py`, `db/models.py` | OPEN — blocks any real value moving (Sprint 4 gate). |
-| 8 | HIGH | **Safety net** — backend HTTP boundary covered (PR #47). **Web vitest + Playwright now un-stubbed and wired into CI (2026-06-18)**; treasury-cap + chain-failure-rollback UI tests still absent. | `web/package.json`, `.github/workflows/ci.yml`, `tests/test_http_boundary.py` | NEAR-CLOSED — web CI wired 2026-06-18, **validation pending the first CI run** (no web npm network locally). |
-| 9 | MED | **Sim dormancy semantics** — large `max_catchup_hours` gaps can delay an earned harvest / skip lethal decay; needs a design decision + knob guard. (FTUE sidesteps it for the tutorial plant via `last_tick_at = now`.) | `simulation/engine.py` | OPEN. |
-| 11 | LOW | Rate-limiter `memory://` per-worker (set Redis for multi-worker); `get_level` public oracle. | fleet-sweep audit | PARTIAL. |
-
-**Cleared earlier:** *Web global 401/403 handler* (prev RISK #10) — an `AuthErrorListener` tears down
-the session on a rejected key, shipped in **PR #29/#30** (see `DECISIONS.md` 2026-06-14).
-
-> Reassuring (verified solid earlier, not re-checked here): no IDOR; auth/authz server-authoritative;
-> AI SpendGuard unescapable + CI never hits a live key; ledger correct single-threaded; no
-> model↔migration drift (single Alembic head).
-
----
-
-## DIRECTOR DECISIONS (resolved 2026-06-14)
-
-**BE-004A — PR reconciliation (this chat):**
-1. **PR #47** — **CANONICAL** for the Simulation Test Clock; preserve `OffsetClock` / `active_clock()`
-   / `/api/dev/clock/{,advance,reset}` / dev-only gating (`GROW_TEST_CLOCK` + `APP_ENV`, prod
-   hard-disable). Conflicts resolved + **merged** this chat (owner-approved exception to
-   one-PR-one-responsibility, since BE-004 was already built+green on the branch). ✅
-2. **PR #44** — **closed** as superseded by #47. ✅
-3. **PR #32** — service-layer e2e + a CI gate step; now overlaps #47's HTTP e2e. **Owner decision
-   pending:** merge for the CI gate, or close as overlapping. ⬜
-4. **BE-004** — **closed/complete** (its deliverables shipped within PR #47). ✅
-
-**REC-004 (prior sweep, still in force):**
-- **PR #43** owner-merged (folded into REC-004). **PR #37** closed (superseded by the FTUE epic; WO-1/
-  WO-2 logged to BACKLOG). **Branch pruning** approved — recommended list in
-  `docs/memory/CANONICAL_STATE.md` §3; owner executes (destructive git is owner-only).
+> History note: earlier batons described a large multi-PR program (testing-prep, simulation test clock,
+> feature-flag reconciliation) under PR numbers that **do not exist in this repository** (it tops out at
+> #23). Those references were removed as unverifiable. The durable facts are the merged-PR ledger and the
+> carried-risks ledger above; trust the code over any prose.
