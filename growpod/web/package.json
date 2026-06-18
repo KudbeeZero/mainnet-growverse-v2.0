@@ -8,9 +8,9 @@
     "start": "next start -p 3000",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'tests disabled in this environment'",
-    "test:watch": "echo 'tests disabled in this environment'",
-    "test:e2e": "echo 'playwright not installed in this environment'",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "gen:stages": "tsx scripts/gen-stage-pngs.ts"
   },
   "dependencies": {
@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@napi-rs/canvas": "^1.0.0",
+    "@playwright/test": "^1.49.1",
     "@types/node": "^20.17.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -31,6 +32,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.22.4",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
   }
 }

@@ -52,7 +52,7 @@ jobs:
         run: python -m pytest -q --cov --cov-report=term-missing
 
   web:
-    name: web (typecheck · lint · build · test)
+    name: web (typecheck · lint · build · test · e2e)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -66,8 +66,12 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
+      # `npm install` (not `npm ci`): the vitest/playwright test deps were added
+      # in an offline environment where the lockfile could not be regenerated, so
+      # install resolves them here and refreshes the lock. Switch back to `npm ci`
+      # once the lockfile is regenerated with network access.
       - name: Install
-        run: npm ci
+        run: npm install
 
       - name: Typecheck
         run: npm run typecheck
@@ -80,3 +84,8 @@ jobs:
 
       - name: Test (vitest)
         run: npm run test
+
+      - name: E2E (Playwright, mocked API)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e

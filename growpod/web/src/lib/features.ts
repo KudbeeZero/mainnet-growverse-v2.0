@@ -28,11 +28,28 @@ export function isFeatureEnabled(name: FeatureName): boolean {
   return FEATURES[name];
 }
 
-/*
-// ── Production version (restore before launch) ──────────────────────────────
-function on(value: string | undefined): boolean { return value === "true"; }
+/**
+ * Dev/test-only "skip login" bypass.
+ *
+ * OFF unless `NEXT_PUBLIC_ENABLE_DEV_BYPASS=true` is set at build time (the
+ * test-env launch script sets it). When on, the onboarding screen shows an
+ * "Enter as tester" button that auto-provisions a throwaway player and drops
+ * straight into the game — no password, no wallet. NEVER enable in production.
+ */
+export function isDevBypassEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ENABLE_DEV_BYPASS === "true";
+}
 
-type FeatureEnv = {
+// ── Production feature resolution (kept live + tested) ──────────────────────
+// `FEATURES` above is hardcoded ON for the current testing phase. To restore
+// per-environment gating before launch, swap the `FEATURES` definition above to
+// `computeFeatures({ ... process.env.NEXT_PUBLIC_ENABLE_* ... })`. The resolver
+// stays exported and unit-tested so the launch swap is a one-liner.
+function on(value: string | undefined): boolean {
+  return value === "true";
+}
+
+export type FeatureEnv = {
   NEXT_PUBLIC_ENABLE_MARKETPLACE?: string;
   NEXT_PUBLIC_ENABLE_CHAIN?: string;
   NEXT_PUBLIC_ENABLE_CUP?: string;
@@ -40,7 +57,7 @@ type FeatureEnv = {
   NEXT_PUBLIC_ENABLE_CONTRACTS?: string;
 };
 
-export function computeFeatures(env: FeatureEnv) {
+export function computeFeatures(env: FeatureEnv): Record<FeatureName, boolean> {
   return {
     marketplace: on(env.NEXT_PUBLIC_ENABLE_MARKETPLACE),
     chain:       on(env.NEXT_PUBLIC_ENABLE_CHAIN),
@@ -49,13 +66,3 @@ export function computeFeatures(env: FeatureEnv) {
     contracts:   on(env.NEXT_PUBLIC_ENABLE_CONTRACTS),
   };
 }
-
-export const FEATURES = computeFeatures({
-  NEXT_PUBLIC_ENABLE_MARKETPLACE: process.env.NEXT_PUBLIC_ENABLE_MARKETPLACE,
-  NEXT_PUBLIC_ENABLE_CHAIN:       process.env.NEXT_PUBLIC_ENABLE_CHAIN,
-  NEXT_PUBLIC_ENABLE_CUP:         process.env.NEXT_PUBLIC_ENABLE_CUP,
-  NEXT_PUBLIC_ENABLE_UNIVERSITY:  process.env.NEXT_PUBLIC_ENABLE_UNIVERSITY,
-  NEXT_PUBLIC_ENABLE_CONTRACTS:   process.env.NEXT_PUBLIC_ENABLE_CONTRACTS,
-});
-// ────────────────────────────────────────────────────────────────────────────
-*/
