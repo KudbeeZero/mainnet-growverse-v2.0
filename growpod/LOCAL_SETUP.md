@@ -50,22 +50,25 @@ reachable outside Replit, so installing against the public registry is required.
 
 ```bash
 cd web
-cp .env.local.example .env.local   # then set NEXT_PUBLIC_API_BASE (see below)
 pnpm install --ignore-workspace    # or: npm install, against a reachable registry
 pnpm dev                           # next dev -p 3000
 ```
 
-`web/.env.local`:
-
-```
-NEXT_PUBLIC_API_BASE=http://localhost:8000
-```
-
-The browser then calls the API directly at `:8000`; CORS is already allowed for
-`http://localhost:3000` (backend default `CORS_ALLOWED_ORIGINS`). Alternatively
-leave `NEXT_PUBLIC_API_BASE` empty to use the Next.js rewrite proxy in
-`next.config.mjs` (proxies `/api/*` and `/health` to `BACKEND_URL`, default
-`http://localhost:8000`), which avoids cross-origin requests entirely.
+That's the whole setup — **no `.env.local` is needed**, and deliberately so.
+With `NEXT_PUBLIC_API_BASE` unset, the client uses relative URLs and
+`next.config.mjs` proxies `/api/*` and `/health` to `BACKEND_URL` (default
+`http://localhost:8000`, which matches the gunicorn backend above). The browser
+talks only to `:3000`, so there is no cross-origin/CORS surface and **no API
+port is baked into the build** — nothing to drift out of sync.
 
 Open http://localhost:3000 — it redirects to `/onboarding` (new player) or
 `/dashboard`.
+
+> **Do not** `cp .env.local.example .env.local` for this setup. That example
+> sets an absolute `NEXT_PUBLIC_API_BASE=http://localhost:10000` for the
+> *other* run mode (`make serve`, which serves on `:10000`). Mixing it with the
+> `:8000` gunicorn backend bakes the wrong port into the browser bundle and every
+> API call 502s. Pick one mode: either this proxy mode (backend on `:8000`, no
+> env file), or `make serve` on `:10000` with `NEXT_PUBLIC_API_BASE=…:10000`.
+> If you run the backend on a non-default port, set `BACKEND_URL` to match when
+> starting `pnpm dev`.
