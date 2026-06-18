@@ -64,6 +64,13 @@ No walls of text. If a detail doesn't change what the owner does next, it belong
 body or the baton, not the report. This is the chat-facing summary; the repo-facing closeout
 (baton rewrite, audit receipt, Summary→Next) is defined in `docs/SESSION_PROTOCOL.md`.
 
+## Build safely (the safety charter)
+Before writing code, **audit**; before expanding scope, **ask**; before merging, **prove**;
+before new features, **protect the foundation**. One PR = one purpose. Migrations, economy
+(`src/growpodempire/data/balance.yaml`), feature flags, wallet/auth and lockfiles are protected
+surfaces — touch them only with the checks and stop-conditions spelled out in the
+[Global Build Rules — Safety Charter](docs/BUILD_RULES.md). When in doubt, stop and ask.
+
 ## Memory layer map (read deeper as needed)
 | Layer | File | Purpose | Volatility |
 |------|------|---------|-----------|
