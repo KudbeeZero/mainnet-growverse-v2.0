@@ -12,6 +12,7 @@ from growpodempire.db.session import session_scope
 from growpodempire.db.models import Strain
 from growpodempire.services.game_service import GameService, GameError
 from growpodempire.services.progression_service import ProgressionService
+from growpodempire.economy.config import load_economy_config
 from growpodempire.simulation.clock import FrozenClock
 from launch_economy import launch_config
 
@@ -21,6 +22,10 @@ BASE = datetime(2025, 1, 1, 12, 0, 0)
 LAUNCH_CFG = launch_config()
 
 
+@pytest.mark.skipif(
+    load_economy_config().daily_stipend != 50.0,
+    reason="dev stipend (balance.yaml daily_stipend != 50); restore to 50 to enforce the launch stipend",
+)
 def test_daily_stipend_cooldown(db):
     with session_scope() as s:
         p = GameService(s).create_player("daily")

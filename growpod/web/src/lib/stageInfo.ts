@@ -7,6 +7,7 @@ export const STAGE_ORDER: GrowthStage[] = [
   "seedling",
   "vegetative",
   "flowering",
+  "late_flower",
   "harvest",
 ];
 
@@ -48,6 +49,12 @@ export const STAGE_INFO: Record<
     label: "Flowering",
     blurb:
       "Buds are forming. How long this takes depends on the strain's genetics. Watch humidity to avoid mildew and ease off the nitrogen.",
+  },
+  late_flower: {
+    icon: "🪻",
+    label: "Late Flower",
+    blurb:
+      "Buds are fattening and trichomes are ambering up — the ripening finish. Ease right off the nutrients (flush), keep humidity low to protect the colas, and watch for harvest readiness.",
   },
   harvest: {
     icon: "✂️",

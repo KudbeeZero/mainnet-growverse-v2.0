@@ -586,7 +586,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     }
 
     const nodes: Node[] = [];
-    const flowering = stageOf() === "flowering" || stageOf() === "harvest";
+    const flowering = stageOf() === "flowering" || stageOf() === "late_flower" || stageOf() === "harvest";
     // Node density: the strain silhouette sets the canopy fill, and flowering
     // packs a few more nodes in to close the gaps the bare skeleton left.
     const flowerPack = flowering ? 1.18 : 1;
