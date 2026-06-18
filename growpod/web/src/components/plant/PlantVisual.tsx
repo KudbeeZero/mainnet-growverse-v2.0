@@ -15,6 +15,7 @@ const STAGE_SCALE: Record<GrowthStage, number> = {
   seedling: 0.6,
   vegetative: 0.85,
   flowering: 1,
+  late_flower: 1,
   harvest: 1,
 };
 
@@ -123,8 +124,8 @@ export function PlantVisual({
           <ellipse cx="66" cy="78" rx="12" ry="5" transform="rotate(22 66 78)" />
           <ellipse cx="50" cy="46" rx="9" ry="14" />
         </g>
-        {/* flower buds in flowering/harvest */}
-        {(stage === "flowering" || stage === "harvest") && dom.condition !== "dead" && (
+        {/* flower buds in flowering/late_flower/harvest */}
+        {(stage === "flowering" || stage === "late_flower" || stage === "harvest") && dom.condition !== "dead" && (
           <g fill="#8bc34a">
             <circle cx="50" cy="40" r="6" />
             <circle cx="42" cy="50" r="4" />

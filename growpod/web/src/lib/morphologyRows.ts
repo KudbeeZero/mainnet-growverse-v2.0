@@ -25,6 +25,7 @@ const BASE_NODES: Record<GrowthStage, number> = {
   seedling: 2,
   vegetative: 5,
   flowering: 8,
+  late_flower: 9,
   harvest: 9,
 };
 

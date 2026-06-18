@@ -15,6 +15,7 @@ class GrowthStage(str, Enum):
     SEEDLING = "seedling"
     VEGETATIVE = "vegetative"
     FLOWERING = "flowering"
+    LATE_FLOWER = "late_flower"
     HARVEST = "harvest"
 
 

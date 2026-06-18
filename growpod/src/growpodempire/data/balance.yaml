@@ -115,9 +115,10 @@ simulation:
       seedling:   [100, 400]
       vegetative: [400, 700]
       flowering:  [700, 1000]
-      # `late_flower` is not a distinct engine GrowthStage today (flowering runs
-      # to harvest); kept here as a forward-looking band so the console already
-      # has a window if the stage is ever split out.
+      # `late_flower` is now a live engine GrowthStage (the additive ripening
+      # finish after flowering — see simulation.stages.late_flower_days), so this
+      # band resolves for real plants in that stage. Late-flower growers flush /
+      # taper nutrients, hence the lower window than peak flowering.
       late_flower: [500, 700]
 
   # Pod environment optimal bands; deviations sap health.
@@ -184,12 +185,18 @@ simulation:
     germination_days: 5
     seedling_days: 10
     vegetative_days: 26
+    # Ripening/finish stage AFTER flowering. ADDITIVE — appended to (not carved
+    # out of) the genetic flowering window, so it lengthens total seed->harvest
+    # time by this many days (× time_scale). Owner-ratified player-facing pacing
+    # change (see docs/memory/DECISIONS.md 2026-06-18). Set to 0 to disable.
+    late_flower_days: 14
 
   # Height gain (cm/day) at full health, by stage.
   growth:
     seedling_cm_per_day: 0.6
     vegetative_cm_per_day: 2.2
     flowering_cm_per_day: 0.5
+    late_flower_cm_per_day: 0.2
 
   # How much a player action moves a level.
   actions:

@@ -9,8 +9,8 @@
  * current behavior — while a launch build hides unfinished surfaces with
  * `NEXT_PUBLIC_ENABLE_<NAME>=false`, no code change required.
  *
- * This restores the env-driven gate that had been temporarily forced ON; the
- * web testing profile (all ON) is kept distinct from the launch profile (gated).
+ * `computeFeatures` (the pure env→flags mapper) is the launch-time source of truth
+ * and stays a live, unit-tested export; `FEATURES` is wired to it from process.env.
  */
 
 export type FeatureName =
@@ -20,7 +20,7 @@ export type FeatureName =
   | "university"
   | "contracts";
 
-type FeatureEnv = {
+export type FeatureEnv = {
   NEXT_PUBLIC_ENABLE_MARKETPLACE?: string;
   NEXT_PUBLIC_ENABLE_CHAIN?: string;
   NEXT_PUBLIC_ENABLE_CUP?: string;
@@ -33,6 +33,7 @@ function enabled(value: string | undefined): boolean {
   return value !== "false";
 }
 
+/** Pure mapper from NEXT_PUBLIC_ENABLE_* env strings to the flag record. */
 export function computeFeatures(env: FeatureEnv): Record<FeatureName, boolean> {
   return {
     marketplace: enabled(env.NEXT_PUBLIC_ENABLE_MARKETPLACE),

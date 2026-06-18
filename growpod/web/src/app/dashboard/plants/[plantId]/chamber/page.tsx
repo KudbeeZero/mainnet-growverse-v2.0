@@ -306,7 +306,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         </div>
 
         {/* 🔬 View Buds — fades in once bud geometry starts rendering (flowering/harvest) */}
-        {(renderStage === "flowering" || renderStage === "harvest") && !ended && view !== "macro" && (
+        {(renderStage === "flowering" || renderStage === "late_flower" || renderStage === "harvest") && !ended && view !== "macro" && (
           <button
             onClick={() => { setView("macro"); setTab("view"); }}
             className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full border border-cyan-400/50 bg-[#08141e]/85 px-4 py-2 text-xs font-bold text-cyan-200 backdrop-blur transition-all duration-500 hover:bg-[#16364c] hover:border-cyan-300"

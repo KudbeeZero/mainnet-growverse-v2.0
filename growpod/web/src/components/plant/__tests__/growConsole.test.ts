@@ -46,6 +46,19 @@ describe("growConsoleRows — nutrient PPM vs per-stage target", () => {
     expect(row(seedling, "ppm").severity).toBe(0);
   });
 
+  it("uses the late_flower window (500–700) — the formerly inert band, now live", () => {
+    // 600 ppm: in-band for late_flower (500–700), out-of-band for flowering (700–1000).
+    const late = growConsoleRows(
+      plant({ growth_stage: "late_flower", metrics: { vpd_kpa: 1.2, dli_mol: 30, ppfd: 600, photoperiod_hours: 18, nutrient_ppm: 600, stage_targets: [500, 700] } }),
+    );
+    expect(row(late, "ppm").band.optimal).toEqual([500, 700]);
+    expect(row(late, "ppm").severity).toBe(0);
+    const flowering = growConsoleRows(
+      plant({ growth_stage: "flowering", metrics: { vpd_kpa: 1.2, dli_mol: 30, ppfd: 600, photoperiod_hours: 18, nutrient_ppm: 600, stage_targets: [700, 1000] } }),
+    );
+    expect(row(flowering, "ppm").severity).not.toBe(0);
+  });
+
   it("reports no PPM verdict when the stage has no target band", () => {
     const rows = growConsoleRows(
       plant({ growth_stage: "seed", metrics: { vpd_kpa: 1.2, dli_mol: 30, ppfd: 600, photoperiod_hours: 18, nutrient_ppm: 720, stage_targets: null } }),

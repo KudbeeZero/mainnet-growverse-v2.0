@@ -116,6 +116,22 @@ def test_metrics_exposes_nutrient_ppm_and_flowering_stage_targets(session):
     assert m["stage_targets"] == [700, 1000]
 
 
+def test_metrics_exposes_live_late_flower_stage_targets(session):
+    """The `late_flower` PPM band — previously inert (no engine stage) — now
+    resolves live, since late_flower is a real GrowthStage the plant transitions
+    through before harvest."""
+    from growpodempire.services.simulation_service import SimulationService
+
+    _, _, plant = _plant(session)
+    plant.growth_stage = "late_flower"
+    session.flush()
+
+    m = SimulationService(session).metrics(plant)
+    ncfg = CFG.raw["simulation"]["nutrient"]
+    assert m["stage_targets"] == ncfg["stage_targets"]["late_flower"]
+    assert m["stage_targets"] == [500, 700]
+
+
 def test_metrics_stage_targets_none_outside_fed_stages(session):
     """Stages with no PPM band (seed / germination / harvest) report None so the
     UI can show an honest 'no target for this stage' instead of a fake window."""

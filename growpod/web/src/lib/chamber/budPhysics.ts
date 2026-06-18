@@ -32,6 +32,8 @@ const COLA_GAIN = 0.085;
  */
 export function flowerStageMultiplier(stage: GrowthStage, budDev: number): number {
   if (stage === "harvest") return 1;
+  // Late flower carries the heavier ripening load (~0.7 → 1.0 as buds finish).
+  if (stage === "late_flower") return lerp(0.7, 1.0, clamp(budDev, 0, 1));
   if (stage !== "flowering") return 0;
   return lerp(0.25, 0.7, clamp(budDev, 0, 1));
 }

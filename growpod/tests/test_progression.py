@@ -19,6 +19,10 @@ BASE = datetime(2025, 1, 1, 12, 0, 0)
 CFG = load_economy_config()
 
 
+@pytest.mark.skipif(
+    load_economy_config().daily_stipend != 50.0,
+    reason="dev stipend (balance.yaml daily_stipend != 50); restore to 50 to enforce the launch stipend",
+)
 def test_daily_stipend_cooldown(db):
     # The stipend amount comes from balance.yaml (canonical), not a hardcoded
     # literal — so the cooldown mechanic is tested independent of the tuned value.

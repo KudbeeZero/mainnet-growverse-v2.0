@@ -157,7 +157,7 @@ export function PlantCard({
             budColor={budColor}
             budDna={budDna}
           />
-          {(plant.growth_stage === "flowering" || plant.growth_stage === "harvest") && (
+          {(plant.growth_stage === "flowering" || plant.growth_stage === "late_flower" || plant.growth_stage === "harvest") && (
             <button
               onClick={() => setChamberView((v) => (v === "chamber" ? "macro" : "chamber"))}
               className="absolute bottom-2 right-2 z-10 rounded-full border border-ink-600 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-gray-400 backdrop-blur-sm transition-colors hover:border-grow-500 hover:text-grow-300"

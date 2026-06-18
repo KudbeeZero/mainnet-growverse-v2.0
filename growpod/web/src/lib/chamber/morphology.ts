@@ -228,14 +228,14 @@ export function devParams(day: number): DevParams {
  */
 export function effectiveDev(stage: GrowthStage, day: number): DevParams {
   const d = devParams(day);
-  if (stage === "flowering" || stage === "harvest") return d;
+  if (stage === "flowering" || stage === "late_flower" || stage === "harvest") return d;
   return { budDev: 0, ripe: 0, brown: 0, trich: 0, blush: 0 };
 }
 
 // Nominal stage durations (days) — mirrors balance.yaml growth.stages.
-export const STAGE_DAYS = { seed: 3, germination: 5, seedling: 10, vegetative: 26 } as const;
+export const STAGE_DAYS = { seed: 3, germination: 5, seedling: 10, vegetative: 26, late_flower: 14 } as const;
 const STAGE_ORDER: GrowthStage[] = [
-  "seed", "germination", "seedling", "vegetative", "flowering", "harvest",
+  "seed", "germination", "seedling", "vegetative", "flowering", "late_flower", "harvest",
 ];
 
 /** Real elapsed days since planting (client clock); 0 if unknown. */
@@ -262,12 +262,20 @@ export function stageForDay(day: number, floweringDays = 60): GrowthStage {
   if (day < seedlingEnd) return "seedling";
   if (day < vegEnd) return "vegetative";
   if (day < vegEnd + floweringDays) return "flowering";
+  if (day < vegEnd + floweringDays + STAGE_DAYS.late_flower) return "late_flower";
   return "harvest";
 }
 
 /** Total nominal length of one grow cycle (days) for a given flowering window. */
 export function cycleDays(floweringDays = 60): number {
-  return STAGE_DAYS.seed + STAGE_DAYS.germination + STAGE_DAYS.seedling + STAGE_DAYS.vegetative + floweringDays;
+  return (
+    STAGE_DAYS.seed +
+    STAGE_DAYS.germination +
+    STAGE_DAYS.seedling +
+    STAGE_DAYS.vegetative +
+    floweringDays +
+    STAGE_DAYS.late_flower
+  );
 }
 
 /**

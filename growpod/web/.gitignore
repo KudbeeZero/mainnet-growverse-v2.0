@@ -2,6 +2,9 @@
 /node_modules
 /.pnp
 .pnp.js
+# npm is canonical here (see CLAUDE.md); ignore env-specific pnpm lockfiles
+# generated when installing against a public registry off-Replit.
+pnpm-lock.yaml
 
 # next.js
 /.next/
