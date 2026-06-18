@@ -46,7 +46,12 @@ once they appear here. Last reconciled: **2026-06-14** (REC-004 full repository 
   hide gated entries, plus `RequireFeature` route guards and in-page hides. Tests:
   `tests/test_feature_gates.py`, `web/src/lib/__tests__/features.test.ts`. ADR in `DECISIONS.md`
   (2026-06-14).
-- 🚀 ⬜ **Playtesting → Retention Validation → MVP Launch Candidate** — the launch critical-path tail.
+- 🚀 🔨 **Playtesting → Retention Validation → MVP Launch Candidate** — the launch critical-path tail.
+  Testing-prep (2026-06-18): `make testenv` stands up the full stack behind a cloudflared tunnel with
+  a dev/test-only **skip-login** shortcut (`NEXT_PUBLIC_ENABLE_DEV_BYPASS`, default OFF) + dev clock,
+  plus `docs/TESTER_RUNBOOK.md` + a bug-report template. Economy is in deliberate **free testing mode**
+  (free seeds, boosted stipend); launch values are guarded by `tests/fixtures/launch_balance.yaml` +
+  the `test_launch_balance_values` tripwire — **restore them in `balance.yaml` before launch.**
 - 🚀 ❄️ **OMNI Charter v1.0** (PR #38, merged 2026-06-14) — organizational constitution
   (`docs/OMNI_CHARTER.md`): chain of command, departments, work-order system, canonical principles.
   Governance layer; no further backlog action.
@@ -131,9 +136,13 @@ once they appear here. Last reconciled: **2026-06-14** (REC-004 full repository 
   (confirmed, asset-id, receiver=treasury, sender=linked addr, amount); txid replay protection
   (unique `onchain_txid`); reconciliation job; address validation/opt-in on link/withdraw. Blocks
   any real value moving (Sprint 4 gate).
-- 🔴 ⬜ **Restore the web safety net** (RISK #8) — real vitest + Playwright in devDeps + CI (the
-  scripts are `echo` stubs today); add HTTP-boundary tests for withdraw/deposit/mint
-  (`game_api.py` 40% covered); global 401/403 handler.
+- 🔴 ✅ **Restore the web safety net** (RISK #8, 2026-06-18) — `web/package.json` test scripts
+  un-stubbed (`vitest run` / `playwright test`), `vitest` + `@playwright/test` added to devDeps, and
+  `.github/workflows/ci.yml` web job now runs vitest **and** a Playwright e2e step (`npm install`
+  since the lockfile can't be regenerated offline — switch back to `npm ci` once it's regenerated
+  with network). Re-exported `computeFeatures` (was commented out in testing mode) so the existing
+  features unit test passes. HTTP-boundary withdraw/deposit/mint (PR #47) + global 401/403 handler
+  (PR #29/#30) were already done. *Validation pending the first CI run (no web npm network locally).*
 - 🔴 ✅ **Make the integrity/CI gates REAL** (2026-06-10) — a chat found that
   `scripts/check_memory.py`, `scripts/check_single_head.py`, the SessionStart hook, **and
   `.github/workflows/ci.yml` did not exist on disk**, despite being claimed ✅ below and in
