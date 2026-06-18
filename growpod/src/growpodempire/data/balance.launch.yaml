@@ -1,0 +1,23 @@
+# LAUNCH / LIVE economy profile — overlay, NOT a standalone config.
+#
+# Deep-merged OVER balance.yaml when ECONOMY_PROFILE=launch (and REQUIRED in
+# production: the app refuses to boot live on any other profile). This file holds
+# ONLY the owner-ratified launch deltas, so the free-playtest base and the
+# launch/live economy stay separate and test values can never accidentally ship.
+#
+# Owner-ratified launch-safe values (do not change without owner sign-off):
+#   - seeds.base_cost: 25   (no free seeds)
+#   - daily_stipend:   50   (small retention faucet, no wealth pump)
+#   - simulation.time_scale: 1.0  (real-time pace, no accelerated testing scale)
+#
+# validate_launch_profile() enforces these as hard guards on load:
+#   base_cost >= 25, daily_stipend <= 50, time_scale == 1.0.
+# Everything else (prices, rewards, multipliers, fees) inherits balance.yaml.
+
+daily_stipend: 50
+
+seeds:
+  base_cost: 25
+
+simulation:
+  time_scale: 1.0

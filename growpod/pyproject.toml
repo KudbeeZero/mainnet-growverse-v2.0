@@ -9,6 +9,11 @@ build-backend = "setuptools.build_meta"
 # Coverage gate — the third leg of "make truth automatic" (alongside the ruff
 # lint gate and scripts/check_memory.py). Operational one-shot scripts are
 # excluded; they're run by ops, not exercised by the unit suite.
+[tool.pytest.ini_options]
+markers = [
+    "sim: economy simulation tests (slower; drive the full grow loop over HTTP)",
+]
+
 [tool.coverage.run]
 source = ["growpodempire"]
 omit = ["*/scripts/*"]

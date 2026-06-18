@@ -13,7 +13,20 @@
 > *only* to avoid any behavior change — this is NOT live-economy approval**, **(5) live economy stays
 > BLOCKED** until the simulation + exploit hardening (PR-2) lands. PR-1 adds: `validate_economy_config()`
 > on load, the `economy` master kill-switch gating the core money loop (default ON), and de-hardcoded
-> economy tests. Gates: `make test` 351 passed · `make lint` ✅ · `make check-memory` ✅.
+> economy tests.
+>
+> **PR-2 (same branch) — Launch Profile + Sims + Web flag restore** ([`docs/ECONOMY_LAUNCH_PROFILE.md`](ECONOMY_LAUNCH_PROFILE.md)):
+> owner-ratified launch values (`seeds.base_cost 25`, `daily_stipend 50`, `time_scale 1.0`) live in a
+> SEPARATE `balance.launch.yaml` overlay selected by `ECONOMY_PROFILE=launch`; `balance.yaml` (playtest)
+> is unchanged. Launch guards refuse unsafe values; **production refuses any profile but `launch`**.
+> Sims (`tests/test_economy_sim.py`) show launch cuts per-cycle net issuance ~6.8× and lifts sink/faucet
+> ~16× vs playtest, ledger reconciles. Web `computeFeatures` restored (default ON, `=false` to disable
+> per-env). **Economy still NOT live** — go-live is a separate owner-approved flip to
+> `ECONOMY_PROFILE=launch` after the recommended deltas (cup-prize bound, mint sink, harvest cap) are
+> ratified. **Carried risk:** the coverage gate was already RED on arrival (73.98% < 79% floor; repo
+> shipped with 6 failing economy tests). This work fixed those 6 and raised coverage to 74.29%, but the
+> ~5pt gap is pre-existing debt in non-economy modules (seasonal/minting/settlement) — owner to decide
+> targeted backfill vs floor note. `make lint` ✅ · `make check-memory` ✅.
 
 **Last rewritten:** 2026-06-14 · **By:** records chat — CEO ratified PR #63; #61 closed; FF-RECON-001 EXECUTED
 **Active branch:** `main` (PR #63 squash-merged this chat).

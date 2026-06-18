@@ -2,34 +2,34 @@ import { describe, it, expect } from "vitest";
 import { computeFeatures } from "@/lib/features";
 
 describe("computeFeatures", () => {
-  it("defaults every non-MVP feature OFF when env is empty", () => {
+  it("defaults every surface ON when env is empty (testing/playtest build)", () => {
     expect(computeFeatures({})).toEqual({
-      marketplace: false,
-      chain: false,
-      cup: false,
-      university: false,
-      contracts: false,
+      marketplace: true,
+      chain: true,
+      cup: true,
+      university: true,
+      contracts: true,
     });
   });
 
-  it('treats only the exact string "true" as enabled', () => {
+  it('disables only on the exact string "false" (launch per-env OFF)', () => {
     const f = computeFeatures({
-      NEXT_PUBLIC_ENABLE_MARKETPLACE: "true",
-      NEXT_PUBLIC_ENABLE_CHAIN: "TRUE",
+      NEXT_PUBLIC_ENABLE_MARKETPLACE: "false",
+      NEXT_PUBLIC_ENABLE_CHAIN: "true",
       NEXT_PUBLIC_ENABLE_CUP: "1",
-      NEXT_PUBLIC_ENABLE_UNIVERSITY: "yes",
-      NEXT_PUBLIC_ENABLE_CONTRACTS: "false",
+      NEXT_PUBLIC_ENABLE_UNIVERSITY: "",
+      NEXT_PUBLIC_ENABLE_CONTRACTS: "yes",
     });
-    expect(f.marketplace).toBe(true);
-    expect(f.chain).toBe(false);
-    expect(f.cup).toBe(false);
-    expect(f.university).toBe(false);
-    expect(f.contracts).toBe(false);
+    expect(f.marketplace).toBe(false); // explicitly disabled
+    expect(f.chain).toBe(true);
+    expect(f.cup).toBe(true); // any non-"false" value stays ON
+    expect(f.university).toBe(true);
+    expect(f.contracts).toBe(true);
   });
 
-  it("enables features independently", () => {
-    const f = computeFeatures({ NEXT_PUBLIC_ENABLE_CUP: "true" });
-    expect(f.cup).toBe(true);
-    expect(f.marketplace).toBe(false);
+  it("disables features independently", () => {
+    const f = computeFeatures({ NEXT_PUBLIC_ENABLE_CUP: "false" });
+    expect(f.cup).toBe(false);
+    expect(f.marketplace).toBe(true);
   });
 });

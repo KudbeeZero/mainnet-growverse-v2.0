@@ -5,12 +5,23 @@ Loads the YAML economy balance file into a typed, cached config object.
 lives there so balance can change without code changes. On load the raw values are
 checked by :func:`validate_economy_config`, which guards only against *corrupting*
 states (negative / NaN / inf economy values, fees outside ``[0, 1]``), NOT against
-tuning choices. The current free-playtest values (e.g. ``seeds.base_cost: 0``,
-``daily_stipend: 5000``) are intentional and pass validation unchanged; the final
-balance is owner-ratified and is only retuned in a separate, owner-approved PR.
+tuning choices.
+
+Two PROFILES keep the free-playtest economy separate from the launch/live economy
+so temporary test values can never ship:
+
+- ``playtest`` (default): ``balance.yaml`` as-is — free seeds, big stipend, fast
+  clock. Preserves current behavior; safe for testing only.
+- ``launch``: ``balance.yaml`` with ``balance.launch.yaml`` deep-merged over it —
+  the owner-ratified launch-safe values. :func:`validate_launch_profile` enforces
+  hard guards (no free seeds, bounded stipend, real-time clock) on load, and
+  production REFUSES to boot on anything but the launch profile.
+
+Select with ``ECONOMY_PROFILE=playtest|launch`` (default ``playtest``).
 """
 
 import math
+import os
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
@@ -18,6 +29,14 @@ from typing import Any, Dict, List, Optional
 import yaml
 
 from ..config import get_settings
+
+# Launch-profile safety guards (owner-ratified). These are HARD floors/ceilings,
+# not tuning: the live economy must charge for seeds, must not pump wealth via the
+# stipend, and must run at real-time pace. Final tuned values live in the overlay.
+LAUNCH_OVERLAY_FILENAME = "balance.launch.yaml"
+LAUNCH_MIN_SEED_BASE_COST = 25.0
+LAUNCH_MAX_DAILY_STIPEND = 50.0
+LAUNCH_REQUIRED_TIME_SCALE = 1.0
 
 
 class EconomyConfigError(ValueError):
@@ -208,18 +227,93 @@ def validate_economy_config(cfg: EconomyConfig) -> None:
         )
 
 
-def load_economy_config(path: Optional[str] = None) -> EconomyConfig:
-    """Load (uncached) an EconomyConfig from a YAML path, validated on load."""
+def _active_profile() -> str:
+    """The selected economy profile (``playtest`` default, or ``launch``)."""
+    return (os.environ.get("ECONOMY_PROFILE") or "playtest").strip().lower() or "playtest"
+
+
+def _deep_merge(base: Dict[str, Any], overlay: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively merge ``overlay`` onto ``base`` (overlay wins on scalars)."""
+    for key, value in overlay.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            _deep_merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
+def validate_launch_profile(cfg: EconomyConfig) -> None:
+    """Enforce the owner-ratified LAUNCH guards so test values cannot ship live.
+
+    Hard floors/ceilings (not tuning): the launch economy must charge for seeds,
+    must keep the daily stipend small, and must run at real-time pace. Violations
+    raise :class:`EconomyConfigError` so a misconfigured launch profile fails to
+    boot rather than silently shipping a free/inflated economy.
+    """
+    raw = cfg.raw
+    errors: List[str] = []
+    base_cost = cfg.seed_base_cost()
+    if base_cost < LAUNCH_MIN_SEED_BASE_COST:
+        errors.append(
+            f"seeds.base_cost must be >= {LAUNCH_MIN_SEED_BASE_COST} in the launch "
+            f"profile (no free seeds), got {base_cost}"
+        )
+    stipend = cfg.daily_stipend
+    if stipend > LAUNCH_MAX_DAILY_STIPEND:
+        errors.append(
+            f"daily_stipend must be <= {LAUNCH_MAX_DAILY_STIPEND} in the launch "
+            f"profile (no wealth pump), got {stipend}"
+        )
+    time_scale = float(raw.get("simulation", {}).get("time_scale", 1.0))
+    if time_scale != LAUNCH_REQUIRED_TIME_SCALE:
+        errors.append(
+            f"simulation.time_scale must be {LAUNCH_REQUIRED_TIME_SCALE} in the "
+            f"launch profile (no accelerated testing pace), got {time_scale}"
+        )
+    if errors:
+        raise EconomyConfigError(
+            "launch economy profile failed safety guards:\n  - " + "\n  - ".join(errors)
+        )
+
+
+def load_economy_config(
+    path: Optional[str] = None, profile: Optional[str] = None
+) -> EconomyConfig:
+    """Load (uncached) an EconomyConfig, profile-resolved and validated on load.
+
+    ``profile`` defaults to ``ECONOMY_PROFILE`` (``playtest``). The ``launch``
+    profile deep-merges ``balance.launch.yaml`` over the base file and enforces the
+    launch guards. Production refuses any profile other than ``launch``.
+    """
     settings = get_settings()
     path = path or settings.balance_file
+    profile = (profile or _active_profile()).strip().lower()
+
     with open(path, "r", encoding="utf-8") as fh:
         data = yaml.safe_load(fh)
+
+    if profile == "launch":
+        overlay_path = os.path.join(os.path.dirname(path), LAUNCH_OVERLAY_FILENAME)
+        with open(overlay_path, "r", encoding="utf-8") as fh:
+            overlay = yaml.safe_load(fh) or {}
+        _deep_merge(data, overlay)
+
     cfg = EconomyConfig(raw=data)
     validate_economy_config(cfg)
+    if profile == "launch":
+        validate_launch_profile(cfg)
+
+    # Launch guard: production must run the launch profile — never the free
+    # playtest values. This is the backstop that keeps test tuning from shipping.
+    if settings.is_production and profile != "launch":
+        raise EconomyConfigError(
+            "production requires ECONOMY_PROFILE=launch — refusing to run the "
+            f"free-playtest economy live (got profile {profile!r})"
+        )
     return cfg
 
 
 @lru_cache(maxsize=1)
 def get_economy_config() -> EconomyConfig:
-    """Cached default economy config from the configured balance file."""
+    """Cached economy config for the active profile (call cache_clear on change)."""
     return load_economy_config()

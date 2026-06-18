@@ -19,6 +19,7 @@ from growpodempire.economy.config import (  # noqa: E402
     EconomyConfigError,
     load_economy_config,
     validate_economy_config,
+    validate_launch_profile,
 )
 
 
@@ -104,3 +105,61 @@ def test_load_raises_on_corrupt_file(tmp_path):
     bad.write_text(yaml.safe_dump(raw), encoding="utf-8")
     with pytest.raises(EconomyConfigError):
         load_economy_config(str(bad))
+
+
+# ----- Profiles: playtest (default) vs launch (owner-ratified) -----------
+def test_playtest_profile_is_default_and_free():
+    # Default profile = the free-playtest base, unchanged.
+    cfg = load_economy_config(profile="playtest")
+    assert cfg.seed_base_cost() == 0
+    assert cfg.daily_stipend == 5000
+    assert float(cfg.raw["simulation"]["time_scale"]) == 0.075
+
+
+def test_launch_profile_applies_owner_ratified_values():
+    # The launch overlay merges the three ratified deltas over the base.
+    cfg = load_economy_config(profile="launch")
+    assert cfg.seed_base_cost() == 25          # no free seeds
+    assert cfg.daily_stipend == 50             # small retention faucet
+    assert float(cfg.raw["simulation"]["time_scale"]) == 1.0  # real-time pace
+    # Everything else still inherits the base (e.g. pod prices).
+    assert cfg.pod_price("basic") == 100
+
+
+def test_launch_profile_passes_its_own_guards():
+    validate_launch_profile(load_economy_config(profile="launch"))  # no raise
+
+
+def test_launch_guard_rejects_free_seeds():
+    raw = _raw()  # playtest base: base_cost 0, stipend 5000, fast clock
+    with pytest.raises(EconomyConfigError):
+        validate_launch_profile(EconomyConfig(raw=raw))
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda r: r["seeds"].__setitem__("base_cost", 10),          # below floor
+        lambda r: r.__setitem__("daily_stipend", 500),               # above ceiling
+        lambda r: r["simulation"].__setitem__("time_scale", 0.5),    # accelerated
+    ],
+)
+def test_launch_guard_rejects_each_unsafe_value(mutate):
+    raw = copy.deepcopy(load_economy_config(profile="launch").raw)
+    mutate(raw)
+    with pytest.raises(EconomyConfigError):
+        validate_launch_profile(EconomyConfig(raw=raw))
+
+
+def test_production_refuses_non_launch_profile(monkeypatch):
+    from growpodempire.config import get_settings
+
+    monkeypatch.setenv("APP_ENV", "production")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(EconomyConfigError):
+            load_economy_config(profile="playtest")
+        # Launch profile is allowed in production.
+        load_economy_config(profile="launch")
+    finally:
+        get_settings.cache_clear()
