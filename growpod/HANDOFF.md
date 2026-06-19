@@ -1,5 +1,11 @@
 # 🛰️ SHIFT HANDOFF — GrowVerse / GrowPod Empire
 
+> [!NOTE]
+> **SUPERSEDED (2026-06-18).** This is an archived shift note from **2026-06-10 (PR #5 era)** and no
+> longer reflects `main`. The **canonical baton is [`growpod/docs/HANDOFF.md`](docs/HANDOFF.md)** —
+> read that for the current state, merged-PR ledger, carried risks, and the single NEXT ACTION.
+> Kept below for history only.
+
 **Outgoing shift:** local bring-up + strain-encyclopedia build.
 **Date:** 2026-06-10 · **Branch:** `session/local-bringup` — **pushed**; **PR #5 open** → main.
 **Owner decision:** HOLD for review/CI — do NOT merge/deploy yet.
