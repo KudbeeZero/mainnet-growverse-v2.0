@@ -1,0 +1,48 @@
+# Keep the backend image small and prevent dev-only / secret / unrelated files
+# from shipping. NOTE: this trims cruft only — it does NOT make a dirty worktree
+# "committed-only". To exclude the uncommitted staking work, build/deploy from a
+# clean worktree at HEAD (see docs/DEPLOY_FLY.md).
+
+# VCS / tooling
+.git
+.github
+.claude
+
+# Python dev artifacts
+.venv
+**/__pycache__
+*.pyc
+.pytest_cache
+.coverage
+.ruff_cache
+.mypy_cache
+
+# Dev database (must never ship — prod uses Fly Postgres)
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets / local env
+.env
+.env.*
+
+# Unrelated subtrees not needed by the Python backend image
+web
+artifacts
+node_modules
+attached_assets
+night-reports
+knowledge
+
+# Tests & docs (not needed at runtime)
+tests
+docs
+*.md
+
+# JS/workspace config that doesn't belong in the Python image
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+tsconfig*.json
+.npmrc
+render.yaml
