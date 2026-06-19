@@ -11,6 +11,8 @@
 
 import type { PlantState } from "@/lib/types";
 import { STAGE_INFO } from "@/lib/stageInfo";
+import { BANDS, bandSeverity } from "@/lib/envBands";
+import { timeAgo, hours } from "@/lib/format";
 
 export type PacketHealth = "good" | "watch" | "alert" | "unknown";
 
@@ -32,12 +34,6 @@ export interface MissionPacket {
   actionNeeded: boolean;
 }
 
-// ── Reference bands (documented; not the live engine bands) ──────────────────
-export const REFERENCE_BANDS = {
-  vpd_kpa: [0.8, 1.6] as const,
-  ppfd: [300, 900] as const,
-};
-
 /** Worst-of combiner so a packet reflects its most urgent line. */
 export function worst(a: PacketHealth, b: PacketHealth): PacketHealth {
   const rank: Record<PacketHealth, number> = { good: 0, unknown: 1, watch: 2, alert: 3 };
@@ -58,25 +54,13 @@ export function classifyPressure(v: number, alert = 50, watch = 20): PacketHealt
   return "good";
 }
 
-function inBand(v: number, [lo, hi]: readonly [number, number]): boolean {
-  return v >= lo && v <= hi;
-}
-
-function fmtHours(h: number): string {
-  if (!isFinite(h) || h < 0) return "—";
-  if (h < 24) return `${Math.round(h)}h`;
-  const d = Math.floor(h / 24);
-  const r = Math.round(h % 24);
-  return r ? `${d}d ${r}h` : `${d}d`;
-}
-
 function fmtEta(iso: string | null | undefined): string {
   if (!iso) return "—";
   const t = new Date(iso).getTime();
   if (Number.isNaN(t)) return "—";
   const diffH = (t - Date.now()) / 3_600_000;
   if (diffH <= 0) return "now";
-  return `in ${fmtHours(diffH)}`;
+  return `in ${hours(diffH)}`;
 }
 
 /**
@@ -184,19 +168,22 @@ export function buildMetricsPacket(state: PlantState, now: string): MissionPacke
   }
   const lines: string[] = [];
   let health: PacketHealth = "good";
+  // Bands routed through the shared single-source `envBands` (mirrors balance.yaml)
+  // so Mission Control can never disagree with the grow console about "in band".
+  const sevToHealth = (sev: 0 | 1 | 2): PacketHealth => (sev === 0 ? "good" : sev === 2 ? "alert" : "watch");
   if (m.vpd_kpa != null) {
-    const ok = inBand(m.vpd_kpa, REFERENCE_BANDS.vpd_kpa);
-    lines.push(`VPD: ${m.vpd_kpa.toFixed(2)} kPa ${ok ? "✓ (in reference band)" : "⚠ outside reference band"}`);
-    if (!ok) health = worst(health, "watch");
+    const sev = bandSeverity(m.vpd_kpa, BANDS.vpd_kpa);
+    lines.push(`VPD: ${m.vpd_kpa.toFixed(2)} kPa ${sev === 0 ? "✓ (in band)" : "⚠ out of band"}`);
+    health = worst(health, sevToHealth(sev));
   }
   if (m.ppfd != null) {
-    const ok = inBand(m.ppfd, REFERENCE_BANDS.ppfd);
-    lines.push(`PPFD: ${Math.round(m.ppfd)} µmol ${ok ? "✓ (in reference band)" : "⚠ outside reference band"}`);
-    if (!ok) health = worst(health, "watch");
+    const sev = bandSeverity(m.ppfd, BANDS.light_intensity);
+    lines.push(`PPFD: ${Math.round(m.ppfd)} µmol ${sev === 0 ? "✓ (in band)" : "⚠ out of band"}`);
+    health = worst(health, sevToHealth(sev));
   }
   if (m.dli_mol != null) lines.push(`DLI: ${m.dli_mol.toFixed(1)} mol·m⁻²·day⁻¹`);
   if (m.nutrient_ppm != null) lines.push(`Nutrient PPM (display): ${Math.round(m.nutrient_ppm)}`);
-  lines.push("Bands are reference values (balance.yaml), shown for context — not live engine thresholds.");
+  lines.push("Bands come from the shared envBands reference (mirrors balance.yaml), shown for context — not a live per-stage threshold.");
 
   return {
     id: `${state.id}:metrics`,
@@ -226,7 +213,7 @@ export function buildEventPacket(state: PlantState, now: string): MissionPacket 
     summary: `Latest: ${ev.event_type}`,
     lines: [
       `Event: ${ev.event_type}${ev.severity ? ` (${ev.severity})` : ""}`,
-      `When: ${ev.timestamp ? fmtEta(ev.timestamp) : "—"}`,
+      `When: ${timeAgo(ev.timestamp) || "—"}`,
       `${state.recent_events.length} recent event(s) on record.`,
     ],
     timestamp: now,

@@ -58,10 +58,12 @@ function MissionBoard() {
   const plants = plantsQ.data ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Default to an actively-growing plant; don't silently surface a dead/harvested
+  // one (that would render full packets where "No grow to monitor" is honest).
+  // The selector can still target any plant explicitly.
   const activePlant =
     (selectedId ? plants.find((p) => p.id === selectedId) : undefined) ??
     plants.find((p) => p.is_alive && !p.harvested) ??
-    plants[0] ??
     null;
 
   const stateQ = usePlantState(playerId ?? "", activePlant?.id ?? "", Boolean(activePlant));
@@ -70,7 +72,7 @@ function MissionBoard() {
   // Live wiring probes (read-only, public endpoints; failures are shown honestly).
   const flagsQ = useQuery({
     queryKey: ["mission", "flags"],
-    queryFn: () => apiFetch<Record<string, boolean>>("/flags", { auth: false }),
+    queryFn: () => apiFetch<{ flags: Record<string, boolean> }>("/flags", { auth: false }),
     retry: false,
     staleTime: 30_000,
   });
@@ -191,11 +193,11 @@ function MissionBoard() {
                   <Badge className="border-sky-800 bg-sky-950/50 text-sky-200">unconfirmed</Badge>
                 )}
               </li>
-              {flagsQ.isSuccess && flagsQ.data && (
+              {flagsQ.isSuccess && flagsQ.data?.flags && (
                 <li className="pt-1">
                   <div className="mb-1 text-[10px] uppercase tracking-wide text-gray-500">Live flags</div>
                   <div className="flex flex-wrap gap-1">
-                    {Object.entries(flagsQ.data).map(([k, v]) => (
+                    {Object.entries(flagsQ.data.flags).map(([k, v]) => (
                       <Badge
                         key={k}
                         className={

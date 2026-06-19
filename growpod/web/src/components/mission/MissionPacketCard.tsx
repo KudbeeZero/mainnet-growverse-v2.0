@@ -6,6 +6,7 @@
 
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { timeAgo } from "@/lib/format";
 import type { MissionPacket, PacketHealth } from "@/lib/mission/packets";
 
 const HEALTH_STYLE: Record<PacketHealth, { dot: string; badge: string; label: string }> = {
@@ -14,15 +15,6 @@ const HEALTH_STYLE: Record<PacketHealth, { dot: string; badge: string; label: st
   alert: { dot: "bg-red-400", badge: "border-red-800 bg-red-950/50 text-red-200", label: "Action" },
   unknown: { dot: "bg-gray-500", badge: "border-ink-600 bg-ink-700 text-gray-300", label: "Unknown" },
 };
-
-function relTime(iso: string): string {
-  const d = Date.now() - new Date(iso).getTime();
-  if (Number.isNaN(d)) return "";
-  const s = Math.round(d / 1000);
-  if (s < 60) return `${s}s ago`;
-  const m = Math.round(s / 60);
-  return m < 60 ? `${m}m ago` : `${Math.round(m / 60)}h ago`;
-}
 
 export function MissionPacketCard({ packet }: { packet: MissionPacket }) {
   const s = HEALTH_STYLE[packet.health];
@@ -63,7 +55,7 @@ export function MissionPacketCard({ packet }: { packet: MissionPacket }) {
           </span>
           <span className="flex items-center gap-2 tabular-nums">
             {packet.nextCheckpoint && <span>Next check {packet.nextCheckpoint}</span>}
-            <span className="text-gray-600">· {relTime(packet.timestamp)}</span>
+            <span className="text-gray-600">· {timeAgo(packet.timestamp)}</span>
           </span>
         </div>
       </div>

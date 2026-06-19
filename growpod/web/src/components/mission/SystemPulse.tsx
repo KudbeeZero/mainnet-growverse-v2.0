@@ -24,14 +24,17 @@ export function SystemPulse({
 }) {
   const alerts = packets.filter((p) => p.health === "alert").length;
   const watches = packets.filter((p) => p.health === "watch").length;
+  const unknowns = packets.filter((p) => p.health === "unknown").length;
   const headline =
-    alerts > 0
-      ? `${alerts} packet(s) need action`
-      : watches > 0
-        ? `${watches} packet(s) to watch`
-        : packets.length > 0
-          ? "All active packets healthy"
-          : "No live grow packets yet";
+    packets.length === 0
+      ? "No live grow packets yet"
+      : alerts > 0
+        ? `${alerts} packet(s) need action`
+        : watches > 0
+          ? `${watches} packet(s) to watch`
+          : unknowns > 0
+            ? `${packets.length - unknowns} healthy · ${unknowns} unknown`
+            : "All active packets healthy";
 
   return (
     <Card>
