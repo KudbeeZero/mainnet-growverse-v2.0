@@ -19,6 +19,7 @@ import { PlantActionCTA } from "@/components/plant/PlantActionCTA";
 import { StickyActionBar } from "@/components/ui/StickyActionBar";
 import { nextPlantAction } from "@/lib/plantAction";
 import { usePlantState } from "@/hooks/usePlantState";
+import { useQaMilestones } from "@/hooks/useQaMilestones";
 import { useStrainMap, usePods } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { api } from "@/lib/api";
@@ -40,6 +41,8 @@ function PlantDetail({ plantId }: { plantId: string }) {
     queryFn: () => api.plants.events(plantId, 50),
     refetchInterval: plantSettled ? false : 10_000,
   });
+  // QA-only: toast on real state changes between polls so testing feels alive.
+  useQaMilestones(plant);
 
   if (isLoading) return <LoadingBlock label="Loading plant…" />;
   if (isError || !plant)
@@ -146,7 +149,9 @@ function PlantDetail({ plantId }: { plantId: string }) {
         </Card>
       </div>
 
-      <AdvisorPanel plantId={plant.id} />
+      <div data-onboarding="plant-suggestions">
+        <AdvisorPanel plantId={plant.id} />
+      </div>
 
       <Card>
         <CardHeader title="Event log" subtitle="Stage changes, stress onsets and care actions" />

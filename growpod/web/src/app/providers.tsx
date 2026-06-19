@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "@/lib/session";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AuthErrorListener } from "@/components/layout/AuthErrorListener";
+import { OnboardingProvider } from "@/components/onboarding/OnboardingProvider";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -24,7 +25,9 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={client}>
       <SessionProvider>
         <AuthErrorListener />
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <OnboardingProvider>{children}</OnboardingProvider>
+        </ToastProvider>
       </SessionProvider>
     </QueryClientProvider>
   );
