@@ -14,6 +14,8 @@ import { usePods, usePlantsList } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useIdStore } from "@/lib/localStore";
 import { useDevSpeedStore } from "@/lib/devSpeedStore";
+import { useToast } from "@/components/ui/Toast";
+import { APP_VERSION } from "@/lib/version";
 
 const PodCard = dynamic(
   () => import("@/components/pod/PodCard").then((m) => m.PodCard),
@@ -55,6 +57,7 @@ function DashboardInner() {
   const { devSpeed, setDevSpeed, incrementHours, resetElapsed } = useDevSpeedStore();
   const lastTickMs = useRef<number>(0);
   const [tickFraction, setTickFraction] = useState(0);
+  const toast = useToast();
 
   // On mount: check for long absence, then record this visit.
   useEffect(() => {
@@ -73,26 +76,37 @@ function DashboardInner() {
     if (ready) setDevSpeed(false);
   }, [plants.data, devSpeed, setDevSpeed]);
 
-  // Main 700ms clock tick: advance 1 game-hour on the backend, then refetch plants.
+  // Main 700ms clock tick: advance 1 game-hour on the backend, then refetch
+  // plants. Honest about the QA clock: the counter only increments on a *real*
+  // advance, and if the dev clock isn't available (e.g. disabled in production,
+  // where it 404s), we stop and tell the tester instead of silently faking
+  // progress.
   useEffect(() => {
     if (!devSpeed) {
       resetElapsed();
       setTickFraction(0);
       return;
     }
+    let stopped = false;
     const id = setInterval(async () => {
       lastTickMs.current = Date.now();
       setTickFraction(0);
-      incrementHours();
       try {
-        await fetch("/api/dev/clock/advance", {
+        const res = await fetch("/api/dev/clock/advance", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ hours: 1 }),
         });
+        if (!res.ok) throw new Error(`dev clock ${res.status}`);
+        incrementHours(); // count only advances the backend actually applied
         plants.refetch();
       } catch {
-        // dev clock may not be available
+        if (stopped) return;
+        stopped = true;
+        setDevSpeed(false); // stops this loop on the next render
+        toast.error(
+          "QA 10× isn’t available on this backend (dev clock is off in production). Acceleration stopped.",
+        );
       }
     }, 700);
     return () => clearInterval(id);
@@ -158,6 +172,15 @@ function DashboardInner() {
           </div>
         }
       />
+
+      <div className="flex justify-end">
+        <span
+          className="rounded-full border border-ink-600 bg-ink-800 px-2 py-0.5 font-mono text-[10px] text-gray-400"
+          title="Build version — bumps with each shipped update"
+        >
+          🌿 GrowPod Empire · v{APP_VERSION}
+        </span>
+      </div>
 
       {showCreate && (
         <Card className="max-w-md">
