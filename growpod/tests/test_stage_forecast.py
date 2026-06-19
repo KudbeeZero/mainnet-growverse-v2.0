@@ -123,16 +123,22 @@ def test_late_flower_is_non_terminal_and_finite(session):
 
 def test_service_forecast_uses_its_clock(session):
     _, _, plant = _plant(session)
-    # 5-day window on purpose (not 4): an early random pest spawn — seeded by the
-    # plant's id, so it varies per run — can infest the seedling and drag health
-    # down, stretching the seed stage's effective duration (72h × (1+(100-health)
-    # /200)) past the 4-day mark on some ids. That made a 4-day window flaky
-    # ("still seed"). 5 days clears the stretched stage deterministically
-    # (verified across 300 random ids). The plant is intentionally left uncared —
-    # this asserts the *service uses its injected clock*, not ideal care.
-    svc = SimulationService(session, config=CFG, clock=FrozenClock(BASE + timedelta(days=5)))
+    # Advance to mid-vegetative: comfortably past the seed stage but well before
+    # harvest, derived from the configured time_scale so this test isn't pinned to
+    # a particular pacing value (an early id-seeded pest spawn can stretch early
+    # stages, so we land deep enough past seed to stay deterministic). The plant is
+    # intentionally left uncared — this asserts the *service uses its injected
+    # clock*, not ideal care.
+    sim = CFG.raw["simulation"]
+    scale = float(sim["time_scale"])
+    st = sim["stages"]
+    pre_veg_days = st["seed_days"] + st["germination_days"] + st["seedling_days"]
+    advance_hours = (pre_veg_days + st["vegetative_days"] / 2) * 24 * scale
+    svc = SimulationService(
+        session, config=CFG, clock=FrozenClock(BASE + timedelta(hours=advance_hours))
+    )
     svc.sync(plant)  # the /state route syncs before forecasting
     f = svc.forecast(plant)
     assert f["stage"] != GrowthStage.SEED.value  # advanced past the seed stage
-    assert f["harvest_eta"] is not None
-    assert f["age_hours"] == 120.0
+    assert f["harvest_eta"] is not None  # mid-cycle: harvest still ahead
+    assert f["age_hours"] == pytest.approx(advance_hours, abs=0.1)  # service rounds to 0.1h
