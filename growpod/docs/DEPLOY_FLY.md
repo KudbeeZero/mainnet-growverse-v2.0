@@ -1,147 +1,96 @@
-# Deploying the FRONTIER backend to Fly.io
+# Deploying the growpod Python API to Fly (`growverse-api`)
 
-This is the runbook for deploying the **GROWv2 / `growpodempire` Flask API** to
-Fly.io as app **`frontiernext`** in region **`ord`**.
+The GrowVerse frontend on Vercel (`growverse.dev`) proxies `/api/*` to a backend
+via the Next.js rewrite (`BACKEND_URL`). The service that actually serves
+`/api/game/*` (login/account, economy, breeding, market) is **this** app — the
+Python/Flask game API in `growpod/`. This runbook deploys it as the Fly app
+`growverse-api`. (The existing `frontiernext` Fly app is a *different*,
+Node/Drizzle plant-minting service and is **not** the login backend.)
 
-## Architecture (read this first)
+## What Gate A created (this commit)
+- `Dockerfile` — `python:3.12-slim`, installs `requirements.txt`, runs
+  `gunicorn -b 0.0.0.0:8080 -w 2 server:app` (`server:app` = `create_app()`).
+- `fly.toml` — app `growverse-api`, region `ord`, health check `GET /health`,
+  non-secret env (`PYTHONPATH=src`, `PORT=8080`, `CORS_ALLOWED_ORIGINS`), and a
+  `release_command` that runs migrations + seed.
+- `.dockerignore` — trims dev cruft / the dev SQLite DB / `web/` / `artifacts/`.
 
-- **Public game UI** → Next.js app in `web/`, served via Cloudflare Pages at
-  **https://frontierprotocol.app**. This is what players visit.
-- **Backend API** → this Flask app (gunicorn `server:app`). It is **API-only**
-  (its `/` returns a JSON banner, not the game). It should live behind
-  **https://api.frontierprotocol.app** — do **not** point players directly at it.
+**Nothing is deployed.** No Fly app, Postgres, or secret exists yet.
 
-The frontend calls the API through the existing env var `NEXT_PUBLIC_API_BASE`
-(see `web/.env.local.example`). In production set:
+## Ship committed code only (no staking)
+The working tree currently has **uncommitted staking changes**. A normal
+`fly deploy` from `growpod/` would bake those into the image. `.dockerignore`
+canNOT fix this (it can't undo edits to tracked files like `models.py`). So the
+deploy MUST run from a clean checkout of the committed `HEAD`.
 
+> **CRITICAL prerequisite (do this first):** the deploy artifacts themselves
+> (`growpod/Dockerfile`, `growpod/fly.toml`, `growpod/.dockerignore`) are
+> currently **untracked**. A clean worktree at a committed SHA will **not**
+> contain them, so `fly deploy` would fail with no Dockerfile. **Commit these
+> three files (deploy config only — NOT the staking changes) before deploying**,
+> then check out that commit. Verify with `git show <SHA>:growpod/Dockerfile`.
+
+> **Do NOT deploy from `main`.** `main` currently has a **dual-head Alembic
+> state** (two leaf revisions), so `alembic upgrade head` in the release_command
+> would fail. Deploy only from a **single-head** commit on this branch (the
+> documented `20e390f` is single-head).
+
+```sh
+# from the repo root, non-destructive — does not touch your working tree:
+git worktree add ../growverse-deploy <DEPLOY_SHA>   # a single-head commit that includes the deploy files
+cd ../growverse-deploy/growpod
+fly deploy --app growverse-api
+# when done:
+git worktree remove ../growverse-deploy
 ```
-NEXT_PUBLIC_API_BASE=https://api.frontierprotocol.app
+
+## Required configuration
+| Name | Where | Secret? | Notes |
+|------|-------|---------|-------|
+| `DATABASE_URL` | Fly secret | **yes** | Set automatically by `fly postgres attach`. `config.py` normalizes `postgres://`→`postgresql://`. |
+| `PYTHONPATH=src` | `fly.toml [env]` | no | src-layout import path. |
+| `PORT=8080` | `fly.toml [env]` | no | gunicorn bind port / `internal_port`. |
+| `CORS_ALLOWED_ORIGINS` | `fly.toml [env]` | no | `https://growverse.dev`. |
+
+Optional (app falls back to mocks; **not needed for login**): `ANTHROPIC_API_KEY`,
+`ELEVENLABS_API_KEY`, `ALGOD_URL`/`ALGOD_TOKEN`/`ALGO_TREASURY_MNEMONIC`/
+`WALLET_ENCRYPTION_KEY`, `RATELIMIT_STORAGE_URI` (Redis for multi-worker limits).
+
+## Migration safety (pre-flight verified 2026-06-19)
+- Single Alembic head; `alembic upgrade head` applies cleanly on a fresh DB.
+- Drift is limited to 4 store tables (`bundles`, `featured_items`,
+  `player_badges`, `store_partners`) not created by migrations. The
+  `release_command` runs `python -m growpodempire.db.seed`, whose `main()` calls
+  `init_db()` (`create_all`) before seeding — so the release finishes with the
+  full, seeded 30-table schema. **No migration repair needed.** `players`
+  (login) is created by migrations regardless.
+
+## Remaining gates (each owner-approved; commands shown, not yet run)
+- **Gate B** — `fly apps create growverse-api`
+- **Gate C** — `fly postgres create --name growverse-db --region ord` then
+  `fly postgres attach growverse-db -a growverse-api` (sets `DATABASE_URL`)
+- **Gate D** — only if real AI/chain wanted: `fly secrets set …` (separate lane)
+- **Gate E** — `fly deploy` from the clean worktree (runs release_command, boots app).
+  **Prerequisite:** `fly secrets list -a growverse-api` must already show `DATABASE_URL`
+  (set at Gate C). If it isn't set, the release_command's `alembic upgrade head` runs
+  against an ephemeral SQLite on the release machine and the real Postgres stays empty.
+- **Gate F** — after `curl -i https://growverse-api.fly.dev/health` → 200, set
+  Vercel `BACKEND_URL=https://growverse-api.fly.dev` (project
+  `mainnet-growverse-v2-0-api-server`, team `ascend9`, Production) and redeploy.
+
+## Login smoke test (after Gate F)
+```sh
+curl -i https://growverse.dev/health                         # 200
+curl -i -X POST https://growverse.dev/api/game/players \
+  -H 'Content-Type: application/json' -d '{"username":"smoketest"}'   # 200/201, not 404
 ```
+Then create an account through the web UI and confirm no 404.
 
-The web client appends `/api/game` itself, so set the base origin only.
-
-## Where to run `flyctl` (this fixes "Could not detect runtime or Dockerfile")
-
-Fly looks for a `Dockerfile` in the directory you run it from. The backend lives
-in `growpod/`, but the git repo root is one level up (a pnpm/TS workspace Fly
-can't auto-detect). So there are **two** equivalent setups — use whichever
-matches where you run Fly:
-
-- **Repo root** (default for `flyctl launch` against the GitHub repo): a
-  root-level `Dockerfile` + `fly.toml` build the backend from `growpod/`. Just
-  run `fly launch` / `fly deploy` from the repo root.
-- **Inside `growpod/`**: `growpod/Dockerfile` + `growpod/fly.toml` build the same
-  image with a `growpod/` context. Run Fly after `cd growpod`.
-
-Both produce the identical `frontiernext` image. If you previously hit
-"Could not find a Dockerfile, nor detect a runtime…", you were launching from
-the repo root before the root-level files existed — that's now fixed.
-
-## What's in this repo for Fly
-
-- `Dockerfile` — Python 3.11-slim, installs `requirements.txt`, runs
-  `gunicorn -b 0.0.0.0:$PORT -w 2 server:app` (identical command to `render.yaml`).
-  Present at both the repo root and in `growpod/`.
-- `fly.toml` — app `frontiernext`, region `ord`, internal port `8080`,
-  `/health` check, and a `release_command` that runs migrations + seed. Present
-  at both the repo root and in `growpod/`.
-- `.dockerignore` — keeps secrets and the frontend/Node tooling out of the image.
-
-## Required secrets & env vars
-
-**Required to run in production:**
-
-- `DATABASE_URL` — Postgres connection string. The `release_command`
-  (`alembic upgrade head && python -m growpodempire.db.seed`) needs it, and so
-  does the running app. Without it the app falls back to local SQLite, which is
-  ephemeral on Fly and **will be lost** on every machine restart — do not run
-  production on SQLite.
-
-**Strongly recommended:**
-
-- `CORS_ALLOWED_ORIGINS` — comma-separated browser origins allowed to call the
-  API. Set to your live frontend origin(s), e.g.
-  `https://frontierprotocol.app` (add `https://game.frontierprotocol.app` if/when
-  that host exists). Defaults to `http://localhost:3000`; do **not** use `*`
-  (the API uses an `X-API-Key` auth header).
-- `RATELIMIT_STORAGE_URI` — set to a Redis URI so rate limits hold across
-  workers/instances (default is in-memory, per-process).
-
-**Optional (the app has offline mock fallbacks for all of these):**
-
-- `ANTHROPIC_API_KEY` — real AI "Master Grower" advisor (else a mock advisor).
-- `ELEVENLABS_API_KEY` — real TTS narration prewarm.
-- Algorand on-chain layer: `ALGOD_URL`, `ALGOD_TOKEN`, `INDEXER_URL`,
-  `ALGO_TREASURY_MNEMONIC`, `WALLET_ENCRYPTION_KEY`, `ASA_ID`,
-  `NFT_METADATA_BASE_URL`. These are **secrets** (the treasury mnemonic
-  especially) — set them only via `fly secrets`, never commit them. Without a
-  treasury the app uses an offline mock chain.
-- GCS narration storage: `GOOGLE_APPLICATION_CREDENTIALS` / bucket config.
-
-Never set `FLASK_DEBUG=true` on a public URL (Werkzeug debugger = RCE).
-
-## Deploy steps (owner)
-
-> Do not deploy until you're ready — these are the post-merge commands.
-
-1. **Create the app + machines config without deploying:**
-
-   ```bash
-   # If fly.toml is already present (it is, after this PR), just validate/launch:
-   fly launch --no-deploy --name frontiernext --region ord
-   # or a pure build check:
-   fly deploy --build-only
-   ```
-
-2. **Set secrets** (at minimum DATABASE_URL and CORS):
-
-   ```bash
-   fly secrets set DATABASE_URL='postgresql://...' -a frontiernext
-   fly secrets set CORS_ALLOWED_ORIGINS='https://frontierprotocol.app' -a frontiernext
-   ```
-
-   If you provision a Fly Postgres cluster, attach it (this sets `DATABASE_URL`
-   for you):
-
-   ```bash
-   fly postgres create --name frontiernext-db --region ord
-   fly postgres attach frontiernext-db -a frontiernext
-   ```
-
-3. **Deploy** (the `release_command` runs `alembic upgrade head` + seed first):
-
-   ```bash
-   fly deploy -a frontiernext
-   ```
-
-4. **Add the custom domain + cert:**
-
-   ```bash
-   fly certs add api.frontierprotocol.app -a frontiernext
-   ```
-
-5. **Create the Cloudflare DNS record Fly requests** (a `CNAME`/`A`/`AAAA`
-   pair plus the ACME `CNAME` shown by `fly certs show api.frontierprotocol.app`).
-   In Cloudflare, set that record to **DNS-only (grey cloud)** while validating
-   the cert.
-
-6. **Point the frontend at the API:** set
-   `NEXT_PUBLIC_API_BASE=https://api.frontierprotocol.app` in the Cloudflare
-   Pages build env and redeploy the frontend.
-
-## Health checks
-
-- `GET /health` — liveness, no dependencies (used by `fly.toml`).
-- `GET /readiness` — readiness, pings the database (returns 503 if the DB is down).
-
-## Notes
-
-- Port: gunicorn binds `0.0.0.0:$PORT`; `fly.toml` sets `PORT=8080` and
-  `internal_port = 8080`. The server already binds `0.0.0.0` — no code change.
-- The `release_command` mirrors the existing Render `preDeployCommand`. If you'd
-  rather run migrations manually, comment out the `[deploy]` block in `fly.toml`
-  and run `fly ssh console -C 'alembic upgrade head' -a frontiernext` after the
-  first deploy.
-- Scale-to-zero (`min_machines_running = 0`) is enabled. Background threads
-  (seasonal rollover, audio prewarm) catch up on cold start; raise to `1` if you
-  want them always warm.
+Security smoke tests (Gate F):
+```sh
+# CORS must NOT echo an arbitrary attacker origin:
+curl -i -H 'Origin: http://attacker.example' https://growverse-api.fly.dev/health \
+  | grep -i access-control-allow-origin    # expect: no attacker origin echoed
+# Dev test-clock must be closed in production (APP_ENV=production):
+curl -i https://growverse-api.fly.dev/api/dev/clock   # expect: 404 (blueprint not registered)
+```

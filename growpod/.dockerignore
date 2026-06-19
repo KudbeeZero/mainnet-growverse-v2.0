@@ -1,49 +1,48 @@
-# Keep the build context small and ensure no secrets/dev artifacts leak into the
-# image. The Dockerfile copies only what gunicorn needs (server.py, alembic*,
-# src/); this is belt-and-suspenders.
+# Keep the backend image small and prevent dev-only / secret / unrelated files
+# from shipping. NOTE: this trims cruft only — it does NOT make a dirty worktree
+# "committed-only". To exclude the uncommitted staking work, build/deploy from a
+# clean worktree at HEAD (see docs/DEPLOY_FLY.md).
 
-# Python build/test artifacts
-.venv/
-venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
+# VCS / tooling
+.git
+.github
+.claude
+
+# Python dev artifacts
+.venv
+**/__pycache__
+*.pyc
+.pytest_cache
 .coverage
-.coverage.*
-htmlcov/
-*.egg-info/
+.ruff_cache
+.mypy_cache
 
-# Local SQLite DBs (production uses Postgres via DATABASE_URL)
+# Dev database (must never ship — prod uses Fly Postgres)
 *.db
-*.db-wal
 *.db-shm
+*.db-wal
 
-# Secrets — never bake into an image
+# Secrets / local env
 .env
 .env.*
-!.env.example
 
-# Frontend (deployed separately via Cloudflare Pages) + Node tooling
-web/
-node_modules/
-lib/
-artifacts/
-scripts/
-pnpm-lock.yaml
-pnpm-workspace.yaml
-package.json
-.npmrc
-tsconfig*.json
+# Unrelated subtrees not needed by the Python backend image
+web
+artifacts
+node_modules
+attached_assets
+night-reports
+knowledge
 
-# Docs / dev notes (not needed at runtime)
-docs/
-night-reports/
-knowledge/
-attached_assets/
+# Tests & docs (not needed at runtime)
+tests
+docs
 *.md
 
-# VCS / agent tooling
-.git/
-.github/
-.claude/
-.agents/
+# JS/workspace config that doesn't belong in the Python image
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+tsconfig*.json
+.npmrc
+render.yaml

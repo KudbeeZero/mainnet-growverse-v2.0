@@ -1,46 +1,54 @@
-# Fly.io configuration for the FRONTIER backend (GROWv2 / growpodempire) — the
-# Flask API only. The public game UI is the separate Next.js app in web/, served
-# via Cloudflare Pages at https://frontierprotocol.app. This API is meant to live
-# behind https://api.frontierprotocol.app. Deploy from this directory (growpod/).
-# See docs/DEPLOY_FLY.md for the full runbook (secrets, certs, DNS).
-app = "frontiernext"
+# Fly.io config for the growpod Python game API (GrowVerse backend).
+#
+# Created at "Gate A" — NOT deployed. Creating the app, Postgres, secrets, and
+# the first deploy are Gates B–E (owner-approved, one at a time). The deploy MUST
+# run from a clean worktree at the committed HEAD so the uncommitted staking work
+# is never shipped. Full runbook: docs/DEPLOY_FLY.md.
+
+app = "growverse-api"
 primary_region = "ord"
 
 [build]
   dockerfile = "Dockerfile"
 
-[env]
-  # Fly routes to internal_port below; gunicorn binds 0.0.0.0:$PORT.
-  PORT = "8080"
-  # src/ layout: make the growpodempire package importable (mirrors render.yaml).
-  PYTHONPATH = "src"
-
-# Run schema migrations + the idempotent strain seed before each new version goes
-# live, mirroring the existing Render preDeployCommand. This runs in a temporary
-# machine and REQUIRES the DATABASE_URL secret to be set first
-# (`fly secrets set DATABASE_URL=... -a frontiernext`). If you prefer to run
-# migrations by hand, comment this block out.
+# Before each new release goes live, an ephemeral machine runs migrations + the
+# idempotent seed (mirrors the proven render.yaml preDeployCommand). seed.main()
+# calls init_db() first, which create_all()s the 4 store tables Alembic doesn't
+# yet create — so this finishes with the full, seeded schema. Requires the
+# DATABASE_URL secret (set via `fly postgres attach` at Gate C).
 [deploy]
-  release_command = "alembic upgrade head && python -m growpodempire.db.seed"
+  release_command = "sh -c 'alembic upgrade head && python -m growpodempire.db.seed'"
+
+# Non-secret runtime env. DATABASE_URL is a SECRET and is intentionally NOT here
+# (set by `fly postgres attach`). config.py normalizes a postgres:// URL for
+# SQLAlchemy 2.x automatically.
+[env]
+  PYTHONPATH = "src"
+  PORT = "8080"
+  # Fail-closed posture: force-disables the dev test-clock (/api/dev/clock/*)
+  # regardless of GROW_TEST_CLOCK, and makes admin endpoints 503 unless
+  # ADMIN_SECRET is explicitly set. See config.py is_production.
+  APP_ENV = "production"
+  # Browser origin allowed to call /api/* directly. Same-origin proxy traffic
+  # (Vercel rewrite) isn't subject to this, but set it for safety/direct calls.
+  CORS_ALLOWED_ORIGINS = "https://growverse.dev"
 
 [http_service]
   internal_port = 8080
   force_https = true
+  # Keep one machine warm for reliable login during recovery/testing. Lower to 0
+  # later for cost (cold starts) once stable — owner's call.
   auto_stop_machines = "stop"
   auto_start_machines = true
-  # Background threads (seasonal rollover, audio prewarm) catch up on cold start,
-  # so scale-to-zero is safe for early deploys. Raise to 1 to keep them warm.
-  min_machines_running = 0
+  min_machines_running = 1
 
-  # Real liveness route defined in src/growpodempire/api/observability.py.
-  # (/readiness also exists and pings the DB if you want a deeper check.)
   [[http_service.checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "10s"
     method = "GET"
     path = "/health"
-    interval = "30s"
-    timeout = "5s"
-    grace_period = "10s"
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "512mb"
+  memory = "1024mb"
