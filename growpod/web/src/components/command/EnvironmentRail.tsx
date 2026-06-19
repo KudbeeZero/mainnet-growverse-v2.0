@@ -2,6 +2,7 @@
 
 import { ENV_ROWS, bandPct, bandSeverity, type EnvRowDef } from "@/lib/envBands";
 import { envStatus, STATUS_STYLES } from "@/lib/podStatus";
+import { CollapsiblePanel } from "@/components/ui/CollapsiblePanel";
 import type { Environment } from "@/lib/api";
 import type { PlantState, Pod } from "@/lib/types";
 
@@ -92,18 +93,18 @@ export function EnvironmentRail({
   }
 
   return (
-    <section className="panel flex h-full flex-col overflow-y-auto rounded-xl p-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[11px] font-bold tracking-[0.2em] text-cyan-300">🌡 ENVIRONMENT</h3>
+    <CollapsiblePanel
+      title="🌡 ENVIRONMENT"
+      action={
         <span
           className="rounded border border-ink-700 px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.12em] text-gray-500"
           title="Automatic climate control — coming soon"
         >
           AUTO {pod?.auto_water || pod?.auto_feed ? "ON" : "OFF"}
         </span>
-      </div>
-
-      <div className="mt-2 space-y-1.5">
+      }
+    >
+      <div className="space-y-1.5">
         {ENV_ROWS.map((def) => {
           const { value, editable, step } = valueFor(def);
           return (
@@ -124,6 +125,6 @@ export function EnvironmentRail({
         <span className="instrument-label text-[10px]">ENVIRONMENT STATUS</span>
         <span className={`text-xs font-bold ${STATUS_STYLES[status]}`}>{status}</span>
       </div>
-    </section>
+    </CollapsiblePanel>
   );
 }

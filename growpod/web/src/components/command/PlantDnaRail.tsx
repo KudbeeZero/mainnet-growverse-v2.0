@@ -5,6 +5,7 @@ import { traitRows } from "@/lib/traits";
 import { morphologyRows } from "@/lib/morphologyRows";
 import { seedId, rarityStars } from "@/lib/cosmetics";
 import { RARITY_STYLES, titleCase } from "@/lib/format";
+import { CollapsiblePanel } from "@/components/ui/CollapsiblePanel";
 import type { GrowthStage, Strain } from "@/lib/types";
 
 function SummaryRow({ label, value, tag }: { label: string; value: string; tag?: string }) {
@@ -51,14 +52,12 @@ export function PlantDnaRail({
   const stars = strain ? rarityStars(strain.rarity) : 0;
 
   return (
-    <section className="panel flex h-full flex-col overflow-y-auto rounded-xl p-3">
-      <h3 className="text-[11px] font-bold tracking-[0.2em] text-grow-300">⬡ PLANT DNA</h3>
-
+    <CollapsiblePanel title="⬡ PLANT DNA" titleClassName="text-grow-300">
       {!strain ? (
-        <p className="mt-3 text-xs text-gray-500">Loading genetics…</p>
+        <p className="text-xs text-gray-500">Loading genetics…</p>
       ) : (
         <>
-          <div className="mt-2">
+          <div>
             <SummaryRow label="STRAIN" value={strain.name} />
             <SummaryRow label="GENETICS" value={geneticsLabel(strain)} tag={titleCase(strain.lineage_type)} />
             <SummaryRow label="GENERATION" value={`F${strain.generation}`} />
@@ -89,6 +88,6 @@ export function PlantDnaRail({
           </div>
         </>
       )}
-    </section>
+    </CollapsiblePanel>
   );
 }

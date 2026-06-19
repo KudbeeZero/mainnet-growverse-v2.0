@@ -224,7 +224,7 @@ function CommandScreen({ plantId }: { plantId: string }) {
           </div>
 
           {/* left rail */}
-          <div className="min-h-0 xl:col-start-1 xl:row-start-1">
+          <div className="min-h-0 xl:col-start-1 xl:row-start-1 xl:overflow-y-auto">
             <PlantDnaRail strain={strain} plantId={plantId} stage={renderStage} />
           </div>
 

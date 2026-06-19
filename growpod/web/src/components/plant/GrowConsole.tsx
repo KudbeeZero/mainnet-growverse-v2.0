@@ -7,6 +7,7 @@
 
 import { bandPct } from "@/lib/envBands";
 import { growConsoleRows, hasMetrics, type ConsoleRow } from "@/components/plant/growConsoleData";
+import { CollapsiblePanel } from "@/components/ui/CollapsiblePanel";
 import type { PlantState, Pod } from "@/lib/types";
 
 const VAL_COLOR = ["text-grow-300", "text-amber-300", "text-red-300"] as const;
@@ -74,14 +75,15 @@ function ConsoleRowView({ row }: { row: ConsoleRow }) {
 /** Read-only "GROW CONSOLE" panel — optimal stage targets + in/out-of-band status. */
 export function GrowConsole({ plant, pod }: { plant: PlantState; pod?: Pod | undefined }) {
   return (
-    <section className="panel flex flex-col rounded-xl p-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-[11px] font-bold tracking-[0.2em] text-cyan-300">🎓 GROW CONSOLE</h3>
+    <CollapsiblePanel
+      title="🎓 GROW CONSOLE"
+      action={
         <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-cyan-200/50">
           {plant.growth_stage}
         </span>
-      </div>
-      <p className="mt-1 text-[9px] leading-snug text-cyan-200/40">
+      }
+    >
+      <p className="text-[9px] leading-snug text-cyan-200/40">
         Optimal targets for this stage. Read-only — adjust the pod from the
         Environment rail.
       </p>
@@ -97,6 +99,6 @@ export function GrowConsole({ plant, pod }: { plant: PlantState; pod?: Pod | und
           ))}
         </div>
       )}
-    </section>
+    </CollapsiblePanel>
   );
 }
