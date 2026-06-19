@@ -74,3 +74,21 @@ export function isFeatureEnabled(name: FeatureName): boolean {
 export function isDevBypassEnabled(): boolean {
   return process.env.NEXT_PUBLIC_ENABLE_DEV_BYPASS === "true";
 }
+
+/**
+ * Mission Control v0 gate (owner/admin-only, internal operations board).
+ *
+ * ⚠️ HONEST LIMITATION: this is NOT a real role/permission system. v0 visibility
+ * is a build-flag + login gate only:
+ *   - the page is NOT linked in the nav (players won't discover it), and
+ *   - it requires a logged-in session (RequireAuth), and
+ *   - it is "active" only when `NEXT_PUBLIC_ENABLE_MISSION_CONTROL=true` OR the
+ *     dev/test bypass is on (so owner/tester can reach it in test builds).
+ * A true owner/admin role is future work — do not treat this as security.
+ */
+export function isMissionControlEnabled(): boolean {
+  return (
+    process.env.NEXT_PUBLIC_ENABLE_MISSION_CONTROL === "true" ||
+    isDevBypassEnabled()
+  );
+}
