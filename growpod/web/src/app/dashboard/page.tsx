@@ -10,6 +10,9 @@ import { LoadingBlock } from "@/components/ui/Spinner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/States";
 import { DASHBOARD_COACH_MARKS } from "@/lib/coachMarks";
+import { TokenClaimBanner } from "@/components/onboarding/TokenClaimBanner";
+import { RestartTutorialButton } from "@/components/onboarding/RestartTutorialButton";
+import { APP_VERSION } from "@/lib/version";
 import { usePods, usePlantsList } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useIdStore } from "@/lib/localStore";
@@ -159,6 +162,18 @@ function DashboardInner() {
         }
       />
 
+      <div className="flex justify-end">
+        <span
+          data-onboarding="app-version"
+          className="rounded-full border border-ink-600 bg-ink-800 px-2 py-0.5 font-mono text-[10px] text-gray-400"
+          title="Build version — bumps with each shipped update"
+        >
+          🌿 GrowPod Empire · v{APP_VERSION}
+        </span>
+      </div>
+
+      <TokenClaimBanner />
+
       {showCreate && (
         <Card className="max-w-md">
           <CardHeader title="Create a grow pod" />
@@ -209,6 +224,10 @@ function DashboardInner() {
 
       {/* First-session guidance — points at the real UI, once per player. */}
       <CoachMarks marks={DASHBOARD_COACH_MARKS} />
+
+      <div className="flex justify-center pt-2">
+        <RestartTutorialButton />
+      </div>
     </div>
   );
 }

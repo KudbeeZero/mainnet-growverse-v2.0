@@ -89,7 +89,7 @@ export function PlantCard({
   const glowing = devSpeed && plant.is_alive && !plant.harvested;
 
   return (
-    <div className="relative">
+    <div className="relative" data-onboarding="plant-card">
       {glowing && (
         <div
           className="pointer-events-none absolute inset-0 rounded-xl"
