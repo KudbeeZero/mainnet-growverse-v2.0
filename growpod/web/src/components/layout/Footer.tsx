@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { APP_VERSION } from "@/lib/version";
+import { APP_VERSION, BUILD_SHA, IS_DEPLOYED_BUILD } from "@/lib/version";
 
 // Tasteful creator branding so people arriving from Twitter recognize Kudbee,
 // plus a quick path to the in-game Guide. Lives at the bottom of the app shell.
@@ -16,7 +16,12 @@ export function Footer() {
           Grow Guide
         </Link>
         <span className="mx-2">·</span>
-        <span className="font-mono">v{APP_VERSION}</span>
+        {/* Build stamp: version + the deployed commit SHA so you can confirm at a
+            glance which build is live. The SHA only renders for real deploys. */}
+        <span className="font-mono" title={IS_DEPLOYED_BUILD ? `build ${BUILD_SHA}` : "local build"}>
+          v{APP_VERSION}
+          {IS_DEPLOYED_BUILD && <span className="text-gray-600"> · {BUILD_SHA}</span>}
+        </span>
       </p>
     </footer>
   );
