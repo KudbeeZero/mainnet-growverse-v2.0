@@ -123,6 +123,11 @@ export function GrowChamber({
       canvas!.style.height = `${H}px`;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
       core.setSize(W, H);
+      // setSize rebuilds the (day/stage-driven) geometry but doesn't paint. When
+      // animating, the RAF loop paints next frame; under reduced motion there is
+      // no loop, so repaint the static frame here — otherwise the freshly-built
+      // plant is never drawn after (re)sizing and the pod renders blank.
+      if (!motionOK) core.draw(0);
     }
 
     fit();
