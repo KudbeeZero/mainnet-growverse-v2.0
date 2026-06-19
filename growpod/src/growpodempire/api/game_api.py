@@ -113,7 +113,6 @@ def get_wallet(player_id):
 
 
 @game_bp.get("/players/<player_id>/level")
-@require_player
 def get_level(player_id):
     try:
         with session_scope() as s:
