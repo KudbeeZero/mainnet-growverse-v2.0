@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { NavBar } from "./NavBar";
 import { MobileTabBar } from "./MobileTabBar";
-import { Footer } from "./Footer";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -11,7 +10,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           safe area); removed at lg where the bar is hidden. */}
       <main className="mx-auto max-w-6xl px-4 py-6 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6">
         {children}
-        <Footer />
       </main>
       <MobileTabBar />
     </div>

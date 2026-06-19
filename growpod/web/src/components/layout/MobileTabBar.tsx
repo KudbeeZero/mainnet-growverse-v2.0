@@ -8,10 +8,8 @@ import {
   PRIMARY_LINKS,
   SECONDARY_LINKS,
   isActiveLink,
-  navOnboardingId,
   type NavLink,
 } from "./navLinks";
-import { RestartTutorialButton } from "@/components/onboarding/RestartTutorialButton";
 
 /**
  * Mobile bottom tab bar — the native-app navigation pattern, shown below `lg`
@@ -88,9 +86,6 @@ export function MobileTabBar() {
                 );
               })}
             </nav>
-            <div className="flex justify-center px-4 pb-4 pt-1">
-              <RestartTutorialButton />
-            </div>
           </div>
         </div>
       )}
@@ -105,7 +100,6 @@ export function MobileTabBar() {
           ))}
           <button
             type="button"
-            data-onboarding="profile"
             onClick={() => setMoreOpen((o) => !o)}
             aria-haspopup="dialog"
             aria-expanded={moreOpen}
@@ -131,7 +125,6 @@ function Tab({ link, active }: { link: NavLink; active: boolean }) {
   return (
     <Link
       href={link.href}
-      data-onboarding={navOnboardingId(link.href)}
       aria-current={active ? "page" : undefined}
       className={`flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] transition-colors ${
         active ? "text-grow-300" : "text-gray-400 active:text-gray-100"

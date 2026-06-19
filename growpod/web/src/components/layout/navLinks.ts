@@ -35,7 +35,6 @@ const ALL_NAV_LINKS: NavLink[] = [
   { href: "/store", label: "Store", icon: "🏪" },
   { href: "/university", label: "University", icon: "🎓", feature: "university" },
   { href: "/leaderboards", label: "Leaderboards", icon: "📊" },
-  { href: "/guide", label: "Guide", icon: "📖" },
   { href: "/profile", label: "Profile", icon: "👤" },
   { href: "/admin/economy", label: "Economy", icon: "📈" },
 ];
@@ -48,23 +47,6 @@ export const NAV_LINKS: NavLink[] = ALL_NAV_LINKS.filter(
 /** True when `pathname` is on `href` or one of its sub-routes. */
 export function isActiveLink(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + "/");
-}
-
-/**
- * Stable `data-onboarding` id for a nav destination, so the guided tutorial can
- * spotlight the right tab on whichever surface is visible (desktop NavBar or
- * mobile tab bar). Returns undefined for links the tutorial doesn't target.
- */
-const ONBOARDING_NAV_IDS: Record<string, string> = {
-  "/dashboard": "grow-nav",
-  "/lab": "lab-nav",
-  "/market": "market-nav",
-  "/cup": "cup-nav",
-  "/guide": "guide",
-  "/profile": "profile",
-};
-export function navOnboardingId(href: string): string | undefined {
-  return ONBOARDING_NAV_IDS[href];
 }
 
 export const PRIMARY_LINKS = NAV_LINKS.filter((l) => l.primary);

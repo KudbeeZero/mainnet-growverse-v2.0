@@ -25,7 +25,7 @@ export function CareButtons({ plant }: { plant: PlantState }) {
   };
 
   return (
-    <div className="relative flex flex-wrap gap-2" data-onboarding="care-actions">
+    <div className="relative flex flex-wrap gap-2">
       {layer}
       <Button
         size="sm"

@@ -46,7 +46,6 @@ export function PlantSeedForm({ podId }: { podId: string }) {
   return (
     <div className="flex flex-wrap items-end gap-2">
       <Select
-        data-onboarding="seed-select"
         value={effectiveSeed}
         onChange={(e) => setSeedId(e.target.value)}
         className="max-w-xs"
@@ -57,12 +56,7 @@ export function PlantSeedForm({ podId }: { podId: string }) {
           </option>
         ))}
       </Select>
-      <Button
-        data-onboarding="plant-here"
-        size="sm"
-        loading={mutation.isPending}
-        onClick={() => mutation.mutate()}
-      >
+      <Button size="sm" loading={mutation.isPending} onClick={() => mutation.mutate()}>
         🌱 Plant here
       </Button>
     </div>

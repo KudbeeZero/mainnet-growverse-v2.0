@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session";
-import { NAV_LINKS, isActiveLink, navOnboardingId } from "./navLinks";
+import { NAV_LINKS, isActiveLink } from "./navLinks";
 import { PlayerBadge } from "./PlayerBadge";
 import { useDevSpeedStore } from "@/lib/devSpeedStore";
 
@@ -32,7 +32,6 @@ export function NavBar() {
                   <Link
                     key={l.href}
                     href={l.href}
-                    data-onboarding={navOnboardingId(l.href)}
                     aria-current={active ? "page" : undefined}
                     className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
                       active
