@@ -56,6 +56,15 @@ once they appear here. Last reconciled: **2026-06-14** (REC-004 full repository 
   (`docs/OMNI_CHARTER.md`): chain of command, departments, work-order system, canonical principles.
   Governance layer; no further backlog action.
 
+- 🚀 ⬜ **Optional boost economy + UI feature package (planning, docs only)** — product/economy/UI
+  planning for 10 UI lanes, an optional **free-in-alpha** paid boost/recovery concept, a
+  liquidity-first transparency model, fairness guardrails, boost UI copy, and a build roadmap. Docs
+  in `docs/product/` (`GROWVERSE_UI_FEATURE_BUILDS.md`, `GROWVERSE_OPTIONAL_BOOST_ECONOMY.md`,
+  `GROWVERSE_LIQUIDITY_TRANSPARENCY_MODEL.md`, `GROWVERSE_FAIRNESS_GUARDRAILS.md`,
+  `GROWVERSE_BOOST_UI_COPY.md`, `GROWVERSE_BUILD_PRIORITY_ROADMAP.md`); ADR in `DECISIONS.md`
+  (2026-06-19). **No code / no economy change** — boosts are `planned`, free + QA-labeled in alpha;
+  five owner decisions gate any real activation. Build only after the named owner decisions.
+
 ## 🎨 Graphics Phase II/III (COMPLETE — signed off 2026-06-14; no scope expansion)
 > The game's emotional core is the whole-plant chamber view. This track is **visual-only** —
 > no economy / chain / breeding / factions / combat / new crop families. Canon lives in

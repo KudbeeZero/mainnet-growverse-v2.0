@@ -552,3 +552,16 @@ price monotonicity, the 50-GROW stipend), and avoids touching gameplay.
 **auto-reactivate** to enforce the launch economy the moment those values are restored. **To go live
 (owner, one balance.yaml edit):** `seeds.base_cost: 25`, `rarity_multiplier` `[common 1, uncommon 2,
 rare 6, epic 20, legendary 40]`, `daily_stipend: 50`. No code change needed to flip it on.
+
+### 2026-06-19 — Optional paid boost economy: planned, free-in-alpha, liquidity-first (docs only)
+**Decision:** Document (not build) an **optional** paid plant-boost/recovery economy. During alpha all
+boosts are **free and QA-labeled** (same convention as the `seeds.base_cost: 0 # FREE for testing`
+flag). Full planning lives in `docs/product/` (boost economy, liquidity transparency, fairness
+guardrails, UI copy, roadmap). **Why:** the creator needs sustainable revenue, but the core loop must
+stay free and the transparency promise must hold — no pay-to-win, no secret routing of boost money
+into Cup prize pools (the Cup is funded only by its own entry-fee sink). **Consequences:**
+time-skip/speed/recovery/rewind boosts **do not exist yet** and are documented as `planned`, not
+shipped; no payment rails are built; chain stays TestNet/mock-by-default. Five owner decisions gate
+any real activation (allocation model A/B/C, money rails, recovery-vs-rewind, Cup policy, boost caps)
+— see `docs/product/GROWVERSE_BUILD_PRIORITY_ROADMAP.md`. Any boost granting in-game value must post
+through the audited ledger (`economy/ledger.py`).

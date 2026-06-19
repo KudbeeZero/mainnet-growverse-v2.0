@@ -141,3 +141,17 @@ so correctness is *re-proven on every push* instead of remembered.
    when they disagree, this file wins — and the layer-map table here is the one to update first.
 4. **Don't let it sprawl.** It's an index + dashboard, not prose. Deep detail lives in the layer it
    points at.
+
+## Product / planning docs (`docs/product/`)
+Forward-looking product/economy/UI planning (status-labeled `live | in-progress | placeholder |
+planned | not-wired`; nothing claimed live without a real path). Build only after the owner
+decisions listed in the roadmap.
+
+| Doc | Scope |
+|-----|-------|
+| `docs/product/GROWVERSE_UI_FEATURE_BUILDS.md` | 10 UI feature lanes (onboarding, grow board, guide, notifications, suggestions, journal, persona, market feedback, tester status, mobile dashboard) |
+| `docs/product/GROWVERSE_OPTIONAL_BOOST_ECONOMY.md` | Optional, free-in-alpha paid boost/recovery concept (all `planned`) |
+| `docs/product/GROWVERSE_LIQUIDITY_TRANSPARENCY_MODEL.md` | USD/approx-ALGO pricing + liquidity-first allocation models A/B/C + public copy |
+| `docs/product/GROWVERSE_FAIRNESS_GUARDRAILS.md` | Pay-to-win prevention, caps, Cup rules, boosted-plant labeling |
+| `docs/product/GROWVERSE_BOOST_UI_COPY.md` | Paste-ready button/modal/receipt/QA copy |
+| `docs/product/GROWVERSE_BUILD_PRIORITY_ROADMAP.md` | Phased order + risks/legal notes + top-5 owner decisions |
