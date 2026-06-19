@@ -2,12 +2,14 @@
 
 import { use } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
-import { PlantVisual } from "@/components/plant/PlantVisual";
+import { plantRender } from "@/lib/plantRender";
+import { previewDev, seedForPlant } from "@/lib/chamber/morphology";
 import { StatBars } from "@/components/plant/StatBars";
 import { ConditionBadges } from "@/components/plant/ConditionBadges";
 import { CareButtons } from "@/components/plant/CareButtons";
@@ -25,6 +27,14 @@ import { useSession } from "@/lib/session";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { titleCase, num, dateTime } from "@/lib/format";
+
+// Real per-strain plant render (canvas), same component the Command Center /
+// Grow Chamber / plant cards use — replaces the old crude placeholder SVG.
+// ssr:false (canvas) with no loading flash, matching the other call sites.
+const GrowChamber = dynamic(
+  () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
+  { ssr: false, loading: () => null },
+);
 
 function PlantDetail({ plantId }: { plantId: string }) {
   const { playerId } = useSession();
@@ -57,6 +67,10 @@ function PlantDetail({ plantId }: { plantId: string }) {
 
   const strain = map.get(plant.strain_id);
   const pod = pods?.find((p) => p.id === plant.pod_id) ?? null;
+  // Derive the canonical chamber-render inputs (morphology / bud DNA / nominal
+  // grow day) so this view shows the SAME real plant as the chamber/command/card.
+  const render = plantRender(plant, strain, pod ?? undefined);
+  const dev = previewDev(render.liveNominalDay, render.flMid);
   // Reuse FP-3's canonical resolver to decide whether a sticky CTA is warranted —
   // when the plant is thriving (kind "none") we keep the thumb zone clear.
   const hasNextAction = nextPlantAction(plant, pod).kind !== "none";
@@ -107,8 +121,25 @@ function PlantDetail({ plantId }: { plantId: string }) {
             }
             subtitle={`${titleCase(plant.growth_stage)} · ${num(plant.height, 1)} cm`}
           />
-          <div className="flex items-center justify-center rounded-lg bg-ink-900/60 py-4">
-            <PlantVisual stage={plant.growth_stage} flags={plant.condition_flags} size={200} />
+          <div className="relative h-56 w-full overflow-hidden rounded-lg bg-[#050b12]">
+            <GrowChamber
+              seed={seedForPlant(plantId)}
+              day={render.liveNominalDay}
+              stage={plant.growth_stage}
+              morphology={render.morphology}
+              silhouette={render.silhouette}
+              dev={dev}
+              budColor={render.budColor}
+              budDna={render.budDna}
+              climate={{
+                fan: 45,
+                temp: pod?.temperature ?? 24,
+                hum: pod?.humidity ?? 50,
+                co2: pod?.co2_level ?? 800,
+              }}
+              conditionFlags={plant.condition_flags}
+              view="chamber"
+            />
           </div>
           <div className="mt-3">
             <ConditionBadges flags={plant.condition_flags} />
