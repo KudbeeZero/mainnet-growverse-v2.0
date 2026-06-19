@@ -121,3 +121,55 @@ describe("store read-path builders", () => {
     });
   });
 });
+
+describe("store player-scoped purchase/equip builders", () => {
+  it("purchaseGear POSTs to the gear-purchase path with a default quantity of 1", async () => {
+    await store.purchaseGear("player-001", "led_240w");
+
+    expect(mockApiFetch).toHaveBeenCalledTimes(1);
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      "/players/player-001/store/gear/led_240w/purchase",
+      { method: "POST", body: { quantity: 1 } },
+    );
+  });
+
+  it("purchaseGear forwards an explicit quantity", async () => {
+    await store.purchaseGear("player-001", "led_240w", 3);
+
+    expect(mockApiFetch).toHaveBeenCalledTimes(1);
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      "/players/player-001/store/gear/led_240w/purchase",
+      { method: "POST", body: { quantity: 3 } },
+    );
+  });
+
+  it("equipLight POSTs the gear key to the pod equip-light path", async () => {
+    await store.equipLight("player-001", "pod-42", "led_240w");
+
+    expect(mockApiFetch).toHaveBeenCalledTimes(1);
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      "/players/player-001/pods/pod-42/equip-light",
+      { method: "POST", body: { gear_key: "led_240w" } },
+    );
+  });
+
+  it("purchaseBundle POSTs to the bundle-purchase path with no body", async () => {
+    await store.purchaseBundle("player-001", "bundle-7");
+
+    expect(mockApiFetch).toHaveBeenCalledTimes(1);
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      "/players/player-001/store/bundles/bundle-7/purchase",
+      { method: "POST" },
+    );
+  });
+
+  it("purchasePartner POSTs to the partner-purchase path with no body", async () => {
+    await store.purchasePartner("player-001", "partner-9");
+
+    expect(mockApiFetch).toHaveBeenCalledTimes(1);
+    expect(mockApiFetch).toHaveBeenCalledWith(
+      "/players/player-001/store/partners/partner-9/purchase",
+      { method: "POST" },
+    );
+  });
+});
