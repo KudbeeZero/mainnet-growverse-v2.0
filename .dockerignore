@@ -1,0 +1,58 @@
+# Root build context for the Fly Dockerfile. The image only needs the Python
+# backend in growpod/ (requirements.txt, server.py, alembic*, src/); keep the
+# context small and ensure no secrets/frontend/Node tooling leak in.
+
+# VCS / agent tooling
+.git/
+.github/
+.agents/
+**/.claude/
+
+# Node / JS workspace (frontend deploys separately via Cloudflare Pages)
+node_modules/
+**/node_modules/
+growpod/web/
+artifacts/
+lib/
+scripts/
+growpod/artifacts/
+growpod/lib/
+growpod/scripts/
+pnpm-lock.yaml
+pnpm-workspace.yaml
+**/pnpm-lock.yaml
+**/pnpm-workspace.yaml
+package.json
+**/package.json
+.npmrc
+**/.npmrc
+tsconfig*.json
+**/tsconfig*.json
+
+# Python build/test artifacts
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.coverage
+**/htmlcov/
+**/*.egg-info/
+
+# Local SQLite DBs (production uses Postgres via DATABASE_URL)
+**/*.db
+**/*.db-wal
+**/*.db-shm
+
+# Secrets — never bake into an image
+**/.env
+**/.env.*
+!**/.env.example
+
+# Docs / dev notes / assets (not needed at runtime)
+**/*.md
+growpod/docs/
+growpod/night-reports/
+growpod/knowledge/
+attached_assets/
+growpod/attached_assets/
