@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { countdown, msUntil } from "@/lib/format";
+import { countdown } from "@/lib/format";
+import { useCountdown } from "@/hooks/useCountdown";
 
-/** Live ticking countdown to an ISO deadline. */
+/** Live ticking countdown to an ISO deadline. Smooth (no jitter across polls). */
 export function Countdown({
   to,
   className = "",
@@ -13,12 +13,7 @@ export function Countdown({
   className?: string;
   prefix?: string;
 }) {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const ms = msUntil(to);
+  const ms = useCountdown(to);
   return (
     <span className={`instrument-value ${ms <= 0 ? "text-red-300" : ""} ${className}`}>
       {prefix && <span className="mr-1 text-gray-500">{prefix}</span>}
