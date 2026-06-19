@@ -8,6 +8,7 @@ Operational endpoints + request observability.
 """
 
 import logging
+import os
 import time
 import uuid
 
@@ -17,6 +18,20 @@ from sqlalchemy import text
 from ..db.session import get_engine
 
 log = logging.getLogger("growpodempire.access")
+
+# Build stamp for the API, mirrored from the deploy env so `/health` can confirm
+# which build is live (set GIT_SHA / APP_VERSION in the Fly/Render env; common
+# platform SHAs are used as fallbacks). Empty/"dev" when unset locally.
+_GIT_SHA = (
+    os.environ.get("GIT_SHA")
+    or os.environ.get("RENDER_GIT_COMMIT")
+    or os.environ.get("FLY_IMAGE_REF")
+    or ""
+)
+API_BUILD = {
+    "version": os.environ.get("APP_VERSION", "dev"),
+    "sha": _GIT_SHA[:7] if _GIT_SHA else "dev",
+}
 
 
 def register_observability(app) -> None:
@@ -45,7 +60,7 @@ def register_observability(app) -> None:
 
     @app.get("/health")
     def health():
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", **API_BUILD})
 
     @app.get("/readiness")
     def readiness():

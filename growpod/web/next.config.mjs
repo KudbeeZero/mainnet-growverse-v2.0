@@ -52,8 +52,21 @@ const securityHeaders = [
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
+// Build stamp injected at build time so the app can always show the EXACT
+// commit that's deployed (not just a hand-bumped version string). On Vercel,
+// VERCEL_GIT_COMMIT_SHA / VERCEL_ENV are auto-populated; locally they're empty
+// and fall back to "dev"/"local". These are inlined into the client bundle.
+const buildEnv = {
+  NEXT_PUBLIC_BUILD_SHA:
+    process.env.VERCEL_GIT_COMMIT_SHA || process.env.GIT_SHA || "",
+  NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+  NEXT_PUBLIC_BUILD_ENV:
+    process.env.VERCEL_ENV || process.env.NODE_ENV || "local",
+};
+
 const nextConfig = {
   reactStrictMode: true,
+  env: buildEnv,
   // Pin output file tracing to this app's directory (portable across hosts).
   outputFileTracingRoot: import.meta.dirname,
   async headers() {

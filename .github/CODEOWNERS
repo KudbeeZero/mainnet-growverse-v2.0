@@ -1,0 +1,12 @@
+# Default owner for everything in the repo. Routes review requests and makes
+# CODEOWNERS-based protections (if enabled) resolve to the owner.
+* @KudbeeZero
+
+# Protected surfaces — call out explicitly so changes here are unmistakable.
+/growpod/src/growpodempire/data/balance.yaml   @KudbeeZero
+/growpod/src/growpodempire/migrations/         @KudbeeZero
+/growpod/src/growpodempire/api/auth.py          @KudbeeZero
+/fly.toml                                        @KudbeeZero
+/Dockerfile                                      @KudbeeZero
+/growpod/render.yaml                             @KudbeeZero
+/.github/                                        @KudbeeZero
