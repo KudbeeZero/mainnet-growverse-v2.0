@@ -16,7 +16,6 @@ import type { Player } from "@/lib/types";
 type Tab = "create" | "import";
 
 export function OnboardingPanel() {
-  const router = useRouter();
   const [tab, setTab] = useState<Tab>("create");
   const [createdKey, setCreatedKey] = useState<{ player: Player; key: string } | null>(null);
 
@@ -44,17 +43,6 @@ export function OnboardingPanel() {
         ) : (
           <ImportForm />
         )}
-
-        {/* Offline escape hatch: lets the player reach the grow loop even when the
-            backend login is unavailable (no raw 404). Local-only, clearly labeled. */}
-        <div className="mt-4 border-t border-ink-700 pt-4">
-          <p className="mb-2 text-center text-xs text-gray-400">
-            Cloud login not connected yet?
-          </p>
-          <Button variant="secondary" className="w-full" onClick={() => router.push("/demo")}>
-            ▶ Play Demo Grow (offline)
-          </Button>
-        </div>
       </Card>
       {/* Dev/test-only shortcut — invisible in production (flag default off). */}
       {isDevBypassEnabled() && <DevSkipLoginButton />}
@@ -101,8 +89,7 @@ function CreateForm({
       }
       onCreated(player, player.api_key);
     },
-    onError: (e) =>
-      toast.error(`${e.message} — or use “Play Demo Grow (offline)” below.`),
+    onError: (e) => toast.error(e.message),
   });
 
   return (
@@ -156,7 +143,7 @@ function ImportForm() {
       toast.error(
         e.status === 403
           ? "That API key doesn't match this Player ID"
-          : `Sign in failed: ${e.message} — or use “Play Demo Grow (offline)” below.`,
+          : `Sign in failed: ${e.message}`,
       ),
   });
 
