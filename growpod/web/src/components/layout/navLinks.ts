@@ -35,6 +35,7 @@ const ALL_NAV_LINKS: NavLink[] = [
   { href: "/store", label: "Store", icon: "🏪" },
   { href: "/university", label: "University", icon: "🎓", feature: "university" },
   { href: "/leaderboards", label: "Leaderboards", icon: "📊" },
+  { href: "/guide", label: "Guide", icon: "📖" },
   { href: "/profile", label: "Profile", icon: "👤" },
   { href: "/admin/economy", label: "Economy", icon: "📈" },
 ];
