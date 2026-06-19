@@ -20,15 +20,32 @@ NEXT_PUBLIC_API_BASE=https://api.frontierprotocol.app
 
 The web client appends `/api/game` itself, so set the base origin only.
 
+## Where to run `flyctl` (this fixes "Could not detect runtime or Dockerfile")
+
+Fly looks for a `Dockerfile` in the directory you run it from. The backend lives
+in `growpod/`, but the git repo root is one level up (a pnpm/TS workspace Fly
+can't auto-detect). So there are **two** equivalent setups — use whichever
+matches where you run Fly:
+
+- **Repo root** (default for `flyctl launch` against the GitHub repo): a
+  root-level `Dockerfile` + `fly.toml` build the backend from `growpod/`. Just
+  run `fly launch` / `fly deploy` from the repo root.
+- **Inside `growpod/`**: `growpod/Dockerfile` + `growpod/fly.toml` build the same
+  image with a `growpod/` context. Run Fly after `cd growpod`.
+
+Both produce the identical `frontiernext` image. If you previously hit
+"Could not find a Dockerfile, nor detect a runtime…", you were launching from
+the repo root before the root-level files existed — that's now fixed.
+
 ## What's in this repo for Fly
 
 - `Dockerfile` — Python 3.11-slim, installs `requirements.txt`, runs
   `gunicorn -b 0.0.0.0:$PORT -w 2 server:app` (identical command to `render.yaml`).
+  Present at both the repo root and in `growpod/`.
 - `fly.toml` — app `frontiernext`, region `ord`, internal port `8080`,
-  `/health` check, and a `release_command` that runs migrations + seed.
+  `/health` check, and a `release_command` that runs migrations + seed. Present
+  at both the repo root and in `growpod/`.
 - `.dockerignore` — keeps secrets and the frontend/Node tooling out of the image.
-
-Build/deploy from **this directory** (`growpod/`).
 
 ## Required secrets & env vars
 
