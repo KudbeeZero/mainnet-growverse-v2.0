@@ -7,6 +7,7 @@ Keys are compared in constant time.
 """
 
 import hmac
+import logging
 from functools import wraps
 
 from flask import request, jsonify
@@ -15,6 +16,8 @@ from ..db.session import session_scope
 from ..db.models import Player
 
 API_KEY_HEADER = "X-API-Key"
+
+logger = logging.getLogger(__name__)
 
 
 def require_player(view):
@@ -77,6 +80,15 @@ def require_admin(view):
                 player = s.query(Player).filter(Player.api_key == provided).first()
                 if player is None:
                     return jsonify({"error": "Invalid API key"}), 403
+            # Loud breadcrumb: this convenience path grants admin access to ANY
+            # valid player key. It must never be hit in a shared environment —
+            # set ADMIN_SECRET there. (Production already takes Path 3 / locks.)
+            logger.warning(
+                "Admin endpoint %s authorized via dev fallback (no ADMIN_SECRET "
+                "set, APP_ENV=%s). Set ADMIN_SECRET in shared environments.",
+                request.path,
+                settings.app_env,
+            )
 
         else:
             # Path 3 — production with no secret configured: lock the routes.

@@ -21,6 +21,17 @@ function on(value: string | undefined): boolean {
   return value === "true";
 }
 
+/**
+ * Opt-out resolver: a flag is ON unless explicitly disabled with the exact
+ * string "false". Used by the live `FEATURES` map so production keeps serving
+ * the surfaces that are live today, while still allowing any surface to be
+ * killed per-environment by setting its NEXT_PUBLIC_ENABLE_* var to "false"
+ * (no code change / redeploy of code needed).
+ */
+export function enabledUnlessDisabled(value: string | undefined): boolean {
+  return value !== "false";
+}
+
 export type FeatureEnv = {
   NEXT_PUBLIC_ENABLE_MARKETPLACE?: string;
   NEXT_PUBLIC_ENABLE_CHAIN?: string;
@@ -40,22 +51,26 @@ export function computeFeatures(env: FeatureEnv): Record<FeatureName, boolean> {
   };
 }
 
-// ⚠️ TESTING MODE: all flags forced ON. Before launch, replace this literal with
-// the env-driven version below so non-MVP surfaces can be turned off per-env:
-//
-//   export const FEATURES = computeFeatures({
-//     NEXT_PUBLIC_ENABLE_MARKETPLACE: process.env.NEXT_PUBLIC_ENABLE_MARKETPLACE,
-//     NEXT_PUBLIC_ENABLE_CHAIN:       process.env.NEXT_PUBLIC_ENABLE_CHAIN,
-//     NEXT_PUBLIC_ENABLE_CUP:         process.env.NEXT_PUBLIC_ENABLE_CUP,
-//     NEXT_PUBLIC_ENABLE_UNIVERSITY:  process.env.NEXT_PUBLIC_ENABLE_UNIVERSITY,
-//     NEXT_PUBLIC_ENABLE_CONTRACTS:   process.env.NEXT_PUBLIC_ENABLE_CONTRACTS,
-//   });
+/**
+ * Resolved feature flags for THIS build.
+ *
+ * Security: these were previously hardcoded `true` with no way to disable a
+ * surface per environment. They are now env-driven via NEXT_PUBLIC_ENABLE_*, so
+ * any feature can be turned OFF in a given deployment by setting its var to
+ * "false" — a real per-env kill switch.
+ *
+ * Default-ON / opt-out (`enabledUnlessDisabled`) is deliberate: it preserves the
+ * features that are live in production today (so this hardening change can't
+ * silently dark-launch the site) while still making every surface gateable. To
+ * move to strict opt-in (default-OFF unless explicitly "true"), swap the resolver
+ * for `computeFeatures({ ... })` once the deploy env sets the vars explicitly.
+ */
 export const FEATURES: Record<FeatureName, boolean> = {
-  marketplace: true,
-  chain:       true,
-  cup:         true,
-  university:  true,
-  contracts:   true,
+  marketplace: enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_MARKETPLACE),
+  chain:       enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_CHAIN),
+  cup:         enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_CUP),
+  university:  enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_UNIVERSITY),
+  contracts:   enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_CONTRACTS),
 };
 
 /** True if a named feature is enabled in this build. */

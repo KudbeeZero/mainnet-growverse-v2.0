@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeFeatures } from "@/lib/features";
+import { computeFeatures, enabledUnlessDisabled } from "@/lib/features";
 
 describe("computeFeatures", () => {
   it("defaults every non-MVP feature OFF when env is empty", () => {
@@ -31,5 +31,19 @@ describe("computeFeatures", () => {
     const f = computeFeatures({ NEXT_PUBLIC_ENABLE_CUP: "true" });
     expect(f.cup).toBe(true);
     expect(f.marketplace).toBe(false);
+  });
+});
+
+describe("enabledUnlessDisabled (live FEATURES resolver)", () => {
+  it("defaults ON when unset (preserves live production behavior)", () => {
+    expect(enabledUnlessDisabled(undefined)).toBe(true);
+    expect(enabledUnlessDisabled("")).toBe(true);
+  });
+
+  it('turns OFF only on the exact string "false"', () => {
+    expect(enabledUnlessDisabled("false")).toBe(false);
+    expect(enabledUnlessDisabled("FALSE")).toBe(true); // not exact → stays ON
+    expect(enabledUnlessDisabled("0")).toBe(true);
+    expect(enabledUnlessDisabled("true")).toBe(true);
   });
 });

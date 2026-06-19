@@ -37,8 +37,21 @@ def init_limiter(app) -> None:
     """Configure and attach the shared limiter to `app` from its config."""
     if not app.config.get("RATELIMIT_ENABLED", True):
         return
-    app.config["RATELIMIT_STORAGE_URI"] = app.config.get(
-        "RATELIMIT_STORAGE_URI", get_settings().ratelimit_storage_uri
+    settings = get_settings()
+    storage_uri = app.config.get(
+        "RATELIMIT_STORAGE_URI", settings.ratelimit_storage_uri
     )
+    # Fail-closed: in-memory limits live per-worker, so a multi-worker production
+    # server lets an attacker round-robin requests across workers to bypass the
+    # cap. Refuse to boot prod with ineffective rate limiting rather than provide
+    # a false sense of protection. (Dev/CI keep memory:// for zero-config runs.)
+    if settings.is_production and storage_uri.startswith("memory://"):
+        raise RuntimeError(
+            "Rate limiting is in-memory (memory://) but APP_ENV is production. "
+            "In-memory limits are bypassable across workers — set "
+            "RATELIMIT_STORAGE_URI to a shared store (e.g. redis://...), or "
+            "explicitly set RATELIMIT_ENABLED=false to opt out."
+        )
+    app.config["RATELIMIT_STORAGE_URI"] = storage_uri
     # Keep the default limit headers off internal probes (health checks).
     limiter.init_app(app)
