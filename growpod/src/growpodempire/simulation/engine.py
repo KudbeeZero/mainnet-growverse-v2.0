@@ -18,6 +18,21 @@ from ..enums import GrowthStage
 from ..db.models import Plant, GrowPod, PlantEvent
 from . import reactions, horticulture
 from .conditions import PlantCondition
+from .engines.base import EngineContext
+
+# The per-hour engine pipeline. Built lazily so `engines.legacy` (which imports
+# `_step` from this module) can be imported without a cycle. Parity-first: the
+# only stage today is the LegacyStepEngine wrapping `_step`, so the pipeline
+# reproduces the original behavior exactly. Real micro-engines are inserted here.
+_PIPELINE = None
+
+
+def _pipeline():
+    global _PIPELINE
+    if _PIPELINE is None:
+        from .engines.legacy import LegacyStepEngine
+        _PIPELINE = [LegacyStepEngine()]
+    return _PIPELINE
 
 # Stages that actually grow / take time, in order.
 _STAGE_ORDER = [
@@ -347,7 +362,12 @@ def catch_up(session, plant: Plant, now: datetime, cfg) -> List[PlantEvent]:
     for _ in range(elapsed_hours):
         t = plant.last_tick_at + timedelta(hours=1)
         rng = _rng_for(plant.id, t)
-        step_events = _step(plant, env, sim, rng, t, auto)
+        # Thin orchestrator: run the engine pipeline for this hour. (Today that is
+        # the single LegacyStepEngine, so behavior is identical to calling _step.)
+        ctx = EngineContext(plant=plant, env=env, sim=sim, rng=rng, t=t, auto=auto)
+        step_events: List[dict] = []
+        for engine in _pipeline():
+            step_events.extend(engine.update(ctx))
         plant.last_tick_at = t
 
         for ev in step_events:
