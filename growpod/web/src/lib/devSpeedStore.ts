@@ -3,31 +3,19 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-interface DevSpeedState {
-  devSpeed: boolean;
-  elapsedHours: number;
+// Lightweight "last visit" tracker, used to surface the welcome-back / neglect
+// prompt after a long absence. (The global 10× speed faucet is now server-owned
+// via `useTurbo` and toggled only in the Grow Chamber; the legacy localStorage
+// key name below is kept so existing visit timestamps survive the migration.)
+interface VisitState {
   lastVisitMs: number;
-  toggle: () => void;
-  setDevSpeed: (v: boolean) => void;
-  incrementHours: () => void;
-  resetElapsed: () => void;
   markVisit: () => void;
 }
 
-export const useDevSpeedStore = create<DevSpeedState>()(
+export const useDevSpeedStore = create<VisitState>()(
   persist(
     (set) => ({
-      devSpeed: false,
-      elapsedHours: 0,
       lastVisitMs: 0,
-      toggle: () =>
-        set((s) => ({
-          devSpeed: !s.devSpeed,
-          elapsedHours: 0,
-        })),
-      setDevSpeed: (v) => set({ devSpeed: v, elapsedHours: 0 }),
-      incrementHours: () => set((s) => ({ elapsedHours: s.elapsedHours + 1 })),
-      resetElapsed: () => set({ elapsedHours: 0 }),
       markVisit: () => set({ lastVisitMs: Date.now() }),
     }),
     {

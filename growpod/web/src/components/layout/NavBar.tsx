@@ -5,12 +5,10 @@ import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session";
 import { NAV_LINKS, isActiveLink, navOnboardingId } from "./navLinks";
 import { PlayerBadge } from "./PlayerBadge";
-import { useTurbo } from "@/hooks/useTurbo";
 
 export function NavBar() {
   const pathname = usePathname();
-  const { isAuthed, playerId } = useSession();
-  const { enabled: devSpeed, multiplier, isToggling, toggle } = useTurbo(playerId);
+  const { isAuthed } = useSession();
 
   return (
     <header className="sticky top-0 z-30 border-b border-ink-700 bg-ink-900/95 backdrop-blur">
@@ -48,28 +46,8 @@ export function NavBar() {
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {isAuthed && (
-            <button
-              onClick={() => !isToggling && toggle()}
-              disabled={isToggling}
-              title={
-                devSpeed
-                  ? `Global ${multiplier}× speed ON for every pod — click to turn off`
-                  : `Enable global ${multiplier}× time acceleration (all pods)`
-              }
-              className={`relative flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold tracking-wide transition-all duration-300 disabled:opacity-60 ${
-                devSpeed
-                  ? "border-green-400 bg-green-500/20 text-green-300 shadow-[0_0_12px_rgba(74,222,128,0.5)]"
-                  : "border-ink-600 bg-ink-800 text-gray-500 hover:border-green-700 hover:text-green-400"
-              }`}
-            >
-              {/* Slow glow pulse ring when active */}
-              {devSpeed && (
-                <span className="animate-ping pointer-events-none absolute inset-0 rounded-full border border-green-400/60" />
-              )}
-              ⚡ {multiplier}×
-            </button>
-          )}
+          {/* The global 10× speed faucet is toggled in ONE place only — the Grow
+              Chamber (Open Grow Chamber → ⚡10×). Intentionally no nav toggle. */}
           <PlayerBadge />
         </div>
       </div>

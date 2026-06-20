@@ -17,7 +17,6 @@ import { usePods, usePlantsList } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useIdStore } from "@/lib/localStore";
 import { useDevSpeedStore } from "@/lib/devSpeedStore";
-import { useTurbo } from "@/hooks/useTurbo";
 
 const PodCard = dynamic(
   () => import("@/components/pod/PodCard").then((m) => m.PodCard),
@@ -55,10 +54,9 @@ function DashboardInner() {
   const [showCreate, setShowCreate] = useState(false);
   const [showNeglect, setShowNeglect] = useState(false);
 
-  // ⚡ Global 10× speed faucet is server-owned (see useTurbo): the toggle lives in
-  // the nav and accelerates EVERY pod account-wide. Here we only auto-stop it once
-  // a plant is harvest-ready so a QA run doesn't overshoot.
-  const { enabled: devSpeed, setEnabled: setTurbo } = useTurbo(playerId);
+  // The global 10× speed faucet is toggled in ONE place only — the Grow Chamber
+  // (see useTurbo / chamber page). The dashboard only reflects it (plant-card
+  // glow), it does not control it.
 
   // On mount: check for long absence, then record this visit.
   useEffect(() => {
@@ -67,15 +65,6 @@ function DashboardInner() {
     mv();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Auto-stop the faucet when any plant hits harvest-ready (server-side off).
-  useEffect(() => {
-    if (!devSpeed) return;
-    const ready = (plants.data ?? []).some(
-      (p) => p.is_alive && !p.harvested && p.growth_stage === "harvest",
-    );
-    if (ready) setTurbo(false);
-  }, [plants.data, devSpeed, setTurbo]);
 
   if (pods.isLoading) return <LoadingBlock label="Loading your grow…" />;
 

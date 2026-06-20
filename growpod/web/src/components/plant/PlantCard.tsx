@@ -16,7 +16,7 @@ import { StageTimelineCompact } from "./StageTimeline";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap } from "@/hooks/queries";
 import { useCleanupPlant } from "@/hooks/useCareActions";
-import { useDevSpeedStore } from "@/lib/devSpeedStore";
+import { useTurbo } from "@/hooks/useTurbo";
 import { titleCase, num } from "@/lib/format";
 import {
   morphologyFor,
@@ -47,7 +47,8 @@ export function PlantCard({
   const { map } = useStrainMap();
   const cleanup = useCleanupPlant();
   const [chamberView, setChamberView] = useState<ChamberView>("chamber");
-  const devSpeed = useDevSpeedStore((s) => s.devSpeed);
+  // Read-only reflection of the global faucet (toggled only in the Grow Chamber).
+  const { enabled: devSpeed } = useTurbo(playerId);
 
   if (isLoading) {
     return (

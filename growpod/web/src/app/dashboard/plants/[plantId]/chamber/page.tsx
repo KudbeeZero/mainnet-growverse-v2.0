@@ -462,7 +462,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       {/* ⚡ Global speed faucet — fixed bottom-right. ON accelerates EVERY pod on
           the account (server-side, account-wide); shows the harvest countdown. */}
       <button
-        onClick={() => !isToggling && toggleTurbo()}
+        onClick={() => !isToggling && toggleTurbo(!devSpeed)}
         disabled={isToggling}
         title={
           devSpeed

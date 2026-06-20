@@ -7,7 +7,10 @@
 //   2.0.4 — integrated build: deeper 14-step onboarding + Guide + QA feedback
 //   2.0.5 — 10× faster grow pacing · jitter-free countdown timers · real
 //           per-strain plant render on detail page · deploy build-stamp + PR guardrails
-export const APP_VERSION = "2.0.5";
+//   2.0.7 — global 10× speed faucet: server-owned per-account turbo (every pod at
+//           once, banked/forward-only, production-safe), toggled in ONE place —
+//           the Grow Chamber. Verified working; economy-safe (stipend unaffected).
+export const APP_VERSION = "2.0.7";
 
 // Automatic build stamp — injected at build time from Vercel's git env (see
 // next.config.mjs `env`). Unlike APP_VERSION, these change on EVERY deploy even

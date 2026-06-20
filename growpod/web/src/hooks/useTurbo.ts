@@ -1,24 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { queryKeys } from "@/lib/queryKeys";
-import { useDevSpeedStore } from "@/lib/devSpeedStore";
+import type { TurboState } from "@/lib/api";
 
 /**
- * The global per-account "10× test" speed faucet.
+ * Global per-ACCOUNT "10× test" speed faucet.
  *
- * `enabled` is server truth (the toggle reflects the account, not a client
- * guess). Flipping it POSTs to the backend, which accelerates EVERY one of the
- * account's pods on its own clock; we then invalidate the plant/pods/player
- * caches so the accelerated state shows immediately and keeps updating on the
- * normal poll. No client-side clock ticking — the server owns the time.
+ * Unlike the old client-side dev-clock loop (which 404'd in production), this is
+ * server-authoritative: flipping it sets a banked, forward-only multiplier on
+ * the player so EVERY pod advances together, and it survives in prod. The hook
+ * exposes the server's truth (`enabled`) and a toggle that, on success, pulls
+ * fresh accelerated plant/pod state so the change is reflected immediately.
  */
 export function useTurbo(playerId: string | null) {
   const qc = useQueryClient();
 
-  const state = useQuery({
+  const state = useQuery<TurboState>({
     queryKey: ["turbo", playerId],
     queryFn: () => api.turbo.get(playerId!),
     enabled: !!playerId,
@@ -26,28 +24,16 @@ export function useTurbo(playerId: string | null) {
     refetchInterval: 20_000,
   });
 
-  // Mirror server truth into the legacy client store so every existing consumer
-  // (plant-card glow, nav badge, QA milestones) reflects the account's real
-  // turbo state without each one having to call the API.
-  const serverEnabled = state.data?.enabled;
-  useEffect(() => {
-    if (serverEnabled !== undefined) {
-      useDevSpeedStore.getState().setDevSpeed(serverEnabled);
-    }
-  }, [serverEnabled]);
-
   const toggle = useMutation({
     mutationFn: (enabled: boolean) => api.turbo.set(playerId!, enabled),
     onSuccess: (data) => {
       qc.setQueryData(["turbo", playerId], data);
-      useDevSpeedStore.getState().setDevSpeed(data.enabled);
-      if (playerId) {
-        qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
-        qc.invalidateQueries({ queryKey: queryKeys.pods(playerId) });
-        qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
-      }
-      // Every open plant view (key ["plant", id]) — refresh to the new clock.
+      // Every pod just jumped to the new clock on the server — refetch the
+      // plant/pod views so the account reflects it without waiting for a poll.
       qc.invalidateQueries({ queryKey: ["plant"] });
+      qc.invalidateQueries({ queryKey: ["plants"] });
+      qc.invalidateQueries({ queryKey: ["pods"] });
+      qc.invalidateQueries({ queryKey: ["events"] });
     },
   });
 
@@ -55,7 +41,6 @@ export function useTurbo(playerId: string | null) {
     enabled: state.data?.enabled ?? false,
     multiplier: state.data?.multiplier ?? 10,
     isToggling: toggle.isPending,
-    setEnabled: (next: boolean) => toggle.mutate(next),
-    toggle: () => toggle.mutate(!(state.data?.enabled ?? false)),
+    toggle: (next: boolean) => toggle.mutate(next),
   };
 }

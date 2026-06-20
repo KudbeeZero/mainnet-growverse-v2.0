@@ -8,12 +8,13 @@
 
 import { useEffect, useRef } from "react";
 import { useToast } from "@/components/ui/Toast";
-import { useDevSpeedStore } from "@/lib/devSpeedStore";
+import { useTurbo } from "@/hooks/useTurbo";
 import { titleCase } from "@/lib/format";
 import type { PlantState } from "@/lib/types";
 
-export function useQaMilestones(plant: PlantState | undefined) {
-  const qaActive = useDevSpeedStore((s) => s.devSpeed);
+export function useQaMilestones(plant: PlantState | undefined, playerId: string | null) {
+  // Server-truth: the global 10× faucet (toggled only in the Grow Chamber).
+  const { enabled: qaActive } = useTurbo(playerId);
   const toast = useToast();
   const prev = useRef<PlantState | null>(null);
 
