@@ -8,13 +8,23 @@ import { useToast } from "@/components/ui/Toast";
 import { useIdStore } from "@/lib/localStore";
 import type { Plant, Harvest } from "@/lib/types";
 
-type CareKind = "water" | "feed" | "treatPests" | "treatDisease";
+type CareKind =
+  | "water"
+  | "feed"
+  | "treatPests"
+  | "treatDisease"
+  | "prune"
+  | "train"
+  | "boost";
 
 const LABELS: Record<CareKind, string> = {
   water: "Watered",
   feed: "Fed nutrients",
   treatPests: "Treated pests",
   treatDisease: "Treated disease",
+  prune: "Pruned",
+  train: "Trained",
+  boost: "Boosted",
 };
 
 export function useCareActions(plantId: string) {
@@ -36,6 +46,9 @@ export function useCareActions(plantId: string) {
       if (kind === "water") return api.plants.water(playerId!, plantId);
       if (kind === "feed") return api.plants.feed(playerId!, plantId);
       if (kind === "treatPests") return api.plants.treatPests(playerId!, plantId);
+      if (kind === "prune") return api.plants.prune(playerId!, plantId);
+      if (kind === "train") return api.plants.train(playerId!, plantId);
+      if (kind === "boost") return api.plants.boost(playerId!, plantId);
       return api.plants.treatDisease(playerId!, plantId);
     },
     onSuccess: (_data, kind) => {

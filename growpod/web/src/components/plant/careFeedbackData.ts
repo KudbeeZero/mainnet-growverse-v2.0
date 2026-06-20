@@ -7,7 +7,15 @@
  * cosmetic reinforcement only: "I helped my plant."
  */
 
-export type CareKind = "water" | "feed" | "treatPests" | "treatDisease" | "harvest";
+export type CareKind =
+  | "water"
+  | "feed"
+  | "treatPests"
+  | "treatDisease"
+  | "prune"
+  | "train"
+  | "boost"
+  | "harvest";
 
 export interface CareFx {
   /** Particle glyphs, cycled across the burst. */
@@ -27,6 +35,10 @@ export const CARE_FX: Record<CareKind, CareFx> = {
   feed: { glyphs: ["🧪", "✨"], count: 6, haptic: 22, tone: "grow", label: "Fed" },
   treatPests: { glyphs: ["🐞", "✨"], count: 5, haptic: [12, 40, 12], tone: "amber", label: "Pests treated" },
   treatDisease: { glyphs: ["🧫", "✨"], count: 5, haptic: [12, 40, 12], tone: "amber", label: "Disease treated" },
+  // Free care tools — gentle, free reinforcement.
+  prune: { glyphs: ["✂️", "🌿"], count: 5, haptic: 18, tone: "grow", label: "Pruned" },
+  train: { glyphs: ["🪢", "🌿"], count: 5, haptic: 18, tone: "grow", label: "Trained" },
+  boost: { glyphs: ["⚡", "✨"], count: 6, haptic: 22, tone: "accent", label: "Boosted" },
   // The celebration: a fuller, wider, longer spray — the screenshot moment.
   harvest: { glyphs: ["🌾", "✨", "🌿", "⭐"], count: 14, haptic: [20, 30, 20, 30, 40], tone: "grow", label: "Harvested" },
 };

@@ -213,6 +213,10 @@ simulation:
   actions:
     water_amount: 35
     feed_amount: 30
+    # Free "care tool" actions (no ledger spend). Conservative, gentle effects.
+    prune: {pest_reduction: 15, disease_reduction: 10, health_add: 2}
+    train: {health_add: 3, pest_reduction: 5}
+    boost: {water_floor: 80, nutrient_floor: 80, health_add: 4, cooldown_hours: 6}
 
   # Pod automation (higher tiers): top resources up when they run low.
   automation:
