@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { APP_VERSION, BUILD_SHA, IS_DEPLOYED_BUILD } from "@/lib/version";
+import { APP_VERSION, BUILD_SHA, BUILD_TIME_CT, IS_DEPLOYED_BUILD } from "@/lib/version";
 
 // Tasteful creator branding so people arriving from Twitter recognize Kudbee,
 // plus a quick path to the in-game Guide. Lives at the bottom of the app shell.
@@ -22,6 +22,14 @@ export function Footer() {
           v{APP_VERSION}
           {IS_DEPLOYED_BUILD && <span className="text-gray-600"> · {BUILD_SHA}</span>}
         </span>
+        {BUILD_TIME_CT && (
+          <>
+            <span className="mx-2">·</span>
+            <span className="font-mono text-gray-600" title="Build time (US Central)">
+              {BUILD_TIME_CT}
+            </span>
+          </>
+        )}
       </p>
     </footer>
   );

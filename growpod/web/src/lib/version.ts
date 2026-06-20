@@ -10,7 +10,9 @@
 //   2.0.7 — global 10× speed faucet: server-owned per-account turbo (every pod at
 //           once, banked/forward-only, production-safe), toggled in ONE place —
 //           the Grow Chamber. Verified working; economy-safe (stipend unaffected).
-export const APP_VERSION = "2.0.7";
+//   2.0.8 — turbo single-toggle confirmed (removed the duplicate nav button) +
+//           smooth wall-anchored countdown + Central-time build stamp in footer.
+export const APP_VERSION = "2.0.8";
 
 // Automatic build stamp — injected at build time from Vercel's git env (see
 // next.config.mjs `env`). Unlike APP_VERSION, these change on EVERY deploy even
@@ -24,6 +26,17 @@ export const BUILD_SHA = RAW_SHA ? RAW_SHA.slice(0, 7) : "dev";
 
 /** ISO timestamp of when this bundle was built. */
 export const BUILD_TIME = process.env.NEXT_PUBLIC_BUILD_TIME || "";
+
+/** Build time formatted in US Central (Chicago) time — e.g. "Jun 20, 2026,
+ *  6:15 AM CT" — so the owner can read at a glance WHEN the live build shipped,
+ *  in their own timezone. Empty when built locally (no injected build time). */
+export const BUILD_TIME_CT = BUILD_TIME
+  ? `${new Date(BUILD_TIME).toLocaleString("en-US", {
+      timeZone: "America/Chicago",
+      dateStyle: "medium",
+      timeStyle: "short",
+    })} CT`
+  : "";
 
 /** Deploy environment: "production" | "preview" | "development" | "local". */
 export const BUILD_ENV = process.env.NEXT_PUBLIC_BUILD_ENV || "local";

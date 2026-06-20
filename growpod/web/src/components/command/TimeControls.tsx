@@ -16,6 +16,8 @@ const JUMPS: { label: string; days: number }[] = [
  */
 export function TimeControls({
   forecast,
+  turboOn = false,
+  turboX = 10,
   previewing,
   previewDay,
   liveNominalDay,
@@ -24,6 +26,9 @@ export function TimeControls({
   onLive,
 }: {
   forecast: StageForecast | undefined;
+  /** Live global turbo state (read-only readout) — the faucet is toggled in the Grow Chamber. */
+  turboOn?: boolean;
+  turboX?: number;
   previewing: boolean;
   previewDay: number;
   liveNominalDay: number;
@@ -53,13 +58,19 @@ export function TimeControls({
 
       <div className="text-center">
         <div className="instrument-label text-[9px]">SPEED</div>
-        <div className="font-mono text-sm font-bold text-cyan-200">1x · NORMAL</div>
+        <div
+          className={`font-mono text-sm font-bold ${turboOn ? "text-green-300" : "text-cyan-200"}`}
+        >
+          {turboOn ? `⚡ ${turboX}× · TURBO` : "1× · NORMAL"}
+        </div>
       </div>
 
       <div className="h-7 w-px bg-ink-700" aria-hidden />
 
       <div className="flex items-center gap-1.5">
-        <span className="instrument-label text-[9px]">PREVIEW</span>
+        <span className="instrument-label text-[9px]" title="View-only — scrubs the preview; does not change real grow speed">
+          PREVIEW
+        </span>
         {JUMPS.map((j) => (
           <button
             key={j.label}
