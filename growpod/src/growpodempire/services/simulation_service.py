@@ -107,6 +107,7 @@ class SimulationService:
         return trg.telemetry(
             plant.growth_stage, fc.get("stage_progress_pct", 0.0),
             plant.health, env.get("light", 600.0), genetics, self._sim,
+            water=plant.water_level, nutrient=plant.nutrient_level,
         )
 
     def metrics(self, plant: Plant) -> dict:
