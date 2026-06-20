@@ -79,6 +79,18 @@ export function isFeatureEnabled(name: FeatureName): boolean {
 }
 
 /**
+ * 3D bud renderer (WebGL/three.js) — experimental, OFF by default.
+ *
+ * Opt-IN: only the exact string "true" enables it build-wide. The chamber page
+ * additionally honours a `?bud3d=1` query param so it can be previewed (and
+ * screenshotted in e2e) without a dedicated build. Falls back to the Canvas
+ * `GrowChamber` when off / unsupported / reduced-motion.
+ */
+export function isBud3DEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ENABLE_BUD3D === "true";
+}
+
+/**
  * Dev/test-only "skip login" bypass.
  *
  * OFF unless `NEXT_PUBLIC_ENABLE_DEV_BYPASS=true` is set at build time (the
