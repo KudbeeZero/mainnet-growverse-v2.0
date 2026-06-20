@@ -32,6 +32,16 @@ def _lerp(a: float, b: float, t: float) -> float:
     return a + (b - a) * t
 
 
+def _in_band(v: float, lo: float, hi: float) -> float:
+    """1.0 inside an optimal band, decaying linearly to 0 over one band-width
+    outside it — a smooth "how well supplied is this resource" score."""
+    if lo <= v <= hi:
+        return 1.0
+    span = max(1.0, hi - lo)
+    dist = (lo - v) if v < lo else (v - hi)
+    return max(0.0, 1.0 - dist / span)
+
+
 def ripeness_progress(stage: str, stage_progress_pct: float) -> float:
     """0 (just frosting) → 1 (harvest window) across the flowering stages."""
     base = _FLOWER_BASE.get(stage)
@@ -66,8 +76,15 @@ def _harvest_window(progress: float, cloudy: float, amber: float, ecfg: Dict):
 
 
 def telemetry(stage: str, stage_progress_pct: float, health: float,
-              light_ppfd: float, genetics: Dict, sim: Dict) -> Dict:
-    """Full trichome read-model for the `/state` payload + the 3D bud + advisor."""
+              light_ppfd: float, genetics: Dict, sim: Dict,
+              *, water: float = 60.0, nutrient: float = 60.0) -> Dict:
+    """Full trichome read-model for the `/state` payload + the 3D bud + advisor.
+
+    `water`/`nutrient` are the plant's 0..100 resource levels — a well-supplied
+    canopy makes more resin precursors, so good care frosts a plant up while
+    stress thins it out (the "leaves → precursor supply → trichomes" coupling).
+    Defaults sit mid-band so callers that don't pass them get a neutral factor.
+    """
     ecfg = (sim.get("engines", {}) or {}).get("trichome_resin_gland", {})
 
     if stage not in _FLOWER_BASE:
@@ -87,8 +104,14 @@ def telemetry(stage: str, stage_progress_pct: float, health: float,
     per100 = ecfg.get("light_density_per_100ppfd", 0.06)
     light_factor = _clamp(1.0 + (light_ppfd - ref) / 100.0 * per100, 0.6, 1.25)
     health_factor = 0.6 + 0.4 * _clamp01(health / 100.0)
+    # Precursor supply: well-watered + well-fed → more resin precursors → frostier.
+    wcfg = sim.get("water", {})
+    ncfg = sim.get("nutrient", {})
+    care = 0.5 * _in_band(water, wcfg.get("optimal_low", 40), wcfg.get("optimal_high", 78)) \
+        + 0.5 * _in_band(nutrient, ncfg.get("optimal_low", 35), ncfg.get("optimal_high", 82))
+    precursor = ecfg.get("precursor_base", 0.7) + ecfg.get("precursor_care_gain", 0.3) * care
     head_dev = p
-    density = _clamp01(genetic_density * (0.3 + 0.7 * head_dev) * light_factor * health_factor)
+    density = _clamp01(genetic_density * (0.3 + 0.7 * head_dev) * light_factor * health_factor * precursor)
 
     dominant = "clear" if (clear >= cloudy and clear >= amber) else ("amber" if amber >= cloudy else "cloudy")
     window, rec = _harvest_window(p, cloudy, amber, ecfg)

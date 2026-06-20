@@ -232,6 +232,8 @@ simulation:
       peak_cloudy: 0.50                 # cloudy fraction marking the peak window
       ripe_amber: 0.12                  # amber fraction marking "ripe"
       overripe_amber: 0.30              # amber fraction marking "overripe"
+      precursor_base: 0.7               # frost floor regardless of care
+      precursor_care_gain: 0.3          # extra frost from a well-watered/-fed canopy
 
   # Pod automation (higher tiers): top resources up when they run low.
   automation:

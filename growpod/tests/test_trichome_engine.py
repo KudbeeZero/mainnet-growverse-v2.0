@@ -66,6 +66,21 @@ def test_harvest_window_transitions():
     assert "peak" in windows or "ripe" in windows
 
 
+def test_care_precursor_frostier_than_neglect():
+    # Same genetics/stage/light/health — only the resource levels differ.
+    fed = trg.telemetry("late_flower", 60.0, 90.0, 600.0, GEN, SIM, water=60, nutrient=60)
+    starved = trg.telemetry("late_flower", 60.0, 90.0, 600.0, GEN, SIM, water=8, nutrient=4)
+    assert fed["density"] > starved["density"]
+
+
+def test_precursor_default_is_in_band_neutral():
+    # The default water/nutrient sit mid-band → full precursor; passing in-band
+    # values explicitly matches the default (no hidden penalty).
+    default = _tel("late_flower", 60.0)
+    explicit = trg.telemetry("late_flower", 60.0, 100.0, 600.0, GEN, SIM, water=60, nutrient=60)
+    assert default["density"] == explicit["density"]
+
+
 def test_deterministic():
     assert _tel("late_flower", 55.0) == _tel("late_flower", 55.0)
 
