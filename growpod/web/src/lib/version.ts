@@ -5,7 +5,9 @@
 //   2.0.2 — honest QA 10× + QA milestone toasts
 //   2.0.3 — in-game Grow Guide + Kudbee branding
 //   2.0.4 — integrated build: deeper 14-step onboarding + Guide + QA feedback
-export const APP_VERSION = "2.0.4";
+//   2.0.5 — 10× faster grow pacing · jitter-free countdown timers · real
+//           per-strain plant render on detail page · deploy build-stamp + PR guardrails
+export const APP_VERSION = "2.0.5";
 
 // Automatic build stamp — injected at build time from Vercel's git env (see
 // next.config.mjs `env`). Unlike APP_VERSION, these change on EVERY deploy even
