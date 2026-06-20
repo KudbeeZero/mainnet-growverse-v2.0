@@ -15,11 +15,13 @@ from sqlalchemy.orm import Session
 from ..economy.config import get_economy_config, EconomyConfig
 from ..economy.ledger import post, to_money
 from ..enums import LedgerEntryType
+from datetime import datetime, timedelta
+
 from ..db.models import (
-    Plant, GrowPod, PlantEvent, EnvironmentReading, ConsumableInventory,
+    Plant, GrowPod, Player, PlantEvent, EnvironmentReading, ConsumableInventory,
 )
 from ..simulation import engine
-from ..simulation.clock import Clock, active_clock
+from ..simulation.clock import Clock, active_clock, player_effective_now
 from .game_service import GameError
 
 
@@ -41,6 +43,27 @@ class SimulationService:
     def _sim(self) -> dict:
         return self.cfg.raw.get("simulation", {})
 
+    @property
+    def _turbo_multiplier(self) -> float:
+        return float(self._sim.get("turbo_multiplier", 10.0))
+
+    def _player_now(self, player_id: str) -> datetime:
+        """The player's effective simulation 'now' — wall time accelerated by the
+        per-account turbo faucet (banked offset + live acceleration). All of a
+        player's plant reads MUST go through this so every pod advances on the
+        same clock. Falls back to wall time when turbo has never run."""
+        player = self.session.get(Player, player_id)
+        wall = self.clock.now()
+        if player is None:
+            return wall
+        return player_effective_now(
+            wall,
+            turbo_enabled=bool(getattr(player, "turbo_enabled", False)),
+            offset_seconds=float(getattr(player, "turbo_offset_seconds", 0.0) or 0.0),
+            anchor_at=getattr(player, "turbo_anchor_at", None),
+            multiplier=self._turbo_multiplier,
+        )
+
     def _get_plant(self, player_id: str, plant_id: str) -> Plant:
         plant = self.session.get(Plant, plant_id)
         if plant is None or plant.player_id != player_id:
@@ -61,8 +84,9 @@ class SimulationService:
         return to_money(Decimal(str(base)) * Decimal(str(1.0 - disc)))
 
     def sync(self, plant: Plant) -> List[PlantEvent]:
-        """Advance the plant to the current time."""
-        return engine.catch_up(self.session, plant, self.clock.now(), self.cfg)
+        """Advance the plant to the current time (accelerated by the owner's
+        turbo faucet when engaged)."""
+        return engine.catch_up(self.session, plant, self._player_now(plant.player_id), self.cfg)
 
     def get_state(self, player_id: str, plant_id: str):
         plant = self._get_plant(player_id, plant_id)
@@ -94,8 +118,30 @@ class SimulationService:
     def forecast(self, plant: Plant) -> dict:
         """Lifecycle forecast: current stage, progress, and ETAs to the next stage
         and harvest-readiness (at current health). Powers the player-facing
-        stage timeline + countdown."""
-        return engine.stage_forecast(plant, self.cfg, self.clock.now())
+        stage timeline + countdown.
+
+        Computed on the owner's effective (turbo) clock so progress is consistent
+        with the persisted timestamps, then the ETA timestamps are expressed back
+        in WALL time — under turbo the plant consumes its remaining grow hours
+        `multiplier`× faster, so a wall-clock countdown to harvest is
+        correspondingly shorter and ticks down truthfully."""
+        eff_now = self._player_now(plant.player_id)
+        fc = engine.stage_forecast(plant, self.cfg, eff_now)
+
+        wall = self.clock.now()
+        m = self._turbo_multiplier
+        # Re-anchor the absolute ETAs to wall time only when turbo is actually
+        # compressing time (effective now is ahead of wall and m > 1).
+        if m > 1.0 and eff_now > wall and not fc.get("is_harvest_ready"):
+            hth = fc.get("hours_to_harvest")
+            if hth is not None and fc.get("harvest_eta") is not None:
+                fc["harvest_eta"] = (wall + timedelta(hours=hth / m)).isoformat()
+            # remaining-in-stage = effective stage length × (1 − progress)
+            total = fc.get("stage_total_hours") or 0.0
+            rem = max(0.0, total * (1.0 - (fc.get("stage_progress_pct") or 0.0) / 100.0))
+            if fc.get("next_stage_eta") is not None:
+                fc["next_stage_eta"] = (wall + timedelta(hours=rem / m)).isoformat()
+        return fc
 
     def get_events(self, plant_id: str, limit: int = 50) -> List[PlantEvent]:
         return (

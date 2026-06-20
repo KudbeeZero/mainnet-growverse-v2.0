@@ -78,6 +78,39 @@ class OffsetClock:
         self._offset = timedelta()
 
 
+# --- Per-player "turbo" speed faucet -----------------------------------------
+# A per-ACCOUNT accelerated clock built on the same forward-only-offset idea as
+# OffsetClock, but driven by fields persisted on the Player row so it survives
+# in production (unlike the dev test clock). The effective time for a player is
+# their wall `now` shifted by a banked offset plus, while turbo is engaged, the
+# live acceleration accrued since it was switched on:
+#
+#     effective = wall + offset + (enabled ? (wall - anchor) * (multiplier - 1) : 0)
+#
+# d(effective)/d(wall) == multiplier while ON and == 1 while OFF, and the shift
+# is monotonic (offset only ever grows), so a player's plants never rewind. Pure
+# and model-free so it has no import cycle with db.models; callers pass the three
+# persisted fields in.
+def player_effective_now(
+    wall_now: datetime,
+    *,
+    turbo_enabled: bool,
+    offset_seconds: float,
+    anchor_at: Optional[datetime],
+    multiplier: float,
+) -> datetime:
+    """The player's accelerated 'now'. Defaults to `wall_now` when turbo has
+    never run (offset 0, disabled)."""
+    bonus = float(offset_seconds or 0.0)
+    if turbo_enabled and anchor_at is not None:
+        live = (wall_now - anchor_at).total_seconds()
+        if live > 0:
+            bonus += live * (float(multiplier) - 1.0)
+    if bonus <= 0:
+        return wall_now
+    return wall_now + timedelta(seconds=bonus)
+
+
 # --- Process-wide simulation test clock --------------------------------------
 # A single shared OffsetClock for the running process. Lazily created; only ever
 # reached when the test clock is enabled (dev/test, never production).

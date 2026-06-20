@@ -10,6 +10,7 @@ import { ErrorState } from "@/components/ui/States";
 import { CareButtons } from "@/components/plant/CareButtons";
 import type { ChamberView } from "@/components/viz/GrowChamber";
 import { usePlantState } from "@/hooks/usePlantState";
+import { useTurbo } from "@/hooks/useTurbo";
 import { useStrainMap, usePods } from "@/hooks/queries";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useSession } from "@/lib/session";
@@ -96,10 +97,10 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   // Growth-preview scrubber: null = track the real (server) age; a number =
   // preview that day on the cycle. Preview never mutates server state.
   const [previewDay, setPreviewDay] = useState<number | null>(null);
-  const [devSpeed, setDevSpeed] = useState(false);
-  // Smooth decimal countdown — interpolates between 700ms server ticks at 40ms (25fps)
-  const lastTickMs = useRef<number>(0);
-  const [tickFraction, setTickFraction] = useState(0);
+  // Global per-account 10× speed faucet (server truth). Toggling it accelerates
+  // EVERY pod on the account; the normal plant poll then shows the faster growth.
+  const { enabled: devSpeed, multiplier: turboX, isToggling, toggle: toggleTurbo } =
+    useTurbo(playerId);
 
   const pod = pods?.find((p) => p.id === plant?.pod_id);
 
@@ -144,34 +145,6 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   useEffect(() => () => {
     if (commitRef.current) clearTimeout(commitRef.current);
   }, []);
-
-  // ⚡ Dev speed: advance test clock 1 game-hour every 700ms while ON.
-  // Requires GROW_TEST_CLOCK=true on the API (set in dev env).
-  useEffect(() => {
-    if (!devSpeed) { setTickFraction(0); return; }
-    const id = setInterval(async () => {
-      lastTickMs.current = Date.now();
-      setTickFraction(0);
-      try {
-        await fetch("/api/dev/clock/advance", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ hours: 1 }),
-        });
-      } catch { /* test clock may not be available */ }
-      refetch();
-    }, 700);
-    return () => clearInterval(id);
-  }, [devSpeed, refetch]);
-
-  // Smooth 40ms interpolation: drives decimal display between server ticks.
-  useEffect(() => {
-    if (!devSpeed) return;
-    const id = setInterval(() => {
-      setTickFraction(Math.min((Date.now() - lastTickMs.current) / 700, 1));
-    }, 40);
-    return () => clearInterval(id);
-  }, [devSpeed]);
 
   function onSlide(key: keyof ChamberClimate, value: number) {
     setClimate((c) => {
@@ -234,12 +207,13 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     : strain
       ? Math.round(daysToHarvest(plant.growth_stage, strain.flowering_days, plant.health))
       : null;
-  // Decimal-smooth countdown: server value minus in-progress tick fraction (0→1 per 700ms).
-  // Gives e.g. "4.83d" ticking smoothly instead of "5d" jumping each full hour.
-  const hoursSmooth = devSpeed && plant.forecast?.hours_to_harvest !== undefined
-    ? Math.max(0, plant.forecast.hours_to_harvest - tickFraction)
-    : null;
-  const daysSmooth = hoursSmooth !== null ? (hoursSmooth / 24).toFixed(2) : null;
+  // Harvest countdown in days. Under turbo the server compresses the ETA to wall
+  // time, so the value already ticks down ~10× faster on each poll — no client
+  // clock needed.
+  const daysSmooth =
+    devSpeed && plant.forecast?.hours_to_harvest !== undefined
+      ? (plant.forecast.hours_to_harvest / 24).toFixed(2)
+      : null;
 
   const c = climateModel({ fan: climate.fan, temp: climate.temperature, hum: climate.humidity, co2: climate.co2_level });
   const health = clamp(plant.health, 0, 100);
@@ -485,17 +459,23 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       </div>
       </div>
 
-      {/* ⚡ Dev speed toggle — fixed bottom-right. Shows live decimal harvest countdown when ON. */}
+      {/* ⚡ Global speed faucet — fixed bottom-right. ON accelerates EVERY pod on
+          the account (server-side, account-wide); shows the harvest countdown. */}
       <button
-        onClick={() => setDevSpeed((s) => !s)}
-        title={devSpeed ? "10× speed ON — tap to disable" : "10× speed OFF — tap to enable"}
-        className={`fixed bottom-4 right-4 z-50 flex h-9 items-center justify-center rounded-full border font-extrabold tracking-wide transition-all ${
+        onClick={() => !isToggling && toggleTurbo()}
+        disabled={isToggling}
+        title={
+          devSpeed
+            ? `Global ${turboX}× speed ON for all pods — tap to turn off`
+            : `Global ${turboX}× speed OFF — tap to turn on for the whole account`
+        }
+        className={`fixed bottom-4 right-4 z-50 flex h-9 items-center justify-center rounded-full border font-extrabold tracking-wide transition-all disabled:opacity-60 ${
           devSpeed
             ? "gap-1 px-3 border-green-400 bg-green-500/20 text-[11px] text-green-300 shadow-[0_0_14px_rgba(74,222,128,0.45)]"
             : "w-16 border-[#1c3447] bg-[#0d1d2b] text-[11px] text-[#7fa9bf] hover:border-green-700 hover:text-green-500"
         }`}
       >
-        <span>⚡ 10×</span>
+        <span>⚡ {turboX}×</span>
         {devSpeed && daysSmooth !== null && (
           <span className="font-mono text-green-200">· {daysSmooth}d</span>
         )}

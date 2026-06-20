@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { RequireAuth } from "@/components/layout/RequireAuth";
@@ -17,7 +17,7 @@ import { usePods, usePlantsList } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useIdStore } from "@/lib/localStore";
 import { useDevSpeedStore } from "@/lib/devSpeedStore";
-import { useToast } from "@/components/ui/Toast";
+import { useTurbo } from "@/hooks/useTurbo";
 
 const PodCard = dynamic(
   () => import("@/components/pod/PodCard").then((m) => m.PodCard),
@@ -55,11 +55,10 @@ function DashboardInner() {
   const [showCreate, setShowCreate] = useState(false);
   const [showNeglect, setShowNeglect] = useState(false);
 
-  // ⚡ Dev speed — state lives in the persisted store so it survives navigation + refresh
-  const { devSpeed, setDevSpeed, incrementHours, resetElapsed } = useDevSpeedStore();
-  const lastTickMs = useRef<number>(0);
-  const [tickFraction, setTickFraction] = useState(0);
-  const toast = useToast();
+  // ⚡ Global 10× speed faucet is server-owned (see useTurbo): the toggle lives in
+  // the nav and accelerates EVERY pod account-wide. Here we only auto-stop it once
+  // a plant is harvest-ready so a QA run doesn't overshoot.
+  const { enabled: devSpeed, setEnabled: setTurbo } = useTurbo(playerId);
 
   // On mount: check for long absence, then record this visit.
   useEffect(() => {
@@ -69,60 +68,14 @@ function DashboardInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-stop 10× when any plant hits harvest-ready (hours_to_harvest ≤ 0).
+  // Auto-stop the faucet when any plant hits harvest-ready (server-side off).
   useEffect(() => {
     if (!devSpeed) return;
     const ready = (plants.data ?? []).some(
       (p) => p.is_alive && !p.harvested && p.growth_stage === "harvest",
     );
-    if (ready) setDevSpeed(false);
-  }, [plants.data, devSpeed, setDevSpeed]);
-
-  // Main 700ms clock tick: advance 1 game-hour on the backend, then refetch
-  // plants. Honest about the QA clock: the counter only increments on a *real*
-  // advance, and if the dev clock isn't available (e.g. disabled in production,
-  // where it 404s), we stop and tell the tester instead of silently faking
-  // progress.
-  useEffect(() => {
-    if (!devSpeed) {
-      resetElapsed();
-      setTickFraction(0);
-      return;
-    }
-    let stopped = false;
-    const id = setInterval(async () => {
-      lastTickMs.current = Date.now();
-      setTickFraction(0);
-      try {
-        const res = await fetch("/api/dev/clock/advance", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ hours: 1 }),
-        });
-        if (!res.ok) throw new Error(`dev clock ${res.status}`);
-        incrementHours(); // count only advances the backend actually applied
-        plants.refetch();
-      } catch {
-        if (stopped) return;
-        stopped = true;
-        setDevSpeed(false); // stops this loop on the next render
-        toast.error(
-          "QA 10× isn’t available on this backend (dev clock is off in production). Acceleration stopped.",
-        );
-      }
-    }, 700);
-    return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devSpeed]);
-
-  // Smooth 40ms interpolation between ticks — drives decimal precision on the counter.
-  useEffect(() => {
-    if (!devSpeed) return;
-    const id = setInterval(() => {
-      setTickFraction(Math.min((Date.now() - lastTickMs.current) / 700, 1));
-    }, 40);
-    return () => clearInterval(id);
-  }, [devSpeed]);
+    if (ready) setTurbo(false);
+  }, [plants.data, devSpeed, setTurbo]);
 
   if (pods.isLoading) return <LoadingBlock label="Loading your grow…" />;
 

@@ -15,6 +15,7 @@ import { university } from "./university";
 import { ftue } from "./ftue";
 import { seasonal } from "./seasonal";
 import { store } from "./store";
+import { turbo } from "./turbo";
 
 export const api = {
   players,
@@ -34,8 +35,10 @@ export const api = {
   ftue,
   seasonal,
   store,
+  turbo,
 };
 
 export { ApiError } from "./client";
+export type { TurboState } from "./turbo";
 export type { StrainFilters } from "./strains";
 export type { Environment } from "./pods";

@@ -179,6 +179,15 @@ simulation:
   # Owner-ratified 10× speed-up from the prior 0.075 launch pacing (2026-06-19).
   time_scale: 0.0075
 
+  # Global "turbo" speed faucet (per ACCOUNT, opt-in toggle — see Player.turbo_*).
+  # When a player switches turbo ON, their effective simulation clock runs this
+  # many × wall time, so EVERY one of their pods advances together. Banked and
+  # forward-only, so toggling off never rewinds progress. Tuning only: this
+  # accelerates plant biology, NOT the economy — the daily-stipend faucet stays
+  # on the real wall clock and harvest value stays a pure fn of grams/quality/
+  # rarity, so turbo changes WHEN a harvest lands, never its value.
+  turbo_multiplier: 10.0
+
   # Canonical stage durations in days (flowering comes from the strain's genome).
   # These are the REAL-TIME reference lengths; time_scale above scales them for
   # the live cycle, so reverting launch pacing is a one-line change.

@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session";
 import { NAV_LINKS, isActiveLink, navOnboardingId } from "./navLinks";
 import { PlayerBadge } from "./PlayerBadge";
-import { useDevSpeedStore } from "@/lib/devSpeedStore";
+import { useTurbo } from "@/hooks/useTurbo";
 
 export function NavBar() {
   const pathname = usePathname();
-  const { isAuthed } = useSession();
-  const { devSpeed, toggle } = useDevSpeedStore();
+  const { isAuthed, playerId } = useSession();
+  const { enabled: devSpeed, multiplier, isToggling, toggle } = useTurbo(playerId);
 
   return (
     <header className="sticky top-0 z-30 border-b border-ink-700 bg-ink-900/95 backdrop-blur">
@@ -50,9 +50,14 @@ export function NavBar() {
         <div className="flex shrink-0 items-center gap-2">
           {isAuthed && (
             <button
-              onClick={toggle}
-              title={devSpeed ? "10× speed ON — click to disable" : "Enable 10× time acceleration"}
-              className={`relative flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold tracking-wide transition-all duration-300 ${
+              onClick={() => !isToggling && toggle()}
+              disabled={isToggling}
+              title={
+                devSpeed
+                  ? `Global ${multiplier}× speed ON for every pod — click to turn off`
+                  : `Enable global ${multiplier}× time acceleration (all pods)`
+              }
+              className={`relative flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold tracking-wide transition-all duration-300 disabled:opacity-60 ${
                 devSpeed
                   ? "border-green-400 bg-green-500/20 text-green-300 shadow-[0_0_12px_rgba(74,222,128,0.5)]"
                   : "border-ink-600 bg-ink-800 text-gray-500 hover:border-green-700 hover:text-green-400"
@@ -62,7 +67,7 @@ export function NavBar() {
               {devSpeed && (
                 <span className="animate-ping pointer-events-none absolute inset-0 rounded-full border border-green-400/60" />
               )}
-              ⚡ 10×
+              ⚡ {multiplier}×
             </button>
           )}
           <PlayerBadge />
