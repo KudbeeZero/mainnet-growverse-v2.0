@@ -6,6 +6,7 @@ is banked (forward-only) so toggling OFF never rewinds; and it touches plant
 biology only — never the economy ledger.
 """
 
+import copy
 import os
 import sys
 from datetime import datetime, timedelta
@@ -13,6 +14,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from growpodempire.db.models import Strain, Player
+from growpodempire.economy.config import get_economy_config
 from growpodempire.economy.ledger import balance
 from growpodempire.services.game_service import GameService
 from growpodempire.services.simulation_service import SimulationService
@@ -20,12 +22,22 @@ from growpodempire.simulation.clock import FrozenClock
 from growpodempire.api.serialize import player_dict
 
 BASE = datetime(2025, 1, 1, 0, 0, 0)
-M = 10.0  # simulation.turbo_multiplier
+# These tests pin the multiplier so they verify the turbo MECHANISM, independent
+# of the (much higher, owner-tuned) production `simulation.turbo_multiplier`. A
+# config copy is injected into every service below; M stays the expected factor.
+M = 10.0
+
+
+def _cfg():
+    """A balance config with turbo pinned to M (production value isn't asserted)."""
+    c = copy.deepcopy(get_economy_config())
+    c.raw["simulation"]["turbo_multiplier"] = M
+    return c
 
 
 def _player_two_pods(session, clock, username="turbofarmer"):
     """A player with two pods, each holding a fresh seedling pinned to BASE."""
-    svc = GameService(session, clock=clock)
+    svc = GameService(session, config=_cfg(), clock=clock)
     p = svc.create_player(username)
     strain = session.query(Strain).filter(Strain.slug == "white-widow").one()
     plants = []
@@ -48,7 +60,7 @@ def test_turbo_accelerates_every_pod_by_the_multiplier(session):
 
     svc.set_turbo(p.id, True)            # anchor at BASE
     fc.set(BASE + timedelta(hours=1))    # one wall hour elapses
-    sim = SimulationService(session, clock=fc)
+    sim = SimulationService(session, config=_cfg(), clock=fc)
     for plant in plants:
         sim.sync(plant)
 
@@ -61,7 +73,7 @@ def test_no_turbo_advances_at_wall_rate(session):
     fc = FrozenClock(BASE)
     _svc, _p, plants = _player_two_pods(session, fc)
     fc.set(BASE + timedelta(hours=1))
-    SimulationService(session, clock=fc).sync(plants[0])
+    SimulationService(session, config=_cfg(), clock=fc).sync(plants[0])
     assert plants[0].last_tick_at == BASE + timedelta(hours=1)
 
 
@@ -74,7 +86,7 @@ def test_turbo_is_banked_and_never_rewinds(session):
 
     svc.set_turbo(p.id, True)            # anchor BASE
     fc.set(BASE + timedelta(hours=1))    # 1 wall hour at 10×  → +10h effective
-    GameService(session, clock=fc).set_turbo(p.id, False)  # banks 9h, syncs pods
+    GameService(session, config=_cfg(), clock=fc).set_turbo(p.id, False)  # banks 9h, syncs pods
 
     player = session.get(Player, p.id)
     assert player.turbo_enabled is False
@@ -85,7 +97,7 @@ def test_turbo_is_banked_and_never_rewinds(session):
     # A further wall hour with turbo OFF advances only ONE more hour (wall rate),
     # never rewinding the banked 10h.
     fc.set(BASE + timedelta(hours=2))
-    SimulationService(session, clock=fc).sync(plant)
+    SimulationService(session, config=_cfg(), clock=fc).sync(plant)
     assert plant.last_tick_at == BASE + timedelta(hours=11)
 
 
@@ -98,7 +110,7 @@ def test_turbo_toggle_posts_nothing_to_the_ledger(session):
 
     svc.set_turbo(p.id, True)
     fc.set(BASE + timedelta(hours=1))
-    GameService(session, clock=fc).set_turbo(p.id, False)
+    GameService(session, config=_cfg(), clock=fc).set_turbo(p.id, False)
 
     assert balance(session, p.id) == before
 
@@ -131,7 +143,7 @@ def test_forecast_eta_is_compressed_to_wall_time_under_turbo(session):
 
     svc.set_turbo(p.id, True)            # anchor BASE
     fc.set(BASE + timedelta(hours=1))    # wall ahead of anchor → turbo active
-    fcst = SimulationService(session, clock=fc).forecast(plant)
+    fcst = SimulationService(session, config=_cfg(), clock=fc).forecast(plant)
 
     wall_now = fc.now()
     eta = datetime.fromisoformat(fcst["harvest_eta"])
@@ -153,9 +165,9 @@ def test_forecast_eta_not_overcompressed_after_turbo_off(session):
 
     svc.set_turbo(p.id, True)               # anchor BASE
     fc.set(BASE + timedelta(hours=1))       # bank ~9h of acceleration
-    GameService(session, clock=fc).set_turbo(p.id, False)   # OFF, offset banked
+    GameService(session, config=_cfg(), clock=fc).set_turbo(p.id, False)   # OFF, offset banked
 
-    fcst = SimulationService(session, clock=fc).forecast(plant)
+    fcst = SimulationService(session, config=_cfg(), clock=fc).forecast(plant)
     assert not fcst["is_harvest_ready"]
     wall_now = fc.now()
     eta = datetime.fromisoformat(fcst["harvest_eta"])
