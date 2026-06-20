@@ -255,11 +255,24 @@ class GameService:
         return {**self.turbo_state(player), "synced_pods": len(living)}
 
     def link_wallet(self, player_id: str, algorand_address: str) -> Player:
-        """Associate a player with an Algorand address (Phase 3)."""
-        if not algorand_address:
+        """Associate (connect / "log in") a player with an Algorand address.
+        Validates the address checksum so a typo can't be stored."""
+        from algosdk import encoding
+        addr = (algorand_address or "").strip()
+        if not addr:
             raise GameError("algorand_address is required")
+        if not encoding.is_valid_address(addr):
+            raise GameError("That doesn't look like a valid Algorand address.")
         player = self.get_player(player_id)
-        player.algorand_address = algorand_address
+        player.algorand_address = addr
+        return player
+
+    def unlink_wallet(self, player_id: str) -> Player:
+        """Disconnect ("log out") the player's linked Algorand address.
+        Idempotent — on-chain assets stay at the address; the player can re-link
+        anytime."""
+        player = self.get_player(player_id)
+        player.algorand_address = None
         return player
 
     def get_wallet(self, player_id: str) -> Wallet:

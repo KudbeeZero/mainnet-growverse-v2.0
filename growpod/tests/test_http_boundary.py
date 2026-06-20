@@ -46,7 +46,11 @@ def _new_player(client, username="boundary"):
     return p["id"], p["api_key"]
 
 
-def _link(client, pid, key, address="ALGOADDR1"):
+from algosdk import account as _algo_account
+_VALID_ADDR = _algo_account.generate_account()[1]  # checksum-valid test address
+
+
+def _link(client, pid, key, address=_VALID_ADDR):
     client.post(
         f"/api/game/players/{pid}/wallet/link",
         json={"address": address},

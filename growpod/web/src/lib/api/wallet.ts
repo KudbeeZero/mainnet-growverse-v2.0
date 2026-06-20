@@ -8,6 +8,9 @@ export const wallet = {
       body: { address },
     }),
 
+  unlink: (playerId: string) =>
+    apiFetch<Player>(`/players/${playerId}/wallet/unlink`, { method: "POST" }),
+
   withdraw: (playerId: string, amount: number) =>
     apiFetch<Record<string, unknown>>(`/players/${playerId}/wallet/withdraw`, {
       method: "POST",
