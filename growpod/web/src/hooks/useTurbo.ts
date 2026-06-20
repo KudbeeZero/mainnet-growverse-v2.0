@@ -5,8 +5,8 @@ import { api } from "@/lib/api";
 import type { TurboState } from "@/lib/api";
 
 /**
- * Global per-ACCOUNT turbo speed faucet (server-tuned multiplier; ~2-min
- * seed→harvest at the current 600× so growth is actually watchable).
+ * Global per-ACCOUNT turbo speed faucet (server-tuned multiplier; ~5-min
+ * seed→harvest at the current 250× so growth is actually watchable).
  *
  * Unlike the old client-side dev-clock loop (which 404'd in production), this is
  * server-authoritative: flipping it sets a banked, forward-only multiplier on
@@ -40,7 +40,7 @@ export function useTurbo(playerId: string | null) {
 
   return {
     enabled: state.data?.enabled ?? false,
-    multiplier: state.data?.multiplier ?? 600,
+    multiplier: state.data?.multiplier ?? 250,
     isToggling: toggle.isPending,
     toggle: (next: boolean) => toggle.mutate(next),
   };
