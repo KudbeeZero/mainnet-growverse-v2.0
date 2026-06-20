@@ -228,6 +228,19 @@ simulation:
     prune: {pest_reduction: 15, disease_reduction: 10, health_add: 2}
     train: {health_add: 3, pest_reduction: 5}
     boost: {water_floor: 80, nutrient_floor: 80, health_add: 4, cooldown_hours: 6}
+    # Purchasable "growth boost" — spends in-game GROW to fast-forward the plant
+    # a few grow-hours AND revive a struggling one (floors water/nutrients, lifts
+    # health to a floor). This is the SIMULATED purchase: the GROW sink + effect
+    # are live now; a real-money checkout route attaches later (see the NOTE in
+    # services/simulation_service.apply_growth_boost). On a cooldown so it stays a
+    # boost, not an autopilot.
+    growth_boost:
+      cost: 60               # GROW spent per boost (in-game soft currency)
+      advance_hours: 4       # grow-hours fast-forwarded (applied immediately)
+      recover_health_to: 70  # health is lifted up to this floor (revives a sick plant)
+      water_floor: 80        # tops water up to at least this
+      nutrient_floor: 80     # tops nutrients up to at least this
+      cooldown_hours: 8      # min hours between paid boosts on one plant
 
   # Per-engine tunables for the composable micro-engines (simulation/engines/).
   engines:

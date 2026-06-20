@@ -279,6 +279,72 @@ class SimulationService:
         self._log(plant, "boosted", payload={})
         return plant
 
+    def apply_growth_boost(self, player_id: str, plant_id: str) -> Plant:
+        """Purchasable growth boost: spend in-game GROW to fast-forward the plant a
+        few grow-hours AND revive a struggling one. Tops water/nutrients to a floor,
+        lifts health to a floor (so a plant that fell too far can recover — the
+        "it's hard to bring it back" pain point), then advances the lifecycle by
+        ``advance_hours`` immediately. On a cooldown so it stays a boost.
+
+        NOTE (real-money attach point): this is the SIMULATED purchase. The GROW
+        sink (LedgerEntryType.GROWTH_BOOST) and the effect below are LIVE now so
+        the boost is fully playable/testable against the in-game soft currency. A
+        real-money checkout (e.g. card/crypto → grant GROW or apply the boost
+        directly) is NOT wired yet; when it is, add the payment route in the API
+        layer and call into this same method (or a thin wrapper) so the effect and
+        the cooldown/ledger accounting stay identical. Keep gameplay truth in the
+        DB ledger; never let an external payment provider drive plant state
+        directly. See balance.yaml `simulation.actions.growth_boost` for tuning.
+        """
+        plant = self._get_plant(player_id, plant_id)
+        self._require_living(plant)
+        self.sync(plant)
+
+        cfg = self._sim.get("actions", {}).get("growth_boost", {})
+        cooldown_hours = cfg.get("cooldown_hours", 8)
+        since = self._hours_since_last_event(plant, "growth_boosted")
+        if since is not None and since < cooldown_hours:
+            raise GameError("Growth boost is recharging — try again later.")
+
+        # Charge first (after the cooldown gate): a failed/overdrawn payment must
+        # not mutate the plant. `post` raises InsufficientFundsError on overdraw.
+        cost = to_money(Decimal(str(cfg.get("cost", 60))))
+        post(
+            self.session, player_id, -cost,
+            LedgerEntryType.GROWTH_BOOST, ref_type="plant", ref_id=plant_id,
+        )
+
+        # Revive: floor resources and lift health BEFORE the jump so the
+        # fast-forwarded hours run under good conditions (a near-dead plant won't
+        # die mid-jump), then re-assert the health floor after as a guaranteed
+        # post-condition.
+        recover_to = cfg.get("recover_health_to", 70)
+        plant.water_level = max(plant.water_level, cfg.get("water_floor", 80))
+        plant.nutrient_level = max(plant.nutrient_level, cfg.get("nutrient_floor", 80))
+        plant.health = max(plant.health, recover_to)
+
+        # Fast-forward: rewind the lifecycle timestamps, then re-sync so the engine
+        # advances `advance_hours` extra grow-hours NOW (deterministic, seeded
+        # per plant-hour). last_tick_at lands back at the effective clock — no
+        # future-banking; the plant is simply older/further along.
+        advance_hours = int(cfg.get("advance_hours", 4))
+        if advance_hours > 0:
+            jump = timedelta(hours=advance_hours)
+            plant.last_tick_at -= jump
+            plant.stage_entered_at -= jump
+            if plant.planted_at is not None:
+                plant.planted_at -= jump
+            self.sync(plant)
+
+        plant.health = max(plant.health, recover_to)
+        plant.condition_flags = engine.reactions.compute_conditions(plant, self._sim)
+        self._log(plant, "growth_boosted", payload={
+            "cost": float(cost),
+            "advance_hours": advance_hours,
+            "recovered_health_to": recover_to,
+        })
+        return plant
+
     def apply_consumable(self, player_id: str, plant_id: str, item_key: str) -> Plant:
         """Use one shop consumable on a plant, applying its effect to the plant's
         simulated levels (so it flows through the normal yield/quality math)."""

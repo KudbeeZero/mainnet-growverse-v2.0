@@ -9,6 +9,7 @@ import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
 import { CareButtons } from "@/components/plant/CareButtons";
 import { TrichomeReadout } from "@/components/plant/TrichomeReadout";
+import { useGrowthBoost } from "@/hooks/useCareActions";
 import type { ChamberView } from "@/components/viz/GrowChamber";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useTurbo } from "@/hooks/useTurbo";
@@ -147,6 +148,20 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   // EVERY pod on the account; the normal plant poll then shows the faster growth.
   const { enabled: devSpeed, multiplier: turboX, isToggling, toggle: toggleTurbo } =
     useTurbo(playerId);
+
+  // Purchasable (simulated) growth boost — spends in-game GROW to jump the plant
+  // forward + revive it; on success we flash the ⚡ electric surge over the stage.
+  const [boostFlash, setBoostFlash] = useState(false);
+  const flashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const growthBoost = useGrowthBoost(plantId, () => {
+    if (reducedMotion) return;
+    setBoostFlash(true);
+    if (flashRef.current) clearTimeout(flashRef.current);
+    flashRef.current = setTimeout(() => setBoostFlash(false), 1100);
+  });
+  useEffect(() => () => {
+    if (flashRef.current) clearTimeout(flashRef.current);
+  }, []);
 
   const pod = pods?.find((p) => p.id === plant?.pod_id);
 
@@ -331,6 +346,16 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           <ReadoutCard k="HUM" v={climate.humidity} unit="%" alert={Math.abs(climate.humidity - 50) > 15} />
           <ReadoutCard k="CO₂" v={climate.co2_level} />
         </div>
+        {/* ⚡ Growth-boost surge — electric flash + bolt over the stage on success. */}
+        {boostFlash && (
+          <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden" aria-hidden>
+            <div className="gpe-electric-flash absolute inset-0" />
+            <span className="gpe-electric-bolt absolute left-1/2 top-1/2 text-7xl drop-shadow-[0_0_18px_rgba(125,211,255,0.9)]">
+              ⚡
+            </span>
+          </div>
+        )}
+
         {/* health meter */}
         <div className="pointer-events-none absolute inset-x-2.5 bottom-2 h-[5px] overflow-hidden rounded-full bg-[#11212e]">
           <div
@@ -420,6 +445,18 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         {tab === "grow" && (
           <div className="space-y-2">
             <CareButtons plant={plant} />
+            {/* Purchasable growth boost — fast-forward + revive for in-game GROW.
+                Cost mirrors balance.yaml simulation.actions.growth_boost.cost. */}
+            {!ended && (
+              <button
+                onClick={() => growthBoost.mutate()}
+                disabled={growthBoost.isPending}
+                data-testid="growth-boost"
+                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-cyan-400/50 bg-gradient-to-r from-cyan-500/15 to-grow-500/15 px-3 text-xs font-bold tracking-[0.06em] text-cyan-100 transition-all hover:border-cyan-300 hover:from-cyan-500/25 hover:to-grow-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {growthBoost.isPending ? "Boosting…" : "⚡ Boost Growth · 60 🌿"}
+              </button>
+            )}
             <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
               {strain
                 ? `${strain.name} · ${indicaRatio >= 0.66 ? "indica-dominant" : indicaRatio <= 0.34 ? "sativa-dominant" : "balanced hybrid"} — grown live from your plant's real state.`

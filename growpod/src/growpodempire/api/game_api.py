@@ -802,6 +802,14 @@ def boost_plant(player_id, plant_id):
     return _care_action(player_id, plant_id, "boost")
 
 
+@game_bp.post("/players/<player_id>/plants/<plant_id>/growth-boost")
+@require_player
+def growth_boost_plant(player_id, plant_id):
+    # Simulated purchase: spends in-game GROW to fast-forward + revive the plant.
+    # Real-money checkout attaches later (see SimulationService.apply_growth_boost).
+    return _care_action(player_id, plant_id, "apply_growth_boost")
+
+
 @game_bp.post("/players/<player_id>/pods/<pod_id>/weather")
 @require_player
 def roll_weather(player_id, pod_id):
