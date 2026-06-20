@@ -184,7 +184,11 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     mutationFn: (env) => api.pods.setEnvironment(playerId!, plant!.pod_id, env),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.pods(playerId!) });
-      qc.invalidateQueries({ queryKey: queryKeys.plant(plantId) });
+      // Climate is pod-wide → refresh EVERY plant in the pod (broad ["plant"]
+      // prefix, like useTurbo) plus the dashboard list, not just this plant, so
+      // sibling plants reflect the new environment immediately.
+      qc.invalidateQueries({ queryKey: ["plant"] });
+      if (playerId) qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
     },
     onError: (e) => toast.error(e.message),
   });
@@ -446,8 +450,10 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           <div className="space-y-2">
             <CareButtons plant={plant} />
             {/* Purchasable growth boost — fast-forward + revive for in-game GROW.
-                Cost mirrors balance.yaml simulation.actions.growth_boost.cost. */}
-            {!ended && (
+                Cost mirrors balance.yaml simulation.actions.growth_boost.cost.
+                Hidden at the harvest window: the server rejects it (nothing left
+                to fast-forward), so don't tempt a no-op spend — cut it down. */}
+            {!ended && plant.growth_stage !== "harvest" && (
               <button
                 onClick={() => growthBoost.mutate()}
                 disabled={growthBoost.isPending}

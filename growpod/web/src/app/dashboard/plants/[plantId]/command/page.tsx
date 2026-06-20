@@ -80,7 +80,11 @@ function CommandScreen({ plantId }: { plantId: string }) {
     mutationFn: (env) => api.pods.setEnvironment(playerId!, plant!.pod_id, env),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.pods(playerId!) });
-      qc.invalidateQueries({ queryKey: queryKeys.plant(plantId) });
+      // Climate is pod-wide → refresh EVERY plant in the pod (broad ["plant"]
+      // prefix, like useTurbo) plus the dashboard list, not just this plant, so
+      // sibling plants reflect the new environment immediately.
+      qc.invalidateQueries({ queryKey: ["plant"] });
+      if (playerId) qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
     },
     onError: (e) => toast.error(e.message),
   });
