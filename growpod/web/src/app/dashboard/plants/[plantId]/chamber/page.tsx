@@ -33,6 +33,7 @@ import {
 import { budColorForStrain, silhouetteFor } from "@/lib/chamber/strainVisuals";
 import { budDnaFor, applyEnvironmentToBudDNA } from "@/lib/chamber/budDna";
 import { titleCase } from "@/lib/format";
+import { nudge } from "@/lib/slider";
 
 const GrowChamber = dynamic(
   () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
@@ -55,16 +56,42 @@ const DEFAULT_CLIMATE: ChamberClimate = {
 
 // Slider device ranges (wider than the optimal bands) + the no-penalty optimal
 // window from balance.yaml, shown as a hint. FAN is cosmetic (no backend field).
+// Fine steps for real "dial it in" precision (the backend stores floats). The
+// ± nudge buttons next to each slider step by exactly one of these.
 const SLIDERS = [
   { key: "fan", label: "FAN", min: 0, max: 100, step: 1, unit: "%", optimal: [18, 78], local: true },
-  { key: "temperature", label: "TEMP", min: 10, max: 40, step: 0.5, unit: "°C", optimal: [20, 28] },
-  { key: "humidity", label: "HUMIDITY", min: 10, max: 95, step: 1, unit: "%", optimal: [40, 60] },
-  { key: "co2_level", label: "CO₂", min: 400, max: 1500, step: 10, unit: "", optimal: [800, 1500] },
-  { key: "light_intensity", label: "LIGHT", min: 0, max: 1000, step: 10, unit: "", optimal: [300, 900] },
-  { key: "ph_level", label: "pH", min: 4, max: 9, step: 0.1, unit: "", optimal: [6, 7] },
+  { key: "temperature", label: "TEMP", min: 10, max: 40, step: 0.1, unit: "°C", optimal: [20, 28] },
+  { key: "humidity", label: "HUMIDITY", min: 10, max: 95, step: 0.5, unit: "%", optimal: [40, 60] },
+  { key: "co2_level", label: "CO₂", min: 400, max: 1500, step: 5, unit: "", optimal: [800, 1500] },
+  { key: "light_intensity", label: "LIGHT", min: 0, max: 1000, step: 5, unit: "", optimal: [300, 900] },
+  { key: "ph_level", label: "pH", min: 4, max: 9, step: 0.05, unit: "", optimal: [6, 7] },
 ] as const;
 
 const COMMIT_DEBOUNCE_MS = 700;
+
+function NudgeBtn({
+  children,
+  label,
+  disabled,
+  onClick,
+}: {
+  children: string;
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="flex h-7 w-7 flex-none items-center justify-center rounded-md border border-[#1c3447] bg-[#0a1722] font-mono text-sm leading-none text-[#7fa9bf] hover:border-cyan-400/50 hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {children}
+    </button>
+  );
+}
 
 function ReadoutCard({ k, v, unit, alert }: { k: string; v: string | number; unit?: string; alert?: boolean }) {
   return (
@@ -379,6 +406,9 @@ function ChamberScreen({ plantId }: { plantId: string }) {
                     aria-label={s.label}
                     className="h-2 flex-1 cursor-pointer accent-cyan-400"
                   />
+                  {/* ± micro-nudge: one exact step per tap for fine dial-in. */}
+                  <NudgeBtn label={`Decrease ${s.label}`} disabled={ended} onClick={() => onSlide(s.key as keyof ChamberClimate, nudge(val, -1, s.step, s.min, s.max))}>−</NudgeBtn>
+                  <NudgeBtn label={`Increase ${s.label}`} disabled={ended} onClick={() => onSlide(s.key as keyof ChamberClimate, nudge(val, 1, s.step, s.min, s.max))}>+</NudgeBtn>
                   <span className={`w-[52px] flex-none text-right font-mono text-xs font-bold ${outOfBand ? "text-orange-300" : "text-white"}`}>
                     {val}
                     {s.unit && <span className="text-[10px] text-[#7fa9bf]">{s.unit}</span>}

@@ -53,13 +53,13 @@ export interface EnvRowDef {
 
 /** Row order for the ENVIRONMENT & WEATHER rail (mirrors the dashboard mockup). */
 export const ENV_ROWS: EnvRowDef[] = [
-  { key: "temperature", label: "TEMPERATURE", band: BANDS.temperature, source: { kind: "setpoint", field: "temperature", step: 0.5 }, digits: 1 },
-  { key: "humidity", label: "HUMIDITY", band: BANDS.humidity, source: { kind: "setpoint", field: "humidity", step: 1 }, digits: 0 },
+  { key: "temperature", label: "TEMPERATURE", band: BANDS.temperature, source: { kind: "setpoint", field: "temperature", step: 0.1 }, digits: 1 },
+  { key: "humidity", label: "HUMIDITY", band: BANDS.humidity, source: { kind: "setpoint", field: "humidity", step: 0.5 }, digits: 1 },
   { key: "vpd", label: "VPD", band: BANDS.vpd_kpa, source: { kind: "metric", field: "vpd_kpa" }, digits: 2 },
   { key: "dli", label: "DLI", band: BANDS.dli_mol, source: { kind: "metric", field: "dli_mol" }, digits: 1 },
-  { key: "ppfd", label: "PPFD", band: BANDS.light_intensity, source: { kind: "setpoint", field: "light_intensity", step: 10 }, digits: 0 },
-  { key: "co2", label: "CO₂", band: BANDS.co2_level, source: { kind: "setpoint", field: "co2_level", step: 10 }, digits: 0 },
-  { key: "ph", label: "pH", band: BANDS.ph_level, source: { kind: "setpoint", field: "ph_level", step: 0.1 }, digits: 1 },
+  { key: "ppfd", label: "PPFD", band: BANDS.light_intensity, source: { kind: "setpoint", field: "light_intensity", step: 5 }, digits: 0 },
+  { key: "co2", label: "CO₂", band: BANDS.co2_level, source: { kind: "setpoint", field: "co2_level", step: 5 }, digits: 0 },
+  { key: "ph", label: "pH", band: BANDS.ph_level, source: { kind: "setpoint", field: "ph_level", step: 0.05 }, digits: 2 },
   { key: "water", label: "WATER LEVEL", band: BANDS.water_level, source: { kind: "vital", field: "water_level" }, digits: 0 },
   { key: "nutrients", label: "NUTRIENTS", band: BANDS.nutrient_level, source: { kind: "vital", field: "nutrient_level" }, digits: 0 },
 ];
