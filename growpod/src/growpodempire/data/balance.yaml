@@ -59,6 +59,17 @@ harvest_sale:
   # Diminishing returns: grams above the soft cap are worth less per gram.
   soft_cap_grams: 120
   soft_cap_factor: 0.6
+  # Harvest-timing coupling: the trichome ripeness window at cut time nudges
+  # QUALITY (points, applied before the research bonus, then clamped to
+  # [0, max_quality]). Rewards harvesting in the peak/ripe window and penalises
+  # too-early or overripe — so WHEN you harvest matters. Owner-ratified (gentle).
+  trichome:
+    quality_by_window:
+      developing: -10
+      early: -4
+      peak: 5
+      ripe: 2
+      overripe: -8
 
 # Post-harvest drying/curing. An optional, time-gated step that raises a
 # harvest's quality (and therefore its sale value) — but over-drying erodes it.
