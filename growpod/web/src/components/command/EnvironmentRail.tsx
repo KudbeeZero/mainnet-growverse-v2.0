@@ -1,6 +1,7 @@
 "use client";
 
 import { ENV_ROWS, bandPct, bandSeverity, type EnvRowDef } from "@/lib/envBands";
+import { nudge } from "@/lib/slider";
 import { envStatus, STATUS_STYLES } from "@/lib/podStatus";
 import { CollapsiblePanel } from "@/components/ui/CollapsiblePanel";
 import type { Environment } from "@/lib/api";
@@ -35,17 +36,38 @@ function EnvRow({
           {def.label}
         </span>
         {editable && value != null ? (
-          <input
-            type="range"
-            min={rLo}
-            max={rHi}
-            step={step}
-            value={value}
-            disabled={disabled}
-            aria-label={def.label}
-            onChange={(e) => onChange(Number(e.target.value))}
-            className="h-1.5 flex-1 cursor-pointer accent-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
-          />
+          <>
+            <input
+              type="range"
+              min={rLo}
+              max={rHi}
+              step={step}
+              value={value}
+              disabled={disabled}
+              aria-label={def.label}
+              onChange={(e) => onChange(Number(e.target.value))}
+              className="h-1.5 flex-1 cursor-pointer accent-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+            {/* ± micro-nudge for exact dial-in (one step per tap). */}
+            <button
+              type="button"
+              aria-label={`Decrease ${def.label}`}
+              disabled={disabled}
+              onClick={() => onChange(nudge(value, -1, step, rLo, rHi))}
+              className="flex h-5 w-5 flex-none items-center justify-center rounded border border-[#15303f] bg-[#0a1722] font-mono text-xs leading-none text-cyan-200/60 hover:border-cyan-400/50 hover:text-cyan-200 disabled:opacity-40"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              aria-label={`Increase ${def.label}`}
+              disabled={disabled}
+              onClick={() => onChange(nudge(value, 1, step, rLo, rHi))}
+              className="flex h-5 w-5 flex-none items-center justify-center rounded border border-[#15303f] bg-[#0a1722] font-mono text-xs leading-none text-cyan-200/60 hover:border-cyan-400/50 hover:text-cyan-200 disabled:opacity-40"
+            >
+              +
+            </button>
+          </>
         ) : (
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-700" aria-hidden>
             <div

@@ -1,0 +1,79 @@
+import { test, type Page } from "@playwright/test";
+
+// Proof capture for the slider micro-depth: the Grow Chamber CLIMATE tab with
+// finer steps + ± nudge buttons for exact dial-in. Hermetic (mock API), mirrors
+// the smoke.spec.ts pattern. Run: npx playwright test slider-shot
+
+const PLAYER = {
+  id: "p1", username: "Tester", email: null, algorand_address: null,
+  xp: 100, level: 3, created_at: null, cannabis_cup_title: null, university_title: null,
+  wallet: { id: "w1", player_id: "p1", balance: 500, asa_balance: null, version: 0 },
+};
+const WALLET = { id: "w1", player_id: "p1", balance: 500, asa_balance: null, version: 0 };
+const LEVEL = { xp: 100, level: 3, xp_into_level: 50, xp_for_next_level: 100, progress_pct: 50 };
+const POD = {
+  id: "pod1", player_id: "p1", name: "Tent A", capacity: 4, tier: "standard",
+  active: true, auto_water: false, auto_feed: false,
+  temperature: 24.3, humidity: 55.5, co2_level: 905, light_intensity: 615, ph_level: 6.25,
+};
+const STRAIN = {
+  id: "str1", name: "Galactic Runtz", slug: "galactic-runtz", lineage_type: "hybrid",
+  rarity: "rare", indica_ratio: 0.5, thc_range: [22, 28], cbd_range: [0, 1],
+  flowering_days: [55, 65], yield_range: [400, 600], difficulty: 3, terpenes: ["limonene"],
+  stability: 80, generation: 0, parent_a_id: null, parent_b_id: null, is_base_catalog: true,
+  genome: null, bud_dna: null, nft_asset_id: null, nft_status: "none",
+};
+const PLANT = {
+  id: "plant1", player_id: "p1", pod_id: "pod1", strain_id: "str1",
+  growth_stage: "flowering", planted_at: new Date(Date.now() - 200 * 3600_000).toISOString(),
+  height: 80, health: 88, water_level: 70, nutrient_level: 65, pest_level: 5, disease_level: 2,
+  condition_flags: [], is_alive: true, harvested: false,
+};
+function plantState() {
+  const now = Date.now();
+  return {
+    ...PLANT,
+    metrics: { vpd_kpa: 1.12, dli_mol: 32, ppfd: 615, photoperiod_hours: 12, nutrient_ppm: 850, stage_targets: [700, 1000] },
+    forecast: {
+      stage: "flowering", stage_index: 4, stage_count: 7, age_hours: 200, hours_in_stage: 40,
+      next_stage: "late_flower", stage_progress_pct: 55, stage_base_hours: 120, stage_total_hours: 140,
+      next_stage_eta: new Date(now + 30 * 60_000).toISOString(),
+      hours_to_harvest: 1.5, harvest_eta: new Date(now + 90 * 60_000).toISOString(),
+      is_harvest_ready: false,
+    },
+    recent_events: [],
+  };
+}
+
+async function setup(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("gpe.player_id", "p1");
+    localStorage.setItem("gpe.api_key", "test-key");
+    localStorage.setItem("gpe.onboarding", JSON.stringify({ state: { completed: { p1: true } }, version: 0 }));
+  });
+  const overrides: Record<string, unknown> = {
+    "/pods": [POD],
+    "/plants/plant1/state": plantState(),
+    "/plants": [PLANT],
+    "/strains": [STRAIN],
+    "/turbo": { enabled: false, multiplier: 10, offset_hours: 0, effective_now: new Date().toISOString(), wall_now: new Date().toISOString(), synced_pods: 0 },
+  };
+  await page.route("**/api/game/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const json = (body: unknown) => route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+    for (const [needle, body] of Object.entries(overrides)) if (path.includes(needle)) return json(body);
+    if (path.endsWith("/players/p1")) return json(PLAYER);
+    if (path.endsWith("/wallet")) return json(WALLET);
+    if (path.endsWith("/level")) return json(LEVEL);
+    return json([]);
+  });
+}
+
+test("PROOF: chamber climate sliders have fine steps + ± nudge buttons", async ({ page }) => {
+  await setup(page);
+  await page.goto("/dashboard/plants/plant1/chamber");
+  await page.getByRole("button", { name: /CLIMATE/i }).click();
+  await page.getByLabel("Increase pH").first().waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: "e2e-output/sliders-climate.png", fullPage: true });
+});
