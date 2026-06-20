@@ -22,10 +22,22 @@ const ACTIONS: ActionDef[] = [
 ];
 
 /**
- * The seven-action command bar. WATER/FEED are wired to the care mutations;
- * INSPECT/JOURNAL deep-link to the plant detail page (Advisor + Event log);
- * PRUNE/TRAIN/BOOSTS are visible but disabled until their backend lands.
+ * The seven-action command bar. WATER/FEED + the free care tools PRUNE/TRAIN/
+ * BOOSTS are wired to the care mutations (the latter are free, with server-side
+ * once-per-stage / cooldown guards surfaced as error toasts); INSPECT/JOURNAL
+ * deep-link to the plant detail page (Advisor + Event log).
  */
+type CareKey = "water" | "feed" | "prune" | "train" | "boost";
+
+// The "boosts" button maps to the singular `boost` care kind.
+const CARE_KIND: Record<string, CareKey> = {
+  water: "water",
+  feed: "feed",
+  prune: "prune",
+  train: "train",
+  boosts: "boost",
+};
+
 export function CommandActionBar({ plant }: { plant: PlantState }) {
   const { care } = useCareActions(plant.id);
   const { fire, layer } = useCareFeedback();
@@ -37,7 +49,7 @@ export function CommandActionBar({ plant }: { plant: PlantState }) {
   const live = "border-cyan-400/25 bg-cyan-400/[0.05] text-cyan-100 hover:bg-cyan-400/15";
   const off = "cursor-not-allowed border-ink-700 bg-ink-900/40 text-gray-600";
 
-  const doCare = (kind: "water" | "feed") => {
+  const doCare = (kind: CareKey) => {
     fire(kind);
     care.mutate(kind);
   };
@@ -46,13 +58,14 @@ export function CommandActionBar({ plant }: { plant: PlantState }) {
     <div className="relative flex flex-wrap gap-2">
       {layer}
       {ACTIONS.map((a) => {
-        if (a.key === "water" || a.key === "feed") {
+        const kind = CARE_KIND[a.key];
+        if (kind) {
           return (
             <button
               key={a.key}
-              onClick={() => doCare(a.key as "water" | "feed")}
+              onClick={() => doCare(kind)}
               disabled={ended}
-              className={`${base} ${ended ? off : live} ${pending === a.key ? "animate-pulse" : ""}`}
+              className={`${base} ${ended ? off : live} ${pending === kind ? "animate-pulse" : ""}`}
             >
               <span className="text-base">{a.icon}</span>
               {a.label}

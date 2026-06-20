@@ -783,6 +783,24 @@ def treat_disease(player_id, plant_id):
     return _care_action(player_id, plant_id, "treat_disease")
 
 
+@game_bp.post("/players/<player_id>/plants/<plant_id>/prune")
+@require_player
+def prune_plant(player_id, plant_id):
+    return _care_action(player_id, plant_id, "prune")
+
+
+@game_bp.post("/players/<player_id>/plants/<plant_id>/train")
+@require_player
+def train_plant(player_id, plant_id):
+    return _care_action(player_id, plant_id, "train")
+
+
+@game_bp.post("/players/<player_id>/plants/<plant_id>/boost")
+@require_player
+def boost_plant(player_id, plant_id):
+    return _care_action(player_id, plant_id, "boost")
+
+
 @game_bp.post("/players/<player_id>/pods/<pod_id>/weather")
 @require_player
 def roll_weather(player_id, pod_id):

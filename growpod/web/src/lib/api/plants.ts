@@ -41,6 +41,23 @@ export const plants = {
       method: "POST",
     }),
 
+  // Free "care tool" actions — no GROW cost (gentle once-per-stage / cooldown
+  // effects enforced server-side).
+  prune: (playerId: string, plantId: string) =>
+    apiFetch<Plant>(`/players/${playerId}/plants/${plantId}/prune`, {
+      method: "POST",
+    }),
+
+  train: (playerId: string, plantId: string) =>
+    apiFetch<Plant>(`/players/${playerId}/plants/${plantId}/train`, {
+      method: "POST",
+    }),
+
+  boost: (playerId: string, plantId: string) =>
+    apiFetch<Plant>(`/players/${playerId}/plants/${plantId}/boost`, {
+      method: "POST",
+    }),
+
   // Yield weight & quality are computed server-side from the plant's grown
   // state; the client only chooses whether to immediately sell.
   harvest: (playerId: string, plantId: string, opts: { sell?: boolean } = {}) =>

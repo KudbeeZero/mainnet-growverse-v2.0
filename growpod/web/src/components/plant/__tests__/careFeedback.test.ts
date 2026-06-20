@@ -2,7 +2,16 @@ import { describe, it, expect } from "vitest";
 import { CARE_FX, buildParticles, type CareKind } from "@/components/plant/careFeedbackData";
 import { haptic } from "@/lib/haptics";
 
-const KINDS: CareKind[] = ["water", "feed", "treatPests", "treatDisease", "harvest"];
+const KINDS: CareKind[] = [
+  "water",
+  "feed",
+  "treatPests",
+  "treatDisease",
+  "prune",
+  "train",
+  "boost",
+  "harvest",
+];
 
 describe("CARE_FX", () => {
   it("defines every care kind with non-empty glyphs and a positive count", () => {

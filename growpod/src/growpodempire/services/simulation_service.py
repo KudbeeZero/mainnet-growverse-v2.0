@@ -202,6 +202,61 @@ class SimulationService:
         self._log(plant, "disease_treated", payload={"cleared": cleared})
         return plant
 
+    # ----- Free "care tool" actions (no ledger spend) --------------------
+    def prune(self, player_id: str, plant_id: str) -> Plant:
+        """Free tidy-up: trims pests/disease and nudges health. Once per stage."""
+        plant = self._get_plant(player_id, plant_id)
+        self._require_living(plant)
+        self.sync(plant)
+        if self._last_event_stage(plant, "pruned") == plant.growth_stage:
+            raise GameError("Already pruned this stage — let it recover first.")
+        cfg = self._sim.get("actions", {}).get("prune", {})
+        pest_reduction = cfg.get("pest_reduction", 15)
+        disease_reduction = cfg.get("disease_reduction", 10)
+        health_add = cfg.get("health_add", 2)
+        plant.pest_level = max(0.0, plant.pest_level - pest_reduction)
+        plant.disease_level = max(0.0, plant.disease_level - disease_reduction)
+        plant.health = min(100.0, plant.health + health_add)
+        plant.condition_flags = engine.reactions.compute_conditions(plant, self._sim)
+        self._log(plant, "pruned", payload={"stage": plant.growth_stage})
+        return plant
+
+    def train(self, player_id: str, plant_id: str) -> Plant:
+        """Free low-stress training: gentle health bump + small pest relief. Once per stage."""
+        plant = self._get_plant(player_id, plant_id)
+        self._require_living(plant)
+        self.sync(plant)
+        if self._last_event_stage(plant, "trained") == plant.growth_stage:
+            raise GameError("Already trained this stage.")
+        cfg = self._sim.get("actions", {}).get("train", {})
+        health_add = cfg.get("health_add", 3)
+        pest_reduction = cfg.get("pest_reduction", 5)
+        plant.health = min(100.0, plant.health + health_add)
+        plant.pest_level = max(0.0, plant.pest_level - pest_reduction)
+        plant.condition_flags = engine.reactions.compute_conditions(plant, self._sim)
+        self._log(plant, "trained", payload={"stage": plant.growth_stage})
+        return plant
+
+    def boost(self, player_id: str, plant_id: str) -> Plant:
+        """Free top-up: floors water/nutrients and a small health bump. On a cooldown."""
+        plant = self._get_plant(player_id, plant_id)
+        self._require_living(plant)
+        self.sync(plant)
+        cfg = self._sim.get("actions", {}).get("boost", {})
+        cooldown_hours = cfg.get("cooldown_hours", 6)
+        since = self._hours_since_last_event(plant, "boosted")
+        if since is not None and since < cooldown_hours:
+            raise GameError("Boost is recharging — try again later.")
+        water_floor = cfg.get("water_floor", 80)
+        nutrient_floor = cfg.get("nutrient_floor", 80)
+        health_add = cfg.get("health_add", 4)
+        plant.water_level = max(plant.water_level, water_floor)
+        plant.nutrient_level = max(plant.nutrient_level, nutrient_floor)
+        plant.health = min(100.0, plant.health + health_add)
+        plant.condition_flags = engine.reactions.compute_conditions(plant, self._sim)
+        self._log(plant, "boosted", payload={})
+        return plant
+
     def apply_consumable(self, player_id: str, plant_id: str, item_key: str) -> Plant:
         """Use one shop consumable on a plant, applying its effect to the plant's
         simulated levels (so it flows through the normal yield/quality math)."""
@@ -298,3 +353,35 @@ class SimulationService:
                 payload=payload,
             )
         )
+
+    def _last_event(self, plant: Plant, event_type: str) -> Optional[PlantEvent]:
+        """The most recent PlantEvent of ``event_type`` for this plant, or None.
+
+        Flushes first so an event logged earlier in this same (autoflush-off)
+        session — e.g. a prior prune/boost — is visible to the once-per-stage /
+        cooldown guard.
+        """
+        self.session.flush()
+        return (
+            self.session.query(PlantEvent)
+            .filter(
+                PlantEvent.plant_id == plant.id,
+                PlantEvent.event_type == event_type,
+            )
+            .order_by(PlantEvent.timestamp.desc())
+            .first()
+        )
+
+    def _last_event_stage(self, plant: Plant, event_type: str) -> Optional[str]:
+        """The ``stage`` recorded on the most recent ``event_type`` event, or None."""
+        ev = self._last_event(plant, event_type)
+        if ev is None:
+            return None
+        return (ev.payload or {}).get("stage")
+
+    def _hours_since_last_event(self, plant: Plant, event_type: str) -> Optional[float]:
+        """Hours elapsed since the most recent ``event_type`` event, or None."""
+        ev = self._last_event(plant, event_type)
+        if ev is None:
+            return None
+        return (self.clock.now() - ev.timestamp).total_seconds() / 3600.0
