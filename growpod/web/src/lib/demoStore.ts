@@ -8,10 +8,39 @@ import type { ConditionFlag, GrowthStage } from "@/lib/types";
 
 export const DEMO_STORAGE = "gpe.demo";
 
+/** A strain a demo grower can pick. Curated (offline) — mirrors the authored
+ * catalog strains the renderer already knows, with the headline stats. */
+export interface DemoStrain {
+  slug: string;
+  name: string;
+  lineage: "indica" | "sativa" | "hybrid";
+  thc: number;
+  floweringDays: [number, number];
+  rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
+}
+
+export const DEMO_STRAINS: DemoStrain[] = [
+  { slug: "white-widow", name: "White Widow", lineage: "hybrid", thc: 19, floweringDays: [56, 63], rarity: "common" },
+  { slug: "white-rhino", name: "White Rhino", lineage: "indica", thc: 22, floweringDays: [56, 63], rarity: "uncommon" },
+  { slug: "g13", name: "G13", lineage: "indica", thc: 24, floweringDays: [56, 63], rarity: "rare" },
+  { slug: "white-fire-og", name: "White Fire OG", lineage: "hybrid", thc: 22, floweringDays: [60, 67], rarity: "rare" },
+  { slug: "animal-mints", name: "Animal Mints", lineage: "hybrid", thc: 26, floweringDays: [56, 63], rarity: "rare" },
+  { slug: "gelato", name: "Gelato", lineage: "hybrid", thc: 25, floweringDays: [55, 60], rarity: "epic" },
+  { slug: "purple-diddy-punch", name: "Purple Diddy Punch", lineage: "indica", thc: 23, floweringDays: [58, 65], rarity: "epic" },
+  { slug: "wedding-cake", name: "Wedding Cake", lineage: "hybrid", thc: 25, floweringDays: [58, 63], rarity: "legendary" },
+];
+
+/** The chosen demo strain, falling back to the first when the slug is unknown. */
+export function strainForSlug(slug?: string): DemoStrain {
+  return DEMO_STRAINS.find((s) => s.slug === slug) ?? DEMO_STRAINS[0];
+}
+
 export interface DemoGrow {
   growerName: string;
   podName: string;
   strainName: string;
+  /** Slug of the picked strain (links to the renderer/genetics). */
+  strainSlug: string;
   day: number;
   stage: GrowthStage;
   /** 0..120, cosmetic height for the renderer scale narrative. */
@@ -54,12 +83,14 @@ export function saveDemo(g: DemoGrow): DemoGrow {
   return next;
 }
 
-export function startDemo(growerName?: string): DemoGrow {
+export function startDemo(growerName?: string, strainSlug?: string): DemoGrow {
   const now = new Date().toISOString();
+  const strain = strainForSlug(strainSlug);
   return saveDemo({
     growerName: (growerName ?? "").trim() || "Demo Grower",
     podName: "Starter Pod",
-    strainName: "Demo Kush",
+    strainName: strain.name,
+    strainSlug: strain.slug,
     day: 1,
     stage: "seed",
     height: 2,
