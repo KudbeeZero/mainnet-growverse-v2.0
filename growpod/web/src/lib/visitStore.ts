@@ -5,14 +5,14 @@ import { persist, createJSONStorage } from "zustand/middleware";
 
 // Lightweight "last visit" tracker, used to surface the welcome-back / neglect
 // prompt after a long absence. (The global 10× speed faucet is now server-owned
-// via `useTurbo` and toggled only in the Grow Chamber; the legacy localStorage
-// key name below is kept so existing visit timestamps survive the migration.)
+// via `useTurbo` and toggled only in the Grow Chamber.) The legacy localStorage
+// key name is kept so existing visit timestamps survive the rename.
 interface VisitState {
   lastVisitMs: number;
   markVisit: () => void;
 }
 
-export const useDevSpeedStore = create<VisitState>()(
+export const useVisitStore = create<VisitState>()(
   persist(
     (set) => ({
       lastVisitMs: 0,

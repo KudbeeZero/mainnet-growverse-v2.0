@@ -111,6 +111,29 @@ def player_effective_now(
     return wall_now + timedelta(seconds=bonus)
 
 
+def player_clock(wall_now: datetime, player, multiplier: float):
+    """Read a Player row's turbo fields and return ``(effective_now, rate)``.
+
+    ``rate`` is the CURRENT speed of the effective clock relative to wall time:
+    ``multiplier`` only while turbo is actively engaged, else ``1.0`` (a banked
+    offset still shifts ``now`` forward, but time then advances at wall rate).
+    Callers anchoring wall-clock ETAs must divide remaining time by ``rate`` —
+    not by ``multiplier`` — so a banked-but-OFF faucet doesn't over-compress.
+
+    Single source of truth for the per-player clock so the two services that
+    advance plants (read sync + harvest catch-up) can never drift apart.
+    """
+    enabled = bool(getattr(player, "turbo_enabled", False))
+    eff = player_effective_now(
+        wall_now,
+        turbo_enabled=enabled,
+        offset_seconds=float(getattr(player, "turbo_offset_seconds", 0.0) or 0.0),
+        anchor_at=getattr(player, "turbo_anchor_at", None),
+        multiplier=multiplier,
+    )
+    return eff, (float(multiplier) if enabled else 1.0)
+
+
 # --- Process-wide simulation test clock --------------------------------------
 # A single shared OffsetClock for the running process. Lazily created; only ever
 # reached when the test clock is enabled (dev/test, never production).

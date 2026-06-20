@@ -31,7 +31,7 @@ from ..enums import (
 from ..genetics.breeding import cross, derive_strain_fields, assign_rarity
 from ..genetics.traits import express_terpenes, normalize_genome
 from ..simulation import engine, curing
-from ..simulation.clock import Clock, active_clock, player_effective_now
+from ..simulation.clock import Clock, active_clock, player_clock
 from . import leveling_service
 from ..db.models import (
     Player,
@@ -195,14 +195,10 @@ class GameService:
     def _player_now(self, player: Player) -> datetime:
         """The player's effective simulation 'now' (wall time + banked turbo
         acceleration). Used wherever the grow loop advances a plant so harvest
-        reflects the accelerated clock."""
-        return player_effective_now(
-            self.clock.now(),
-            turbo_enabled=bool(player.turbo_enabled),
-            offset_seconds=float(player.turbo_offset_seconds or 0.0),
-            anchor_at=player.turbo_anchor_at,
-            multiplier=self._turbo_multiplier(),
-        )
+        reflects the accelerated clock. Shares the single per-player clock helper
+        with SimulationService so the two can never drift apart."""
+        eff_now, _rate = player_clock(self.clock.now(), player, self._turbo_multiplier())
+        return eff_now
 
     def turbo_state(self, player: Player) -> dict:
         """Account-truthful turbo readout for the UI (so the toggle reflects the

@@ -16,7 +16,7 @@ import { APP_VERSION } from "@/lib/version";
 import { usePods, usePlantsList } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useIdStore } from "@/lib/localStore";
-import { useDevSpeedStore } from "@/lib/devSpeedStore";
+import { useVisitStore } from "@/lib/visitStore";
 
 const PodCard = dynamic(
   () => import("@/components/pod/PodCard").then((m) => m.PodCard),
@@ -60,7 +60,7 @@ function DashboardInner() {
 
   // On mount: check for long absence, then record this visit.
   useEffect(() => {
-    const { lastVisitMs: lv, markVisit: mv } = useDevSpeedStore.getState();
+    const { lastVisitMs: lv, markVisit: mv } = useVisitStore.getState();
     if (lv > 0 && Date.now() - lv > TWO_WEEKS_MS) setShowNeglect(true);
     mv();
   // eslint-disable-next-line react-hooks/exhaustive-deps

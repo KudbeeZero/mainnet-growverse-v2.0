@@ -139,3 +139,26 @@ def test_forecast_eta_is_compressed_to_wall_time_under_turbo(session):
     # The wall countdown is ~M× shorter than the biological hours remaining.
     assert wall_hours < fcst["hours_to_harvest"]
     assert abs(wall_hours - fcst["hours_to_harvest"] / M) < 0.5
+
+
+def test_forecast_eta_not_overcompressed_after_turbo_off(session):
+    """Regression: once turbo is switched OFF the banked offset keeps eff_now
+    ahead of wall, but time now advances at 1× — so the ETA must be re-anchored
+    at the CURRENT rate (1×), NOT divided by the multiplier. A naive `/ M` would
+    show the harvest countdown ~M× too soon, permanently (banked offset never
+    clears)."""
+    fc = FrozenClock(BASE)
+    svc, p, plants = _player_two_pods(session, fc)
+    plant = plants[0]
+
+    svc.set_turbo(p.id, True)               # anchor BASE
+    fc.set(BASE + timedelta(hours=1))       # bank ~9h of acceleration
+    GameService(session, clock=fc).set_turbo(p.id, False)   # OFF, offset banked
+
+    fcst = SimulationService(session, clock=fc).forecast(plant)
+    assert not fcst["is_harvest_ready"]
+    wall_now = fc.now()
+    eta = datetime.fromisoformat(fcst["harvest_eta"])
+    wall_hours = (eta - wall_now).total_seconds() / 3600.0
+    # Rate is 1× now → wall countdown ≈ the biological hours remaining (NOT /M).
+    assert abs(wall_hours - fcst["hours_to_harvest"]) < 0.5
