@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from ..economy.config import get_economy_config, EconomyConfig
 from ..economy.ledger import post, to_money
-from ..enums import LedgerEntryType
+from ..enums import LedgerEntryType, GrowthStage
 from datetime import datetime, timedelta
 
 from ..db.models import (
@@ -299,6 +299,16 @@ class SimulationService:
         plant = self._get_plant(player_id, plant_id)
         self._require_living(plant)
         self.sync(plant)
+
+        # The catch-up above can cross the death threshold (the plant was alive at
+        # read but its overdue ticks just killed it). Bail BEFORE charging — an
+        # honest death, no GROW spent, no half-revived "dead at health 70" state.
+        if not plant.is_alive:
+            raise GameError("This plant didn't survive — it can't be boosted.")
+        # At the harvest window the engine grows nothing, so a fast-forward would
+        # advance zero lifecycle. Don't take 60 GROW for a no-op — tell them to cut.
+        if plant.growth_stage == GrowthStage.HARVEST.value:
+            raise GameError("Already at the harvest window — boosting won't speed it up. Cut it down!")
 
         cfg = self._sim.get("actions", {}).get("growth_boost", {})
         cooldown_hours = cfg.get("cooldown_hours", 8)

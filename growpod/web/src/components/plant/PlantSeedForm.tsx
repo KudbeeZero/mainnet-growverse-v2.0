@@ -30,6 +30,8 @@ export function PlantSeedForm({ podId }: { podId: string }) {
       addPlant(playerId!, plant.id);
       qc.invalidateQueries({ queryKey: queryKeys.plants(playerId!) });
       qc.invalidateQueries({ queryKey: queryKeys.seeds(playerId!) });
+      // Refresh the pod so its "x/N plants" capacity badge updates at once.
+      qc.invalidateQueries({ queryKey: queryKeys.pods(playerId!) });
       toast.success("Seed planted");
     },
     onError: (e) => toast.error(e.message),

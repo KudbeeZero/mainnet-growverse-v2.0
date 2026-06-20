@@ -8,7 +8,7 @@ revives a struggling plant, all on a cooldown.
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -106,3 +106,45 @@ def test_boost_requires_funds(session):
         PlantEvent.event_type == "growth_boosted",
     ).all()
     assert boosted == []
+
+
+def _no_boost_event(session, plant_id) -> bool:
+    from growpodempire.db.models import PlantEvent
+    return session.query(PlantEvent).filter(
+        PlantEvent.plant_id == plant_id,
+        PlantEvent.event_type == "growth_boosted",
+    ).count() == 0
+
+
+def test_boost_rejected_when_catchup_kills_the_plant(session):
+    # Alive at read, but its overdue ticks (maxed pest+disease, no resources) will
+    # cross the death threshold during the boost's initial catch-up sync.
+    pid, plant = _plant(session, "doomed", health=2.0)
+    plant.pest_level = 100.0
+    plant.disease_level = 100.0
+    plant.water_level = 0.0
+    plant.nutrient_level = 0.0
+    plant.last_tick_at = datetime.utcnow() - timedelta(hours=12)
+    session.flush()
+    before = balance(session, pid)
+
+    with pytest.raises(GameError):
+        SimulationService(session).apply_growth_boost(pid, plant.id)
+
+    # No GROW spent on a plant that didn't survive, and no boost event.
+    assert balance(session, pid) == before
+    assert plant.is_alive is False
+    assert _no_boost_event(session, plant.id)
+
+
+def test_boost_rejected_at_harvest_window(session):
+    # At the harvest stage the engine grows nothing — boosting would be a no-op,
+    # so it's rejected before any charge.
+    pid, plant = _plant(session, "ripe", stage=GrowthStage.HARVEST.value)
+    before = balance(session, pid)
+
+    with pytest.raises(GameError):
+        SimulationService(session).apply_growth_boost(pid, plant.id)
+
+    assert balance(session, pid) == before
+    assert _no_boost_event(session, plant.id)

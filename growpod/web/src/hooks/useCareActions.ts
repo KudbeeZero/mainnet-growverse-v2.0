@@ -38,6 +38,9 @@ export function useCareActions(plantId: string) {
     if (playerId) {
       qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
       qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+      // Also refresh the dashboard plant LIST object so any list-level view
+      // (sort/filter) tracks the change, not just the per-plant card query.
+      qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
     }
   }
 
@@ -99,6 +102,8 @@ export function useGrowthBoost(plantId: string, onBoosted?: () => void) {
       if (playerId) {
         qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
         qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+        // Keep the dashboard plant list in lockstep with the boosted card.
+        qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
       }
       onBoosted?.();
     },
@@ -116,6 +121,8 @@ export function useCleanupPlant() {
     mutationFn: (plantId) => api.plants.cleanup(playerId!, plantId),
     onSuccess: (_v, plantId) => {
       toast.success("Pod cleaned up · ready for a new seed 🌱");
+      // Refresh any detail/chamber view open on this exact plant, not just the list.
+      qc.invalidateQueries({ queryKey: queryKeys.plant(plantId) });
       if (playerId) {
         removePlant(playerId, plantId);
         qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
