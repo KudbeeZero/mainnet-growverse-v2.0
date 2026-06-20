@@ -565,3 +565,19 @@ shipped; no payment rails are built; chain stays TestNet/mock-by-default. Five o
 any real activation (allocation model A/B/C, money rails, recovery-vs-rewind, Cup policy, boost caps)
 — see `docs/product/GROWVERSE_BUILD_PRIORITY_ROADMAP.md`. Any boost granting in-game value must post
 through the audited ledger (`economy/ledger.py`).
+
+### 2026-06-20 — Turbo speed faucet 10× → 250× ("watchable" pacing)
+**Decision (owner-ratified):** Raise `simulation.turbo_multiplier` from `10.0` to `250.0`. At the
+launch `time_scale: 0.0075` a plant is already ~21 hours of real play seed→harvest, so the old 10×
+faucet still took ~2 hours and — because the engine grows in **1-hour steps** — visibly advanced only
+once every ~6 minutes, reading as "the 10× doesn't work / it's frozen." 250× lands a full seed→harvest
+in **~5 minutes**, and at the client's ~7s poll the bud visibly develops every poll.
+**Why:** the whole point of turbo is to let a player *watch* a plant grow in one sitting; 10× never
+delivered that. This is pure pacing on the per-account opt-in faucet — it changes only WHEN a harvest
+lands, never its grams/quality/value, and touches no faucet/sink/price. The daily-stipend faucet stays
+on the real wall clock. The clock math (`simulation/clock.py player_effective_now`) was already correct
+and is unchanged; only the multiplier moved.
+**Consequences:** (1) one-line balance knob — dial back toward 10× if 600× feels too fast. (2) Turbo's
+mechanism tests (`tests/test_turbo_speed.py`) now inject a **pinned** config (M=10) so they verify the
+banking/acceleration math independent of the production value — re-tuning never breaks them. (3) The ⚡
+chip renders the live server multiplier, so it shows "600×" with no further UI change.

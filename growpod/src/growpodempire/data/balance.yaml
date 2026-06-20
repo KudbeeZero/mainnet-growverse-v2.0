@@ -197,7 +197,13 @@ simulation:
   # accelerates plant biology, NOT the economy — the daily-stipend faucet stays
   # on the real wall clock and harvest value stays a pure fn of grams/quality/
   # rarity, so turbo changes WHEN a harvest lands, never its value.
-  turbo_multiplier: 10.0
+  #
+  # 250× makes turbo actually WATCHABLE: at time_scale 0.0075 a plant is ~21h of
+  # real play seed->harvest, so 250× lands it in ~5 minutes and the bud visibly
+  # advances every client poll (instead of 10×, where growth ticked once every
+  # ~6 minutes and looked frozen). Owner-ratified ~5-min pacing (2026-06-20);
+  # pacing-only, no faucet/sink/price change. See docs/memory/DECISIONS.md.
+  turbo_multiplier: 250.0
 
   # Canonical stage durations in days (flowering comes from the strain's genome).
   # These are the REAL-TIME reference lengths; time_scale above scales them for
