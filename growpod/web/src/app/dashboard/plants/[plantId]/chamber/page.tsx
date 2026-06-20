@@ -293,6 +293,10 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             dna={budDna}
             seed={seedForPlant(plantId)}
             budDev={dev.budDev}
+            ripe={dev.ripe}
+            brown={dev.brown}
+            trich={dev.trich}
+            purple={budColor.anthocyanin ?? 0}
             reducedMotion={reducedMotion}
           />
         ) : (
