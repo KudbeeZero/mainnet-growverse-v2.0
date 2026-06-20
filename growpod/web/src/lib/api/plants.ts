@@ -58,6 +58,14 @@ export const plants = {
       method: "POST",
     }),
 
+  // Purchasable (simulated) growth boost — spends in-game GROW to fast-forward
+  // the lifecycle a few hours AND revive a struggling plant. Real-money checkout
+  // attaches later server-side; this calls the same effect with GROW now.
+  growthBoost: (playerId: string, plantId: string) =>
+    apiFetch<Plant>(`/players/${playerId}/plants/${plantId}/growth-boost`, {
+      method: "POST",
+    }),
+
   // Yield weight & quality are computed server-side from the plant's grown
   // state; the client only chooses whether to immediately sell.
   harvest: (playerId: string, plantId: string, opts: { sell?: boolean } = {}) =>

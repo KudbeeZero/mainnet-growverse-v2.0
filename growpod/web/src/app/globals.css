@@ -204,6 +204,60 @@ body {
   animation: gpe-celebrate-pop 0.5s ease-out both;
 }
 
+/* ---- Growth boost: an electric "zap" surge over the stage ---- */
+/* Stage-wide flash: a couple of bright electric pulses then fade. */
+@keyframes gpe-electric-flash {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  24% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.gpe-electric-flash {
+  animation: gpe-electric-flash 1.1s ease-out forwards;
+  background: radial-gradient(
+    circle at 50% 45%,
+    rgba(125, 211, 255, 0.55),
+    rgba(74, 222, 128, 0.18) 45%,
+    transparent 70%
+  );
+}
+/* The ⚡ bolt: snaps in big, jitters, then settles + fades. */
+@keyframes gpe-electric-bolt {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4) rotate(-8deg);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.25) rotate(6deg);
+  }
+  34% {
+    transform: translate(-50%, -52%) scale(1.05) rotate(-5deg);
+  }
+  55% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.12) rotate(3deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+}
+.gpe-electric-bolt {
+  animation: gpe-electric-bolt 1.1s ease-out forwards;
+}
+
 /* ---- Intro scene: AI agents popping up over a growing plant ---- */
 
 /* Entrance for an agent bubble: rise + scale in, with a slight overshoot. */
@@ -270,6 +324,8 @@ body {
   .gpe-care-glow,
   .gpe-celebrate-ring,
   .gpe-celebrate-pop,
+  .gpe-electric-flash,
+  .gpe-electric-bolt,
   .animate-spin,
   .animate-twinkle,
   .animate-pulse-ring,

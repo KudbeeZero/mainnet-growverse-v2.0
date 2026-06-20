@@ -79,6 +79,33 @@ export function useCareActions(plantId: string) {
   return { care, harvest };
 }
 
+/**
+ * Purchasable (simulated) growth boost. Spends in-game GROW to fast-forward the
+ * plant a few hours AND revive a struggling one. `onBoosted` fires on success so
+ * the caller can play the ⚡ electric animation. (Real-money checkout attaches
+ * later server-side — see SimulationService.apply_growth_boost.)
+ */
+export function useGrowthBoost(plantId: string, onBoosted?: () => void) {
+  const { playerId } = useSession();
+  const qc = useQueryClient();
+  const toast = useToast();
+
+  return useMutation<Plant, ApiError, void>({
+    mutationFn: () => api.plants.growthBoost(playerId!, plantId),
+    onSuccess: () => {
+      toast.success("⚡ Growth boosted — fast-forwarded & revived!");
+      qc.invalidateQueries({ queryKey: queryKeys.plant(plantId) });
+      qc.invalidateQueries({ queryKey: queryKeys.events(plantId) });
+      if (playerId) {
+        qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
+        qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+      }
+      onBoosted?.();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+}
+
 export function useCleanupPlant() {
   const { playerId } = useSession();
   const qc = useQueryClient();
