@@ -87,6 +87,16 @@ def harvest_value(
     return to_money(value)
 
 
+def quality_window_delta(window: str, cfg: EconomyConfig) -> float:
+    """Quality adjustment (points) for harvesting in a given trichome-ripeness
+    window — rewards the peak/ripe window, penalises too-early or overripe. The
+    magnitudes are owner-ratified balance, read from
+    ``harvest_sale.trichome.quality_by_window`` (so they're config, not code).
+    Unknown windows (e.g. a pre-flower harvest) get no adjustment."""
+    table = cfg.harvest.get("trichome", {}).get("quality_by_window", {})
+    return float(table.get(window, 0.0))
+
+
 def cup_score(
     weight_g: float,
     quality: float,

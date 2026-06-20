@@ -1009,6 +1009,28 @@ class GameService:
         }
 
     # ----- Harvest & sale -------------------------------------------------
+    def _harvest_window(self, plant: Plant) -> str:
+        """The trichome ripeness window for a plant at its CURRENT state — read
+        from the same telemetry read-model the UI/3D bud use, so the harvest-
+        timing reward matches what the grower sees in the 🔬 readout."""
+        from ..simulation.engines.flowers import trichome_resin_gland as trg
+        now = self._player_now(self.get_player(plant.player_id))
+        fc = engine.stage_forecast(plant, self.cfg, now)
+        sim = self.cfg.raw.get("simulation", {})
+        pod = self.session.get(GrowPod, plant.pod_id)
+        env = engine.environment_for(plant, pod, sim)
+        genetics = trg.genetics_from_genes(
+            engine._gene(plant, "thc", 18.0),
+            engine._gene(plant, "vigor", 0.5),
+            engine._gene(plant, "indica_ratio", 0.5),
+        )
+        tri = trg.telemetry(
+            plant.growth_stage, fc.get("stage_progress_pct", 0.0),
+            plant.health, env.get("light", 600.0), genetics, sim,
+            water=plant.water_level, nutrient=plant.nutrient_level,
+        )
+        return tri["harvest_window"]
+
     def harvest_plant(
         self,
         player_id: str,
@@ -1031,9 +1053,12 @@ class GameService:
         strain = self.get_strain(plant.strain_id)
         fx = self._research(player_id)  # research-tree modifiers
 
-        # Yield scales with health; quality is the plant's health at harvest.
+        # Yield scales with health; quality is the plant's health at harvest,
+        # nudged by WHEN it was cut: trichome ripeness window (peak/ripe reward,
+        # too-early/overripe penalty). Owner-ratified, config-driven magnitudes.
         if quality is None:
             quality = max(0.0, min(100.0, plant.health))
+            quality = max(0.0, quality + pricing.quality_window_delta(self._harvest_window(plant), self.cfg))
         if weight_g is None:
             midpoint = (strain.yield_min + strain.yield_max) / 2.0
             weight_g = round(midpoint * (0.4 + 0.6 * plant.health / 100.0), 1)
