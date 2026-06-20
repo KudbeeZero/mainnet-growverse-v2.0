@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
 import { usePlantState } from "@/hooks/usePlantState";
+import { useTurbo } from "@/hooks/useTurbo";
 import { usePods, useStrainMap } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useToast } from "@/components/ui/Toast";
@@ -49,6 +50,10 @@ function CommandScreen({ plantId }: { plantId: string }) {
   const qc = useQueryClient();
   const toast = useToast();
   const { data: plant, isLoading, isError, error, refetch } = usePlantState(playerId!, plantId);
+  // Global 10× faucet state (read-only here) so the SPEED chip tells the truth
+  // when turbo is engaged from the Grow Chamber — the preview buttons stay a
+  // separate, view-only scrubber.
+  const { enabled: turboOn, multiplier: turboX } = useTurbo(playerId);
   const { map } = useStrainMap();
   const { data: pods } = usePods();
 
@@ -214,6 +219,8 @@ function CommandScreen({ plantId }: { plantId: string }) {
             </div>
             <TimeControls
               forecast={plant.forecast}
+              turboOn={turboOn}
+              turboX={turboX}
               previewing={previewing}
               previewDay={previewDay ?? render.liveNominalDay}
               liveNominalDay={render.liveNominalDay}

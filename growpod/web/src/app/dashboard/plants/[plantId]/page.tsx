@@ -52,7 +52,7 @@ function PlantDetail({ plantId }: { plantId: string }) {
     refetchInterval: plantSettled ? false : 10_000,
   });
   // QA-only: toast on real state changes between polls so testing feels alive.
-  useQaMilestones(plant);
+  useQaMilestones(plant, playerId);
 
   if (isLoading) return <LoadingBlock label="Loading plant…" />;
   if (isError || !plant)

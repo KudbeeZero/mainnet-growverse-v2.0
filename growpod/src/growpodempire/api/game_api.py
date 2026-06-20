@@ -313,6 +313,35 @@ def list_plants(player_id):
         return _error(str(e), 404)
 
 
+@game_bp.get("/players/<player_id>/turbo")
+@require_player
+def get_turbo(player_id):
+    """Current global 10× speed-faucet state for the account."""
+    try:
+        with session_scope() as s:
+            svc = GameService(s)
+            state = svc.turbo_state(svc.get_player(player_id))
+        return jsonify(state)
+    except GameError as e:
+        return _error(str(e), 404)
+
+
+@game_bp.post("/players/<player_id>/turbo")
+@require_player
+def set_turbo(player_id):
+    """Turn the global 10× speed faucet ON/OFF for the whole account. Body:
+    {"enabled": true|false}. Affects every pod at once and is reflected in the
+    account immediately (all living plants are caught up to the new clock)."""
+    data = request.get_json(force=True, silent=True) or {}
+    enabled = bool(data.get("enabled", False))
+    try:
+        with session_scope() as s:
+            state = GameService(s).set_turbo(player_id, enabled)
+        return jsonify(state)
+    except GameError as e:
+        return _error(str(e), 404)
+
+
 @game_bp.post("/players/<player_id>/seeds/buy")
 @require_player
 def buy_seed(player_id):

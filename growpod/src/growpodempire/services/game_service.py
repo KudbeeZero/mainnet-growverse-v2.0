@@ -9,7 +9,7 @@ so balances stay consistent and auditable.
 
 import random
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import List, Optional
 
@@ -31,7 +31,7 @@ from ..enums import (
 from ..genetics.breeding import cross, derive_strain_fields, assign_rarity
 from ..genetics.traits import express_terpenes, normalize_genome
 from ..simulation import engine, curing
-from ..simulation.clock import Clock, active_clock
+from ..simulation.clock import Clock, active_clock, player_clock
 from . import leveling_service
 from ..db.models import (
     Player,
@@ -187,6 +187,72 @@ class GameService:
         if player is None:
             raise GameError(f"Player {player_id} not found")
         return player
+
+    # ----- Global turbo (10× test) speed faucet ---------------------------
+    def _turbo_multiplier(self) -> float:
+        return float(self.cfg.raw.get("simulation", {}).get("turbo_multiplier", 10.0))
+
+    def _player_now(self, player: Player) -> datetime:
+        """The player's effective simulation 'now' (wall time + banked turbo
+        acceleration). Used wherever the grow loop advances a plant so harvest
+        reflects the accelerated clock. Shares the single per-player clock helper
+        with SimulationService so the two can never drift apart."""
+        eff_now, _rate = player_clock(self.clock.now(), player, self._turbo_multiplier())
+        return eff_now
+
+    def turbo_state(self, player: Player) -> dict:
+        """Account-truthful turbo readout for the UI (so the toggle reflects the
+        server, not a client guess)."""
+        m = self._turbo_multiplier()
+        now = self._player_now(player)
+        return {
+            "enabled": bool(player.turbo_enabled),
+            "multiplier": m,
+            "offset_hours": round(float(player.turbo_offset_seconds or 0.0) / 3600.0, 3),
+            "effective_now": now.isoformat(),
+            "wall_now": self.clock.now().isoformat(),
+        }
+
+    def set_turbo(self, player_id: str, enabled: bool) -> dict:
+        """Turn the global speed faucet on/off for the whole ACCOUNT. Banks the
+        accrued acceleration on the way off (forward-only) so no progress is lost,
+        then brings every living pod up to the new effective clock so the change
+        is reflected immediately across all of them."""
+        player = self.get_player(player_id)
+        wall = self.clock.now()
+        m = self._turbo_multiplier()
+
+        if enabled and not player.turbo_enabled:
+            player.turbo_anchor_at = wall
+            player.turbo_enabled = True
+        elif not enabled and player.turbo_enabled:
+            if player.turbo_anchor_at is not None:
+                live = (wall - player.turbo_anchor_at).total_seconds()
+                if live > 0:
+                    player.turbo_offset_seconds = (
+                        float(player.turbo_offset_seconds or 0.0) + live * (m - 1.0)
+                    )
+            player.turbo_enabled = False
+            player.turbo_anchor_at = None
+
+        # Reflect the change across every pod at once: catch each living plant up
+        # to the new effective clock (compute-on-read, no economy paths touched
+        # beyond the normal harvest-on-advance).
+        from .simulation_service import SimulationService
+        sim = SimulationService(self.session, config=self.cfg, clock=self.clock)
+        living = (
+            self.session.query(Plant)
+            .filter(
+                Plant.player_id == player_id,
+                Plant.harvested.is_(False),
+                Plant.is_alive.is_(True),
+            )
+            .all()
+        )
+        for plant in living:
+            sim.sync(plant)
+
+        return {**self.turbo_state(player), "synced_pods": len(living)}
 
     def link_wallet(self, player_id: str, algorand_address: str) -> Player:
         """Associate a player with an Algorand address (Phase 3)."""
@@ -958,8 +1024,9 @@ class GameService:
             raise GameError("Plant already harvested")
 
         # Bring the plant's simulated state up to "now" so yield/quality reflect
-        # how it was actually grown.
-        engine.catch_up(self.session, plant, self.clock.now(), self.cfg)
+        # how it was actually grown — on the owner's effective (turbo) clock so a
+        # harvest taken under the speed faucet reflects the accelerated growth.
+        engine.catch_up(self.session, plant, self._player_now(self.get_player(player_id)), self.cfg)
 
         strain = self.get_strain(plant.strain_id)
         fx = self._research(player_id)  # research-tree modifiers

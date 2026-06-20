@@ -148,6 +148,10 @@ export function StageTimelineCompact({ forecast, harvested, isAlive }: Props) {
   else if (!isAlive) trailing = <span className="text-red-300">Died</span>;
   else if (forecast.is_harvest_ready)
     trailing = <span className="text-amber-300">✂️ Ready to harvest</span>;
+  else if (forecast.harvest_eta)
+    // Live ticking countdown so the pod's "main view" visibly counts down — and
+    // accelerates while the global ⚡10× faucet is ON (harvest_eta is wall-anchored).
+    trailing = <Countdown to={forecast.harvest_eta} prefix="Harvest" className="text-grow-300" />;
   else
     trailing = (
       <span className="text-grow-300">Harvest ~{hours(forecast.hours_to_harvest)}</span>

@@ -27,6 +27,9 @@ def player_dict(player, balance=None) -> dict:
         "level": getattr(player, "level", 1),
         "cannabis_cup_title": getattr(player, "cannabis_cup_title", None),
         "university_title": getattr(player, "university_title", None),
+        # Global 10× speed faucet state (per account) so the UI toggle reflects
+        # the server, not a client guess.
+        "turbo_enabled": bool(getattr(player, "turbo_enabled", False)),
         "created_at": _ts(player.created_at),
     }
     if balance is not None:

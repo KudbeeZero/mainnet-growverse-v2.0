@@ -63,6 +63,20 @@ class Player(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     ftue_plant_id: Mapped[Optional[str]] = mapped_column(String(32), default=None)
     ftue_completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
 
+    # Global "10× test" speed faucet (per ACCOUNT, not per pod). When enabled the
+    # player's effective simulation clock runs `simulation.turbo_multiplier`× wall
+    # time, so EVERY one of their pods advances together on the next compute-on-read.
+    # Banked, forward-only: while ON, accumulated bonus time grows; toggling OFF
+    # banks it into `turbo_offset_seconds` so progress is never lost or rewound. The
+    # effective clock is `wall + offset (+ live acceleration)`, always ahead of wall,
+    # which is why every read for this player must go through that same clock.
+    # Production-safe (no dev-clock dependency) and economy-safe: it accelerates
+    # plant biology only — the daily-stipend faucet stays on the real wall clock, so
+    # turbo cannot be used to farm currency.
+    turbo_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    turbo_offset_seconds: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    turbo_anchor_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
+
     wallet: Mapped["Wallet"] = relationship(
         back_populates="player", uselist=False, cascade="all, delete-orphan"
     )
