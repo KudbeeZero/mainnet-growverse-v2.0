@@ -29,14 +29,31 @@ function frostColor(mat: FrostMat, purple: number): THREE.Color {
   return new THREE.Color(r / 255, g / 255, b / 255);
 }
 
-/** A teardrop calyx: bulbous swollen base tapering to a pointed tip (lathed). */
+/** A RIBBED teardrop calyx: bulbous swollen base → pointed tip (lathed), then
+ * radially fluted so it reads "ribbed, not a grape" (polish-guide rule of
+ * realism). Ribs fade out at the tip so the point stays clean. */
 function useCalyxGeometry() {
   return useMemo(() => {
     const profile = [
       [0.0, -0.5], [0.28, -0.42], [0.42, -0.3], [0.5, -0.15],
       [0.46, 0.0], [0.36, 0.16], [0.22, 0.3], [0.1, 0.42], [0.0, 0.5],
     ].map(([x, y]) => new THREE.Vector2(x, y));
-    return new THREE.LatheGeometry(profile, 10);
+    const geo = new THREE.LatheGeometry(profile, 16);
+    const pos = geo.attributes.position;
+    const RIBS = 6, AMT = 0.14;
+    const v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i);
+      const r = Math.hypot(v.x, v.z);
+      if (r > 1e-4) {
+        const theta = Math.atan2(v.z, v.x);
+        const f = 1 + AMT * Math.cos(RIBS * theta);
+        v.x *= f; v.z *= f;
+        pos.setXYZ(i, v.x, v.y, v.z);
+      }
+    }
+    geo.computeVertexNormals();
+    return geo;
   }, []);
 }
 

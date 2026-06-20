@@ -56,7 +56,10 @@ export function buildFrost(cola: ColaInstance[], opts: FrostOpts): FrostInstance
   if (density <= 0) return out;
 
   for (const c of cola) {
-    const per = Math.round(2 + 7 * density);
+    // Frost concentrates up the cola (tips/edges) like a real plant — weight the
+    // gland count by the calyx's height in the cola (y≈0 base .. 1 apex).
+    const heightFrac = clamp01(c.pos[1]);
+    const per = Math.round((2 + 7 * density) * (0.5 + 0.9 * heightFrac));
     for (let k = 0; k < per && out.length < budget; k++) {
       // A point on the calyx ellipsoid surface (uniform-ish direction).
       const u = rnd() * Math.PI * 2;
@@ -134,7 +137,7 @@ export function buildPistils(cola: ColaInstance[], opts: PistilOpts): PistilInst
 
   for (const c of cola) {
     if (rnd() > chance) continue;
-    const bundle = 2 + Math.floor(rnd() * 3); // 2..4 strands
+    const bundle = 3 + Math.floor(rnd() * 3); // 3..5 strands
     // Outward (radial) direction from the central stem axis.
     const radial = Math.hypot(c.pos[0], c.pos[2]) || 1e-3;
     const ox = c.pos[0] / radial;
