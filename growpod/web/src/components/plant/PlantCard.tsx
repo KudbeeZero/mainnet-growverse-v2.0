@@ -47,8 +47,10 @@ export function PlantCard({
   const { map } = useStrainMap();
   const cleanup = useCleanupPlant();
   const [chamberView, setChamberView] = useState<ChamberView>("chamber");
-  // Read-only reflection of the global faucet (toggled only in the Grow Chamber).
-  const { enabled: devSpeed } = useTurbo(playerId);
+  // Global speed faucet — now toggleable right here on the dashboard so growth
+  // can be sped up (and the plants watched) without diving into the chamber.
+  const { enabled: devSpeed, multiplier: turboX, isToggling, toggle: toggleTurbo } =
+    useTurbo(playerId);
 
   if (isLoading) {
     return (
@@ -164,6 +166,21 @@ export function PlantCard({
               className="absolute bottom-2 right-2 z-10 rounded-full border border-ink-600 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-gray-400 backdrop-blur-sm transition-colors hover:border-grow-500 hover:text-grow-300"
             >
               {chamberView === "chamber" ? "🔬 Buds" : "🌿 Plant"}
+            </button>
+          )}
+          {plant.is_alive && (
+            <button
+              onClick={() => toggleTurbo(!devSpeed)}
+              disabled={isToggling}
+              title={`Global ${turboX}× speed ${devSpeed ? "ON" : "OFF"} — accelerates every plant on your account`}
+              aria-pressed={devSpeed}
+              className={`absolute left-2 top-2 z-10 flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold backdrop-blur-sm transition-colors disabled:opacity-60 ${
+                devSpeed
+                  ? "border-grow-400/60 bg-grow-700/50 text-grow-100"
+                  : "border-ink-600 bg-black/60 text-gray-300 hover:border-grow-500 hover:text-grow-200"
+              }`}
+            >
+              ⚡ {turboX}× {devSpeed ? "ON" : "OFF"}
             </button>
           )}
         </div>
