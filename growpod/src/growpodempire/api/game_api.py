@@ -1424,6 +1424,20 @@ def link_wallet(player_id):
         return _error(str(e))
 
 
+@game_bp.post("/players/<player_id>/wallet/unlink")
+@require_feature("chain")
+@require_player
+def unlink_wallet(player_id):
+    """Disconnect ("log out") the player's linked Algorand wallet."""
+    try:
+        with session_scope() as s:
+            player = GameService(s).unlink_wallet(player_id)
+            payload = S.player_dict(player)
+        return jsonify(payload)
+    except GameError as e:
+        return _error(str(e))
+
+
 @game_bp.post("/players/<player_id>/wallet/withdraw")
 @require_feature("chain")
 @require_player

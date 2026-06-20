@@ -261,6 +261,11 @@ function ProfileInner() {
     successMessage: "Algorand wallet linked",
   });
 
+  const unlink = useApiMutation(() => api.wallet.unlink(playerId!), {
+    invalidate: [queryKeys.player(playerId ?? "")],
+    successMessage: "Algorand wallet disconnected",
+  });
+
   if (player.isLoading) return <LoadingBlock label="Loading profile…" />;
 
   const p = player.data;
@@ -334,9 +339,24 @@ function ProfileInner() {
             <div className="mt-4">
               <div className="instrument-label mb-1">ALGORAND WALLET</div>
               {p?.algorand_address ? (
-                <code className="block break-all rounded-md border border-ink-600 bg-ink-900 px-3 py-2 text-xs text-gray-300">
-                  {p.algorand_address}
-                </code>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-grow-700/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-grow-300">
+                      Connected
+                    </span>
+                  </div>
+                  <code className="block break-all rounded-md border border-ink-600 bg-ink-900 px-3 py-2 text-xs text-gray-300">
+                    {p.algorand_address}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={unlink.isPending}
+                    onClick={() => unlink.mutate()}
+                  >
+                    Disconnect
+                  </Button>
+                </div>
               ) : (
                 <div className="flex gap-2">
                   <TextInput
