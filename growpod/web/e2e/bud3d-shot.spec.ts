@@ -42,6 +42,12 @@ function plantState() {
       hours_to_harvest: 12, harvest_eta: new Date(now + 12 * 3600_000).toISOString(),
       is_harvest_ready: false,
     },
+    trichomes: {
+      active: true, density: 0.74, head_development: 0.7,
+      clear_pct: 30.0, cloudy_pct: 62.0, amber_pct: 8.0,
+      dominant: "cloudy", harvest_window: "peak",
+      recommendation: "Cloudy-dominant with little amber — the ideal harvest window.",
+    },
     recent_events: [],
   };
 }

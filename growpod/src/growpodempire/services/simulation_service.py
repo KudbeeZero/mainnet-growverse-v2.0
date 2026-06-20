@@ -88,6 +88,27 @@ class SimulationService:
         self.sync(plant)
         return plant
 
+    def trichomes(self, plant: Plant) -> dict:
+        """Read-only TrichomeResinGland telemetry for the plant's `/state`: frost
+        density, head development, and the clear→cloudy→amber ripeness mix +
+        harvest-window recommendation. Deterministic; mirrors the frontend
+        maturity model. TELEMETRY ONLY — never feeds the engine tick or economy.
+        """
+        from ..simulation.engines.flowers import trichome_resin_gland as trg
+        eff_now, _rate = self._player_clock(plant.player_id)
+        fc = engine.stage_forecast(plant, self.cfg, eff_now)
+        pod = self.session.get(GrowPod, plant.pod_id)
+        env = engine.environment_for(plant, pod, self._sim)
+        genetics = trg.genetics_from_genes(
+            engine._gene(plant, "thc", 18.0),
+            engine._gene(plant, "vigor", 0.5),
+            engine._gene(plant, "indica_ratio", 0.5),
+        )
+        return trg.telemetry(
+            plant.growth_stage, fc.get("stage_progress_pct", 0.0),
+            plant.health, env.get("light", 600.0), genetics, self._sim,
+        )
+
     def metrics(self, plant: Plant) -> dict:
         """Scientist-grade derived readouts (VPD, DLI, PPFD) for a plant's pod,
         plus the display-only nutrient PPM and the current stage's target bands.
