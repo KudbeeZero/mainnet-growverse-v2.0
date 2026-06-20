@@ -33,6 +33,7 @@ import {
 } from "@/lib/chamber/morphology";
 import { budColorForStrain, silhouetteFor } from "@/lib/chamber/strainVisuals";
 import { budDnaFor, applyEnvironmentToBudDNA } from "@/lib/chamber/budDna";
+import { budParamsFromTrichomes } from "@/lib/chamber/bud3d/serverBud";
 import { titleCase } from "@/lib/format";
 import { nudge } from "@/lib/slider";
 import { isBud3DEnabled } from "@/lib/features";
@@ -241,6 +242,8 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const day = previewing ? previewDay : liveNominalDay;
   const renderStage = previewing ? stageForDay(day, flMid) : plant.growth_stage;
   const dev = previewing ? previewDev(day, flMid) : previewDev(liveNominalDay, flMid);
+  // Server trichome telemetry → bud frost/maturity (live only); null while previewing.
+  const serverBud = budParamsFromTrichomes(plant.trichomes, previewing);
   const maxPreviewDay = Math.round(cycleDays(flMid) + 8);
   // "To harvest" is the authoritative, pace-aware countdown from the server
   // forecast (so it tracks the compressed cycle); the client estimate is only a
@@ -294,9 +297,12 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             dna={budDna}
             seed={seedForPlant(plantId)}
             budDev={dev.budDev}
-            ripe={dev.ripe}
+            // Live frost/maturity from server trichome truth (so the bud matches the
+            // 🔬 readout's harvest window); falls back to the client dev prediction
+            // while previewing a scrubbed day or before flowering.
+            ripe={serverBud?.ripe ?? dev.ripe}
             brown={dev.brown}
-            trich={dev.trich}
+            trich={serverBud?.trich ?? dev.trich}
             purple={budColor.anthocyanin ?? 0}
             reducedMotion={reducedMotion}
           />
