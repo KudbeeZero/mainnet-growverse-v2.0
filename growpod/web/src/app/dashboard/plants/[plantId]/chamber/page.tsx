@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
 import { CareButtons } from "@/components/plant/CareButtons";
+import { TrichomeReadout } from "@/components/plant/TrichomeReadout";
 import type { ChamberView } from "@/components/viz/GrowChamber";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useTurbo } from "@/hooks/useTurbo";
@@ -335,6 +336,13 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             }}
           />
         </div>
+
+        {/* Live trichome telemetry (server truth) — shown in the bud macro view. */}
+        {view === "macro" && plant.trichomes?.active && (
+          <div className="absolute bottom-3 left-2.5 w-[200px] max-w-[60%]">
+            <TrichomeReadout t={plant.trichomes} />
+          </div>
+        )}
 
         {/* 🔬 View Buds — fades in once bud geometry starts rendering (flowering/harvest) */}
         {(renderStage === "flowering" || renderStage === "late_flower" || renderStage === "harvest") && !ended && view !== "macro" && (

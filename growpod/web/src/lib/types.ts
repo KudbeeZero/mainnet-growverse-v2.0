@@ -227,9 +227,24 @@ export interface StageForecast {
   is_harvest_ready: boolean;
 }
 
+/** Read-only TrichomeResinGland telemetry (server truth): frost density, head
+ * development, and the clear→cloudy→amber ripeness mix + harvest-window advice. */
+export interface TrichomeTelemetry {
+  active: boolean;
+  density: number;          // 0..1 frostiness
+  head_development: number; // 0..1
+  clear_pct: number;
+  cloudy_pct: number;
+  amber_pct: number;
+  dominant: "clear" | "cloudy" | "amber" | null;
+  harvest_window: "not_flowering" | "developing" | "early" | "peak" | "ripe" | "overripe";
+  recommendation: string;
+}
+
 export interface PlantState extends Plant {
   metrics?: PlantMetrics;
   forecast?: StageForecast;
+  trichomes?: TrichomeTelemetry;
   recent_events: PlantEvent[];
 }
 
