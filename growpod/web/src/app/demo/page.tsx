@@ -21,6 +21,7 @@ import {
   advanceDay,
   demoFlags,
   STAGE_LABEL,
+  DEMO_STRAINS,
   type DemoGrow,
 } from "@/lib/demoStore";
 
@@ -59,31 +60,39 @@ export default function DemoPage() {
 
   if (!grow) {
     return (
-      <div className="mx-auto max-w-md p-4">
+      <div className="mx-auto max-w-lg p-4">
         <Banner />
         <Card>
           <CardHeader
-            title="Local Grow Mode"
-            subtitle="Play offline while cloud login is being finalized."
+            title="Pick a strain to grow"
+            subtitle="Choose any seed below — it starts a local grow you can simulate."
           />
-          <form
-            className="space-y-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              setGrow(startDemo(name));
-            }}
-          >
-            <Field label="Grower name (optional)">
-              <TextInput
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Demo Grower"
-              />
-            </Field>
-            <Button type="submit" className="w-full">
-              Start Local Grow
-            </Button>
-          </form>
+          <Field label="Grower name (optional)">
+            <TextInput
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Demo Grower"
+            />
+          </Field>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {DEMO_STRAINS.map((s) => (
+              <button
+                key={s.slug}
+                type="button"
+                onClick={() => setGrow(startDemo(name, s.slug))}
+                aria-label={`Grow ${s.name}`}
+                className="flex flex-col gap-1 rounded-lg border border-ink-600 bg-ink-900 p-2.5 text-left transition-colors hover:border-grow-500/60 hover:bg-grow-700/10"
+              >
+                <span className="text-sm font-bold text-gray-100">{s.name}</span>
+                <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                  {s.lineage} · {s.rarity}
+                </span>
+                <span className="text-[10px] text-gray-500">
+                  THC {s.thc}% · flower ~{s.floweringDays[0]}–{s.floweringDays[1]}d
+                </span>
+              </button>
+            ))}
+          </div>
           <p className="mt-3 text-[11px] text-gray-500">
             No account or backend needed. This is a local demo grow — actions and growth
             happen on this device only and never sync to the cloud.
