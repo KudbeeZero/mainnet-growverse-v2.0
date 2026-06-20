@@ -34,9 +34,17 @@ import { budColorForStrain, silhouetteFor } from "@/lib/chamber/strainVisuals";
 import { budDnaFor, applyEnvironmentToBudDNA } from "@/lib/chamber/budDna";
 import { titleCase } from "@/lib/format";
 import { nudge } from "@/lib/slider";
+import { isBud3DEnabled } from "@/lib/features";
 
 const GrowChamber = dynamic(
   () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
+  { ssr: false, loading: () => null },
+);
+
+// Experimental WebGL bud renderer (Phase 1a) — only mounted for the macro view
+// when enabled; otherwise the Canvas GrowChamber renders as before.
+const BudGL = dynamic(
+  () => import("@/components/viz/BudGL").then((m) => m.BudGL),
   { ssr: false, loading: () => null },
 );
 
@@ -118,6 +126,15 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const { data: pods } = usePods();
 
   const reducedMotion = usePrefersReducedMotion();
+  // 3D bud renderer: build-flag OR a `?bud3d=1` preview override (read client-side
+  // to avoid the useSearchParams Suspense requirement). Applies to the macro view.
+  const [bud3dOverride, setBud3dOverride] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("bud3d") === "1") {
+      setBud3dOverride(true);
+    }
+  }, []);
+  const bud3d = isBud3DEnabled() || bud3dOverride;
   const [tab, setTab] = useState<"grow" | "climate" | "time" | "view">("grow");
   const [view, setView] = useState<ChamberView>("chamber");
   const [climate, setClimate] = useState<ChamberClimate>(DEFAULT_CLIMATE);
@@ -271,19 +288,28 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
       {/* stage */}
       <div className="relative min-h-0 flex-1">
-        <GrowChamber
-          seed={seedForPlant(plantId)}
-          day={day}
-          stage={renderStage}
-          morphology={morphology}
-          silhouette={silhouette}
-          dev={dev}
-          budColor={budColor}
-          budDna={budDna}
-          climate={{ fan: climate.fan, temp: climate.temperature, hum: climate.humidity, co2: climate.co2_level }}
-          conditionFlags={plant.condition_flags}
-          view={view}
-        />
+        {bud3d && view === "macro" ? (
+          <BudGL
+            dna={budDna}
+            seed={seedForPlant(plantId)}
+            budDev={dev.budDev}
+            reducedMotion={reducedMotion}
+          />
+        ) : (
+          <GrowChamber
+            seed={seedForPlant(plantId)}
+            day={day}
+            stage={renderStage}
+            morphology={morphology}
+            silhouette={silhouette}
+            dev={dev}
+            budColor={budColor}
+            budDna={budDna}
+            climate={{ fan: climate.fan, temp: climate.temperature, hum: climate.humidity, co2: climate.co2_level }}
+            conditionFlags={plant.condition_flags}
+            view={view}
+          />
+        )}
         <div className="pointer-events-none absolute left-2.5 top-2.5 rounded-lg border border-cyan-400/40 bg-[#08141e]/70 px-2.5 py-1.5 font-mono text-[11px] tracking-wide backdrop-blur">
           {strain?.name ?? "Plant"} · {titleCase(renderStage)}
           {previewing && <span className="text-grow-300"> · preview</span>}
