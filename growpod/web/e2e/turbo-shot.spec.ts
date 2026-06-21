@@ -1,9 +1,9 @@
 import { test, type Page } from "@playwright/test";
 
-// Proof capture: with the global ⚡10× faucet ON, show (a) the dashboard pod's
-// LIVE harvest countdown + green turbo glow on the main view, and (b) the Grow
-// Chamber's single turbo button. Uses the same mock-API pattern as smoke.spec.ts
-// so it runs hermetically (no backend). Run: npx playwright test turbo-shot
+// Proof capture: with the global ⚡10× faucet ON, show (a) the pod's plant card
+// with its LIVE harvest countdown + green turbo glow (reached by opening the pod
+// from the dashboard), and (b) the Grow Chamber's single turbo button. Uses the
+// same mock-API pattern as smoke.spec.ts so it runs hermetically (no backend).
 
 const PLAYER = {
   id: "p1", username: "Tester", email: null, algorand_address: null,
@@ -92,12 +92,14 @@ async function mockApi(page: Page) {
   });
 }
 
-test("PROOF: dashboard pod shows a live turbo countdown, chamber has one ⚡ button", async ({ page }) => {
+test("PROOF: pod plant card shows a live turbo countdown, chamber has one ⚡ button", async ({ page }) => {
   await authedSession(page);
   await mockApi(page);
 
-  // (a) Main dashboard view — the pod card with the live "Harvest" countdown.
+  // (a) Drill into the pod (the dashboard is the Pods home now) → the plant card
+  // with the live "Harvest" countdown.
   await page.goto("/dashboard");
+  await page.getByRole("link", { name: /Tent A/ }).first().click();
   const card = page.locator('[data-onboarding="plant-card"]').first();
   await card.getByText(/Harvest/i).first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(2500); // let the countdown tick a couple seconds

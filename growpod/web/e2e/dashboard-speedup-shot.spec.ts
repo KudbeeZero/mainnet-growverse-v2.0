@@ -1,7 +1,8 @@
 import { test, type Page } from "@playwright/test";
 
-// Proof: the global speed toggle (⚡10×) is now reachable on the DASHBOARD plant
-// card, so growth can be sped up from the main view. Hermetic (mock API).
+// Proof: the global speed toggle (⚡10×) is reachable on the plant card, one hop
+// from the dashboard — the dashboard is the Pods home, so you open the pod to
+// reach its plants. Exercises the Pods → Pod drill-down. Hermetic (mock API).
 
 const PLAYER = {
   id: "p1", username: "Tester", email: null, algorand_address: null,
@@ -68,9 +69,11 @@ async function setup(page: Page) {
   });
 }
 
-test("PROOF: dashboard plant card has a ⚡ speed toggle", async ({ page }) => {
+test("PROOF: pod plant card has a ⚡ speed toggle", async ({ page }) => {
   await setup(page);
   await page.goto("/dashboard");
+  // Dashboard is the Pods home — open the pod to reach its plant cards.
+  await page.getByRole("link", { name: /Tent A/ }).first().click();
   await page.getByRole("button", { name: /⚡\s*10×/ }).first().waitFor({ timeout: 20_000 });
   await page.waitForTimeout(800);
   await page.screenshot({ path: "e2e-output/dashboard-speedup.png", fullPage: true });
