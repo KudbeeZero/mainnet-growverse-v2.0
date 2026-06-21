@@ -25,6 +25,7 @@ import { clamp, previewDev, seedForPlant } from "@/lib/chamber/morphology";
 import { STAGE_ORDER } from "@/lib/stageInfo";
 import { plantRender } from "@/lib/plantRender";
 import { podStatus } from "@/lib/podStatus";
+import { timeControlsGate } from "@/lib/timeControls";
 import { FleetCounters } from "@/components/command/FleetCounters";
 import { ConnectivityBadge } from "@/components/command/ConnectivityBadge";
 import { StageProgressBar } from "@/components/command/StageProgressBar";
@@ -181,6 +182,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   const status = plant ? podStatus(pod, plant) : null;
   const health = plant ? clamp(plant.health, 0, 100) : 0;
   const ended = plant ? !plant.is_alive || plant.harvested : false;
+  const timeGate = timeControlsGate(plant, isLoading);
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-cyan-400/15 bg-[#050b12] p-3 text-[#cfeeff]">
@@ -287,7 +289,8 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             turboX={turboX}
             onAdvanceHours={(h) => advance.mutate(h)}
             advancing={advance.isPending}
-            disabled={ended || !plant}
+            disabled={timeGate.disabled}
+            disabledReason={timeGate.reason}
             onToggleTurbo={() => toggleTurbo(!turboOn)}
             turboToggling={turboToggling}
           />
