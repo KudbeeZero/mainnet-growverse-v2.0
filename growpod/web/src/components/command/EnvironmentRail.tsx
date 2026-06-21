@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ENV_ROWS, bandPct, bandSeverity, type EnvRowDef } from "@/lib/envBands";
+import {
+  ENV_ROWS,
+  bandPct,
+  bandSeverity,
+  optimalMidpoint,
+  optimalSpanPct,
+  type EnvRowDef,
+} from "@/lib/envBands";
 import { fixFor, metricHelp } from "@/lib/envHelp";
 import { nudge } from "@/lib/slider";
 import { envStatus, STATUS_STYLES } from "@/lib/podStatus";
@@ -46,17 +53,46 @@ function EnvRow({
         </span>
         {editable && value != null ? (
           <>
-            <input
-              type="range"
-              min={rLo}
-              max={rHi}
-              step={step}
-              value={value}
+            <div className="flex-1">
+              <input
+                type="range"
+                min={rLo}
+                max={rHi}
+                step={step}
+                value={value}
+                disabled={disabled}
+                aria-label={def.label}
+                onChange={(e) => onChange(Number(e.target.value))}
+                className="h-1.5 w-full cursor-pointer accent-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              {/* "ideal zone" guide rail: the green segment is the optimal window
+                  on the same scale as the slider, with a tick at the current
+                  setpoint — so you can see where to aim without reading numbers. */}
+              <div className="relative mt-1 h-1 w-full overflow-hidden rounded-full bg-ink-700" aria-hidden>
+                <div
+                  className="absolute inset-y-0 bg-grow-500/40"
+                  style={{
+                    left: `${optimalSpanPct(def.band).left}%`,
+                    right: `${100 - optimalSpanPct(def.band).right}%`,
+                  }}
+                />
+                <div
+                  className={`absolute top-1/2 h-2 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded ${sev === 0 ? "bg-cyan-200" : sev === 1 ? "bg-amber-300" : "bg-red-400"}`}
+                  style={{ left: `${pct}%` }}
+                />
+              </div>
+            </div>
+            {/* Snap straight to the middle of the ideal window (one tap). */}
+            <button
+              type="button"
+              aria-label={`Set ${def.label} to ideal`}
+              title="Snap to ideal"
               disabled={disabled}
-              aria-label={def.label}
-              onChange={(e) => onChange(Number(e.target.value))}
-              className="h-1.5 flex-1 cursor-pointer accent-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
-            />
+              onClick={() => onChange(optimalMidpoint(def.band, step))}
+              className="flex h-5 w-5 flex-none items-center justify-center rounded border border-grow-700/50 bg-[#0a1722] text-[11px] leading-none text-grow-300/80 hover:border-grow-500/60 hover:text-grow-200 disabled:opacity-40"
+            >
+              ⌖
+            </button>
             {/* ± micro-nudge for exact dial-in (one step per tap). */}
             <button
               type="button"

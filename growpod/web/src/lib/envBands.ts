@@ -78,3 +78,21 @@ export function bandPct(value: number, band: Band): number {
   const [lo, hi] = band.range;
   return Math.max(0, Math.min(100, ((value - lo) / Math.max(1e-6, hi - lo)) * 100));
 }
+
+/** The optimal window's left/right edges as 0..100 percentages of the device
+ *  range — used to paint the "ideal zone" marker on a setpoint slider. */
+export function optimalSpanPct(band: Band): { left: number; right: number } {
+  const [lo, hi] = band.optimal;
+  return { left: bandPct(lo, band), right: bandPct(hi, band) };
+}
+
+/** Mid-point of the optimal window, snapped to the slider step and clamped to
+ *  the device range — the target a "snap to ideal" control jumps to. */
+export function optimalMidpoint(band: Band, step: number): number {
+  const [lo, hi] = band.optimal;
+  const [rLo, rHi] = band.range;
+  const snapped = Math.round((lo + hi) / 2 / step) * step;
+  const clamped = Math.min(rHi, Math.max(rLo, snapped));
+  // Kill floating-point dust from the step division (e.g. 0.05 pH steps).
+  return Number(clamped.toFixed(4));
+}
