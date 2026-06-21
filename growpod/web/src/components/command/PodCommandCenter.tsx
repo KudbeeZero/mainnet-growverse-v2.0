@@ -7,7 +7,7 @@
 // ever navigating to another page. This is the embedded (in-dashboard) view; it
 // owns the active-plant selection in local state, not a route param.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingBlock } from "@/components/ui/Spinner";
@@ -70,7 +70,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
 
   // Up to four plants per pod (the current cap). Active selection is local —
   // switching plants never leaves the screen.
-  const ring = plants.slice(0, 4);
+  const ring = useMemo(() => plants.slice(0, 4), [plants]);
   const [activeId, setActiveId] = useState<string | undefined>(() => defaultPlantId(ring));
 
   // Keep the selection valid as the pod's plants change (harvest, switch pod).
