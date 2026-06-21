@@ -106,7 +106,7 @@ export function PlantCard({
       <div className="flex items-start justify-between">
         <div>
           <Link
-            href={`/dashboard/plants/${plant.id}/command`}
+            href={`/dashboard/plants/${plant.id}`}
             className="font-semibold text-gray-100 hover:text-grow-300"
           >
             {strain?.name ?? "Unknown strain"}

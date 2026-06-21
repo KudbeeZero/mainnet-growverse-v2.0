@@ -22,14 +22,21 @@ export function TimeControls({
   onAdvanceHours,
   advancing = false,
   disabled = false,
+  onToggleTurbo,
+  turboToggling = false,
 }: {
   forecast: StageForecast | undefined;
-  /** Live global turbo state (read-only readout) — the faucet is toggled in the Grow Chamber. */
+  /** Live global turbo state. With `onToggleTurbo` the SPEED chip becomes the
+   *  toggle for the global ⚡ faucet — so the one view drives both continuous
+   *  turbo AND discrete ACCELERATE TIME jumps. */
   turboOn?: boolean;
   turboX?: number;
   onAdvanceHours: (hours: number) => void;
   advancing?: boolean;
   disabled?: boolean;
+  /** When provided, the SPEED readout becomes a button toggling global turbo. */
+  onToggleTurbo?: () => void;
+  turboToggling?: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-3 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/70 px-3 py-2">
@@ -50,11 +57,27 @@ export function TimeControls({
 
       <div className="text-center">
         <div className="instrument-label text-[9px]">SPEED</div>
-        <div
-          className={`font-mono text-sm font-bold ${turboOn ? "text-green-300" : "text-cyan-200"}`}
-        >
-          {turboOn ? `⚡ ${turboX}× · TURBO` : "1× · NORMAL"}
-        </div>
+        {onToggleTurbo ? (
+          <button
+            type="button"
+            onClick={onToggleTurbo}
+            disabled={turboToggling}
+            title={`Global ${turboX}× speed ${turboOn ? "ON" : "OFF"} — accelerates every plant on your account`}
+            className={`rounded-md border px-2 py-0.5 font-mono text-sm font-bold transition-colors disabled:opacity-50 ${
+              turboOn
+                ? "border-green-400/40 bg-green-400/10 text-green-300"
+                : "border-cyan-400/30 bg-cyan-400/[0.06] text-cyan-200 hover:bg-cyan-400/15"
+            }`}
+          >
+            ⚡ {turboX}× {turboOn ? "ON" : "OFF"}
+          </button>
+        ) : (
+          <div
+            className={`font-mono text-sm font-bold ${turboOn ? "text-green-300" : "text-cyan-200"}`}
+          >
+            {turboOn ? `⚡ ${turboX}× · TURBO` : "1× · NORMAL"}
+          </div>
+        )}
       </div>
 
       <div className="h-7 w-px bg-ink-700" aria-hidden />

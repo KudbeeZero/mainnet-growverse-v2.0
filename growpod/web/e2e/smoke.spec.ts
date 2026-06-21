@@ -57,7 +57,7 @@ test("authed dashboard renders with an empty grow", async ({ page }) => {
   await authedSession(page);
   await mockApi(page);
   await page.goto("/dashboard");
-  await expect(page.getByRole("heading", { name: /Grow Dashboard/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Command Center/i })).toBeVisible();
   await expect(page.getByText(/No grow pods yet/i)).toBeVisible();
 });
 
