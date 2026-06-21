@@ -253,9 +253,6 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
                     <PodStatusTag status={status} />
                   </div>
                 )}
-                <div className="absolute right-3 top-3 xl:hidden">
-                  <HeroStatChips forecast={plant.forecast} rarity={strain?.rarity} />
-                </div>
                 {/* health meter */}
                 <div className="pointer-events-none absolute inset-x-3 bottom-2 h-[5px] overflow-hidden rounded-full bg-[#11212e]">
                   <div
@@ -289,6 +286,14 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             onToggleTurbo={() => toggleTurbo(!turboOn)}
             turboToggling={turboToggling}
           />
+
+          {/* On mobile the stat chips sit in a clean row under the time strip
+              (on desktop they live in the header band) — never over the plant. */}
+          {plant && (
+            <div className="xl:hidden">
+              <HeroStatChips forecast={plant.forecast} rarity={strain?.rarity} />
+            </div>
+          )}
         </div>
 
         {/* left rail */}
