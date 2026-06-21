@@ -92,17 +92,17 @@ async function mockApi(page: Page) {
   });
 }
 
-test("PROOF: dashboard pod shows a live turbo countdown, chamber has one ⚡ button", async ({ page }) => {
+test("PROOF: dashboard command center shows a live turbo countdown + ⚡ toggle, chamber has one ⚡ button", async ({ page }) => {
   await authedSession(page);
   await mockApi(page);
 
-  // (a) Main dashboard view — the pod card with the live "Harvest" countdown.
+  // (a) Main dashboard view — the Command Center's live "TIME REMAINING"
+  // countdown plus the ⚡10× turbo toggle (ON, green) right on the time strip.
   await page.goto("/dashboard");
-  const card = page.locator('[data-onboarding="plant-card"]').first();
-  await card.getByText(/Harvest/i).first().waitFor({ timeout: 15_000 });
+  await page.getByText(/TIME REMAINING/i).first().waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /⚡\s*10×/ }).first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(2500); // let the countdown tick a couple seconds
   await page.screenshot({ path: "e2e-output/turbo-dashboard-full.png", fullPage: true });
-  await card.screenshot({ path: "e2e-output/turbo-dashboard.png" }); // tight close-up
 
   // (b) Grow Chamber — confirm the single ⚡10× faucet button (ON, green).
   await page.goto("/dashboard/plants/plant1/chamber");
