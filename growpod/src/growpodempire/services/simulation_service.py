@@ -355,6 +355,38 @@ class SimulationService:
         })
         return plant
 
+    def advance_plant(self, player_id: str, plant_id: str, hours: float) -> Plant:
+        """Fast-forward a plant's grow clock by ``hours`` real grow-hours, now.
+
+        A pure TIME control (no cost, no revive) powering the command center's
+        ACCELERATE TIME (+1h / +6h / +1d) buttons. The deterministic engine
+        recomputes the trajectory, so this is equivalent to the plant simply being
+        that much older — same mechanism as the growth boost's fast-forward
+        (rewind the lifecycle timestamps, then re-sync), just unmetered. Capped at
+        one catch-up window so a single call can't run unbounded.
+        """
+        plant = self._get_plant(player_id, plant_id)
+        self._require_living(plant)
+        self.sync(plant)
+        if not plant.is_alive:
+            raise GameError("This plant didn't survive — it can't be advanced.")
+        if plant.growth_stage == GrowthStage.HARVEST.value:
+            raise GameError("Already at the harvest window — nothing left to fast-forward. Cut it down!")
+
+        cap = float(self._sim.get("max_catchup_hours", 8760))
+        jump_hours = max(0.0, min(float(hours), cap))
+        if jump_hours > 0:
+            jump = timedelta(hours=jump_hours)
+            plant.last_tick_at -= jump
+            plant.stage_entered_at -= jump
+            if plant.planted_at is not None:
+                plant.planted_at -= jump
+            self.sync(plant)
+
+        plant.condition_flags = engine.reactions.compute_conditions(plant, self._sim)
+        self._log(plant, "time_advanced", payload={"hours": jump_hours})
+        return plant
+
     def apply_consumable(self, player_id: str, plant_id: str, item_key: str) -> Plant:
         """Use one shop consumable on a plant, applying its effect to the plant's
         simulated levels (so it flows through the normal yield/quality math)."""

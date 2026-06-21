@@ -66,6 +66,15 @@ export const plants = {
       method: "POST",
     }),
 
+  // ACCELERATE TIME — fast-forward the plant's grow clock by `hours` (a free
+  // time control; the deterministic engine recomputes the trajectory). Powers
+  // the command center's +1h / +6h / +1d buttons.
+  advance: (playerId: string, plantId: string, hours: number) =>
+    apiFetch<Plant>(`/players/${playerId}/plants/${plantId}/advance`, {
+      method: "POST",
+      body: { hours },
+    }),
+
   // Yield weight & quality are computed server-side from the plant's grown
   // state; the client only chooses whether to immediately sell.
   harvest: (playerId: string, plantId: string, opts: { sell?: boolean } = {}) =>

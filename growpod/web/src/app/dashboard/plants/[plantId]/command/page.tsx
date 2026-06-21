@@ -15,7 +15,7 @@ import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
 import type { Environment } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
-import { clamp, cycleDays, previewDev, seedForPlant, stageForDay } from "@/lib/chamber/morphology";
+import { clamp, previewDev, seedForPlant } from "@/lib/chamber/morphology";
 import { STAGE_ORDER } from "@/lib/stageInfo";
 import { plantRender } from "@/lib/plantRender";
 import { podStatus } from "@/lib/podStatus";
@@ -58,9 +58,20 @@ function CommandScreen({ plantId }: { plantId: string }) {
   const { data: pods } = usePods();
 
   const [climate, setClimate] = useState<Environment>(DEFAULT_CLIMATE);
-  const [previewDay, setPreviewDay] = useState<number | null>(null);
 
   const pod = pods?.find((p) => p.id === plant?.pod_id);
+
+  // ACCELERATE TIME (+1h/+6h/+1d) — really fast-forwards THIS plant's grow clock.
+  // Pod-wide queries are refreshed so the chamber, forecast and countdowns update.
+  const advance = useMutation<unknown, ApiError, number>({
+    mutationFn: (h) => api.plants.advance(playerId!, plantId, h),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.plant(plantId) });
+      qc.invalidateQueries({ queryKey: queryKeys.events(plantId) });
+      if (playerId) qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   // Seed the climate controls from the pod's real environment, once.
   const seededRef = useRef(false);
@@ -124,13 +135,9 @@ function CommandScreen({ plantId }: { plantId: string }) {
   const strain = map.get(plant.strain_id);
   const render = plantRender(plant, strain, pod);
 
-  const previewing = previewDay !== null;
-  const day = previewing ? previewDay : render.liveNominalDay;
-  const renderStage = previewing ? stageForDay(day, render.flMid) : plant.growth_stage;
-  const dev = previewing
-    ? previewDev(day, render.flMid)
-    : previewDev(render.liveNominalDay, render.flMid);
-  const maxPreviewDay = Math.round(cycleDays(render.flMid) + 8);
+  const day = render.liveNominalDay;
+  const renderStage = plant.growth_stage;
+  const dev = previewDev(day, render.flMid);
 
   const stageIndex = plant.forecast?.stage_index ?? STAGE_ORDER.indexOf(plant.growth_stage);
   const status = podStatus(pod, plant);
@@ -160,7 +167,7 @@ function CommandScreen({ plantId }: { plantId: string }) {
             name={strain?.name ?? "Plant"}
             stage={renderStage}
             day={day}
-            previewing={previewing}
+            previewing={false}
           />
           <div className="w-full max-w-lg">
             <StageProgressBar index={stageIndex} />
@@ -225,12 +232,9 @@ function CommandScreen({ plantId }: { plantId: string }) {
               forecast={plant.forecast}
               turboOn={turboOn}
               turboX={turboX}
-              previewing={previewing}
-              previewDay={previewDay ?? render.liveNominalDay}
-              liveNominalDay={render.liveNominalDay}
-              maxPreviewDay={maxPreviewDay}
-              onPreview={(d) => setPreviewDay(d)}
-              onLive={() => setPreviewDay(null)}
+              onAdvanceHours={(h) => advance.mutate(h)}
+              advancing={advance.isPending}
+              disabled={ended}
             />
           </div>
 

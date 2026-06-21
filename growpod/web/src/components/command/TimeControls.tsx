@@ -4,41 +4,33 @@ import { Countdown } from "@/components/ui/Countdown";
 import { hours } from "@/lib/format";
 import type { StageForecast } from "@/lib/types";
 
-const JUMPS: { label: string; days: number }[] = [
-  { label: "+1h", days: 1 / 24 },
-  { label: "+6h", days: 6 / 24 },
-  { label: "+1d", days: 1 },
+const JUMPS: { label: string; hours: number }[] = [
+  { label: "+1h", hours: 1 },
+  { label: "+6h", hours: 6 },
+  { label: "+1d", hours: 24 },
 ];
 
 /**
- * Center-bottom time strip. The accelerate buttons advance the growth PREVIEW
- * only — they never mutate server state (the simulation is server-authoritative).
+ * Center-bottom time strip. ACCELERATE TIME really fast-forwards the plant's grow
+ * clock by the given hours (server-authoritative, deterministic recompute) — the
+ * one place to actually speed a single grow up.
  */
 export function TimeControls({
   forecast,
   turboOn = false,
   turboX = 10,
-  previewing,
-  previewDay,
-  liveNominalDay,
-  maxPreviewDay,
-  onPreview,
-  onLive,
+  onAdvanceHours,
+  advancing = false,
+  disabled = false,
 }: {
   forecast: StageForecast | undefined;
   /** Live global turbo state (read-only readout) — the faucet is toggled in the Grow Chamber. */
   turboOn?: boolean;
   turboX?: number;
-  previewing: boolean;
-  previewDay: number;
-  liveNominalDay: number;
-  maxPreviewDay: number;
-  onPreview: (day: number) => void;
-  onLive: () => void;
+  onAdvanceHours: (hours: number) => void;
+  advancing?: boolean;
+  disabled?: boolean;
 }) {
-  const base = previewing ? previewDay : liveNominalDay;
-  const jump = (days: number) => onPreview(Math.min(maxPreviewDay, base + days));
-
   return (
     <div className="flex flex-wrap items-center justify-center gap-3 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/70 px-3 py-2">
       <div className="text-center">
@@ -68,26 +60,17 @@ export function TimeControls({
       <div className="h-7 w-px bg-ink-700" aria-hidden />
 
       <div className="flex items-center gap-1.5">
-        <span className="instrument-label text-[9px]" title="View-only — scrubs the preview; does not change real grow speed">
-          PREVIEW
-        </span>
+        <span className="instrument-label text-[9px]">ACCELERATE TIME</span>
         {JUMPS.map((j) => (
           <button
             key={j.label}
-            onClick={() => jump(j.days)}
-            className="min-h-[32px] rounded-md border border-cyan-400/30 bg-cyan-400/[0.06] px-2.5 text-xs font-bold text-cyan-100 hover:bg-cyan-400/15"
+            onClick={() => onAdvanceHours(j.hours)}
+            disabled={disabled || advancing}
+            className="min-h-[32px] rounded-md border border-cyan-400/30 bg-cyan-400/[0.06] px-2.5 text-xs font-bold text-cyan-100 transition-colors hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {j.label}
+            {advancing ? "…" : j.label}
           </button>
         ))}
-        {previewing && (
-          <button
-            onClick={onLive}
-            className="min-h-[32px] rounded-md border border-grow-600 bg-grow-700/40 px-2.5 text-xs font-bold text-grow-100 hover:bg-grow-700/60"
-          >
-            LIVE
-          </button>
-        )}
       </div>
     </div>
   );
