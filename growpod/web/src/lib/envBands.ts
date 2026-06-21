@@ -42,26 +42,34 @@ export type EnvSource =
   /** Read-only plant vital (driven by WATER / FEED actions). */
   | { kind: "vital"; field: "water_level" | "nutrient_level" };
 
+/** Which sub-section of the env rail a row lives under. */
+export type EnvGroup = "Climate" | "Light" | "Root Zone";
+
+/** Display order of the env-rail sub-sections. */
+export const ENV_GROUP_ORDER: EnvGroup[] = ["Climate", "Light", "Root Zone"];
+
 export interface EnvRowDef {
   key: string;
   label: string;
+  group: EnvGroup;
   band: Band;
   source: EnvSource;
   /** Decimal places to show for the value. */
   digits: number;
 }
 
-/** Row order for the ENVIRONMENT & WEATHER rail (mirrors the dashboard mockup). */
+/** Row order for the ENVIRONMENT & WEATHER rail (mirrors the dashboard mockup),
+ *  organised into Climate · Light · Root Zone sub-sections. */
 export const ENV_ROWS: EnvRowDef[] = [
-  { key: "temperature", label: "TEMPERATURE", band: BANDS.temperature, source: { kind: "setpoint", field: "temperature", step: 0.1 }, digits: 1 },
-  { key: "humidity", label: "HUMIDITY", band: BANDS.humidity, source: { kind: "setpoint", field: "humidity", step: 0.5 }, digits: 1 },
-  { key: "vpd", label: "VPD", band: BANDS.vpd_kpa, source: { kind: "metric", field: "vpd_kpa" }, digits: 2 },
-  { key: "dli", label: "DLI", band: BANDS.dli_mol, source: { kind: "metric", field: "dli_mol" }, digits: 1 },
-  { key: "ppfd", label: "PPFD", band: BANDS.light_intensity, source: { kind: "setpoint", field: "light_intensity", step: 5 }, digits: 0 },
-  { key: "co2", label: "CO₂", band: BANDS.co2_level, source: { kind: "setpoint", field: "co2_level", step: 5 }, digits: 0 },
-  { key: "ph", label: "pH", band: BANDS.ph_level, source: { kind: "setpoint", field: "ph_level", step: 0.05 }, digits: 2 },
-  { key: "water", label: "WATER LEVEL", band: BANDS.water_level, source: { kind: "vital", field: "water_level" }, digits: 0 },
-  { key: "nutrients", label: "NUTRIENTS", band: BANDS.nutrient_level, source: { kind: "vital", field: "nutrient_level" }, digits: 0 },
+  { key: "temperature", label: "TEMPERATURE", group: "Climate", band: BANDS.temperature, source: { kind: "setpoint", field: "temperature", step: 0.1 }, digits: 1 },
+  { key: "humidity", label: "HUMIDITY", group: "Climate", band: BANDS.humidity, source: { kind: "setpoint", field: "humidity", step: 0.5 }, digits: 1 },
+  { key: "vpd", label: "VPD", group: "Climate", band: BANDS.vpd_kpa, source: { kind: "metric", field: "vpd_kpa" }, digits: 2 },
+  { key: "co2", label: "CO₂", group: "Climate", band: BANDS.co2_level, source: { kind: "setpoint", field: "co2_level", step: 5 }, digits: 0 },
+  { key: "dli", label: "DLI", group: "Light", band: BANDS.dli_mol, source: { kind: "metric", field: "dli_mol" }, digits: 1 },
+  { key: "ppfd", label: "PPFD", group: "Light", band: BANDS.light_intensity, source: { kind: "setpoint", field: "light_intensity", step: 5 }, digits: 0 },
+  { key: "ph", label: "pH", group: "Root Zone", band: BANDS.ph_level, source: { kind: "setpoint", field: "ph_level", step: 0.05 }, digits: 2 },
+  { key: "water", label: "WATER LEVEL", group: "Root Zone", band: BANDS.water_level, source: { kind: "vital", field: "water_level" }, digits: 0 },
+  { key: "nutrients", label: "NUTRIENTS", group: "Root Zone", band: BANDS.nutrient_level, source: { kind: "vital", field: "nutrient_level" }, digits: 0 },
 ];
 
 /** 0 = in band, 1 = out of band, 2 = far out (beyond half a band-span past the edge). */
@@ -77,4 +85,22 @@ export function bandSeverity(value: number, band: Band): 0 | 1 | 2 {
 export function bandPct(value: number, band: Band): number {
   const [lo, hi] = band.range;
   return Math.max(0, Math.min(100, ((value - lo) / Math.max(1e-6, hi - lo)) * 100));
+}
+
+/** The optimal window's left/right edges as 0..100 percentages of the device
+ *  range — used to paint the "ideal zone" marker on a setpoint slider. */
+export function optimalSpanPct(band: Band): { left: number; right: number } {
+  const [lo, hi] = band.optimal;
+  return { left: bandPct(lo, band), right: bandPct(hi, band) };
+}
+
+/** Mid-point of the optimal window, snapped to the slider step and clamped to
+ *  the device range — the target a "snap to ideal" control jumps to. */
+export function optimalMidpoint(band: Band, step: number): number {
+  const [lo, hi] = band.optimal;
+  const [rLo, rHi] = band.range;
+  const snapped = Math.round((lo + hi) / 2 / step) * step;
+  const clamped = Math.min(rHi, Math.max(rLo, snapped));
+  // Kill floating-point dust from the step division (e.g. 0.05 pH steps).
+  return Number(clamped.toFixed(4));
 }
