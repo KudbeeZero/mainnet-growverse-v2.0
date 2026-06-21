@@ -56,7 +56,13 @@ export function PlantCarousel({
           offset from the active one, so selecting spins the ring */}
       <div className="relative h-[136px] flex-1" style={{ perspective: "900px" }}>
         {plants.map((p) => {
-          const offset = plants.indexOf(p) - activeIdx;
+          // Wrap the offset to the nearest direction so the active cylinder sits
+          // dead-center with neighbours flanking BOTH sides (a balanced ring),
+          // instead of every other plant fanning to one side.
+          const n = plants.length;
+          let offset = plants.indexOf(p) - activeIdx;
+          if (offset > n / 2) offset -= n;
+          if (offset < -n / 2) offset += n;
           const active = offset === 0;
           const dist = Math.abs(offset);
           const style: CSSProperties = {
