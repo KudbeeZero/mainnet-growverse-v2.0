@@ -18,8 +18,8 @@ import { useSession } from "@/lib/session";
 import { useIdStore } from "@/lib/localStore";
 import { useVisitStore } from "@/lib/visitStore";
 
-const PodCard = dynamic(
-  () => import("@/components/pod/PodCard").then((m) => m.PodCard),
+const PodSummaryCard = dynamic(
+  () => import("@/components/pod/PodSummaryCard").then((m) => m.PodSummaryCard),
   { loading: () => null },
 );
 const PlantCard = dynamic(
@@ -72,10 +72,14 @@ function DashboardInner() {
   const liveCount = (plants.data ?? []).filter((p) => p.is_alive && !p.harvested).length;
 
   const byPod = new Map<string, string[]>();
+  const liveByPod = new Map<string, number>();
   for (const p of plants.data ?? []) {
     const arr = byPod.get(p.pod_id) ?? [];
     arr.push(p.id);
     byPod.set(p.pod_id, arr);
+    if (p.is_alive && !p.harvested) {
+      liveByPod.set(p.pod_id, (liveByPod.get(p.pod_id) ?? 0) + 1);
+    }
   }
   const knownIds = new Set((plants.data ?? []).map((p) => p.id));
   const orphanLocal = localPlantIds.filter((id) => !knownIds.has(id));
@@ -148,9 +152,14 @@ function DashboardInner() {
           }
         />
       ) : (
-        <div className="space-y-6" data-coach="your-grows">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-coach="your-grows">
           {podList.map((pod) => (
-            <PodCard key={pod.id} pod={pod} plantIds={byPod.get(pod.id) ?? []} />
+            <PodSummaryCard
+              key={pod.id}
+              pod={pod}
+              plantCount={(byPod.get(pod.id) ?? []).length}
+              liveCount={liveByPod.get(pod.id) ?? 0}
+            />
           ))}
         </div>
       )}
