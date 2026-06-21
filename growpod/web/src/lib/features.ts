@@ -93,13 +93,21 @@ export function isBud3DEnabled(): boolean {
 /**
  * Dev/test-only "skip login" bypass.
  *
- * OFF unless `NEXT_PUBLIC_ENABLE_DEV_BYPASS=true` is set at build time (the
- * test-env launch script sets it). When on, the onboarding screen shows an
- * "Enter as tester" button that auto-provisions a throwaway player and drops
- * straight into the game — no password, no wallet. NEVER enable in production.
+ * When on, the onboarding screen shows an "Enter as tester" button that
+ * auto-provisions a throwaway player and drops straight into the game — no
+ * password, no wallet, no onboarding. Enabled when EITHER:
+ *   - `NEXT_PUBLIC_ENABLE_DEV_BYPASS=true` is set at build time, OR
+ *   - the build is a non-production deployment (Vercel preview, local dev) — so
+ *     the owner can test a PR preview without signing up / logging in every time.
+ *
+ * Hard rule: NEVER on production. `NEXT_PUBLIC_BUILD_ENV` is `VERCEL_ENV`
+ * ("production" | "preview" | "development") on Vercel, falling back to
+ * `NODE_ENV`/"local" elsewhere (see next.config.mjs); production is excluded.
  */
 export function isDevBypassEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_ENABLE_DEV_BYPASS === "true";
+  if (process.env.NEXT_PUBLIC_ENABLE_DEV_BYPASS === "true") return true;
+  const env = process.env.NEXT_PUBLIC_BUILD_ENV;
+  return env === "preview" || env === "development" || env === "local";
 }
 
 /**
