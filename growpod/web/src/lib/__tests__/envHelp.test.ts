@@ -23,6 +23,12 @@ describe("envHelp", () => {
     }
   });
 
+  it("covers every Grow Console row key (glossary completeness)", () => {
+    for (const key of ["ppm", "vpd", "dli", "ppfd", "ph"]) {
+      expect(metricHelp(key), key).not.toBeNull();
+    }
+  });
+
   it("is case-insensitive and null for unknown keys", () => {
     expect(metricHelp("TEMPERATURE")).toEqual(metricHelp("temperature"));
     expect(metricHelp("does-not-exist")).toBeNull();

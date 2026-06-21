@@ -5,7 +5,9 @@
 // the pod is inside those windows. Derived entirely from the live `/state`
 // metrics; it never writes and never feeds back into the simulation.
 
+import { useState } from "react";
 import { bandPct } from "@/lib/envBands";
+import { fixFor, metricHelp } from "@/lib/envHelp";
 import { growConsoleRows, hasMetrics, type ConsoleRow } from "@/components/plant/growConsoleData";
 import { CollapsiblePanel } from "@/components/ui/CollapsiblePanel";
 import type { PlantState, Pod } from "@/lib/types";
@@ -42,11 +44,28 @@ function ConsoleRowView({ row }: { row: ConsoleRow }) {
   const sev = row.severity ?? 0;
   const pct = row.value == null ? 0 : bandPct(row.value, row.band);
 
+  // Inline glossary: every console metric can explain itself in one line, and
+  // when it's out of band it also offers the directional fix.
+  const [helpOpen, setHelpOpen] = useState(false);
+  const help = metricHelp(row.key);
+  const fix = fixFor(row.key, row.value, row.band);
+
   return (
     <div className="rounded-lg border border-[#15303f] bg-[#0b1b27] px-2.5 py-1.5">
       <div className="flex items-center gap-2">
-        <span className="w-[96px] flex-none font-mono text-[10px] tracking-[0.05em] text-cyan-200/60">
+        <span className="flex w-[96px] flex-none items-center gap-1 font-mono text-[10px] tracking-[0.05em] text-cyan-200/60">
           {row.label}
+          {help && (
+            <button
+              type="button"
+              onClick={() => setHelpOpen((o) => !o)}
+              aria-expanded={helpOpen}
+              aria-label={`What is ${row.label}?`}
+              className="flex h-3.5 w-3.5 flex-none items-center justify-center rounded-full border border-ink-600 text-[8px] font-bold text-cyan-200/50 hover:border-cyan-400/50 hover:text-cyan-200"
+            >
+              ?
+            </button>
+          )}
         </span>
         <span className={`flex-1 text-right font-mono text-sm font-bold ${VAL_COLOR[sev]}`}>
           {row.value == null ? "—" : row.value.toFixed(row.digits)}
@@ -68,6 +87,13 @@ function ConsoleRowView({ row }: { row: ConsoleRow }) {
       <div className="mt-0.5 text-right font-mono text-[8px] tracking-wide text-cyan-200/35">
         {row.note ? row.note : `optimal ${optLo}–${optHi}${row.band.unit ? ` ${row.band.unit}` : ""}`}
       </div>
+
+      {help && helpOpen && (
+        <div className="mt-1.5 rounded-md border border-ink-700 bg-ink-900/40 px-2 py-1.5 text-[10px] leading-snug text-cyan-200/70">
+          <p>{help.what}</p>
+          {fix && <p className={`mt-1 font-semibold ${sev === 2 ? "text-red-300" : "text-amber-300"}`}>{fix}</p>}
+        </div>
+      )}
     </div>
   );
 }
