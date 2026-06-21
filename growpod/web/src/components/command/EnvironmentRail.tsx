@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  ENV_GROUP_ORDER,
   ENV_ROWS,
   bandPct,
   bandSeverity,
@@ -201,19 +202,28 @@ export function EnvironmentRail({
         </span>
       }
     >
-      <div className="space-y-1.5">
-        {ENV_ROWS.map((def) => {
-          const { value, editable, step } = valueFor(def);
+      <div className="space-y-2.5">
+        {ENV_GROUP_ORDER.map((group) => {
+          const rows = ENV_ROWS.filter((def) => def.group === group);
+          if (rows.length === 0) return null;
           return (
-            <EnvRow
-              key={def.key}
-              def={def}
-              value={value}
-              editable={editable}
-              step={step}
-              disabled={disabled}
-              onChange={(v) => def.source.kind === "setpoint" && onSlide(def.source.field, v)}
-            />
+            <div key={group} className="space-y-1.5">
+              <h4 className="instrument-label text-[9px] text-cyan-200/40">{group}</h4>
+              {rows.map((def) => {
+                const { value, editable, step } = valueFor(def);
+                return (
+                  <EnvRow
+                    key={def.key}
+                    def={def}
+                    value={value}
+                    editable={editable}
+                    step={step}
+                    disabled={disabled}
+                    onChange={(v) => def.source.kind === "setpoint" && onSlide(def.source.field, v)}
+                  />
+                );
+              })}
+            </div>
           );
         })}
       </div>

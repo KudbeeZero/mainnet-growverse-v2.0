@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   BANDS,
+  ENV_GROUP_ORDER,
+  ENV_ROWS,
   bandPct,
   bandSeverity,
   optimalMidpoint,
@@ -28,5 +30,14 @@ describe("envBands geometry", () => {
     expect(optimalMidpoint(BANDS.ph_level, 0.05)).toBe(6.5); // mid of 6–7, no float dust
     const mid = optimalMidpoint(BANDS.co2_level, 5);
     expect(bandSeverity(mid, BANDS.co2_level)).toBe(0);
+  });
+
+  it("every env row belongs to a known group, and no group is empty", () => {
+    for (const row of ENV_ROWS) {
+      expect(ENV_GROUP_ORDER, row.key).toContain(row.group);
+    }
+    for (const group of ENV_GROUP_ORDER) {
+      expect(ENV_ROWS.some((r) => r.group === group), group).toBe(true);
+    }
   });
 });
