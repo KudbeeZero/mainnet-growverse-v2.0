@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api";
-import { classifyApiError, describeApiError } from "@/lib/apiError";
+import { classifyApiError, describeApiError, shouldRetryApiError } from "@/lib/apiError";
 
 describe("classifyApiError", () => {
   it("maps a network failure (status 0) to offline", () => {
@@ -28,5 +28,19 @@ describe("classifyApiError", () => {
     for (const s of [0, 401, 403, 404, 429, 500]) {
       expect(describeApiError(new ApiError("x", s)).length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("shouldRetryApiError", () => {
+  it("retries transient failures (offline, 5xx) up to the cap", () => {
+    expect(shouldRetryApiError(0, new ApiError("net", 0))).toBe(true);
+    expect(shouldRetryApiError(1, new ApiError("boom", 503))).toBe(true);
+    expect(shouldRetryApiError(2, new ApiError("net", 0))).toBe(false); // hit cap
+  });
+
+  it("never retries auth, not-found, or rate-limit", () => {
+    expect(shouldRetryApiError(0, new ApiError("no", 401))).toBe(false);
+    expect(shouldRetryApiError(0, new ApiError("no", 404))).toBe(false);
+    expect(shouldRetryApiError(0, new ApiError("no", 429))).toBe(false);
   });
 });

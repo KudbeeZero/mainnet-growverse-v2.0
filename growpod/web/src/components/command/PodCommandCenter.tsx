@@ -17,7 +17,7 @@ import { useStrainMap } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
-import { describeApiError } from "@/lib/apiError";
+import { describeApiError, shouldRetryApiError } from "@/lib/apiError";
 import type { Environment } from "@/lib/api";
 import type { Plant, Pod } from "@/lib/types";
 import { queryKeys } from "@/lib/queryKeys";
@@ -106,6 +106,8 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   // clock (server-authoritative, deterministic recompute).
   const advance = useMutation<unknown, ApiError, number>({
     mutationFn: (h) => api.plants.advance(playerId!, activeId!, h),
+    // Self-heal a cold/sleeping backend so the first time-jump still lands.
+    retry: (count, err) => shouldRetryApiError(count, err),
     onSuccess: () => {
       if (!activeId) return;
       qc.invalidateQueries({ queryKey: queryKeys.plant(activeId) });

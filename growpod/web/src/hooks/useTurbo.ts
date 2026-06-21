@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { TurboState } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
-import { describeApiError } from "@/lib/apiError";
+import { describeApiError, shouldRetryApiError } from "@/lib/apiError";
 import { turboView } from "@/lib/turboView";
 
 /**
@@ -31,6 +31,8 @@ export function useTurbo(playerId: string | null) {
 
   const toggle = useMutation({
     mutationFn: (enabled: boolean) => api.turbo.set(playerId!, enabled),
+    // Self-heal a cold/sleeping backend so the first SPEED tap still lands.
+    retry: (count, err) => shouldRetryApiError(count, err),
     onSuccess: (data) => {
       qc.setQueryData(["turbo", playerId], data);
       // Every pod just jumped to the new clock on the server — refetch the

@@ -66,3 +66,18 @@ export function classifyApiError(err: unknown): ApiErrorInfo {
 export function describeApiError(err: unknown): string {
   return classifyApiError(err).message;
 }
+
+/** Failures worth retrying automatically — transient ones only. A cold/sleeping
+ *  backend (offline) or a blip (5xx) should self-heal; auth, not-found and
+ *  rate-limit are the caller's problem and must NOT be hammered. */
+const RETRYABLE: ReadonlySet<ApiErrorKind> = new Set(["offline", "server"]);
+
+/**
+ * react-query-shaped retry predicate: retry a transient failure up to `max`
+ * times. This is what lets a tester's first time-jump against a just-waking
+ * preview backend succeed instead of dying on the cold request.
+ */
+export function shouldRetryApiError(failureCount: number, err: unknown, max = 2): boolean {
+  if (failureCount >= max) return false;
+  return RETRYABLE.has(classifyApiError(err).kind);
+}
