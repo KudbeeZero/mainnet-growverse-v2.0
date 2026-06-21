@@ -33,6 +33,7 @@ import { GrowConsole } from "@/components/plant/GrowConsole";
 import { TimeControls } from "@/components/command/TimeControls";
 import { CommandActionBar } from "@/components/command/CommandActionBar";
 import { PlantCarousel, type CarouselPlant } from "@/components/command/PlantCarousel";
+import { PlantSeedForm } from "@/components/plant/PlantSeedForm";
 
 const GrowChamber = dynamic(
   () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
@@ -152,10 +153,19 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
     ended: !p.is_alive || p.harvested,
   }));
 
+  // Open planting slots — one pod holds up to four plants (the current cap).
+  const slotCap = Math.min(4, pod.capacity || 4);
+  const openSlots = Math.max(0, slotCap - ring.length);
+
+  // Empty pod: plant the first seed right here, no detour to the Lab.
   if (!activeId) {
     return (
-      <div className="rounded-2xl border border-cyan-400/15 bg-[#070f17] p-8 text-center text-sm text-cyan-200/70">
-        No plants in this pod yet — plant a seed from the Lab to begin.
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-cyan-400/15 bg-[#070f17] p-8 text-center">
+        <div className="text-4xl">🌱</div>
+        <p className="text-sm text-cyan-200/80">
+          {pod.name} is empty — plant your first seed to start the grow.
+        </p>
+        <PlantSeedForm podId={pod.id} />
       </div>
     );
   }
@@ -193,6 +203,15 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
         {/* center: carousel + chamber + time controls (first in DOM → leads on mobile) */}
         <div className="flex min-h-0 flex-col gap-2 xl:col-start-2 xl:row-start-1">
           <PlantCarousel plants={carousel} activeId={activeId} onSelect={setActiveId} />
+
+          {openSlots > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/50 px-3 py-2">
+              <span className="instrument-label text-[9px]">
+                + PLANT A SEED · {openSlots} slot{openSlots > 1 ? "s" : ""} open
+              </span>
+              <PlantSeedForm podId={pod.id} />
+            </div>
+          )}
 
           <div className="relative min-h-[42vh] flex-1 overflow-hidden rounded-2xl border border-cyan-400/15">
             {isLoading || !plant || !render ? (
