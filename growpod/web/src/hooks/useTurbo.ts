@@ -3,6 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { TurboState } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+import { turboView } from "@/lib/turboView";
 
 /**
  * Global per-ACCOUNT turbo speed faucet (server-tuned multiplier; ~5-min
@@ -16,6 +18,7 @@ import type { TurboState } from "@/lib/api";
  */
 export function useTurbo(playerId: string | null) {
   const qc = useQueryClient();
+  const toast = useToast();
 
   const state = useQuery<TurboState>({
     queryKey: ["turbo", playerId],
@@ -36,11 +39,20 @@ export function useTurbo(playerId: string | null) {
       qc.invalidateQueries({ queryKey: ["pods"] });
       qc.invalidateQueries({ queryKey: ["events"] });
     },
+    // Without this the SPEED toggle failed SILENTLY — the chip flipped back and
+    // the tester had no idea why "control time" did nothing. Tell them, and
+    // re-sync to the server's real turbo state so the control reflects truth.
+    onError: (e: Error) => {
+      toast.error(`Couldn't change speed — ${e.message}`);
+      qc.invalidateQueries({ queryKey: ["turbo", playerId] });
+    },
   });
 
+  const view = turboView(state.data);
+
   return {
-    enabled: state.data?.enabled ?? false,
-    multiplier: state.data?.multiplier ?? 250,
+    enabled: view.enabled,
+    multiplier: view.multiplier,
     isToggling: toggle.isPending,
     toggle: (next: boolean) => toggle.mutate(next),
   };
