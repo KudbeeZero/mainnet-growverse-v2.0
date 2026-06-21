@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { TurboState } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { describeApiError } from "@/lib/apiError";
 import { turboView } from "@/lib/turboView";
 
 /**
@@ -43,7 +44,7 @@ export function useTurbo(playerId: string | null) {
     // the tester had no idea why "control time" did nothing. Tell them, and
     // re-sync to the server's real turbo state so the control reflects truth.
     onError: (e: Error) => {
-      toast.error(`Couldn't change speed — ${e.message}`);
+      toast.error(`Couldn't change speed — ${describeApiError(e)}`);
       qc.invalidateQueries({ queryKey: ["turbo", playerId] });
     },
   });

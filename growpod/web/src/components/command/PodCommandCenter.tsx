@@ -17,6 +17,7 @@ import { useStrainMap } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
+import { describeApiError } from "@/lib/apiError";
 import type { Environment } from "@/lib/api";
 import type { Plant, Pod } from "@/lib/types";
 import { queryKeys } from "@/lib/queryKeys";
@@ -109,7 +110,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
       qc.invalidateQueries({ queryKey: queryKeys.events(activeId) });
       if (playerId) qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(describeApiError(e)),
   });
 
   const setEnv = useMutation<unknown, ApiError, Environment>({
@@ -120,7 +121,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
       qc.invalidateQueries({ queryKey: ["plant"] });
       if (playerId) qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(describeApiError(e)),
   });
 
   // Debounced commit: coalesce a slider drag into one persisted write.
