@@ -179,16 +179,16 @@ simulation:
 
   # Launch pacing multiplier on EVERY stage's duration — the pre-flower stage
   # knobs below *and* the strain's genetic flowering window. 1.0 = canonical
-  # real-time pace (~104 days for a 60-day-flower strain). For the launch window
+  # real-time pace (~118 days for a 60-day-flower strain). For the launch window
   # we compress so a new $25-pod player experiences the full emotional arc —
   # visible growth → branching → pre-flower → buds → trichome frost → phenotype
-  # colour → harvest payoff — inside their first week, instead of ~7 weeks out.
-  # 0.0075 -> a 60-day-flower strain runs ~0.78 days (~19h) seed→harvest
-  # (flowering begins ~8h, frost reads ~12h) — a full grow completes within a
-  # session for fast alpha testing. Dial back toward 1.0 to lengthen the cycle.
+  # colour → harvest payoff — inside a single day, instead of ~17 weeks out.
+  # 0.0085 -> a 60-day-flower strain runs ~1.0 day (~24h) seed→harvest (flowering
+  # begins ~9h, frost reads ~14h) — a full grow completes within a day so the whole
+  # loop (grow → breed → harvest) can be tested/demoed fast. Toward 1.0 lengthens it.
   # Tuning only: no genetics, prices, or faucet/sink *rates* change here.
-  # Owner-ratified 10× speed-up from the prior 0.075 launch pacing (2026-06-19).
-  time_scale: 0.0075
+  # Owner-ratified ~24h pacing (2026-06-21); was 0.0075 (~21h), prior 0.075 launch.
+  time_scale: 0.0085
 
   # Global "turbo" speed faucet (per ACCOUNT, opt-in toggle — see Player.turbo_*).
   # When a player switches turbo ON, their effective simulation clock runs this
@@ -198,8 +198,8 @@ simulation:
   # on the real wall clock and harvest value stays a pure fn of grams/quality/
   # rarity, so turbo changes WHEN a harvest lands, never its value.
   #
-  # 250× makes turbo actually WATCHABLE: at time_scale 0.0075 a plant is ~21h of
-  # real play seed->harvest, so 250× lands it in ~5 minutes and the bud visibly
+  # 250× makes turbo actually WATCHABLE: at time_scale 0.0085 a plant is ~24h of
+  # real play seed->harvest, so 250× lands it in ~6 minutes and the bud visibly
   # advances every client poll (instead of 10×, where growth ticked once every
   # ~6 minutes and looked frozen). Owner-ratified ~5-min pacing (2026-06-20);
   # pacing-only, no faucet/sink/price change. See docs/memory/DECISIONS.md.

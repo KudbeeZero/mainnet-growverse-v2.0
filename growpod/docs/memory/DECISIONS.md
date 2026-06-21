@@ -581,3 +581,22 @@ and is unchanged; only the multiplier moved.
 mechanism tests (`tests/test_turbo_speed.py`) now inject a **pinned** config (M=10) so they verify the
 banking/acceleration math independent of the production value — re-tuning never breaks them. (3) The ⚡
 chip renders the live server multiplier, so it shows "600×" with no further UI change.
+
+### 2026-06-21 — Launch pacing time_scale 0.0075 → 0.0085 (~21h → ~24h seed→harvest)
+**Decision (owner-ratified):** Raise `simulation.time_scale` from `0.0075` to `0.0085`, so a full
+seed→harvest for the canonical 60-day-flower strain runs ~24 hours (was ~21h). The base lifecycle is
+118 days (seed 3 + germination 5 + seedling 10 + vegetative 26 + flowering 60 + late_flower 14 = 2832h);
+`time_scale` scales every stage uniformly, so 2832h × 0.0085 ≈ 24.1h. Per-strain flowering differences
+are preserved (a 30-day strain ≈ 18h, a 90-day strain ≈ 30h).
+**Why:** the owner wants the whole loop — grow → care → breed → harvest → cure → sell — fast enough to
+breed lots of strains and demo the full process in roughly a day, without building any new UI. This is
+the same single global knob that previously compressed the cycle (1.0 → 0.075 → 0.0075); turning it
+once more is the simplest possible change. Everything else is untouched: pods, care, breeding, harvest,
+all views keep working exactly as-is; this is pure pacing and changes no genetics, prices, or
+faucet/sink *rates*. (The turbo per-account faucet and its 250× value are unaffected; its comment was
+refreshed so its "~24h → ~6 min" math stays truthful.)
+**Consequences:** (1) one-line balance knob — easy to retune. (2) Watch-item: the `daily_stipend`
+faucet runs on the real 24h wall clock, so at a ~24h grow it's ≈ one stipend per grow (clean); pushing
+the cycle much faster than 24h would let harvests outpace the stipend, a faucet/sink balance concern to
+revisit if pacing is shortened further. (3) Forecast tests derive expectations from the configured
+`time_scale` (not a magic number), so they stayed green.
