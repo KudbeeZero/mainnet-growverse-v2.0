@@ -15,7 +15,24 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 // are still locked to same-origin (no attacker-controlled scripts) and eval is
 // disallowed, so this keeps meaningful XSS mitigation while letting the app
 // actually hydrate. connect-src is limited to self + any configured API origin.
-const connectSrc = API_BASE ? `'self' ${API_BASE}` : "'self'";
+// Algorand wallet connection (@txnlab/use-wallet: Pera · Defly · Lute on TestNet)
+// reaches the wallet bridges / WalletConnect relay / an algod node, so connect-src
+// must allow those origins or the connect flow is blocked. Scoped to wallet and
+// Algorand-node domains only.
+const walletConnectSrc = [
+  "https://*.walletconnect.com",
+  "wss://*.walletconnect.com",
+  "https://*.walletconnect.org",
+  "wss://*.walletconnect.org",
+  "https://*.perawallet.app",
+  "wss://*.perawallet.app",
+  "https://*.defly.app",
+  "wss://*.defly.app",
+  "https://lute.app",
+  "https://*.algonode.cloud",
+  "https://*.nodely.dev",
+].join(" ");
+const connectSrc = `${API_BASE ? `'self' ${API_BASE}` : "'self'"} ${walletConnectSrc}`;
 
 // Next.js dev mode evaluates modules and runs HMR via eval(), which requires
 // 'unsafe-eval'. Production builds never use eval, so we only relax script-src
