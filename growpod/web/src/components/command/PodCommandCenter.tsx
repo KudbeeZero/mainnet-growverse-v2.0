@@ -236,6 +236,18 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
                   conditionFlags={plant.condition_flags}
                   view="chamber"
                 />
+                {/* glass grow-tube framing — grow-light glow up top, a glass
+                    reflection down the left, and a soft cyan inner glow so the
+                    center reads as a lit chamber (purely cosmetic, no clicks) */}
+                <div
+                  className="pointer-events-none absolute inset-0 rounded-2xl"
+                  style={{
+                    boxShadow:
+                      "inset 0 0 70px rgba(80,200,255,0.10), inset 0 0 0 1px rgba(140,210,255,0.10)",
+                  }}
+                />
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-8 rounded-t-2xl bg-gradient-to-b from-cyan-200/20 to-transparent" />
+                <span className="pointer-events-none absolute bottom-8 left-3 top-8 w-2.5 rounded-full bg-white/10 blur-md" />
                 {status && (
                   <div className="absolute left-3 top-3">
                     <PodStatusTag status={status} />
