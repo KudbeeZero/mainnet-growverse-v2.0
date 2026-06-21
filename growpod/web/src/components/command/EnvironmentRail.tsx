@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { ENV_ROWS, bandPct, bandSeverity, type EnvRowDef } from "@/lib/envBands";
+import { fixFor, metricHelp } from "@/lib/envHelp";
 import { nudge } from "@/lib/slider";
 import { envStatus, STATUS_STYLES } from "@/lib/podStatus";
 import { CollapsiblePanel } from "@/components/ui/CollapsiblePanel";
@@ -28,6 +30,13 @@ function EnvRow({
   const [rLo, rHi] = def.band.range;
   const sev = value == null ? 0 : bandSeverity(value, def.band);
   const pct = value == null ? 0 : bandPct(value, def.band);
+
+  // When a reading is out of band, offer one-tap guidance: what's wrong + the
+  // concrete fix for THIS direction (too low vs too high).
+  const [helpOpen, setHelpOpen] = useState(false);
+  const fix = fixFor(def.key, value, def.band);
+  const help = metricHelp(def.key);
+  const canHelp = sev > 0 && !!fix;
 
   return (
     <div className="rounded-lg border border-[#15303f] bg-[#0b1b27] px-2.5 py-1.5">
@@ -81,9 +90,39 @@ function EnvRow({
           {def.band.unit && <span className="ml-0.5 text-[9px] text-cyan-200/50">{def.band.unit}</span>}
         </span>
       </div>
-      <div className="mt-0.5 pl-[92px] text-right font-mono text-[8px] tracking-wide text-cyan-200/35">
-        ideal {optLo}–{optHi}
+      <div className="mt-0.5 flex items-center justify-end gap-2 pl-[92px]">
+        {canHelp && (
+          <button
+            type="button"
+            onClick={() => setHelpOpen((o) => !o)}
+            aria-expanded={helpOpen}
+            aria-label={`Help with ${def.label}`}
+            className={`flex items-center gap-0.5 rounded-full border px-1.5 py-px font-mono text-[8px] font-bold tracking-wide transition-colors ${
+              sev === 1
+                ? "border-amber-400/40 text-amber-300/90 hover:bg-amber-400/10"
+                : "border-red-500/40 text-red-300/90 hover:bg-red-500/10"
+            }`}
+          >
+            <span aria-hidden>{helpOpen ? "▾" : "?"}</span> NEED HELP
+          </button>
+        )}
+        <span className="font-mono text-[8px] tracking-wide text-cyan-200/35">
+          ideal {optLo}–{optHi}
+        </span>
       </div>
+
+      {canHelp && helpOpen && (
+        <div
+          className={`mt-1.5 rounded-md border px-2 py-1.5 text-[10px] leading-snug ${
+            sev === 1
+              ? "border-amber-400/25 bg-amber-400/[0.06] text-amber-100/90"
+              : "border-red-500/25 bg-red-500/[0.06] text-red-100/90"
+          }`}
+        >
+          <p className="font-semibold">{fix}</p>
+          {help && <p className="mt-1 text-cyan-200/45">{help.what}</p>}
+        </div>
+      )}
     </div>
   );
 }
