@@ -1,5 +1,29 @@
-import { describe, it, expect } from "vitest";
-import { startDemo, strainForSlug, DEMO_STRAINS } from "@/lib/demoStore";
+import { describe, it, expect, afterEach } from "vitest";
+import {
+  startDemo,
+  strainForSlug,
+  DEMO_STRAINS,
+  DEMO_STORAGE,
+  DEMO_VERSION,
+  loadDemo,
+} from "@/lib/demoStore";
+
+type FakeLS = {
+  getItem(k: string): string | null;
+  setItem(k: string, v: string): void;
+  removeItem(k: string): void;
+};
+
+function stubLocalStorage(): FakeLS {
+  const map = new Map<string, string>();
+  const ls: FakeLS = {
+    getItem: (k) => (map.has(k) ? (map.get(k) as string) : null),
+    setItem: (k, v) => void map.set(k, v),
+    removeItem: (k) => void map.delete(k),
+  };
+  (globalThis as { window?: { localStorage: FakeLS } }).window = { localStorage: ls };
+  return ls;
+}
 
 describe("DEMO_STRAINS", () => {
   it("offers several strains with unique slugs", () => {
@@ -32,5 +56,28 @@ describe("startDemo", () => {
     const g = startDemo("");
     expect(g.strainSlug).toBe(DEMO_STRAINS[0].slug);
     expect(g.growerName).toBe("Demo Grower");
+  });
+});
+
+describe("loadDemo version gate", () => {
+  afterEach(() => {
+    delete (globalThis as { window?: unknown }).window;
+  });
+
+  it("evicts a legacy grow (the pre-picker 'original' plant) and returns null", () => {
+    const ls = stubLocalStorage();
+    // A grow saved before versioning existed — no `version` field.
+    ls.setItem(
+      DEMO_STORAGE,
+      JSON.stringify({ strainName: "Original Fixed Plant", stage: "flowering", day: 30 }),
+    );
+    expect(loadDemo()).toBeNull();
+    expect(ls.getItem(DEMO_STORAGE)).toBeNull(); // evicted, not just ignored
+  });
+
+  it("keeps a current-version grow", () => {
+    const ls = stubLocalStorage();
+    ls.setItem(DEMO_STORAGE, JSON.stringify(startDemo("Tester", "g13")));
+    expect(loadDemo()?.strainSlug).toBe("g13");
   });
 });

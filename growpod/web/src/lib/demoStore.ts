@@ -8,6 +8,12 @@ import type { ConditionFlag, GrowthStage } from "@/lib/types";
 
 export const DEMO_STORAGE = "gpe.demo";
 
+// Schema version for the locally-saved demo grow. Bump whenever the demo's shape
+// or seeding changes so stale state is evicted on the next load instead of
+// resuming. v2 evicts the pre-#52 fixed "original" plant that was saved before
+// the demo became a strain picker — that legacy grow must not reappear.
+export const DEMO_VERSION = 2;
+
 /** A strain a demo grower can pick. Curated (offline) — mirrors the authored
  * catalog strains the renderer already knows, with the headline stats. */
 export interface DemoStrain {
@@ -36,6 +42,8 @@ export function strainForSlug(slug?: string): DemoStrain {
 }
 
 export interface DemoGrow {
+  /** Schema version (see DEMO_VERSION). Older/absent → evicted on load. */
+  version: number;
   growerName: string;
   podName: string;
   strainName: string;
@@ -67,14 +75,22 @@ export function loadDemo(): DemoGrow | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(DEMO_STORAGE);
-    return raw ? (JSON.parse(raw) as DemoGrow) : null;
+    if (!raw) return null;
+    const g = JSON.parse(raw) as DemoGrow;
+    // Evict legacy/stale demo state (e.g. the pre-#52 fixed "original" plant
+    // saved before the strain picker existed) so the visit starts clean.
+    if (!g || g.version !== DEMO_VERSION) {
+      window.localStorage.removeItem(DEMO_STORAGE);
+      return null;
+    }
+    return g;
   } catch {
     return null;
   }
 }
 
 export function saveDemo(g: DemoGrow): DemoGrow {
-  const next = { ...g, updatedAt: new Date().toISOString() };
+  const next = { ...g, version: DEMO_VERSION, updatedAt: new Date().toISOString() };
   try {
     window.localStorage.setItem(DEMO_STORAGE, JSON.stringify(next));
   } catch {
@@ -87,6 +103,7 @@ export function startDemo(growerName?: string, strainSlug?: string): DemoGrow {
   const now = new Date().toISOString();
   const strain = strainForSlug(strainSlug);
   return saveDemo({
+    version: DEMO_VERSION,
     growerName: (growerName ?? "").trim() || "Demo Grower",
     podName: "Starter Pod",
     strainName: strain.name,
