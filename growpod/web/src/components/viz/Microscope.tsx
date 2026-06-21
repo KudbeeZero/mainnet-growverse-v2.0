@@ -99,48 +99,58 @@ export function Microscope({ seed, terpenes, maturity, purple = 0, className = "
       const pur = live.current.purple;
       const terps = live.current.terpenes;
 
-      // bud mass — overlapping calyx blobs (green, slight purple by trait)
+      // bud mass — overlapping calyxes. Teardrop silhouette (a pinched tip via a
+      // skewed quadratic) + a darker rim so they read as packed swollen tissue,
+      // not floating pebbles.
       for (const c of geom.calyxes) {
         const cxp = sx(c.x);
         const cyp = sy(c.y);
         const rx = c.rx * scale;
-        const ry = c.ry * scale;
+        const ry = c.ry * c.skew * scale;
         const hue = 96 - pur * 50; // green → toward violet
         const sat = 45 + pur * 20;
         const lit = 22 + c.shade * 16;
         ctx.save();
         ctx.translate(cxp, cyp);
         ctx.rotate(c.rot);
-        const g = ctx.createRadialGradient(0, 0, 1, 0, 0, Math.max(rx, ry));
-        g.addColorStop(0, `hsla(${hue},${sat}%,${lit + 12}%,0.95)`);
-        g.addColorStop(1, `hsla(${hue + 8},${sat}%,${lit}%,0.9)`);
+        const g = ctx.createRadialGradient(0, -ry * 0.2, 1, 0, 0, Math.max(rx, ry) * 1.1);
+        g.addColorStop(0, `hsla(${hue},${sat}%,${lit + 14}%,0.96)`);
+        g.addColorStop(0.78, `hsla(${hue + 6},${sat}%,${lit}%,0.92)`);
+        g.addColorStop(1, `hsla(${hue + 12},${sat + 6}%,${Math.max(8, lit - 10)}%,0.92)`); // rim
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        // teardrop: round belly that pinches to a point at the top
+        ctx.moveTo(0, -ry);
+        ctx.quadraticCurveTo(rx, -ry * 0.1, rx * 0.62, ry * 0.6);
+        ctx.quadraticCurveTo(0, ry, -rx * 0.62, ry * 0.6);
+        ctx.quadraticCurveTo(-rx, -ry * 0.1, 0, -ry);
         ctx.fill();
         ctx.restore();
       }
 
-      // pistils — curved orange/amber hairs
+      // pistils — curved orange/amber hairs that taper from a thick base to a
+      // fine tip (drawn as short segments so the width can shrink along the run).
       ctx.lineCap = "round";
       for (const p of geom.pistils) {
-        const steps = 6;
-        ctx.beginPath();
-        for (let i = 0; i <= steps; i++) {
+        const steps = 8;
+        const amber = 30 + p.amber * 25;
+        ctx.strokeStyle = `hsla(${amber},85%,60%,0.85)`;
+        let prevX = sx(p.x);
+        let prevY = sy(p.y);
+        for (let i = 1; i <= steps; i++) {
           const t = i / steps;
           const ang = p.ang + p.curl * t;
           const rr = p.len * t;
-          const wx = p.x + Math.cos(ang) * rr;
-          const wy = p.y + Math.sin(ang) * rr - rr * 0.25;
-          const X = sx(wx);
-          const Y = sy(wy);
-          if (i === 0) ctx.moveTo(X, Y);
-          else ctx.lineTo(X, Y);
+          const X = sx(p.x + Math.cos(ang) * rr);
+          const Y = sy(p.y + Math.sin(ang) * rr - rr * 0.25);
+          ctx.beginPath();
+          ctx.moveTo(prevX, prevY);
+          ctx.lineTo(X, Y);
+          ctx.lineWidth = Math.max(0.5, p.baseW * (1 - t * 0.85) * scale);
+          ctx.stroke();
+          prevX = X;
+          prevY = Y;
         }
-        const amber = 30 + p.amber * 25;
-        ctx.strokeStyle = `hsla(${amber},85%,60%,0.85)`;
-        ctx.lineWidth = Math.max(0.6, 2.4 * scale);
-        ctx.stroke();
       }
 
       // trichomes — stalked glandular heads; detail scales with magnification

@@ -29,6 +29,18 @@ describe("buildBudGeometry", () => {
     }
   });
 
+  it("gives calyxes a teardrop skew and pistils a base width in range", () => {
+    const g = buildBudGeometry(123, 3);
+    for (const c of g.calyxes) {
+      expect(c.skew).toBeGreaterThanOrEqual(0.8);
+      expect(c.skew).toBeLessThanOrEqual(1.2);
+    }
+    for (const p of g.pistils) {
+      expect(p.baseW).toBeGreaterThanOrEqual(2.6);
+      expect(p.baseW).toBeLessThanOrEqual(4.4);
+    }
+  });
+
   it("never assigns a terpene index when the strain has none", () => {
     for (const t of buildBudGeometry(5, 0).trichomes) {
       expect(t.terp).toBe(-1);
