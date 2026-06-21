@@ -91,7 +91,6 @@ function DashboardInner() {
 
   if (pods.isLoading) return <LoadingBlock label="Loading your grow…" />;
 
-  const liveCount = plantList.filter((p) => p.is_alive && !p.harvested).length;
   const activePod = podList.find((p) => p.id === activePodId) ?? podList[0];
   const knownIds = new Set(plantList.map((p) => p.id));
   const orphanLocal = localPlantIds.filter((id) => !knownIds.has(id));
@@ -116,9 +115,9 @@ function DashboardInner() {
       )}
 
       <PageHeader
-        eyebrow={`⌖ ${liveCount} LIVE PLANTS · ${podList.length} PODS`}
+        eyebrow="⌖ GROW OPS"
         title="Command Center"
-        subtitle="Everything runs from here. Spin the carousel to pick a plant, then care, tune the environment, and ACCELERATE TIME — no page changes."
+        subtitle="Pick a plant, care for it, and accelerate time — all from here."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/lab">
@@ -215,13 +214,17 @@ function DashboardInner() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader
-          title="Recover a plant"
-          subtitle="Switched devices or cleared storage? Import a plant by its ID."
-        />
-        <ImportEntityForm />
-      </Card>
+      <details className="group rounded-xl border border-ink-700 bg-ink-900/40">
+        <summary className="cursor-pointer list-none px-4 py-2 text-xs text-gray-500 transition-colors hover:text-gray-300">
+          ⤓ Recover a plant by ID
+        </summary>
+        <div className="px-4 pb-4">
+          <p className="mb-2 text-xs text-gray-500">
+            Switched devices or cleared storage? Import a plant by its ID.
+          </p>
+          <ImportEntityForm />
+        </div>
+      </details>
 
       {/* First-session guidance — points at the real UI, once per player. */}
       <CoachMarks marks={DASHBOARD_COACH_MARKS} />

@@ -9,6 +9,7 @@
 
 import type { CSSProperties } from "react";
 import { PlantVisual } from "@/components/plant/PlantVisual";
+import { STAGE_INFO } from "@/lib/stageInfo";
 import type { ConditionFlag, GrowthStage } from "@/lib/types";
 
 export interface CarouselPlant {
@@ -95,6 +96,10 @@ export function PlantCarousel({
               >
                 {/* glass highlight */}
                 <span className="pointer-events-none absolute left-1.5 top-1 h-[70%] w-2 rounded-full bg-white/25 blur-[1px]" />
+                {/* slot number so identical strains stay distinguishable */}
+                <span className="pointer-events-none absolute right-1 top-1 rounded bg-[#08141e]/80 px-1 text-[8px] font-bold text-cyan-200/80">
+                  {plants.indexOf(p) + 1}
+                </span>
                 <div className="flex h-full items-end justify-center pb-1">
                   <PlantVisual stage={p.stage} flags={p.flags} size={52} />
                 </div>
@@ -110,6 +115,13 @@ export function PlantCarousel({
                 }`}
               >
                 {p.label}
+              </span>
+              <span
+                className={`text-[8px] font-medium uppercase tracking-wide ${
+                  active ? "text-cyan-300/70" : "text-cyan-300/40"
+                }`}
+              >
+                {STAGE_INFO[p.stage].label}
               </span>
             </button>
           );

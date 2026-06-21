@@ -213,7 +213,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             </div>
           )}
 
-          <div className="relative min-h-[42vh] flex-1 overflow-hidden rounded-2xl border border-cyan-400/15">
+          <div className="relative min-h-[300px] flex-1 overflow-hidden rounded-2xl border border-cyan-400/15 xl:min-h-[42vh]">
             {isLoading || !plant || !render ? (
               <LoadingBlock label="Loading plant…" />
             ) : (

@@ -77,6 +77,7 @@ export function GrowConsole({ plant, pod }: { plant: PlantState; pod?: Pod | und
   return (
     <CollapsiblePanel
       title="🎓 GROW CONSOLE"
+      defaultOpen={false}
       action={
         <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-cyan-200/50">
           {plant.growth_stage}
