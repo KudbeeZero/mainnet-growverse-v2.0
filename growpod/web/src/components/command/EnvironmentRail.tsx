@@ -11,7 +11,10 @@ import {
   type EnvRowDef,
 } from "@/lib/envBands";
 import { fixFor, metricHelp } from "@/lib/envHelp";
+import { LEVEL_LABEL, nutrientMix, type Level } from "@/lib/nutrientMix";
+import { STAGE_INFO } from "@/lib/stageInfo";
 import { nudge } from "@/lib/slider";
+import type { GrowthStage } from "@/lib/types";
 import { envStatus, STATUS_STYLES } from "@/lib/podStatus";
 import { CollapsiblePanel } from "@/components/ui/CollapsiblePanel";
 import type { Environment } from "@/lib/api";
@@ -164,6 +167,63 @@ function EnvRow({
   );
 }
 
+/** One macro row: label + a 3-segment fill showing how hard to feed it. */
+function MixBar({ label, level }: { label: string; level: Level }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-[104px] flex-none font-mono text-[9px] tracking-wide text-cyan-200/55">
+        {label}
+      </span>
+      <div className="flex flex-1 gap-0.5" aria-hidden>
+        {[1, 2, 3].map((seg) => (
+          <span
+            key={seg}
+            className={`h-1.5 flex-1 rounded-sm ${seg <= level ? "bg-grow-500/80" : "bg-ink-700"}`}
+          />
+        ))}
+      </div>
+      <span className="w-[28px] flex-none text-right font-mono text-[9px] text-cyan-200/50">
+        {LEVEL_LABEL[level]}
+      </span>
+    </div>
+  );
+}
+
+/** Expandable feed-composition (N-P-K + micros) recommended for the plant's
+ *  current growth stage — the micronutrient detail inside the Nutrients control. */
+function NutrientMixPanel({ stage }: { stage: GrowthStage }) {
+  const [open, setOpen] = useState(false);
+  const mix = nutrientMix(stage);
+  const stageLabel = STAGE_INFO[stage]?.label ?? stage;
+
+  return (
+    <div className="rounded-lg border border-[#13283a] bg-[#0a1722] px-2.5 py-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-1.5 text-left"
+      >
+        <span className={`text-[9px] text-cyan-200/45 ${open ? "rotate-90" : ""} transition-transform`} aria-hidden>
+          ▸
+        </span>
+        <span className="instrument-label text-[9px] text-cyan-200/50">
+          FEED MIX · {stageLabel}
+        </span>
+      </button>
+      {open && (
+        <div className="mt-1.5 space-y-1">
+          <MixBar label="N · Nitrogen" level={mix.npk.n} />
+          <MixBar label="P · Phosphorus" level={mix.npk.p} />
+          <MixBar label="K · Potassium" level={mix.npk.k} />
+          <p className="pt-0.5 text-[9px] leading-snug text-cyan-200/55">{mix.micros}</p>
+          <p className="text-[9px] italic leading-snug text-cyan-200/40">{mix.note}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Right "ENVIRONMENT & WEATHER" rail: editable setpoints + read-only readouts. */
 export function EnvironmentRail({
   climate,
@@ -212,15 +272,17 @@ export function EnvironmentRail({
               {rows.map((def) => {
                 const { value, editable, step } = valueFor(def);
                 return (
-                  <EnvRow
-                    key={def.key}
-                    def={def}
-                    value={value}
-                    editable={editable}
-                    step={step}
-                    disabled={disabled}
-                    onChange={(v) => def.source.kind === "setpoint" && onSlide(def.source.field, v)}
-                  />
+                  <div key={def.key} className="space-y-1.5">
+                    <EnvRow
+                      def={def}
+                      value={value}
+                      editable={editable}
+                      step={step}
+                      disabled={disabled}
+                      onChange={(v) => def.source.kind === "setpoint" && onSlide(def.source.field, v)}
+                    />
+                    {def.key === "nutrients" && <NutrientMixPanel stage={plant.growth_stage} />}
+                  </div>
                 );
               })}
             </div>
