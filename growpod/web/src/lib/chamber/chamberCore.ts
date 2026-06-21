@@ -31,6 +31,7 @@ import {
   SHIMMER_MAX_AMP,
 } from "./trichomes";
 import { colaTops } from "./apicalDominance";
+import { calyxShapeFor } from "./calyxShape";
 import { CONDITION_VISUALS, SEVERITY_SCALE, dominantFlag } from "../conditionVisuals";
 import {
   branchFlex as branchFlexFor,
@@ -803,12 +804,15 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // light-stress pushes pointed/foxtail near the top. Height > width.
         const sr = rnd();
         const foxCut = 0.85 - foxtail * 0.2 - foxBias * 0.22 - topness * topStretch * 0.15;
-        const ovalCut = Math.min(0.65 - topness * topStretch * 0.2, foxCut - 0.04);
-        let shape: number, h: number;
-        if (sr < 0.4) { shape = 0; h = w * rr(1.25, 1.5); }
-        else if (sr < ovalCut) { shape = 1; h = w * rr(1.2, 1.35); }
-        else if (sr < foxCut) { shape = 2; h = w * rr(1.5, 1.8); }
-        else { shape = 3; w *= 0.78; h = w * rr(2.0, 2.5); }
+        // Keep the oval band thin (ovals = the "grape" look) and above the
+        // widened teardrop share (calyxShapeFor takes teardrops to 0.52).
+        const ovalCut = Math.min(0.7 - topness * topStretch * 0.2, foxCut - 0.04);
+        const shape = calyxShapeFor(sr, ovalCut, foxCut);
+        let h: number;
+        if (shape === 0) { h = w * rr(1.25, 1.5); }
+        else if (shape === 1) { h = w * rr(1.2, 1.35); }
+        else if (shape === 2) { h = w * rr(1.5, 1.8); }
+        else { w *= 0.78; h = w * rr(2.0, 2.5); }
         if (topStretch > 0) h *= 1 + topness * topStretch * 0.6;
         const col = pickPaletteColor(dna.palette, rnd());
         calyxes.push({
@@ -1584,7 +1588,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const lit = clamp(c.lit + (c.depth - 0.6) * 18 + P.ripe * 2, 10, 82);
       const sc = 0.6 + 0.4 * grow;
       const w = c.w * sc, h = c.h * sc;
-      const detail = w > 4.5 && c.depth > 0.55; // ribs/speckles only where they read
+      const detail = w > 2.8 && c.depth > 0.45; // ribs/seams break up the blob — render them sooner
       ctx!.save();
       ctx!.globalAlpha = lerp(0.78, 1, c.depth);
       ctx!.translate(c.x - baseX, c.y - baseY);
