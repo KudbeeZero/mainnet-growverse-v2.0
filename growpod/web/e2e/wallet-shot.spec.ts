@@ -1,8 +1,10 @@
 import { test, type Page } from "@playwright/test";
 
-// Proof: the Algorand wallet can be CONNECTED and DISCONNECTED (login/out).
-// Mocks a player with a linked address so the "Connected" state + Disconnect
-// button render. Hermetic; mirrors the other *-shot specs.
+// Proof: the Profile wallet section renders the real Algorand "Connect wallet"
+// control (@txnlab/use-wallet: Pera · Defly · Lute) and, when the player already
+// has a linked address, shows it under "Linked:". No real wallet is connected in
+// a headless browser, so the resting state is the "Connect wallet" button — the
+// same entry point as algofaucet.org. Hermetic; mirrors the other *-shot specs.
 
 const ADDR = "MO2H6ZU47Q7NGFHRQFLNRZ4Z2RT37VVQ2VOBM3DEM6X3PVSTQQ7Q5LGZ4Q";
 const PLAYER = {
@@ -30,11 +32,14 @@ async function setup(page: Page) {
   });
 }
 
-test("PROOF: Algorand wallet shows Connected + Disconnect", async ({ page }) => {
+test("PROOF: Profile shows the Connect wallet control + linked address", async ({ page }) => {
   await setup(page);
   await page.goto("/profile");
   await page.getByText("ALGORAND WALLET").waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Disconnect/i }).waitFor();
+  // Resting state (no live wallet in CI): the algofaucet-style Connect button.
+  await page.getByRole("button", { name: /Connect wallet/i }).waitFor();
+  // The already-linked address surfaces under "Linked:".
+  await page.getByText(/Linked:/i).waitFor();
   await page.waitForTimeout(400);
   await page.screenshot({ path: "e2e-output/wallet-connected.png", fullPage: true });
 });

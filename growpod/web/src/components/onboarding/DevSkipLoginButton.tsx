@@ -6,6 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
+import { useOnboardingStore } from "@/lib/onboarding/onboardingStore";
 import type { Player } from "@/lib/types";
 
 /**
@@ -21,6 +22,7 @@ export function DevSkipLoginButton() {
   const { login } = useSession();
   const router = useRouter();
   const toast = useToast();
+  const markCompleted = useOnboardingStore((s) => s.markCompleted);
 
   const mutation = useMutation<Player, ApiError>({
     mutationFn: () =>
@@ -33,6 +35,8 @@ export function DevSkipLoginButton() {
         return;
       }
       login(player.id, player.api_key);
+      // Skip the dashboard tour too — a tester wants to land straight in the game.
+      markCompleted(player.id);
       router.replace("/dashboard");
     },
     onError: (e) => toast.error(`Bypass failed: ${e.message}`),

@@ -810,6 +810,20 @@ def growth_boost_plant(player_id, plant_id):
     return _care_action(player_id, plant_id, "apply_growth_boost")
 
 
+@game_bp.post("/players/<player_id>/plants/<plant_id>/advance")
+@require_player
+@limiter.limit("60 per minute")
+def advance_plant(player_id, plant_id):
+    # ACCELERATE TIME: fast-forward the plant's grow clock by `hours` (a free time
+    # control; the deterministic engine recomputes the trajectory).
+    data = request.get_json(force=True, silent=True) or {}
+    try:
+        hours = float(data.get("hours"))
+    except (TypeError, ValueError):
+        return _error("hours must be a number")
+    return _care_action(player_id, plant_id, "advance_plant", hours=hours)
+
+
 @game_bp.post("/players/<player_id>/pods/<pod_id>/weather")
 @require_player
 def roll_weather(player_id, pod_id):

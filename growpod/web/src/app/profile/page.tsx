@@ -10,8 +10,8 @@ import { LoadingBlock } from "@/components/ui/Spinner";
 import { PageHeader, Section } from "@/components/ui/PageHeader";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { TitleBadge } from "@/components/ui/Pills";
-import { TextInput } from "@/components/ui/Field";
 import { HarvestsPanel } from "@/components/harvest/HarvestsPanel";
+import { ConnectWalletButton } from "@/components/wallet/ConnectWalletButton";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import {
   usePlayer,
@@ -244,7 +244,6 @@ function ProfileInner() {
   const wallet = useWallet();
   const level = useLevel();
   const ledger = useLedger();
-  const [addr, setAddr] = useState("");
 
   const money = [
     queryKeys.wallet(playerId ?? ""),
@@ -256,7 +255,7 @@ function ProfileInner() {
     invalidate: money,
     successMessage: (r) => `Claimed ${grow(r.amount)} daily stipend`,
   });
-  const link = useApiMutation(() => api.wallet.link(playerId!, addr.trim()), {
+  const link = useApiMutation((address: string) => api.wallet.link(playerId!, address), {
     invalidate: [queryKeys.player(playerId ?? "")],
     successMessage: "Algorand wallet linked",
   });
@@ -338,42 +337,18 @@ function ProfileInner() {
           {FEATURES.chain && (
             <div className="mt-4">
               <div className="instrument-label mb-1">ALGORAND WALLET</div>
-              {p?.algorand_address ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded bg-grow-700/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-grow-300">
-                      Connected
-                    </span>
-                  </div>
-                  <code className="block break-all rounded-md border border-ink-600 bg-ink-900 px-3 py-2 text-xs text-gray-300">
-                    {p.algorand_address}
-                  </code>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    loading={unlink.isPending}
-                    onClick={() => unlink.mutate()}
-                  >
-                    Disconnect
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <TextInput
-                    value={addr}
-                    onChange={(e) => setAddr(e.target.value)}
-                    placeholder="Algorand address"
-                    aria-label="Algorand wallet address"
-                  />
-                  <Button
-                    size="sm"
-                    loading={link.isPending}
-                    disabled={!addr.trim()}
-                    onClick={() => link.mutate()}
-                  >
-                    Link
-                  </Button>
-                </div>
+              <ConnectWalletButton
+                onConnected={(address) => {
+                  if (address !== p?.algorand_address) link.mutate(address);
+                }}
+                onDisconnected={() => {
+                  if (p?.algorand_address) unlink.mutate();
+                }}
+              />
+              {p?.algorand_address && (
+                <code className="mt-2 block break-all rounded-md border border-ink-600 bg-ink-900 px-3 py-2 text-[11px] text-gray-400">
+                  Linked: {p.algorand_address}
+                </code>
               )}
             </div>
           )}

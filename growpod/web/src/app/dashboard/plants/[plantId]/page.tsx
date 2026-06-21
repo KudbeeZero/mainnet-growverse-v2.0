@@ -85,7 +85,7 @@ function PlantDetail({ plantId }: { plantId: string }) {
         </Link>
         <div className="flex gap-2">
           <Link
-            href={`/dashboard/plants/${plantId}/command`}
+            href="/dashboard"
             className="rounded-md border border-cyan-500/60 bg-cyan-600/30 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-600/50"
           >
             🛰 Command Center

@@ -13,6 +13,7 @@ import { StatBars } from "@/components/plant/StatBars";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { useOnboardingStore } from "@/lib/onboarding/onboardingStore";
 import { queryKeys } from "@/lib/queryKeys";
 import { titleCase } from "@/lib/format";
 import type { FtueStep } from "@/lib/types";
@@ -33,6 +34,15 @@ const ACTION_LABEL: Record<FtueStep, string> = {
 function FtueInner() {
   const { playerId } = useSession();
   const router = useRouter();
+  const markCompleted = useOnboardingStore((s) => s.markCompleted);
+
+  // Leaving the first-grow tutorial — whether you finished it or skipped it —
+  // also marks the dashboard guided tour complete, so the two onboarding layers
+  // never stack (the #1 "18 prompts every time" complaint). One click → done.
+  const leaveFtue = () => {
+    if (playerId) markCompleted(playerId);
+    router.push("/dashboard");
+  };
 
   const statusQ = useQuery({
     queryKey: queryKeys.ftueStatus(playerId!),
@@ -129,7 +139,7 @@ function FtueInner() {
       {/* The single guided action */}
       <div className="flex items-center justify-between">
         {done ? (
-          <Button size="md" onClick={() => router.push("/dashboard")}>
+          <Button size="md" onClick={leaveFtue}>
             {ACTION_LABEL.completed}
           </Button>
         ) : (
@@ -140,10 +150,10 @@ function FtueInner() {
         {!done && (
           <button
             type="button"
-            onClick={() => router.push("/dashboard")}
-            className="text-xs text-gray-500 transition-colors hover:text-gray-300"
+            onClick={leaveFtue}
+            className="rounded-md border border-ink-600 px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:border-gray-500 hover:text-gray-100"
           >
-            Skip tutorial
+            Skip onboarding →
           </button>
         )}
       </div>

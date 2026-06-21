@@ -75,6 +75,18 @@ describe("loadDemo version gate", () => {
     expect(ls.getItem(DEMO_STORAGE)).toBeNull(); // evicted, not just ignored
   });
 
+  it("evicts an older-version grow (e.g. a v1 plant before the bump) and returns null", () => {
+    const ls = stubLocalStorage();
+    // The exact case the owner hit: a plant saved under an earlier schema
+    // version that must not reappear after DEMO_VERSION was bumped.
+    ls.setItem(
+      DEMO_STORAGE,
+      JSON.stringify({ version: DEMO_VERSION - 1, strainName: "Stale Plant", stage: "vegetative", day: 12 }),
+    );
+    expect(loadDemo()).toBeNull();
+    expect(ls.getItem(DEMO_STORAGE)).toBeNull(); // evicted, not just ignored
+  });
+
   it("keeps a current-version grow", () => {
     const ls = stubLocalStorage();
     ls.setItem(DEMO_STORAGE, JSON.stringify(startDemo("Tester", "g13")));

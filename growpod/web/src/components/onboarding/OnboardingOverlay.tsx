@@ -145,6 +145,15 @@ export function OnboardingOverlay({ step, index, total, onAdvance, onSkip }: Pro
     };
   }, [reposition]);
 
+  // Esc bails out of the whole guided tour in one keystroke.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onSkip();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onSkip]);
+
   const spotlight = !centered && !fallback && rect;
 
   return (
@@ -192,9 +201,9 @@ export function OnboardingOverlay({ step, index, total, onAdvance, onSkip }: Pro
         <div className="mt-3 flex items-center justify-between gap-3">
           <button
             onClick={onSkip}
-            className="text-xs text-gray-500 underline-offset-2 hover:text-gray-300 hover:underline"
+            className="rounded-md border border-ink-600 px-2.5 py-1 text-xs font-medium text-gray-300 transition-colors hover:border-gray-500 hover:text-gray-100"
           >
-            Skip tutorial
+            Skip tour →
           </button>
           {showNext ? (
             <button

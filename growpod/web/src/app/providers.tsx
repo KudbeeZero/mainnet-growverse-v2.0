@@ -6,6 +6,7 @@ import { SessionProvider } from "@/lib/session";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AuthErrorListener } from "@/components/layout/AuthErrorListener";
 import { OnboardingProvider } from "@/components/onboarding/OnboardingProvider";
+import { WalletProvider } from "@/lib/wallet/WalletProvider";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -26,7 +27,9 @@ export function Providers({ children }: { children: ReactNode }) {
       <SessionProvider>
         <AuthErrorListener />
         <ToastProvider>
-          <OnboardingProvider>{children}</OnboardingProvider>
+          <WalletProvider>
+            <OnboardingProvider>{children}</OnboardingProvider>
+          </WalletProvider>
         </ToastProvider>
       </SessionProvider>
     </QueryClientProvider>

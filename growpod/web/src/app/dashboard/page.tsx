@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { RequireAuth } from "@/components/layout/RequireAuth";
@@ -17,10 +17,13 @@ import { usePods, usePlantsList } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useIdStore } from "@/lib/localStore";
 import { useVisitStore } from "@/lib/visitStore";
+import type { Plant } from "@/lib/types";
 
-const PodCard = dynamic(
-  () => import("@/components/pod/PodCard").then((m) => m.PodCard),
-  { loading: () => null },
+// The command center is the whole game surface — everything (carousel of plants,
+// care, environment, ACCELERATE TIME, DNA) happens here, in one view.
+const PodCommandCenter = dynamic(
+  () => import("@/components/command/PodCommandCenter").then((m) => m.PodCommandCenter),
+  { loading: () => <LoadingBlock label="Opening pod…" /> },
 );
 const PlantCard = dynamic(
   () => import("@/components/plant/PlantCard").then((m) => m.PlantCard),
@@ -53,31 +56,43 @@ function DashboardInner() {
     useIdStore((s) => (playerId ? s.ids[playerId]?.plantIds : undefined)) ?? NO_IDS;
   const [showCreate, setShowCreate] = useState(false);
   const [showNeglect, setShowNeglect] = useState(false);
-
-  // The global 10× speed faucet is toggled in ONE place only — the Grow Chamber
-  // (see useTurbo / chamber page). The dashboard only reflects it (plant-card
-  // glow), it does not control it.
+  const [activePodId, setActivePodId] = useState<string | null>(null);
 
   // On mount: check for long absence, then record this visit.
   useEffect(() => {
     const { lastVisitMs: lv, markVisit: mv } = useVisitStore.getState();
     if (lv > 0 && Date.now() - lv > TWO_WEEKS_MS) setShowNeglect(true);
     mv();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const podList = useMemo(() => pods.data ?? [], [pods.data]);
+  const plantList = useMemo(() => plants.data ?? [], [plants.data]);
+
+  // Group plants by pod (full objects — the carousel/command center needs them).
+  const plantsByPod = useMemo(() => {
+    const m = new Map<string, Plant[]>();
+    for (const p of plantList) {
+      const arr = m.get(p.pod_id) ?? [];
+      arr.push(p);
+      m.set(p.pod_id, arr);
+    }
+    return m;
+  }, [plantList]);
+
+  // Keep the selected pod valid as pods load / change.
+  useEffect(() => {
+    if (podList.length === 0) {
+      if (activePodId !== null) setActivePodId(null);
+    } else if (!activePodId || !podList.some((p) => p.id === activePodId)) {
+      setActivePodId(podList[0].id);
+    }
+  }, [podList, activePodId]);
 
   if (pods.isLoading) return <LoadingBlock label="Loading your grow…" />;
 
-  const podList = pods.data ?? [];
-  const liveCount = (plants.data ?? []).filter((p) => p.is_alive && !p.harvested).length;
-
-  const byPod = new Map<string, string[]>();
-  for (const p of plants.data ?? []) {
-    const arr = byPod.get(p.pod_id) ?? [];
-    arr.push(p.id);
-    byPod.set(p.pod_id, arr);
-  }
-  const knownIds = new Set((plants.data ?? []).map((p) => p.id));
+  const activePod = podList.find((p) => p.id === activePodId) ?? podList[0];
+  const knownIds = new Set(plantList.map((p) => p.id));
   const orphanLocal = localPlantIds.filter((id) => !knownIds.has(id));
 
   return (
@@ -100,9 +115,9 @@ function DashboardInner() {
       )}
 
       <PageHeader
-        eyebrow={`⌖ ${liveCount} LIVE PLANTS · ${podList.length} PODS`}
-        title="Grow Dashboard"
-        subtitle="Plants advance in real time as you watch. VPD, DLI and PPFD are live — keep them in band and care before they wilt."
+        eyebrow="⌖ GROW OPS"
+        title="Command Center"
+        subtitle="Pick a plant, care for it, and accelerate time — all from here."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/lab">
@@ -148,10 +163,40 @@ function DashboardInner() {
           }
         />
       ) : (
-        <div className="space-y-6" data-coach="your-grows">
-          {podList.map((pod) => (
-            <PodCard key={pod.id} pod={pod} plantIds={byPod.get(pod.id) ?? []} />
-          ))}
+        <div className="space-y-3" data-coach="your-grows">
+          {/* Pod switcher (only when there's more than one pod). */}
+          {podList.length > 1 && (
+            <div className="flex flex-wrap gap-2">
+              {podList.map((pod) => {
+                const count = (plantsByPod.get(pod.id) ?? []).length;
+                const active = pod.id === activePod?.id;
+                return (
+                  <button
+                    key={pod.id}
+                    type="button"
+                    onClick={() => setActivePodId(pod.id)}
+                    aria-pressed={active}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      active
+                        ? "border-cyan-300/50 bg-cyan-400/10 text-cyan-100"
+                        : "border-ink-600 bg-ink-800 text-gray-400 hover:text-gray-200"
+                    }`}
+                  >
+                    {pod.name}
+                    <span className="ml-1.5 text-[10px] text-gray-500">{count}/4</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {activePod && (
+            <PodCommandCenter
+              key={activePod.id}
+              pod={activePod}
+              plants={plantsByPod.get(activePod.id) ?? []}
+            />
+          )}
         </div>
       )}
 
@@ -169,13 +214,17 @@ function DashboardInner() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader
-          title="Recover a plant"
-          subtitle="Switched devices or cleared storage? Import a plant by its ID."
-        />
-        <ImportEntityForm />
-      </Card>
+      <details className="group rounded-xl border border-ink-700 bg-ink-900/40">
+        <summary className="cursor-pointer list-none px-4 py-2 text-xs text-gray-500 transition-colors hover:text-gray-300">
+          ⤓ Recover a plant by ID
+        </summary>
+        <div className="px-4 pb-4">
+          <p className="mb-2 text-xs text-gray-500">
+            Switched devices or cleared storage? Import a plant by its ID.
+          </p>
+          <ImportEntityForm />
+        </div>
+      </details>
 
       {/* First-session guidance — points at the real UI, once per player. */}
       <CoachMarks marks={DASHBOARD_COACH_MARKS} />
