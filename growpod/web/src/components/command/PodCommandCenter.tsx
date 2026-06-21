@@ -26,6 +26,7 @@ import { STAGE_ORDER } from "@/lib/stageInfo";
 import { plantRender } from "@/lib/plantRender";
 import { podStatus } from "@/lib/podStatus";
 import { FleetCounters } from "@/components/command/FleetCounters";
+import { ConnectivityBadge } from "@/components/command/ConnectivityBadge";
 import { StageProgressBar } from "@/components/command/StageProgressBar";
 import { HeroStatChips, PodStatusTag, StageHeader } from "@/components/command/HeroParts";
 import { PlantDnaRail } from "@/components/command/PlantDnaRail";
@@ -185,7 +186,10 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
     <div className="flex flex-col gap-3 rounded-2xl border border-cyan-400/15 bg-[#050b12] p-3 text-[#cfeeff]">
       {/* header band: counters (left) · stage header (center) · stat chips (right) */}
       <div className="flex items-start justify-between gap-3">
-        <FleetCounters />
+        <div className="flex flex-col items-start gap-1.5">
+          <FleetCounters />
+          <ConnectivityBadge />
+        </div>
         {plant && (
           <div className="hidden xl:block">
             <HeroStatChips forecast={plant.forecast} rarity={strain?.rarity} />
