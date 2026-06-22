@@ -30,7 +30,7 @@ import { HeroStatChips, PodStatusTag, StageHeader } from "@/components/command/H
 import { PlantDnaRail } from "@/components/command/PlantDnaRail";
 import { EnvironmentRail } from "@/components/command/EnvironmentRail";
 import { GrowConsole } from "@/components/plant/GrowConsole";
-import { CommandActionBar } from "@/components/command/CommandActionBar";
+import { CareDeck } from "@/components/command/CareDeck";
 import { PlantCarousel, type CarouselPlant } from "@/components/command/PlantCarousel";
 import { GrowthScrubber } from "@/components/command/GrowthScrubber";
 import { NextActionHint } from "@/components/command/NextActionHint";
@@ -199,8 +199,10 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
         <div className="flex min-h-0 flex-col gap-2 xl:col-start-2 xl:row-start-1">
           <PlantCarousel plants={carousel} activeId={activeId} onSelect={setActiveId} />
 
-          {/* The one thing to do right now — up top, before the readouts. */}
+          {/* Up top, before the readouts: the one thing to do right now, plus the
+              most-reached-for controls — water/nutrient levels + the care bar. */}
           {plant && <NextActionHint plant={plant} />}
+          {plant && <CareDeck plant={plant} />}
 
           {openSlots > 0 && (
             <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/50 px-3 py-2">
@@ -317,8 +319,6 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
           {plant && <GrowConsole plant={plant} pod={pod} />}
         </div>
       </div>
-
-      {plant && <CommandActionBar plant={plant} />}
     </div>
   );
 }
