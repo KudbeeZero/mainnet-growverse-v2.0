@@ -33,6 +33,7 @@ import { GrowConsole } from "@/components/plant/GrowConsole";
 import { CommandActionBar } from "@/components/command/CommandActionBar";
 import { PlantCarousel, type CarouselPlant } from "@/components/command/PlantCarousel";
 import { GrowthScrubber } from "@/components/command/GrowthScrubber";
+import { NextActionHint } from "@/components/command/NextActionHint";
 import { PlantSeedForm } from "@/components/plant/PlantSeedForm";
 
 const GrowChamber = dynamic(
@@ -197,6 +198,9 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
         {/* center: carousel + chamber + time controls (first in DOM → leads on mobile) */}
         <div className="flex min-h-0 flex-col gap-2 xl:col-start-2 xl:row-start-1">
           <PlantCarousel plants={carousel} activeId={activeId} onSelect={setActiveId} />
+
+          {/* The one thing to do right now — up top, before the readouts. */}
+          {plant && <NextActionHint plant={plant} />}
 
           {openSlots > 0 && (
             <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/50 px-3 py-2">
