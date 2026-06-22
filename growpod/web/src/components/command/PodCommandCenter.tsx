@@ -21,6 +21,7 @@ import type { Environment } from "@/lib/api";
 import type { Plant, Pod } from "@/lib/types";
 import { queryKeys } from "@/lib/queryKeys";
 import { clamp, previewDev, seedForPlant } from "@/lib/chamber/morphology";
+import { maxPreviewDay, resolvePreview } from "@/lib/chamber/growthPreview";
 import { STAGE_ORDER } from "@/lib/stageInfo";
 import { plantRender } from "@/lib/plantRender";
 import { podStatus } from "@/lib/podStatus";
@@ -33,6 +34,7 @@ import { GrowConsole } from "@/components/plant/GrowConsole";
 import { TimeControls } from "@/components/command/TimeControls";
 import { CommandActionBar } from "@/components/command/CommandActionBar";
 import { PlantCarousel, type CarouselPlant } from "@/components/command/PlantCarousel";
+import { GrowthScrubber } from "@/components/command/GrowthScrubber";
 import { PlantSeedForm } from "@/components/plant/PlantSeedForm";
 
 const GrowChamber = dynamic(
@@ -73,6 +75,13 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   // switching plants never leaves the screen.
   const ring = useMemo(() => plants.slice(0, 4), [plants]);
   const [activeId, setActiveId] = useState<string | undefined>(() => defaultPlantId(ring));
+
+  // Growth-preview scrubber position (null = track the live server age). Reset
+  // whenever the active plant changes so a scrubbed day never bleeds across pods.
+  const [previewDay, setPreviewDay] = useState<number | null>(null);
+  useEffect(() => {
+    setPreviewDay(null);
+  }, [activeId]);
 
   // Keep the selection valid as the pod's plants change (harvest, switch pod).
   useEffect(() => {
@@ -172,8 +181,13 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
 
   const strain = plant ? map.get(plant.strain_id) : undefined;
   const render = plant ? plantRender(plant, strain, pod) : null;
-  const day = render?.liveNominalDay ?? 0;
-  const renderStage = plant?.growth_stage ?? "seed";
+  const flMid = render?.flMid ?? 60;
+  const liveDay = render?.liveNominalDay ?? 0;
+  // Growth-preview scrubber: drag through the lifecycle (client-only visual);
+  // null = track the real server age. Never mutates server state.
+  const preview = resolvePreview(previewDay, liveDay, flMid, plant?.growth_stage ?? "seed");
+  const day = preview.day;
+  const renderStage = preview.stage;
   const stageIndex =
     plant?.forecast?.stage_index ?? (plant ? STAGE_ORDER.indexOf(plant.growth_stage) : 0);
   const status = plant ? podStatus(pod, plant) : null;
@@ -192,7 +206,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
         )}
       </div>
       <div className="flex flex-col items-center gap-1.5">
-        <StageHeader name={strain?.name ?? "Plant"} stage={renderStage} day={day} previewing={false} />
+        <StageHeader name={strain?.name ?? "Plant"} stage={renderStage} day={day} previewing={preview.previewing} />
         <div className="w-full max-w-lg">
           <StageProgressBar index={stageIndex} />
         </div>
@@ -264,7 +278,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
                     }}
                   />
                 </div>
-                {ended && (
+                {ended && !preview.previewing && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#050b12]/85 text-center">
                     <div className="text-4xl">{plant.harvested ? "🌾" : "🥀"}</div>
                     <p className="text-lg font-bold text-grow-200">
@@ -286,6 +300,19 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             onToggleTurbo={() => toggleTurbo(!turboOn)}
             turboToggling={turboToggling}
           />
+
+          {/* Client-only growth preview — scrub forward/back through the whole
+              lifecycle. Works with no backend (unlike server ACCELERATE TIME). */}
+          {plant && render && (
+            <GrowthScrubber
+              day={day}
+              maxDay={maxPreviewDay(flMid)}
+              stageLabel={renderStage}
+              previewing={preview.previewing}
+              onScrub={setPreviewDay}
+              onReset={() => setPreviewDay(null)}
+            />
+          )}
 
           {/* On mobile the stat chips sit in a clean row under the time strip
               (on desktop they live in the header band) — never over the plant. */}
