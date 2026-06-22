@@ -55,3 +55,18 @@ export function nextAction(plant: PlantState): NextAction | null {
 
   return null;
 }
+
+/** Map the recommended action to a care-bar button key (water/feed/inspect), so
+ *  the bar can glow the button to press. Null when nothing maps (harvest /
+ *  ease-off don't have a single bar button). */
+const ACTION_TO_BAR: Partial<Record<ActionKind, string>> = {
+  water: "water",
+  flush: "water", // flush = run plain water
+  feed: "feed",
+  inspect: "inspect",
+};
+
+export function recommendedActionKey(plant: PlantState): string | null {
+  const a = nextAction(plant);
+  return a ? (ACTION_TO_BAR[a.kind] ?? null) : null;
+}

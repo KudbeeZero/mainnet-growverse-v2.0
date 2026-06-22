@@ -6,6 +6,7 @@
 
 import { CommandActionBar } from "@/components/command/CommandActionBar";
 import { VITAL_BAR, VITAL_TEXT, vitalSeverity } from "@/lib/vitals";
+import { recommendedActionKey } from "@/lib/nextAction";
 import type { PlantState } from "@/lib/types";
 
 function VitalBar({ label, icon, pct }: { label: string; icon: string; pct: number }) {
@@ -36,7 +37,7 @@ export function CareDeck({ plant }: { plant: PlantState }) {
         <VitalBar label="WATER" icon="💧" pct={plant.water_level} />
         <VitalBar label="NUTRIENTS" icon="🧪" pct={plant.nutrient_level} />
       </div>
-      <CommandActionBar plant={plant} />
+      <CommandActionBar plant={plant} recommend={recommendedActionKey(plant)} />
     </div>
   );
 }

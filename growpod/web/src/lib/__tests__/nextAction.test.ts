@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextAction } from "@/lib/nextAction";
+import { nextAction, recommendedActionKey } from "@/lib/nextAction";
 import type { PlantState } from "@/lib/types";
 
 // nextAction only reads a handful of fields; build minimal fixtures.
@@ -46,5 +46,20 @@ describe("nextAction", () => {
   it("maps nutrient burn to flush and overwatering to easing off", () => {
     expect(nextAction(plant({ condition_flags: [{ condition: "nutrient_burn" } as never] }))?.kind).toBe("flush");
     expect(nextAction(plant({ condition_flags: [{ condition: "overwatered" } as never] }))?.kind).toBe("ease_water");
+  });
+});
+
+describe("recommendedActionKey", () => {
+  it("maps to a care-bar button key", () => {
+    expect(recommendedActionKey(plant({ water_level: 10 }))).toBe("water");
+    expect(recommendedActionKey(plant({ nutrient_level: 10 }))).toBe("feed");
+    expect(recommendedActionKey(plant({ condition_flags: [{ condition: "nutrient_burn" } as never] }))).toBe("water"); // flush
+  });
+
+  it("is null when healthy or when no single button maps (harvest)", () => {
+    expect(recommendedActionKey(plant({}))).toBeNull();
+    expect(
+      recommendedActionKey(plant({ forecast: { is_harvest_ready: true } as PlantState["forecast"] })),
+    ).toBeNull();
   });
 });

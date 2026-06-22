@@ -38,7 +38,14 @@ const CARE_KIND: Record<string, CareKey> = {
   boosts: "boost",
 };
 
-export function CommandActionBar({ plant }: { plant: PlantState }) {
+export function CommandActionBar({
+  plant,
+  recommend = null,
+}: {
+  plant: PlantState;
+  /** Care-bar key to spotlight as the recommended next move (e.g. "water"). */
+  recommend?: string | null;
+}) {
   const { care } = useCareActions(plant.id);
   const { fire, layer } = useCareFeedback();
   const ended = !plant.is_alive || plant.harvested;
@@ -48,6 +55,9 @@ export function CommandActionBar({ plant }: { plant: PlantState }) {
     "relative flex min-h-[52px] min-w-[68px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-2 py-1.5 text-[11px] font-semibold transition-colors";
   const live = "border-cyan-400/25 bg-cyan-400/[0.05] text-cyan-100 hover:bg-cyan-400/15";
   const off = "cursor-not-allowed border-ink-700 bg-ink-900/40 text-gray-600";
+  // Spotlight ring on the recommended action (skip when the plant has ended).
+  const rec = (key: string) =>
+    !ended && recommend === key ? " ring-2 ring-grow-400/70 ring-offset-2 ring-offset-[#0b1b27]" : "";
 
   const doCare = (kind: CareKey) => {
     fire(kind);
@@ -65,7 +75,7 @@ export function CommandActionBar({ plant }: { plant: PlantState }) {
               key={a.key}
               onClick={() => doCare(kind)}
               disabled={ended}
-              className={`${base} ${ended ? off : live} ${pending === kind ? "animate-pulse" : ""}`}
+              className={`${base} ${ended ? off : live} ${pending === kind ? "animate-pulse" : ""}${rec(a.key)}`}
             >
               <span className="text-base">{a.icon}</span>
               {a.label}
@@ -77,7 +87,7 @@ export function CommandActionBar({ plant }: { plant: PlantState }) {
             <Link
               key={a.key}
               href={`/dashboard/plants/${plant.id}`}
-              className={`${base} ${live}`}
+              className={`${base} ${live}${rec(a.key)}`}
             >
               <span className="text-base">{a.icon}</span>
               {a.label}
