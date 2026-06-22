@@ -21,7 +21,7 @@ import type { Environment } from "@/lib/api";
 import type { Plant, Pod } from "@/lib/types";
 import { queryKeys } from "@/lib/queryKeys";
 import { clamp, previewDev, seedForPlant } from "@/lib/chamber/morphology";
-import { maxPreviewDay, resolvePreview } from "@/lib/chamber/growthPreview";
+import { harvestMarkers, maxPreviewDay, resolvePreview } from "@/lib/chamber/growthPreview";
 import { STAGE_ORDER } from "@/lib/stageInfo";
 import { plantRender } from "@/lib/plantRender";
 import { podStatus } from "@/lib/podStatus";
@@ -182,6 +182,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   const strain = plant ? map.get(plant.strain_id) : undefined;
   const render = plant ? plantRender(plant, strain, pod) : null;
   const flMid = render?.flMid ?? 60;
+  const harvestMarks = harvestMarkers(flMid);
   const liveDay = render?.liveNominalDay ?? 0;
   // Growth-preview scrubber: drag through the lifecycle (client-only visual);
   // null = track the real server age. Never mutates server state.
@@ -309,6 +310,8 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
               maxDay={maxPreviewDay(flMid)}
               stageLabel={renderStage}
               previewing={preview.previewing}
+              readyFromDay={harvestMarks.readyFromDay}
+              harvestDay={harvestMarks.harvestDay}
               onScrub={setPreviewDay}
               onReset={() => setPreviewDay(null)}
             />

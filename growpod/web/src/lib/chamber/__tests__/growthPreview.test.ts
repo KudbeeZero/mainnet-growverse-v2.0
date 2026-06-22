@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { maxPreviewDay, resolvePreview } from "@/lib/chamber/growthPreview";
+import { harvestMarkers, maxPreviewDay, resolvePreview } from "@/lib/chamber/growthPreview";
 
 describe("resolvePreview", () => {
   it("returns the live values verbatim when previewDay is null", () => {
@@ -27,5 +27,19 @@ describe("maxPreviewDay", () => {
   it("covers a full cycle plus a tail and grows with flowering length", () => {
     expect(maxPreviewDay(60)).toBeGreaterThan(60);
     expect(maxPreviewDay(80)).toBeGreaterThan(maxPreviewDay(50));
+  });
+});
+
+describe("harvestMarkers", () => {
+  it("puts the ready window before the harvest day, both within range", () => {
+    const m = harvestMarkers(60);
+    const max = maxPreviewDay(60);
+    expect(m.readyFromDay).toBeGreaterThan(0);
+    expect(m.readyFromDay).toBeLessThanOrEqual(m.harvestDay);
+    expect(m.harvestDay).toBeLessThanOrEqual(max);
+  });
+
+  it("pushes harvest later for a longer-flowering strain", () => {
+    expect(harvestMarkers(80).harvestDay).toBeGreaterThan(harvestMarkers(50).harvestDay);
   });
 });

@@ -29,3 +29,28 @@ export function resolvePreview(
 export function maxPreviewDay(flMid: number): number {
   return Math.round(cycleDays(flMid) + 8);
 }
+
+export interface HarvestMarkers {
+  /** First day the plant enters the ripening/harvest window (late flower). */
+  readyFromDay: number;
+  /** Day the plant is fully harvest-ready. */
+  harvestDay: number;
+}
+
+/** Where the harvest window sits on the scrubber, derived from the stage map so
+ *  the slider can paint a "ready to harvest" zone + tick. Pure. */
+export function harvestMarkers(flMid: number): HarvestMarkers {
+  const max = maxPreviewDay(flMid);
+  let readyFromDay = max;
+  let harvestDay = max;
+  for (let d = 0; d <= max; d += 0.5) {
+    const s = stageForDay(d, flMid);
+    if (s === "late_flower" && readyFromDay === max) readyFromDay = d;
+    if (s === "harvest") {
+      harvestDay = d;
+      break;
+    }
+  }
+  return { readyFromDay, harvestDay };
+}
+
