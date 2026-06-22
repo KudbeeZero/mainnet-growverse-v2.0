@@ -92,19 +92,19 @@ async function mockApi(page: Page) {
   });
 }
 
-test("PROOF: dashboard command center shows a live turbo countdown + ⚡ toggle, chamber has one ⚡ button", async ({ page }) => {
+test("PROOF: dashboard shows the growth-preview scrubber; chamber has the ⚡ turbo button", async ({ page }) => {
   await authedSession(page);
   await mockApi(page);
 
-  // (a) Main dashboard view — the Command Center's live "TIME REMAINING"
-  // countdown plus the ⚡10× turbo toggle (ON, green) right on the time strip.
+  // (a) Main dashboard view — the Command Center's time control is now the
+  // PREVIEW GROWTH scrubber (the 250× turbo toggle / ACCELERATE TIME were
+  // removed; the slider shows every stage forward and back).
   await page.goto("/dashboard");
-  await page.getByText(/TIME REMAINING/i).first().waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /⚡\s*10×/ }).first().waitFor({ timeout: 15_000 });
-  await page.waitForTimeout(2500); // let the countdown tick a couple seconds
-  await page.screenshot({ path: "e2e-output/turbo-dashboard-full.png", fullPage: true });
+  await page.getByText(/PREVIEW GROWTH/i).first().waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: "e2e-output/dashboard-growth-preview-full.png", fullPage: true });
 
-  // (b) Grow Chamber — confirm the single ⚡10× faucet button (ON, green).
+  // (b) Grow Chamber — still has the ⚡ turbo faucet button.
   await page.goto("/dashboard/plants/plant1/chamber");
   await page.getByText(/⚡/).first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(1500);

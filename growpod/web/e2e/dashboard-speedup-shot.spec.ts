@@ -68,10 +68,12 @@ async function setup(page: Page) {
   });
 }
 
-test("PROOF: dashboard plant card has a ⚡ speed toggle", async ({ page }) => {
+test("PROOF: dashboard has a growth-preview scrubber", async ({ page }) => {
   await setup(page);
   await page.goto("/dashboard");
-  await page.getByRole("button", { name: /⚡\s*10×/ }).first().waitFor({ timeout: 20_000 });
+  // The dashboard's time control is the PREVIEW GROWTH scrubber now (the 250×
+  // turbo toggle / ACCELERATE TIME were removed — the slider shows every stage).
+  await page.getByText(/PREVIEW GROWTH/i).first().waitFor({ timeout: 20_000 });
   await page.waitForTimeout(800);
-  await page.screenshot({ path: "e2e-output/dashboard-speedup.png", fullPage: true });
+  await page.screenshot({ path: "e2e-output/dashboard-growth-preview.png", fullPage: true });
 });
