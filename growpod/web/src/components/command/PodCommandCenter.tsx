@@ -197,8 +197,10 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
         </div>
       </div>
 
-      {/* main 3-rail grid (collapses to a single scrolling column below xl) */}
-      <div className="grid gap-3 xl:grid-cols-[300px_1fr_320px]">
+      {/* main 3-rail grid (collapses to a single scrolling column below xl).
+          Rails widen on larger screens so the layout fills a desktop monitor
+          instead of sitting in a narrow centered column. */}
+      <div className="grid gap-3 xl:grid-cols-[320px_1fr_340px] 2xl:grid-cols-[380px_1fr_420px] 2xl:gap-4">
         {/* center: carousel + chamber + time controls (first in DOM → leads on mobile) */}
         <div className="flex min-h-0 flex-col gap-2 xl:col-start-2 xl:row-start-1">
           <PlantCarousel plants={carousel} activeId={activeId} onSelect={setActiveId} />
