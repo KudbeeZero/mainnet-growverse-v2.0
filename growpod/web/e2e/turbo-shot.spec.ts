@@ -93,7 +93,7 @@ async function mockApi(page: Page) {
   });
 }
 
-test("PROOF: dashboard command center shows a live harvest countdown; chamber has one ⚡ turbo button", async ({ page }) => {
+test("PROOF: dashboard command center shows a live harvest countdown; chamber keeps its ⚡ Boost Growth button", async ({ page }) => {
   await authedSession(page);
   await mockApi(page);
 
@@ -105,9 +105,10 @@ test("PROOF: dashboard command center shows a live harvest countdown; chamber ha
   await page.waitForTimeout(2500); // let the countdown tick a couple seconds
   await page.screenshot({ path: "e2e-output/turbo-dashboard-full.png", fullPage: true });
 
-  // (b) Grow Chamber — confirm the single ⚡10× faucet button (ON, green).
+  // (b) Grow Chamber — the global ⚡ speed faucet was removed, but the paid
+  // "⚡ Boost Growth" button (a GROW sink, unrelated to the dev faucet) stays.
   await page.goto("/dashboard/plants/plant1/chamber");
-  await page.getByText(/⚡/).first().waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Boost Growth/i }).first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(1500);
-  await page.screenshot({ path: "e2e-output/turbo-chamber.png", fullPage: true });
+  await page.screenshot({ path: "e2e-output/chamber-boost-growth.png", fullPage: true });
 });

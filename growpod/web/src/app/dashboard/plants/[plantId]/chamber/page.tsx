@@ -12,7 +12,6 @@ import { TrichomeReadout } from "@/components/plant/TrichomeReadout";
 import { useGrowthBoost } from "@/hooks/useCareActions";
 import type { ChamberView } from "@/components/viz/GrowChamber";
 import { usePlantState } from "@/hooks/usePlantState";
-import { useTurbo } from "@/hooks/useTurbo";
 import { useStrainMap, usePods } from "@/hooks/queries";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useSession } from "@/lib/session";
@@ -144,11 +143,6 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   // Growth-preview scrubber: null = track the real (server) age; a number =
   // preview that day on the cycle. Preview never mutates server state.
   const [previewDay, setPreviewDay] = useState<number | null>(null);
-  // Global per-account 10× speed faucet (server truth). Toggling it accelerates
-  // EVERY pod on the account; the normal plant poll then shows the faster growth.
-  const { enabled: devSpeed, multiplier: turboX, isToggling, toggle: toggleTurbo } =
-    useTurbo(playerId);
-
   // Purchasable (simulated) growth boost — spends in-game GROW to jump the plant
   // forward + revive it; on success we flash the ⚡ electric surge over the stage.
   const [boostFlash, setBoostFlash] = useState(false);
@@ -274,13 +268,6 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     : strain
       ? Math.round(daysToHarvest(plant.growth_stage, strain.flowering_days, plant.health))
       : null;
-  // Harvest countdown in days. Under turbo the server compresses the ETA to wall
-  // time, so the value already ticks down ~10× faster on each poll — no client
-  // clock needed.
-  const daysSmooth =
-    devSpeed && plant.forecast?.hours_to_harvest !== undefined
-      ? (plant.forecast.hours_to_harvest / 24).toFixed(2)
-      : null;
 
   const c = climateModel({ fan: climate.fan, temp: climate.temperature, hum: climate.humidity, co2: climate.co2_level });
   const health = clamp(plant.health, 0, 100);
@@ -345,7 +332,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           {previewing && <span className="text-grow-300"> · preview</span>}
         </div>
         <div className="pointer-events-none absolute right-2 top-2 flex flex-col gap-1.5">
-          <ReadoutCard k="TO HARVEST" v={daysSmooth ?? harvestDays ?? "—"} unit="d" />
+          <ReadoutCard k="TO HARVEST" v={harvestDays ?? "—"} unit="d" />
           <ReadoutCard k="TEMP" v={climate.temperature} unit="°C" alert={Math.abs(climate.temperature - 24) > 5} />
           <ReadoutCard k="HUM" v={climate.humidity} unit="%" alert={Math.abs(climate.humidity - 50) > 15} />
           <ReadoutCard k="CO₂" v={climate.co2_level} />
@@ -575,28 +562,6 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         )}
       </div>
       </div>
-
-      {/* ⚡ Global speed faucet — fixed bottom-right. ON accelerates EVERY pod on
-          the account (server-side, account-wide); shows the harvest countdown. */}
-      <button
-        onClick={() => !isToggling && toggleTurbo(!devSpeed)}
-        disabled={isToggling}
-        title={
-          devSpeed
-            ? `Global ${turboX}× speed ON for all pods — tap to turn off`
-            : `Global ${turboX}× speed OFF — tap to turn on for the whole account`
-        }
-        className={`fixed bottom-4 right-4 z-50 flex h-9 items-center justify-center rounded-full border font-extrabold tracking-wide transition-all disabled:opacity-60 ${
-          devSpeed
-            ? "gap-1 px-3 border-green-400 bg-green-500/20 text-[11px] text-green-300 shadow-[0_0_14px_rgba(74,222,128,0.45)]"
-            : "w-16 border-[#1c3447] bg-[#0d1d2b] text-[11px] text-[#7fa9bf] hover:border-green-700 hover:text-green-500"
-        }`}
-      >
-        <span>⚡ {turboX}×</span>
-        {devSpeed && daysSmooth !== null && (
-          <span className="font-mono text-green-200">· {daysSmooth}d</span>
-        )}
-      </button>
     </div>
   );
 }
