@@ -13,7 +13,7 @@ import type { StageForecast } from "@/lib/types";
  */
 export function TimeControls({ forecast }: { forecast: StageForecast | undefined }) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-3 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/70 px-3 py-2">
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/70 px-3 py-2">
       <div className="text-center">
         <div className="instrument-label text-[9px]">TIME REMAINING</div>
         <div className="font-mono text-sm font-bold text-white">

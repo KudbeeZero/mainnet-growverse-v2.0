@@ -15,6 +15,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { terpeneInfo } from "@/lib/terpenes";
+import {
+  WORLD,
+  buildBudGeometry,
+  frostAlpha,
+  headColor,
+} from "@/lib/chamber/microscopeGeometry";
 
 interface Props {
   /** Deterministic layout seed (e.g. derived from the strain id). */
@@ -28,142 +34,6 @@ interface Props {
   className?: string;
 }
 
-const WORLD = 1000;
-
-function mulberry32(a: number) {
-  return function () {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-interface Trichome {
-  x: number;
-  y: number;
-  stalk: number;
-  head: number;
-  matJitter: number;
-  terp: number; // index into terpenes, or -1
-  glint: number;
-}
-interface Calyx {
-  x: number;
-  y: number;
-  rx: number;
-  ry: number;
-  rot: number;
-  shade: number;
-}
-interface Pistil {
-  x: number;
-  y: number;
-  ang: number;
-  len: number;
-  curl: number;
-  amber: number;
-}
-interface Geometry {
-  calyxes: Calyx[];
-  trichomes: Trichome[];
-  pistils: Pistil[];
-}
-
-function buildGeometry(seed: number, terpCount: number): Geometry {
-  const rnd = mulberry32(seed || 1);
-  const cx = WORLD / 2;
-  const cy = WORLD / 2;
-  // Bud silhouette: a vertical-ish cluster of overlapping calyx blobs.
-  const radX = WORLD * 0.32;
-  const radY = WORLD * 0.4;
-  const inBud = (x: number, y: number) => {
-    const dx = (x - cx) / radX;
-    const dy = (y - cy) / radY;
-    return dx * dx + dy * dy <= 1;
-  };
-
-  const calyxes: Calyx[] = [];
-  for (let i = 0; i < 70; i++) {
-    let x = 0;
-    let y = 0;
-    for (let t = 0; t < 8; t++) {
-      x = cx + (rnd() * 2 - 1) * radX;
-      y = cy + (rnd() * 2 - 1) * radY;
-      if (inBud(x, y)) break;
-    }
-    const r = 60 + rnd() * 70;
-    calyxes.push({
-      x,
-      y,
-      rx: r,
-      ry: r * (0.7 + rnd() * 0.5),
-      rot: rnd() * Math.PI,
-      shade: rnd(),
-    });
-  }
-
-  const trichomes: Trichome[] = [];
-  const COUNT = 460;
-  for (let i = 0; i < COUNT; i++) {
-    let x = 0;
-    let y = 0;
-    for (let t = 0; t < 8; t++) {
-      x = cx + (rnd() * 2 - 1) * radX * 0.98;
-      y = cy + (rnd() * 2 - 1) * radY * 0.98;
-      if (inBud(x, y)) break;
-    }
-    const head = 5 + rnd() * 6;
-    trichomes.push({
-      x,
-      y,
-      stalk: head * (1.4 + rnd() * 1.6),
-      head,
-      matJitter: rnd() * 0.5 - 0.2,
-      terp: terpCount > 0 && rnd() < 0.55 ? Math.floor(rnd() * terpCount) : -1,
-      glint: rnd(),
-    });
-  }
-
-  const pistils: Pistil[] = [];
-  for (let i = 0; i < 46; i++) {
-    let x = 0;
-    let y = 0;
-    for (let t = 0; t < 8; t++) {
-      x = cx + (rnd() * 2 - 1) * radX * 0.8;
-      y = cy + (rnd() * 2 - 1) * radY * 0.8;
-      if (inBud(x, y)) break;
-    }
-    pistils.push({
-      x,
-      y,
-      ang: rnd() * Math.PI * 2,
-      len: 70 + rnd() * 130,
-      curl: (rnd() * 2 - 1) * 0.9,
-      amber: rnd(),
-    });
-  }
-
-  return { calyxes, trichomes, pistils };
-}
-
-function headColor(m: number): string {
-  // 0 clear (bluish glass) → 0.5 cloudy (milky) → 1 amber (gold)
-  const c = Math.max(0, Math.min(1, m));
-  if (c < 0.5) {
-    const t = c / 0.5;
-    const r = Math.round(205 + t * 30);
-    const g = Math.round(225 + t * 20);
-    const b = Math.round(235 - t * 35);
-    return `rgba(${r},${g},${b},0.92)`;
-  }
-  const t = (c - 0.5) / 0.5;
-  const r = Math.round(235 + t * 18);
-  const g = Math.round(220 - t * 70);
-  const b = Math.round(170 - t * 120);
-  return `rgba(${r},${g},${b},0.95)`;
-}
 
 export function Microscope({ seed, terpenes, maturity, purple = 0, className = "" }: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -191,7 +61,7 @@ export function Microscope({ seed, terpenes, maturity, purple = 0, className = "
       typeof window === "undefined" ||
       !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-    const geom = buildGeometry(seed, terpenes.length);
+    const geom = buildBudGeometry(seed, terpenes.length);
     let W = 0;
     let H = 0;
     let base = 1; // fit scale (world → screen at zoom 1)
@@ -229,48 +99,58 @@ export function Microscope({ seed, terpenes, maturity, purple = 0, className = "
       const pur = live.current.purple;
       const terps = live.current.terpenes;
 
-      // bud mass — overlapping calyx blobs (green, slight purple by trait)
+      // bud mass — overlapping calyxes. Teardrop silhouette (a pinched tip via a
+      // skewed quadratic) + a darker rim so they read as packed swollen tissue,
+      // not floating pebbles.
       for (const c of geom.calyxes) {
         const cxp = sx(c.x);
         const cyp = sy(c.y);
         const rx = c.rx * scale;
-        const ry = c.ry * scale;
+        const ry = c.ry * c.skew * scale;
         const hue = 96 - pur * 50; // green → toward violet
         const sat = 45 + pur * 20;
         const lit = 22 + c.shade * 16;
         ctx.save();
         ctx.translate(cxp, cyp);
         ctx.rotate(c.rot);
-        const g = ctx.createRadialGradient(0, 0, 1, 0, 0, Math.max(rx, ry));
-        g.addColorStop(0, `hsla(${hue},${sat}%,${lit + 12}%,0.95)`);
-        g.addColorStop(1, `hsla(${hue + 8},${sat}%,${lit}%,0.9)`);
+        const g = ctx.createRadialGradient(0, -ry * 0.2, 1, 0, 0, Math.max(rx, ry) * 1.1);
+        g.addColorStop(0, `hsla(${hue},${sat}%,${lit + 14}%,0.96)`);
+        g.addColorStop(0.78, `hsla(${hue + 6},${sat}%,${lit}%,0.92)`);
+        g.addColorStop(1, `hsla(${hue + 12},${sat + 6}%,${Math.max(8, lit - 10)}%,0.92)`); // rim
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        // teardrop: round belly that pinches to a point at the top
+        ctx.moveTo(0, -ry);
+        ctx.quadraticCurveTo(rx, -ry * 0.1, rx * 0.62, ry * 0.6);
+        ctx.quadraticCurveTo(0, ry, -rx * 0.62, ry * 0.6);
+        ctx.quadraticCurveTo(-rx, -ry * 0.1, 0, -ry);
         ctx.fill();
         ctx.restore();
       }
 
-      // pistils — curved orange/amber hairs
+      // pistils — curved orange/amber hairs that taper from a thick base to a
+      // fine tip (drawn as short segments so the width can shrink along the run).
       ctx.lineCap = "round";
       for (const p of geom.pistils) {
-        const steps = 6;
-        ctx.beginPath();
-        for (let i = 0; i <= steps; i++) {
+        const steps = 8;
+        const amber = 30 + p.amber * 25;
+        ctx.strokeStyle = `hsla(${amber},85%,60%,0.85)`;
+        let prevX = sx(p.x);
+        let prevY = sy(p.y);
+        for (let i = 1; i <= steps; i++) {
           const t = i / steps;
           const ang = p.ang + p.curl * t;
           const rr = p.len * t;
-          const wx = p.x + Math.cos(ang) * rr;
-          const wy = p.y + Math.sin(ang) * rr - rr * 0.25;
-          const X = sx(wx);
-          const Y = sy(wy);
-          if (i === 0) ctx.moveTo(X, Y);
-          else ctx.lineTo(X, Y);
+          const X = sx(p.x + Math.cos(ang) * rr);
+          const Y = sy(p.y + Math.sin(ang) * rr - rr * 0.25);
+          ctx.beginPath();
+          ctx.moveTo(prevX, prevY);
+          ctx.lineTo(X, Y);
+          ctx.lineWidth = Math.max(0.5, p.baseW * (1 - t * 0.85) * scale);
+          ctx.stroke();
+          prevX = X;
+          prevY = Y;
         }
-        const amber = 30 + p.amber * 25;
-        ctx.strokeStyle = `hsla(${amber},85%,60%,0.85)`;
-        ctx.lineWidth = Math.max(0.6, 2.4 * scale);
-        ctx.stroke();
       }
 
       // trichomes — stalked glandular heads; detail scales with magnification
@@ -281,29 +161,42 @@ export function Microscope({ seed, terpenes, maturity, purple = 0, className = "
         const hr = tr.head * scale;
         if (hx < -40 || hx > W + 40 || hy < -40 || hy > H + 40) continue;
         if (hr < 1.4) {
-          // far view — frosty speckle
+          // far view — a field of tiny frost crystals (size + rotation jitter so
+          // it reads as crystalline frosting, not a uniform dot grid); the
+          // opacity climbs with maturity so the slider visibly frosts the bud.
+          const s = (1 + tr.glint * 0.8) * 1.3;
+          ctx.save();
+          ctx.translate(hx, hy);
+          ctx.rotate(tr.rot);
           ctx.fillStyle = headColor(m);
-          ctx.globalAlpha = 0.55;
-          ctx.fillRect(hx, hy, 1.3, 1.3);
+          ctx.globalAlpha = frostAlpha(m);
+          ctx.fillRect(-s / 2, -s / 2, s, s);
+          ctx.restore();
           ctx.globalAlpha = 1;
           continue;
         }
-        // stalk
-        const baseY = hy + tr.stalk * scale;
+        // stalk — tilted slightly so the gland field looks organic
+        const baseX = hx + Math.sin(tr.tilt) * tr.stalk * scale;
+        const baseY = hy + Math.cos(tr.tilt) * tr.stalk * scale;
         ctx.strokeStyle = "rgba(225,235,210,0.5)";
         ctx.lineWidth = Math.max(0.5, hr * 0.22);
         ctx.beginPath();
-        ctx.moveTo(hx, baseY);
+        ctx.moveTo(baseX, baseY);
         ctx.lineTo(hx, hy);
         ctx.stroke();
-        // bulbous head
+        // rim shadow behind the head so it reads as a 3D bulbous gland
+        ctx.fillStyle = "rgba(20,40,30,0.45)";
+        ctx.beginPath();
+        ctx.ellipse(hx, hy + hr * 0.12, hr * tr.ox * 1.06, hr * 1.06, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // bulbous (ovoid) head
         const hg = ctx.createRadialGradient(hx - hr * 0.3, hy - hr * 0.3, hr * 0.1, hx, hy, hr);
         hg.addColorStop(0, "rgba(255,255,255,0.95)");
         hg.addColorStop(0.6, headColor(m));
         hg.addColorStop(1, headColor(Math.min(1, m + 0.15)));
         ctx.fillStyle = hg;
         ctx.beginPath();
-        ctx.arc(hx, hy, hr, 0, Math.PI * 2);
+        ctx.ellipse(hx, hy, hr * tr.ox, hr, 0, 0, Math.PI * 2);
         ctx.fill();
         // glossy glint (twinkles slightly over time)
         const tw = motionOK ? 0.5 + 0.5 * Math.sin(time * 2 + tr.glint * 6.28) : 0.7;
