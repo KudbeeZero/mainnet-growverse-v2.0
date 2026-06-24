@@ -12,7 +12,6 @@ import dynamic from "next/dynamic";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { usePlantState } from "@/hooks/usePlantState";
-import { useTurbo } from "@/hooks/useTurbo";
 import { useStrainMap } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useToast } from "@/components/ui/Toast";
@@ -64,12 +63,6 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   const qc = useQueryClient();
   const toast = useToast();
   const { map } = useStrainMap();
-  const {
-    enabled: turboOn,
-    multiplier: turboX,
-    isToggling: turboToggling,
-    toggle: toggleTurbo,
-  } = useTurbo(playerId);
 
   // Up to four plants per pod (the current cap). Active selection is local —
   // switching plants never leaves the screen.
@@ -107,19 +100,6 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
       ph_level: pod.ph_level ?? c.ph_level,
     }));
   }, [pod]);
-
-  // ACCELERATE TIME (+1h/+6h/+1d) — really fast-forwards the active plant's grow
-  // clock (server-authoritative, deterministic recompute).
-  const advance = useMutation<unknown, ApiError, number>({
-    mutationFn: (h) => api.plants.advance(playerId!, activeId!, h),
-    onSuccess: () => {
-      if (!activeId) return;
-      qc.invalidateQueries({ queryKey: queryKeys.plant(activeId) });
-      qc.invalidateQueries({ queryKey: queryKeys.events(activeId) });
-      if (playerId) qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
-    },
-    onError: (e) => toast.error(e.message),
-  });
 
   const setEnv = useMutation<unknown, ApiError, Environment>({
     mutationFn: (env) => api.pods.setEnvironment(playerId!, pod.id, env),
@@ -290,16 +270,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             )}
           </div>
 
-          <TimeControls
-            forecast={plant?.forecast}
-            turboOn={turboOn}
-            turboX={turboX}
-            onAdvanceHours={(h) => advance.mutate(h)}
-            advancing={advance.isPending}
-            disabled={ended || !plant}
-            onToggleTurbo={() => toggleTurbo(!turboOn)}
-            turboToggling={turboToggling}
-          />
+          <TimeControls forecast={plant?.forecast} />
 
           {/* Client-only growth preview — scrub forward/back through the whole
               lifecycle. Works with no backend (unlike server ACCELERATE TIME). */}
