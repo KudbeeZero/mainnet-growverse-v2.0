@@ -58,9 +58,11 @@ Each iteration completes **one** deliverable, writes the artifact, ticks the box
   cache + faculty→voice roster ALREADY SHIPPED; designed the avatar-video layer as a
   `VideoPresenterProvider` ABC+mock reusing the narration MP3 + `(avatar_id, audio_hash)` cache;
   ~$140 one-time HeyGen cost. Flagged: faculty roster code ≠ Phase-2 §7 docs.
-- 🔨 **B2** `docs/research/university/courses/bio-101-lecture-scripts.md` — author the canonical
+- ✅ **B2** `docs/research/university/courses/bio-101-lecture-scripts.md` — authored the canonical
   `bio-101` ("Foundations of Plant Biology", Professor Flora) lecture/narration scripts to Master
-  Report §17 (orientation + 4 modules), honest-hour budgeted, transcript-ready.
+  Report §17 (orientation + 4 modules + certification), honest-hour budgeted, transcript-ready.
+  *(Done 2026-06-24: full word-for-word professor lectures, grower-practical voice; flagged the
+  Flora-vs-Vera-Lindqvist voice discrepancy. Track B complete.)*
 
 ### Track C — GrowVerse Master Grower AI Bot (knowledge mapping + monetization plan)
 - ⬜ **C1** `docs/research/2026-06-23-master-grower-bot-knowledge-graph.md` — map the knowledge corpus
