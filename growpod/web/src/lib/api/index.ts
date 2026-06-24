@@ -16,6 +16,7 @@ import { ftue } from "./ftue";
 import { seasonal } from "./seasonal";
 import { store } from "./store";
 import { turbo } from "./turbo";
+import { health } from "./health";
 
 export const api = {
   players,
@@ -36,6 +37,7 @@ export const api = {
   seasonal,
   store,
   turbo,
+  health,
 };
 
 export { ApiError } from "./client";
