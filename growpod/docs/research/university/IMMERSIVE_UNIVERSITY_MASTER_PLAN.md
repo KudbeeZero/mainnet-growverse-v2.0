@@ -152,15 +152,25 @@ none of it posts to the ledger; retention instrumentation in place.
 **Cross-cutting — Figma design system (D1/D2).** Stand up the Figma library from the extracted tokens,
 Code-Connect the new components, assemble the 7 §11 screens — runs alongside Phases 1–4.
 
-### Consolidated owner-decision list (what only you can answer)
-1. **Faculty roster** — reconcile names/voices (code vs. docs); `bio-101` faculty + voice. *(P0)*
-2. **3D fidelity** — stylized vs. photoreal; set-dressing source; max zoom depth (calyx vs. trichome
-   microscope); hall realism. *(A1 §9, gates Phase 3)*
-3. **Avatar sourcing** — HeyGen stock vs. custom-trained faculty avatars (+ commercial-rights). *(B1)*
-4. **Bot monetization** — confirm "sell guidance, never power"; pricing; payment provider; that
-   entitlements never touch the ledger. *(C2, launch-gated)*
-5. **Explorer scope** — courses-only vs. also a standalone "study any strain" feature. *(A2)*
-6. **When to lift the UNI-011 freeze** (post-MVP) and open the Build Phase.
+### Owner decisions — RESOLVED (delegated to Claude as owner-proxy, 2026-06-24)
+> The owner delegated these six calls. Recorded here as the working decisions; owner may override.
+1. **Faculty roster → RESOLVED: code is authoritative.** Adopt the shipped `_DEPT_VOICES` roster
+   (Professor Flora · Vera Lindqvist · Dr. Sage Harlow · Dr. Mira Okafor · Dr. Chem Torres · Dr. Petra
+   Nance); retire Phase-2 §7's Verdant/Mycelia/Atlas/Nova. **`bio-101` → Professor Flora** (matches the
+   §17 narration). **Give Dr. Sage Harlow a distinct voice** (currently shares Rachel with Flora).
+   *(Phase 0 — executed docs-side 2026-06-24.)*
+2. **3D fidelity → RESOLVED: stylized-botanical**, not photoreal; **stock GLTF set-dressing** to start;
+   **zoom to the trichome microscope tier (T4)**; **stylized hall shell**. *(gates Phase 3)*
+3. **Avatar sourcing → RESOLVED: HeyGen stock avatars first**, custom-trained faculty avatars later;
+   keep `VideoPresenterProvider` swappable (no lock-in).
+4. **Bot monetization → RESOLVED: adopt C2 verbatim.** Free game stays complete; **Master Grower+ ≈
+   $6.99/mo** (Stripe web + app-store IAP); entitlement = a `pro` flag **fully decoupled from the GROW
+   ledger**; payment built **last**, launch-gated.
+5. **Explorer scope → RESOLVED: both, phased** — courses-first, then a standalone "study any strain"
+   mode over the 29-strain encyclopedia (same engine).
+6. **Lift the UNI-011 freeze → RESOLVED: NOT yet.** Hold until MVP ships (active critical-path-to-MVP).
+   Pre-authorize the P0–P5 Build-Phase order to execute immediately post-MVP. **Only the docs-only
+   Phase 0 (roster reconciliation) proceeds now.**
 
 ### Definition of done for *this* research pass
 All 10 deliverables (A1–E2) authored, grounded in the real repo, web-sourced where external, committed

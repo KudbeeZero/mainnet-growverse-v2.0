@@ -66,12 +66,21 @@ labs (Cell ID · Photosynthesis Sim · Environmental Variables · Stress Diagnos
 Where physics is needed, labs **call the pure engine** (`simulation/engine.py`) in a read-only teaching
 sandbox — **no new logic in the pure engine** (CLAUDE.md invariant). Master Report §8.
 
-### 7. Professor persona extension 🔨 (CEO-approved 2026-06-14)
+### 7. Professor persona extension 🔨 (CEO-approved 2026-06-14 · roster RECONCILED 2026-06-24)
 Extend the shipped Professor (`ai/provider.py`, `services/lecturer_service.py`) with **named faculty
 personas** — distinct personalities, teaching styles, visual identities, and a persistent narration voice
-(lessons, labs, exams, office hours). Approved roster (names may evolve): **Professor Flora** (Plant
-Biology — teaches `bio-101`) · **Verdant** (Environmental Systems) · **Mycelia** (Microbiology & Soil
-Ecology) · **Atlas** (Commercial Cultivation) · **Nova** (Genetics & Breeding). All generation
+(lessons, labs, exams, office hours).
+> **⚠️ Roster reconciled (2026-06-24, owner-proxy decision).** The earlier proposed names
+> (Verdant/Mycelia/Atlas/Nova) are **superseded by the shipped code**, which is authoritative
+> (`ai/elevenlabs_narrator.py` `_DEPT_VOICES`). The **canonical roster**:
+> **Professor Flora** (Cultivation & Horticulture — also teaches the `bio-101` foundations course) ·
+> **Vera Lindqvist** (Plant Genetics) · **Dr. Sage Harlow** (Soil & Nutrient Science) ·
+> **Dr. Mira Okafor** (Integrated Pest Management) · **Dr. Chem Torres** (Cannabis Chemistry) ·
+> **Dr. Petra Nance** (Post-Harvest & Processing). **Action item:** give Dr. Sage Harlow a *distinct*
+> voice ID — she currently shares Rachel with Professor Flora. See
+> `docs/research/university/IMMERSIVE_UNIVERSITY_MASTER_PLAN.md` §Owner-decisions and the B1/B2 docs.
+
+All generation
 (lab-instruction / quiz-feedback / certification-message) flows through the existing `LectureReport` shape
 and CI-safe mock; no ABC change for the lecture path; persona lives in `curriculum.yaml`. Master Report §4.
 
