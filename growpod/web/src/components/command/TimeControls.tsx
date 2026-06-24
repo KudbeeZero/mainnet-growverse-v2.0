@@ -22,6 +22,7 @@ export function TimeControls({
   onAdvanceHours,
   advancing = false,
   disabled = false,
+  disabledReason = null,
   onToggleTurbo,
   turboToggling = false,
 }: {
@@ -34,12 +35,15 @@ export function TimeControls({
   onAdvanceHours: (hours: number) => void;
   advancing?: boolean;
   disabled?: boolean;
+  /** Why the controls are disabled (shown as a hint + button tooltip) so a
+   *  greyed-out button never reads as "broken." */
+  disabledReason?: string | null;
   /** When provided, the SPEED readout becomes a button toggling global turbo. */
   onToggleTurbo?: () => void;
   turboToggling?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-3 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/70 px-3 py-2">
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/70 px-3 py-2">
       <div className="text-center">
         <div className="instrument-label text-[9px]">TIME REMAINING</div>
         <div className="font-mono text-sm font-bold text-white">
@@ -89,12 +93,18 @@ export function TimeControls({
             key={j.label}
             onClick={() => onAdvanceHours(j.hours)}
             disabled={disabled || advancing}
+            title={disabled && disabledReason ? disabledReason : `Fast-forward ${j.label}`}
             className="min-h-[32px] rounded-md border border-cyan-400/30 bg-cyan-400/[0.06] px-2.5 text-xs font-bold text-cyan-100 transition-colors hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {advancing ? "…" : j.label}
           </button>
         ))}
       </div>
+
+      {/* Never let the controls look mysteriously dead — say why they're off. */}
+      {disabled && disabledReason && (
+        <p className="w-full text-center text-[9px] text-cyan-200/45">{disabledReason}</p>
+      )}
     </div>
   );
 }
