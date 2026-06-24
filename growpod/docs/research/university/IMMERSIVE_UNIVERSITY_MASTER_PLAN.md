@@ -75,9 +75,13 @@ Each iteration completes **one** deliverable, writes the artifact, ticks the box
   ledger; owner-/launch-gated. *(Done 2026-06-24. Track C complete.)*
 
 ### Track D — Figma Design System (GrowVerse University)
-- ⬜ **D1** Design-system rules from the `web/` codebase → `docs/research/university/figma-design-system-rules.md`.
-- ⬜ **D2** `docs/research/university/figma-university-design-system.md` — token + component spec for
-  the classroom/course/lecture/bot UI, mapped to `web/src/components/ui/`.
+- ✅ **D1** `docs/research/university/figma-design-system-rules.md` — design-system rules extracted
+  from `web/` (grow/ink/accent/violet token ramps, Inter type, focus-ring a11y rule, 18-component
+  `ui/` inventory, rules for new components). *(Figma `create_design_system_rules` tool not exposed;
+  authored from `tailwind.config.ts`/`globals.css`/`components/ui/` instead. Done 2026-06-24.)*
+- ✅ **D2** `docs/research/university/figma-university-design-system.md` — Figma-ready UI spec mapping
+  the 7 Master Report §11 screens + 3D Explorer chrome + bot chat onto D1 tokens & existing
+  components; faculty visual identity; Figma build path. *(Done 2026-06-24. Track D complete.)*
 
 ### Track E — Synthesis & Competitive Edge
 - ⬜ **E1** `docs/research/2026-06-23-edtech-competitive-analysis.md` — what makes the *best*
