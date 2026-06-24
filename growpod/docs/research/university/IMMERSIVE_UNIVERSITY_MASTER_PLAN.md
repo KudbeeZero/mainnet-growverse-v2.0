@@ -88,7 +88,26 @@ Each iteration completes **one** deliverable, writes the artifact, ticks the box
   feedback/leagues) · Labster (labs beat reading, +19%) · Kerbal (legible failure) · Foldit (meaning);
   6-item adopt-list; the "best in category" bar; differentiation thesis. *(Done 2026-06-24.)*
 - ✅ **E2** Synthesis below (§Synthesis) — phased owner-gated Build Phase + acceptance criteria +
-  consolidated owner-decision list. *(Done 2026-06-24. Queue complete.)*
+  consolidated owner-decision list. *(Done 2026-06-24. Base queue A1–E2 complete.)*
+
+### Track F — Build-readiness depth pass (turn the A–E designs into *buildable* specs)
+> Added 2026-06-24 after the base queue completed, to deepen toward "best in category." Still
+> docs-only / freeze-safe. Each makes a Build-Phase phase concretely buildable.
+- ✅ **F1** `docs/research/2026-06-24-3d-anatomy-explorer-technical-spec.md` — KEY FINDING: the
+  `bud3d/` generators already emit 3D instance arrays (`buildCola`/`buildFrost`/`buildPistils`) and
+  ripeness is server-authoritative (`budParamsFromTrichomes`). Spec'd the Explorer as a `chamber3d/`
+  R3F **renderer over the existing pure modules** (4 LOD tiers, instanced, deterministic, zero edits
+  to the pure core). *(Done 2026-06-24.)*
+- ⬜ **F2** `docs/research/university/courses/cult-101-lecture-scripts.md` — author the **shipped**
+  next course `cult-101` "Fundamentals of Cannabis Cultivation" full scripts; proves the framework
+  clones (B2 → second course) and uses real `curriculum.yaml` data.
+- ⬜ **F3** `docs/research/university/bio-101-assessment-bank.md` — deterministic, data-authored
+  assessment item bank for `bio-101` (knowledge checks · midterm · mastery + answer keys); makes
+  Build-Phase 1 grading buildable & CI-safe.
+- ⬜ **F4** `docs/research/2026-06-24-master-grower-bot-system-design.md` — bot system prompt + tool
+  contracts + guardrail/eval suite design; makes Build-Phase 4 buildable.
+- ⬜ **F5** `docs/research/university/accessibility-conformance-checklist.md` — WCAG 2.2 AA checklist
+  across every university surface (lecture player · 3D explorer · labs · exams · bot); the ship gate.
 
 ---
 
