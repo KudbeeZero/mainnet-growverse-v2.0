@@ -98,9 +98,10 @@ Each iteration completes **one** deliverable, writes the artifact, ticks the box
   ripeness is server-authoritative (`budParamsFromTrichomes`). Spec'd the Explorer as a `chamber3d/`
   R3F **renderer over the existing pure modules** (4 LOD tiers, instanced, deterministic, zero edits
   to the pure core). *(Done 2026-06-24.)*
-- ⬜ **F2** `docs/research/university/courses/cult-101-lecture-scripts.md` — author the **shipped**
-  next course `cult-101` "Fundamentals of Cannabis Cultivation" full scripts; proves the framework
-  clones (B2 → second course) and uses real `curriculum.yaml` data.
+- ✅ **F2** `docs/research/university/courses/cult-101-lecture-scripts.md` — authored the shipped
+  `cult-101` "Fundamentals of Cannabis Cultivation" full scripts (orientation + 3 modules + cert) by
+  cloning the bio-101 template; grounded in real `curriculum.yaml` (practical = 1 harvest, perk
+  quality_bonus +1). Proves the framework scales. *(Done 2026-06-24.)*
 - ⬜ **F3** `docs/research/university/bio-101-assessment-bank.md` — deterministic, data-authored
   assessment item bank for `bio-101` (knowledge checks · midterm · mastery + answer keys); makes
   Build-Phase 1 grading buildable & CI-safe.
