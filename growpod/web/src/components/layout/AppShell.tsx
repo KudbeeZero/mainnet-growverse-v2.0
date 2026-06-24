@@ -18,12 +18,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     : "max-w-6xl";
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-[100dvh]">
       <NavBar />
       {/* Bottom padding clears the fixed mobile tab bar (incl. the home-indicator
-          safe area); removed at lg where the bar is hidden. */}
+          safe area); removed at lg where the bar is hidden. Left/right padding
+          folds in the landscape notch insets so content never hides under it. */}
       <main
-        className={`mx-auto ${widthClass} px-4 py-6 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6`}
+        className={`mx-auto ${widthClass} py-6 pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] lg:pb-6`}
       >
         {children}
         <Footer />

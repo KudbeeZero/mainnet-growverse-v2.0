@@ -28,8 +28,10 @@ export function StageProgressBar({ index }: { index: number }) {
                       : "bg-ink-600"
                 }`}
               />
+              {/* Labels would overflow a phone width, so below sm we show dots
+                  only (the current stage is named in the header + stage card). */}
               <span
-                className={`whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.08em] ${
+                className={`hidden whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.08em] sm:inline ${
                   current ? "text-grow-300" : done ? "text-gray-400" : "text-gray-600"
                 }`}
               >
@@ -39,7 +41,7 @@ export function StageProgressBar({ index }: { index: number }) {
             {!last && (
               <span
                 aria-hidden
-                className={`mx-1 -mt-4 h-px flex-1 ${done ? "bg-grow-600/70" : "bg-ink-600/60"}`}
+                className={`mx-1 h-px flex-1 sm:-mt-4 ${done ? "bg-grow-600/70" : "bg-ink-600/60"}`}
               />
             )}
           </div>

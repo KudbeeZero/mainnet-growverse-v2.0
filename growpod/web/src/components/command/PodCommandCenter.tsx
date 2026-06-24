@@ -21,7 +21,7 @@ import type { Environment } from "@/lib/api";
 import type { Plant, Pod } from "@/lib/types";
 import { queryKeys } from "@/lib/queryKeys";
 import { clamp, previewDev, seedForPlant } from "@/lib/chamber/morphology";
-import { maxPreviewDay, resolvePreview } from "@/lib/chamber/growthPreview";
+import { harvestMarkers, maxPreviewDay, resolvePreview } from "@/lib/chamber/growthPreview";
 import { STAGE_ORDER } from "@/lib/stageInfo";
 import { plantRender } from "@/lib/plantRender";
 import { podStatus } from "@/lib/podStatus";
@@ -32,10 +32,12 @@ import { HeroStatChips, PodStatusTag, StageHeader } from "@/components/command/H
 import { PlantDnaRail } from "@/components/command/PlantDnaRail";
 import { EnvironmentRail } from "@/components/command/EnvironmentRail";
 import { GrowConsole } from "@/components/plant/GrowConsole";
-import { TimeControls } from "@/components/command/TimeControls";
-import { CommandActionBar } from "@/components/command/CommandActionBar";
+import { CareDeck } from "@/components/command/CareDeck";
 import { PlantCarousel, type CarouselPlant } from "@/components/command/PlantCarousel";
 import { GrowthScrubber } from "@/components/command/GrowthScrubber";
+import { TimeControls } from "@/components/command/TimeControls";
+import { NextActionHint } from "@/components/command/NextActionHint";
+import { StageInfoCard } from "@/components/command/StageInfoCard";
 import { PlantSeedForm } from "@/components/plant/PlantSeedForm";
 
 const GrowChamber = dynamic(
@@ -164,6 +166,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   const strain = plant ? map.get(plant.strain_id) : undefined;
   const render = plant ? plantRender(plant, strain, pod) : null;
   const flMid = render?.flMid ?? 60;
+  const harvestMarks = harvestMarkers(flMid);
   const liveDay = render?.liveNominalDay ?? 0;
   // Growth-preview scrubber: drag through the lifecycle (client-only visual);
   // null = track the real server age. Never mutates server state.
@@ -287,10 +290,24 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
               maxDay={maxPreviewDay(flMid)}
               stageLabel={renderStage}
               previewing={preview.previewing}
+              readyFromDay={harvestMarks.readyFromDay}
+              harvestDay={harvestMarks.harvestDay}
               onScrub={setPreviewDay}
               onReset={() => setPreviewDay(null)}
             />
           )}
+
+          {/* Right under the slider: where this stage is at + what's happening,
+              then the most-reached-for tools (do-next hint, levels, care bar). */}
+          {plant && (
+            <StageInfoCard
+              stage={renderStage}
+              progressPct={plant.forecast?.stage_progress_pct ?? null}
+              previewing={preview.previewing}
+            />
+          )}
+          {plant && <NextActionHint plant={plant} />}
+          {plant && <CareDeck plant={plant} />}
 
           {/* On mobile the stat chips sit in a clean row under the time strip
               (on desktop they live in the header band) — never over the plant. */}
@@ -320,8 +337,6 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
           {plant && <GrowConsole plant={plant} pod={pod} />}
         </div>
       </div>
-
-      {plant && <CommandActionBar plant={plant} />}
     </div>
   );
 }
