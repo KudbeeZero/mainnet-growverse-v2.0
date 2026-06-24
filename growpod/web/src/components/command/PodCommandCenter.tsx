@@ -12,11 +12,11 @@ import dynamic from "next/dynamic";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { usePlantState } from "@/hooks/usePlantState";
-import { useTurbo } from "@/hooks/useTurbo";
 import { useStrainMap } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
+import { describeApiError } from "@/lib/apiError";
 import type { Environment } from "@/lib/api";
 import type { Plant, Pod } from "@/lib/types";
 import { queryKeys } from "@/lib/queryKeys";
@@ -26,6 +26,7 @@ import { STAGE_ORDER } from "@/lib/stageInfo";
 import { plantRender } from "@/lib/plantRender";
 import { podStatus } from "@/lib/podStatus";
 import { FleetCounters } from "@/components/command/FleetCounters";
+import { ConnectivityBadge } from "@/components/command/ConnectivityBadge";
 import { StageProgressBar } from "@/components/command/StageProgressBar";
 import { HeroStatChips, PodStatusTag, StageHeader } from "@/components/command/HeroParts";
 import { PlantDnaRail } from "@/components/command/PlantDnaRail";
@@ -64,12 +65,6 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   const qc = useQueryClient();
   const toast = useToast();
   const { map } = useStrainMap();
-  const {
-    enabled: turboOn,
-    multiplier: turboX,
-    isToggling: turboToggling,
-    toggle: toggleTurbo,
-  } = useTurbo(playerId);
 
   // Up to four plants per pod (the current cap). Active selection is local —
   // switching plants never leaves the screen.
@@ -108,19 +103,6 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
     }));
   }, [pod]);
 
-  // ACCELERATE TIME (+1h/+6h/+1d) — really fast-forwards the active plant's grow
-  // clock (server-authoritative, deterministic recompute).
-  const advance = useMutation<unknown, ApiError, number>({
-    mutationFn: (h) => api.plants.advance(playerId!, activeId!, h),
-    onSuccess: () => {
-      if (!activeId) return;
-      qc.invalidateQueries({ queryKey: queryKeys.plant(activeId) });
-      qc.invalidateQueries({ queryKey: queryKeys.events(activeId) });
-      if (playerId) qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
   const setEnv = useMutation<unknown, ApiError, Environment>({
     mutationFn: (env) => api.pods.setEnvironment(playerId!, pod.id, env),
     onSuccess: () => {
@@ -129,7 +111,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
       qc.invalidateQueries({ queryKey: ["plant"] });
       if (playerId) qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(describeApiError(e)),
   });
 
   // Debounced commit: coalesce a slider drag into one persisted write.
@@ -198,7 +180,10 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
     <div className="flex flex-col gap-3 rounded-2xl border border-cyan-400/15 bg-[#050b12] p-3 text-[#cfeeff]">
       {/* header band: counters (left) · stage header (center) · stat chips (right) */}
       <div className="flex items-start justify-between gap-3">
-        <FleetCounters />
+        <div className="flex flex-col items-start gap-1.5">
+          <FleetCounters />
+          <ConnectivityBadge />
+        </div>
         {plant && (
           <div className="hidden xl:block">
             <HeroStatChips forecast={plant.forecast} rarity={strain?.rarity} />
@@ -212,8 +197,10 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
         </div>
       </div>
 
-      {/* main 3-rail grid (collapses to a single scrolling column below xl) */}
-      <div className="grid gap-3 xl:grid-cols-[300px_1fr_320px]">
+      {/* main 3-rail grid (collapses to a single scrolling column below xl).
+          Rails widen on larger screens so the layout fills a desktop monitor
+          instead of sitting in a narrow centered column. */}
+      <div className="grid gap-3 xl:grid-cols-[320px_1fr_340px] 2xl:grid-cols-[380px_1fr_420px] 2xl:gap-4">
         {/* center: carousel + chamber + time controls (first in DOM → leads on mobile) */}
         <div className="flex min-h-0 flex-col gap-2 xl:col-start-2 xl:row-start-1">
           <PlantCarousel plants={carousel} activeId={activeId} onSelect={setActiveId} />
@@ -290,16 +277,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             )}
           </div>
 
-          <TimeControls
-            forecast={plant?.forecast}
-            turboOn={turboOn}
-            turboX={turboX}
-            onAdvanceHours={(h) => advance.mutate(h)}
-            advancing={advance.isPending}
-            disabled={ended || !plant}
-            onToggleTurbo={() => toggleTurbo(!turboOn)}
-            turboToggling={turboToggling}
-          />
+          <TimeControls forecast={plant?.forecast} />
 
           {/* Client-only growth preview — scrub forward/back through the whole
               lifecycle. Works with no backend (unlike server ACCELERATE TIME). */}

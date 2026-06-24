@@ -31,6 +31,8 @@ import {
   SHIMMER_MAX_AMP,
 } from "./trichomes";
 import { colaTops } from "./apicalDominance";
+import { calyxShapeFor } from "./calyxShape";
+import { earlyStageBoost } from "./earlyStage";
 import { CONDITION_VISUALS, SEVERITY_SCALE, dominantFlag } from "../conditionVisuals";
 import {
   branchFlex as branchFlexFor,
@@ -803,12 +805,15 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // light-stress pushes pointed/foxtail near the top. Height > width.
         const sr = rnd();
         const foxCut = 0.85 - foxtail * 0.2 - foxBias * 0.22 - topness * topStretch * 0.15;
-        const ovalCut = Math.min(0.65 - topness * topStretch * 0.2, foxCut - 0.04);
-        let shape: number, h: number;
-        if (sr < 0.4) { shape = 0; h = w * rr(1.25, 1.5); }
-        else if (sr < ovalCut) { shape = 1; h = w * rr(1.2, 1.35); }
-        else if (sr < foxCut) { shape = 2; h = w * rr(1.5, 1.8); }
-        else { shape = 3; w *= 0.78; h = w * rr(2.0, 2.5); }
+        // Keep the oval band thin (ovals = the "grape" look) and above the
+        // widened teardrop share (calyxShapeFor takes teardrops to 0.52).
+        const ovalCut = Math.min(0.7 - topness * topStretch * 0.2, foxCut - 0.04);
+        const shape = calyxShapeFor(sr, ovalCut, foxCut);
+        let h: number;
+        if (shape === 0) { h = w * rr(1.25, 1.5); }
+        else if (shape === 1) { h = w * rr(1.2, 1.35); }
+        else if (shape === 2) { h = w * rr(1.5, 1.8); }
+        else { w *= 0.78; h = w * rr(2.0, 2.5); }
         if (topStretch > 0) h *= 1 + topness * topStretch * 0.6;
         const col = pickPaletteColor(dna.palette, rnd());
         calyxes.push({
@@ -1174,7 +1179,14 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     // the seed is soaking up moisture and hasn't cracked yet.
     if (p.stage === "seed") {
       const cx = p.cx, by = p.baseY, soilR = scene!.soilR;
-      const bW = soilR * 0.30, bH = soilR * 0.175;
+      const eb = earlyStageBoost(p.stage);
+      const bW = soilR * 0.30 * eb, bH = soilR * 0.175 * eb;
+      // Ground shadow — anchors the seed to the medium so it reads as a seed on
+      // the surface, not a dot floating in the chamber.
+      ctx!.fillStyle = "rgba(0,0,0,0.22)";
+      ctx!.beginPath();
+      ctx!.ellipse(cx, by + bH * 0.45, bW * 1.05, bH * 0.5, 0, 0, TAU);
+      ctx!.fill();
       // Moisture halo — dark damp ring around the base of the seed.
       const mhalo = ctx!.createRadialGradient(cx, by - bH * 0.1, 0, cx, by, soilR * 0.54);
       mhalo.addColorStop(0, "rgba(55,88,78,0.24)");
@@ -1220,7 +1232,8 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     // cotyledons still folded shut at its tip.
     if (p.stage === "germination") {
       const cx = p.cx, by = p.baseY, soilR = scene!.soilR;
-      const hookH = p.A * 0.17;
+      const eb = earlyStageBoost(p.stage);
+      const hookH = p.A * 0.17 * eb;
       // Taproot hint — barely visible below the medium surface.
       ctx!.save();
       ctx!.globalAlpha = 0.42;
@@ -1238,7 +1251,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.globalAlpha = 1;
       ctx!.restore();
       // Two cracked seed-shell halves resting at the medium surface.
-      const bW = soilR * 0.23, bH = soilR * 0.13;
+      const bW = soilR * 0.23 * eb, bH = soilR * 0.13 * eb;
       ctx!.fillStyle = "hsl(22, 40%, 18%)";
       for (const s of [-1, 1]) {
         ctx!.save();
@@ -1265,7 +1278,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       );
       ctx!.stroke();
       // Cotyledon nub — two tiny folded teardrops at the arch tip, still closed.
-      const nubR = soilR * 0.115;
+      const nubR = soilR * 0.115 * eb;
       ctx!.fillStyle = `hsl(${archHue}, ${archSat}%, ${archLit - 4}%)`;
       for (const s of [-1, 1]) {
         ctx!.save();
@@ -1298,7 +1311,8 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     if (p.stage === "seedling") {
       const top = p.spine[24]; // apex of the stem
       const soilR = scene!.soilR;
-      const cotyL = soilR * 0.50, cotyW = soilR * 0.30;
+      const eb = earlyStageBoost(p.stage);
+      const cotyL = soilR * 0.50 * eb, cotyW = soilR * 0.30 * eb;
       const cotyHue = S.hue + 6;
       const cotySat = Math.round(S.sat * 0.82);
       const cotyLit = Math.round(S.lit + 17);
@@ -1322,7 +1336,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.restore();
       }
       // First true leaf — one narrow serrated blade growing up from the apex.
-      const tlSz = soilR * 0.30;
+      const tlSz = soilR * 0.30 * eb;
       ctx!.save();
       ctx!.translate(top.x, top.y - tlSz * 0.06);
       ctx!.fillStyle = `hsl(${S.hue + 2}, ${S.sat}%, ${S.lit + 12}%)`;
@@ -1584,7 +1598,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const lit = clamp(c.lit + (c.depth - 0.6) * 18 + P.ripe * 2, 10, 82);
       const sc = 0.6 + 0.4 * grow;
       const w = c.w * sc, h = c.h * sc;
-      const detail = w > 4.5 && c.depth > 0.55; // ribs/speckles only where they read
+      const detail = w > 2.8 && c.depth > 0.45; // ribs/seams break up the blob — render them sooner
       ctx!.save();
       ctx!.globalAlpha = lerp(0.78, 1, c.depth);
       ctx!.translate(c.x - baseX, c.y - baseY);
