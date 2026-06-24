@@ -1,9 +1,10 @@
 import { test, type Page } from "@playwright/test";
 
-// Proof capture: with the global ⚡10× faucet ON, show (a) the dashboard pod's
-// LIVE harvest countdown + green turbo glow on the main view, and (b) the Grow
-// Chamber's single turbo button. Uses the same mock-API pattern as smoke.spec.ts
-// so it runs hermetically (no backend). Run: npx playwright test turbo-shot
+// Proof capture: (a) the dashboard pod's LIVE harvest countdown on the main
+// view, and (b) the Grow Chamber's single ⚡ turbo button. (The dashboard's own
+// ⚡ speed toggle / ACCELERATE TIME jumps were removed from the Command Center —
+// turbo now lives only in the chamber.) Uses the same mock-API pattern as
+// smoke.spec.ts so it runs hermetically (no backend). Run: npx playwright test turbo-shot
 
 const PLAYER = {
   id: "p1", username: "Tester", email: null, algorand_address: null,
@@ -92,15 +93,15 @@ async function mockApi(page: Page) {
   });
 }
 
-test("PROOF: dashboard command center shows a live turbo countdown + ⚡ toggle, chamber has one ⚡ button", async ({ page }) => {
+test("PROOF: dashboard command center shows a live harvest countdown; chamber has one ⚡ turbo button", async ({ page }) => {
   await authedSession(page);
   await mockApi(page);
 
   // (a) Main dashboard view — the Command Center's live "TIME REMAINING"
-  // countdown plus the ⚡10× turbo toggle (ON, green) right on the time strip.
+  // countdown on the time strip. (The ⚡ speed toggle / ACCELERATE TIME jumps
+  // that used to sit here were removed; only the countdown remains.)
   await page.goto("/dashboard");
   await page.getByText(/TIME REMAINING/i).first().waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /⚡\s*10×/ }).first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(2500); // let the countdown tick a couple seconds
   await page.screenshot({ path: "e2e-output/turbo-dashboard-full.png", fullPage: true });
 
