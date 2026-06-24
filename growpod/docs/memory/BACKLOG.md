@@ -64,6 +64,14 @@ once they appear here. Last reconciled: **2026-06-14** (REC-004 full repository 
   `GROWVERSE_BOOST_UI_COPY.md`, `GROWVERSE_BUILD_PRIORITY_ROADMAP.md`); ADR in `DECISIONS.md`
   (2026-06-19). **No code / no economy change** — boosts are `planned`, free + QA-labeled in alpha;
   five owner decisions gate any real activation. Build only after the named owner decisions.
+- 🚀 ⬜ **AI-assistance feature package (planning, docs only)** — 10 lanes for an AI bot the player
+  can **ask for assistance** that **evaluates real grow state** and **gives correct, grounded
+  assistance**, priced as an optional boost but **free + QA-labeled in alpha**. Grounded on the
+  existing `live` advisor (`GET /players/<id>/plants/<id>/advisor`, `api/game_api.py:621` →
+  `services/advisor_service.py` → swappable `ai/` providers) + `ai/autocare.py`. Doc:
+  `docs/product/GROWVERSE_AI_ASSISTANCE_FEATURE_BUILDS.md`. **No code / no economy change** — every
+  lane `planned`, assists post $0 ledger entries in alpha; moving off free is an owner stop-and-ask.
+  Five owner design questions gate activation. Extends the boost-economy package above.
 
 ## 🎨 Graphics Phase II/III (COMPLETE — signed off 2026-06-14; no scope expansion)
 > The game's emotional core is the whole-plant chamber view. This track is **visual-only** —

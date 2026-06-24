@@ -23,6 +23,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { queryKeys } from "@/lib/queryKeys";
 import { num, titleCase, dateTime } from "@/lib/format";
+import { formatScalar, humanizeKnowledgeKey, humanizeList } from "@/lib/knowledgeFormat";
 import type { Strain } from "@/lib/types";
 import { GrowChamber } from "@/components/viz/GrowChamber";
 import { morphologyFor, devParams, seedForPlant } from "@/lib/chamber/morphology";
@@ -172,25 +173,43 @@ function KnowledgeRenderer({ data }: { data: Record<string, unknown> }) {
 
 function KnowledgeValue({ value }: { value: unknown }) {
   if (value === null || value === undefined) return <span className="text-gray-500">—</span>;
-  if (Array.isArray(value))
+  if (Array.isArray(value)) {
+    // Scalar lists render as readable chips; lists holding objects recurse.
+    const joined = humanizeList(value);
+    if (joined !== null)
+      return (
+        <div className="flex flex-wrap gap-1.5">
+          {value.map((v, i) => (
+            <span key={i} className="rounded-full border border-ink-600 bg-ink-800 px-2 py-0.5 text-xs text-gray-300">
+              {formatScalar(v)}
+            </span>
+          ))}
+        </div>
+      );
     return (
-      <div className="flex flex-wrap gap-1.5">
+      <div className="space-y-2">
         {value.map((v, i) => (
-          <span key={i} className="rounded-full border border-ink-600 bg-ink-800 px-2 py-0.5 text-xs text-gray-300">
-            {typeof v === "object" ? JSON.stringify(v) : String(v)}
-          </span>
+          <KnowledgeValue key={i} value={v} />
         ))}
       </div>
     );
+  }
   if (typeof value === "object")
     return (
       <div className="space-y-1 rounded-md border border-ink-700 bg-ink-900/50 p-2">
-        {Object.entries(value as Record<string, unknown>).map(([k, v]) => (
-          <Stat key={k} label={titleCase(k)} value={typeof v === "object" ? JSON.stringify(v) : String(v)} />
-        ))}
+        {Object.entries(value as Record<string, unknown>).map(([k, v]) =>
+          v !== null && typeof v === "object" ? (
+            <div key={k}>
+              <div className="instrument-label mb-1 text-[10px]">{humanizeKnowledgeKey(k)}</div>
+              <KnowledgeValue value={v} />
+            </div>
+          ) : (
+            <Stat key={k} label={humanizeKnowledgeKey(k)} value={formatScalar(v)} />
+          ),
+        )}
       </div>
     );
-  return <p className="text-sm leading-relaxed text-gray-300">{String(value)}</p>;
+  return <p className="text-sm leading-relaxed text-gray-300">{formatScalar(value)}</p>;
 }
 
 function DnaTab({ strainId }: { strainId: string }) {
