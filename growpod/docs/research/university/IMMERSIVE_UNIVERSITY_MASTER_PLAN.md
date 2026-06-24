@@ -65,12 +65,14 @@ Each iteration completes **one** deliverable, writes the artifact, ticks the box
   Flora-vs-Vera-Lindqvist voice discrepancy. Track B complete.)*
 
 ### Track C — GrowVerse Master Grower AI Bot (knowledge mapping + monetization plan)
-- ⬜ **C1** `docs/research/2026-06-23-master-grower-bot-knowledge-graph.md` — map the knowledge corpus
-  (`knowledge/*`, encyclopedia, sim rules, genetics) into a retrieval/grounding layer; reuse the
-  existing Master Grower advisor stack; guardrails; CI-safe.
-- ⬜ **C2** `docs/memory/design/09-master-grower-bot.md` — product design + **monetization PLAN
-  (no code)**: free vs. paid boundary respecting "earned, never bought"; tiers; entitlement model to
-  build later; trust/safety.
+- ✅ **C1** `docs/research/2026-06-23-master-grower-bot-knowledge-graph.md` — three grounding sources
+  (live game state · structured strain YAML · RAG-over-corpus); hybrid retrieval; cite-or-don't-answer;
+  reuses the shipped advisor stack as a tool-using orchestration layer; optional knowledge-graph v2;
+  CI-safe; safety/scope lock. *(Done 2026-06-24.)*
+- ✅ **C2** `docs/memory/design/09-master-grower-bot.md` — product design + **monetization PLAN
+  (no code)**: principle "sell guidance/convenience, never power/progress"; free game stays complete;
+  paid tier = depth/monitoring/office-hours; real-money entitlement strictly decoupled from the GROW
+  ledger; owner-/launch-gated. *(Done 2026-06-24. Track C complete.)*
 
 ### Track D — Figma Design System (GrowVerse University)
 - ⬜ **D1** Design-system rules from the `web/` codebase → `docs/research/university/figma-design-system-rules.md`.
