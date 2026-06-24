@@ -102,9 +102,10 @@ Each iteration completes **one** deliverable, writes the artifact, ticks the box
   `cult-101` "Fundamentals of Cannabis Cultivation" full scripts (orientation + 3 modules + cert) by
   cloning the bio-101 template; grounded in real `curriculum.yaml` (practical = 1 harvest, perk
   quality_bonus +1). Proves the framework scales. *(Done 2026-06-24.)*
-- ⬜ **F3** `docs/research/university/bio-101-assessment-bank.md` — deterministic, data-authored
-  assessment item bank for `bio-101` (knowledge checks · midterm · mastery + answer keys); makes
-  Build-Phase 1 grading buildable & CI-safe.
+- ✅ **F3** `docs/research/university/bio-101-assessment-bank.md` — authored a deterministic,
+  data-authored seed bank (M1–M4 knowledge checks + midterm/mastery blueprints + answer keys +
+  explained feedback), with a CI-safe grading contract (mcq/multi/tf/numeric+tol/drag_sort). Makes
+  Build-Phase 1 grading buildable. *(Done 2026-06-24.)*
 - ⬜ **F4** `docs/research/2026-06-24-master-grower-bot-system-design.md` — bot system prompt + tool
   contracts + guardrail/eval suite design; makes Build-Phase 4 buildable.
 - ⬜ **F5** `docs/research/university/accessibility-conformance-checklist.md` — WCAG 2.2 AA checklist
