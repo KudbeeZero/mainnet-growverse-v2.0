@@ -106,10 +106,11 @@ Each iteration completes **one** deliverable, writes the artifact, ticks the box
   data-authored seed bank (M1–M4 knowledge checks + midterm/mastery blueprints + answer keys +
   explained feedback), with a CI-safe grading contract (mcq/multi/tf/numeric+tol/drag_sort). Makes
   Build-Phase 1 grading buildable. *(Done 2026-06-24.)*
-- ⬜ **F4** `docs/research/2026-06-24-master-grower-bot-system-design.md` — bot system prompt + tool
-  contracts + guardrail/eval suite design; makes Build-Phase 4 buildable.
-- ⬜ **F5** `docs/research/university/accessibility-conformance-checklist.md` — WCAG 2.2 AA checklist
-  across every university surface (lecture player · 3D explorer · labs · exams · bot); the ship gate.
+- ✅ **F4** `docs/research/2026-06-24-master-grower-bot-system-design.md` — draft system prompt,
+  4 read-only tool contracts, worked orchestration, and a CI-safe **guardrail/eval suite** (grounding,
+  no-invent, refusals, live-state honesty, anti-pay-to-win). Makes Build-Phase 4 buildable. *(Done 2026-06-24.)*
+- ✅ **F5** `docs/research/university/accessibility-conformance-checklist.md` — WCAG 2.2 AA ship-gate
+  checklist across all 6 surfaces + a verification method. *(Done 2026-06-24. Track F complete.)*
 
 ---
 
@@ -183,4 +184,7 @@ to `claude/immersive-university-research`. ✅ **Complete.**
   wakes). Switched to auto mode on `claude/immersive-university-research`, recreated A1/A2/plan,
   committing for durability.
 - 2026-06-24 — **B2 · C1 · C2 · D1 · D2 · E1 · E2 done** in auto mode; each batch committed + pushed.
-  **All 10 deliverables (A1–E2) complete.** Pass closed; branch left for owner review (no PR per freeze).
+  **All 10 base deliverables (A1–E2) complete.**
+- 2026-06-24 — **Track F depth pass (F1–F5) done**: 3D Explorer technical spec, cult-101 scripts,
+  bio-101 assessment bank, bot system design, WCAG a11y gate. **15 docs total.** Further progress now
+  gated on the 6 owner decisions (esp. lifting the UNI-011 freeze). Branch left for owner review (no PR).
