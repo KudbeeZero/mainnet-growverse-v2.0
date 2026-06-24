@@ -84,12 +84,65 @@ Each iteration completes **one** deliverable, writes the artifact, ticks the box
   components; faculty visual identity; Figma build path. *(Done 2026-06-24. Track D complete.)*
 
 ### Track E — Synthesis & Competitive Edge
-- ⬜ **E1** `docs/research/2026-06-23-edtech-competitive-analysis.md` — what makes the *best*
-  immersive/edu experiences (Duolingo, Labster, Foldit, …); tactics to adopt; what "best in category" must beat.
-- ⬜ **E2** Final consolidation pass: fold A–E into a phased, owner-gated University Build Phase
-  sequence with acceptance criteria.
+- ✅ **E1** `docs/research/2026-06-23-edtech-competitive-analysis.md` — Duolingo (streaks/instant
+  feedback/leagues) · Labster (labs beat reading, +19%) · Kerbal (legible failure) · Foldit (meaning);
+  6-item adopt-list; the "best in category" bar; differentiation thesis. *(Done 2026-06-24.)*
+- ✅ **E2** Synthesis below (§Synthesis) — phased owner-gated Build Phase + acceptance criteria +
+  consolidated owner-decision list. *(Done 2026-06-24. Queue complete.)*
 
 ---
+
+## Synthesis (E2) — the phased University Build Phase (owner-gated)
+
+> **Nothing below is built yet.** This is the recommended order for *when the owner lifts the UNI-011
+> freeze* (post-MVP). Every claim traces to A–E. Each phase has an exit/acceptance test.
+
+**Phase 0 — Reconcile docs (cheap, do first, still docs-only).** Fix the **faculty roster mismatch**
+(code `_DEPT_VOICES` vs. Phase-2 §7 vs. the §17.11 `bio-101` voice) and assign `bio-101` a
+department→voice. *Exit:* one authoritative roster; `make check-memory` green.
+
+**Phase 1 — Course framework + the `bio-101` exemplar** (Phase-2's CEO-approved order). Framework →
+`bio-101` content (**B2 scripts already authored**) → assessments (deterministic, data-authored) →
+certification → transcript wiring. *Exit:* a player completes `bio-101` end-to-end; honest-hour sums
+to 240 min; grading is CI-safe (no live AI); degree progress advances via existing `claim_degree`.
+
+**Phase 2 — Professor video layer (B1).** `VideoPresenterProvider` ABC + mock + HeyGen; reuse the
+shipped narration MP3 + `(avatar_id, audio_hash)` cache; captions from ElevenLabs timestamps. *Exit:*
+mock renders in CI with no key; one real lecture video plays with captions=transcript; cost bounded
+(~$140 one-time for the catalog).
+
+**Phase 3 — 3D Anatomy Explorer + Lecture Hall (A1/A2).** First **answer A1 §9** (fidelity, set
+dressing, zoom depth, hall realism). Then build a pure `chamber3d/` procedural module (reuse
+`seedForPlant`) → instanced calyx/trichome geometry → 4 LOD tiers → the 5 labs as modes → the hall.
+*Exit:* < 50 draw calls on mid mobile; deterministic (same id → same plant); 2D fallback + reduced-
+motion + keyboard a11y all pass; no logic added to the pure engine.
+
+**Phase 4 — Master Grower bot (C1) + chat UI (D2).** Corpus-RAG v1 (hybrid retrieval, cite-or-don't-
+answer) as a tool-using layer over the shipped advisor; `BotChatPanel` with citation chips. *Exit:*
+every answer cited; refuses out-of-scope; never invents numbers; mock-backed CI; reads live plant
+state. **Monetization/entitlement (C2) is a separate owner-/launch-gated slice — build last, never
+touching the GROW ledger.**
+
+**Phase 5 — Engagement loop (E1).** Non-economic KXP + forgiving streak (+ gentle wager/freeze),
+instant "small-win" feedback on knowledge checks, educational leagues, proactive bot nudges. *Exit:*
+none of it posts to the ledger; retention instrumentation in place.
+
+**Cross-cutting — Figma design system (D1/D2).** Stand up the Figma library from the extracted tokens,
+Code-Connect the new components, assemble the 7 §11 screens — runs alongside Phases 1–4.
+
+### Consolidated owner-decision list (what only you can answer)
+1. **Faculty roster** — reconcile names/voices (code vs. docs); `bio-101` faculty + voice. *(P0)*
+2. **3D fidelity** — stylized vs. photoreal; set-dressing source; max zoom depth (calyx vs. trichome
+   microscope); hall realism. *(A1 §9, gates Phase 3)*
+3. **Avatar sourcing** — HeyGen stock vs. custom-trained faculty avatars (+ commercial-rights). *(B1)*
+4. **Bot monetization** — confirm "sell guidance, never power"; pricing; payment provider; that
+   entitlements never touch the ledger. *(C2, launch-gated)*
+5. **Explorer scope** — courses-only vs. also a standalone "study any strain" feature. *(A2)*
+6. **When to lift the UNI-011 freeze** (post-MVP) and open the Build Phase.
+
+### Definition of done for *this* research pass
+All 10 deliverables (A1–E2) authored, grounded in the real repo, web-sourced where external, committed
+to `claude/immersive-university-research`. ✅ **Complete.**
 
 ## Loop discipline (self-imposed guardrails)
 - **Freeze-safe:** documentation/design/research artifacts only. No code, no `curriculum.yaml`, no
@@ -107,4 +160,6 @@ Each iteration completes **one** deliverable, writes the artifact, ticks the box
 - 2026-06-24 — **B1 done**: AI-presenter pipeline; discovered narration is already shipped.
 - 2026-06-24 — **Persistence failure diagnosed** (untracked artifacts lost on branch checkout across
   wakes). Switched to auto mode on `claude/immersive-university-research`, recreated A1/A2/plan,
-  committing for durability. Next: B2.
+  committing for durability.
+- 2026-06-24 — **B2 · C1 · C2 · D1 · D2 · E1 · E2 done** in auto mode; each batch committed + pushed.
+  **All 10 deliverables (A1–E2) complete.** Pass closed; branch left for owner review (no PR per freeze).
