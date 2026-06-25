@@ -247,3 +247,60 @@ class MasterGrowerProvider(ABC):
         refuse out-of-scope questions (legal/medical advice, pay-to-win) rather
         than fabricate.
         """
+
+
+# ============================== Admissions agent ==========================
+#
+# A FREE, NON-ECONOMIC intake advisor (Phase 6c). It runs a short intake quiz and
+# recommends which school/department a learner should start in, an ordered course
+# track within that department, and a starting level. The recommendation is then
+# written INTO the centralized learner model ONLY through the audited single
+# writer (``LearnerModelService.apply``) — admissions never sets profile fields or
+# adds audit rows itself, and never touches the ledger/wallet/economy. The
+# departments + course keys it recommends are REAL keys from ``curriculum.yaml``.
+
+
+class AdmissionsError(Exception):
+    """Any failure producing an admissions recommendation (e.g. AI backend errored)."""
+
+
+# A learner's starting level, mirroring the LearnerProfile.experience_level scale.
+AdmissionsLevel = Literal["beginner", "intermediate", "advanced"]
+
+
+class AdmissionsRecommendation(BaseModel):
+    """The Admissions agent's intake recommendation for a learner.
+
+    ``department`` is a real curriculum department key and ``track`` is an ordered
+    list of real course keys for that department (the suggested sequence). ``school``
+    mirrors ``department`` — the school IS the department in this curriculum — so the
+    read model can speak in either vocabulary without a second lookup.
+    """
+
+    school: str = Field(description="The recommended school — a real curriculum department key.")
+    department: str = Field(
+        description="The recommended department — a real curriculum department key (== school)."
+    )
+    track: List[str] = Field(
+        default_factory=list,
+        description="Ordered real course keys for the department (the suggested sequence).",
+    )
+    level: AdmissionsLevel = Field(description="The recommended starting level.")
+    rationale: str = Field(description="A short, learner-facing reason for the recommendation.")
+
+
+class AdmissionsProvider(ABC):
+    """Scores an intake quiz into an AdmissionsRecommendation."""
+
+    @abstractmethod
+    def name(self) -> str:
+        """Backend identifier (e.g. 'mock', 'claude:...')."""
+
+    @abstractmethod
+    def recommend(self, answers: dict) -> AdmissionsRecommendation:
+        """Produce an AdmissionsRecommendation from the player's quiz answers.
+
+        ``answers`` is a flat ``{question_id: choice_id}`` dict. Unknown or missing
+        answers must not crash — the provider defaults sensibly. The recommendation
+        must reference only real curriculum department/course keys.
+        """

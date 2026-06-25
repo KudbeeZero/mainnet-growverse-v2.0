@@ -1288,6 +1288,47 @@ def university_master_grower_ask(player_id):
     return jsonify(report.model_dump())
 
 
+@game_bp.get("/university/admissions/quiz")
+@require_feature("university")
+def university_admissions_quiz():
+    """The Admissions intake quiz definition (public read, like the catalog).
+
+    Returns the deterministic quiz so the client can render the same questions the
+    scorer understands. No grading/state — that happens on submit.
+    """
+    from ..services.admissions_service import AdmissionsService
+
+    with session_scope() as s:
+        quiz = AdmissionsService(s).quiz()
+    return jsonify({"quiz": quiz})
+
+
+@game_bp.post("/players/<player_id>/university/admissions")
+@require_feature("university")
+@require_player
+@limiter.limit("20 per minute")
+def university_admissions(player_id):
+    """Run the Admissions intake quiz and seed the learner model (Phase 6c).
+
+    Body: ``{answers: {question_id: choice_id}}``. NON-ECONOMIC and read-mostly:
+    the recommendation is written into the centralized learner model ONLY through
+    the audited single writer. Returns ``{recommendation, profile}``.
+    """
+    from ..services.admissions_service import AdmissionsService
+
+    body = request.get_json(silent=True) or {}
+    answers = body.get("answers") or {}
+    if not isinstance(answers, dict):
+        return _error("`answers` must be an object of {question_id: choice_id}")
+    try:
+        with session_scope() as s:
+            GameService(s).get_player(player_id)
+            payload = AdmissionsService(s).run_intake(player_id, answers)
+        return jsonify(payload)
+    except GameError as e:
+        return _error(str(e), 404)
+
+
 @game_bp.get("/players/<player_id>/courses/<course_key>/lecture")
 @require_feature("university")
 @require_player

@@ -10,6 +10,7 @@ from typing import Optional
 
 from ..config import get_settings
 from .provider import (
+    AdmissionsProvider,
     AdvisorProvider,
     LecturerProvider,
     MasterGrowerProvider,
@@ -18,6 +19,7 @@ from .provider import (
 from .mock import MockAdvisorProvider
 from .lecturer_mock import MockLecturerProvider
 from .master_grower_mock import MockMasterGrower
+from .admissions_mock import MockAdmissions
 from .video_presenter_mock import MockVideoPresenter
 from .autocare import AutoCareProvider, MockAutoCareProvider
 
@@ -117,6 +119,37 @@ def shared_master_grower(settings=None) -> MasterGrowerProvider:
 def reset_shared_master_grower() -> None:
     global _master_grower
     _master_grower = None
+
+
+def get_admissions_provider(settings=None) -> AdmissionsProvider:
+    """The Admissions agent's provider (Phase 6c).
+
+    Returns the deterministic offline mock when the mock is forced or no Anthropic
+    key is configured (so CI never needs a key). A real ``ClaudeAdmissions`` is a
+    later sub-deliverable; until it lands, even a key-configured environment
+    returns the mock — mirroring the Master Grower factory.
+    """
+    settings = settings or get_settings()
+    if settings.use_mock_ai or not settings.anthropic_api_key:
+        return MockAdmissions()
+    # Real Claude-backed Admissions is a later sub-deliverable; until then the
+    # deterministic mock is the only implementation, so always return it.
+    return MockAdmissions()
+
+
+_admissions: Optional[AdmissionsProvider] = None
+
+
+def shared_admissions(settings=None) -> AdmissionsProvider:
+    global _admissions
+    if _admissions is None:
+        _admissions = get_admissions_provider(settings)
+    return _admissions
+
+
+def reset_shared_admissions() -> None:
+    global _admissions
+    _admissions = None
 
 
 def get_video_presenter_provider(settings=None) -> VideoPresenterProvider:
