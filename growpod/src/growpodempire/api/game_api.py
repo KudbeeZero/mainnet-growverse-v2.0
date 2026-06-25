@@ -20,6 +20,7 @@ from ..services.contract_service import ContractService
 from ..services.cup_service import CupService
 from ..services.university_service import UniversityService
 from ..services.engagement_service import UniversityEngagementService
+from ..services.learner_model_service import LearnerModelService
 from ..services.seasonal_service import SeasonalService
 from ..services.research_service import ResearchService
 from ..services import leveling_service
@@ -1164,6 +1165,22 @@ def university_progress(player_id):
             eng = UniversityEngagementService(s)
             payload = eng.progress(player_id)
             payload["next_nudge"] = eng.next_nudge(player_id)
+        return jsonify(payload)
+    except GameError as e:
+        return _error(str(e), 404)
+
+
+@game_bp.get("/players/<player_id>/university/learner")
+@require_feature("university")
+@require_player
+def university_learner(player_id):
+    """A player's CENTRALIZED LEARNER MODEL (Phase 6a): the NON-ECONOMIC profile
+    (mastery / misconceptions / risk / prefs) merged with the engagement slice."""
+    try:
+        with session_scope() as s:
+            # Ensure the player exists (404 on unknown), matching the other routes.
+            GameService(s).get_player(player_id)
+            payload = LearnerModelService(s).profile(player_id)
         return jsonify(payload)
     except GameError as e:
         return _error(str(e), 404)

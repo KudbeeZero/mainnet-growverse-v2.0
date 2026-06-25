@@ -608,6 +608,59 @@ class UniversityProgress(UUIDPrimaryKeyMixin, Base):
     freeze_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
+class LearnerProfile(UUIDPrimaryKeyMixin, Base):
+    """Per-player CENTRALIZED LEARNER MODEL (Phase 6a) — the authoritative,
+    NON-ECONOMIC snapshot of *what a learner knows and needs*.
+
+    One row per player (the unique FK is the upsert key). Distinct from the
+    ENGAGEMENT slice (``university_progress``: KXP/streak/freeze), which it READS
+    but never duplicates. The ONLY writer of this table is
+    ``LearnerModelService.apply``, which appends a matching ``LearnerEvent`` audit
+    row for every mutation. NONE of this is currency — it never posts to the
+    ledger, touches a Wallet, or reads ``balance.yaml``."""
+
+    __tablename__ = "learner_profiles"
+
+    player_id: Mapped[str] = mapped_column(
+        ForeignKey("players.id"), unique=True, nullable=False
+    )
+    # Skill -> mastery fraction (0..1). In 6a keyed by course (course_key or
+    # course_key:exam_id); remaps to the real skills graph in 6b.
+    mastery_by_skill: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    # Skill/topic -> evidence of a misconception (populated by later sub-phases).
+    misconceptions: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    preferred_format: Mapped[Optional[str]] = mapped_column(String(32), default=None)
+    goals: Mapped[Optional[str]] = mapped_column(String(512), default=None)
+    experience_level: Mapped[str] = mapped_column(
+        String(32), default="beginner", nullable=False
+    )
+    risk_level: Mapped[str] = mapped_column(String(32), default="none", nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+
+class LearnerEvent(UUIDPrimaryKeyMixin, Base):
+    """Append-only AUDIT LOG for the learner model (Phase 6a).
+
+    Exactly one row is written by ``LearnerModelService.apply`` for every mutation
+    of a ``LearnerProfile`` — so a profile can never change without a matching
+    audit row. NON-ECONOMIC: this is learning-state provenance, not currency."""
+
+    __tablename__ = "learner_events"
+
+    player_id: Mapped[str] = mapped_column(
+        ForeignKey("players.id"), nullable=False, index=True
+    )
+    at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    agent: Mapped[str] = mapped_column(String(48), nullable=False)
+    kind: Mapped[str] = mapped_column(String(48), nullable=False)
+    detail: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    reason: Mapped[str] = mapped_column(String(512), default="", nullable=False)
+
+
 class LectureAudio(UUIDPrimaryKeyMixin, Base):
     """Cached TTS MP3 for a (voice_id, text_hash) pair — survives restarts.
 
