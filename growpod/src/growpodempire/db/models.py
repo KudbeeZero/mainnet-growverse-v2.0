@@ -559,6 +559,34 @@ class DegreeProgress(UUIDPrimaryKeyMixin, Base):
     )
 
 
+class AssessmentAttempt(UUIDPrimaryKeyMixin, Base):
+    """A player's graded exam attempts for a course exam (midterm / mastery).
+
+    One row per (player, course, exam): we keep the BEST score and whether the
+    pass gate was ever cleared, plus an attempt counter. Retryable/forgiving by
+    design (Phase-2 §7.3) — a later, worse attempt never lowers a cleared pass.
+    """
+
+    __tablename__ = "assessment_attempts"
+
+    player_id: Mapped[str] = mapped_column(ForeignKey("players.id"), nullable=False)
+    course_key: Mapped[str] = mapped_column(String(48), nullable=False)
+    exam_id: Mapped[str] = mapped_column(String(48), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    best_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    last_attempt_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_assessment_attempts_player_course_exam",
+            "player_id", "course_key", "exam_id", unique=True,
+        ),
+    )
+
+
 class LectureAudio(UUIDPrimaryKeyMixin, Base):
     """Cached TTS MP3 for a (voice_id, text_hash) pair — survives restarts.
 

@@ -1202,17 +1202,19 @@ def university_exam_submit(player_id, course_key, exam_id):
     The answer keys never leave the server: the client posts ``{responses: {item_id: answer}}``
     and gets back the per-item correctness + authored explanation (post-submit feedback).
     """
-    from ..services import assessment_service as A
-
     body = request.get_json(silent=True) or {}
     responses = body.get("responses") or {}
     if not isinstance(responses, dict):
         return _error("`responses` must be an object of {item_id: answer}")
     try:
-        result = A.grade_exam(course_key, exam_id, responses)
-    except A.AssessmentError as e:
-        return _error(str(e), 404)
-    return jsonify(result), 201
+        with session_scope() as s:
+            payload = UniversityService(s).submit_exam(
+                player_id, course_key, exam_id, responses
+            )
+            BadgeService(s).check_all(player_id)
+        return jsonify(payload), 201
+    except GameError as e:
+        return _error(str(e), 404 if "no exam" in str(e) else 400)
 
 
 @game_bp.get("/players/<player_id>/courses/<course_key>/lecture")

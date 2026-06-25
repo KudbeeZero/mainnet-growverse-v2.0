@@ -49,6 +49,7 @@ courses:
         - "Explain how transpiration moves water, and why mobile vs. immobile nutrients show deficiencies in different places."
         - "Diagnose environmental stress by reading where on the plant the symptoms appear."
     practical: {type: level, threshold: 1}
+    requires_exam: mastery   # must pass the mastery exam (>=80%) to complete
     perks: {quality_bonus: 1}
 
   cult-101:

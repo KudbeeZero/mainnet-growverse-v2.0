@@ -89,10 +89,12 @@ class TestExamSubmitGrades:
         )
         assert r.status_code == 201
         body = r.get_json()
-        assert body["score"] == 1.0
-        assert body["passed"] is True
+        assert body["result"]["score"] == 1.0
+        assert body["result"]["passed"] is True
+        assert body["attempt"]["passed"] is True
+        assert body["attempt"]["attempts"] == 1
         # Post-submit feedback IS returned (teaching moment) — that's intended.
-        assert any(it.get("explain") for it in body["items"])
+        assert any(it.get("explain") for it in body["result"]["items"])
 
     def test_empty_responses_fail_gate(self, client):
         pid, key = _new_player(client)
@@ -102,7 +104,9 @@ class TestExamSubmitGrades:
             headers={"X-API-Key": key},
         )
         assert r.status_code == 201
-        assert r.get_json()["passed"] is False
+        body = r.get_json()
+        assert body["result"]["passed"] is False
+        assert body["attempt"]["passed"] is False
 
     def test_submit_requires_auth(self, client):
         pid, _ = _new_player(client)
