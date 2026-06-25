@@ -40,6 +40,58 @@ export const PART_LABELS: Record<AnatomyPart, { title: string; blurb: string }> 
   },
 };
 
+/** Level-of-detail tiers the Explorer steps through as the camera zooms in.
+ * Outer (whole bud) → inner (single resin gland). The A1 §9 default zooms to T4. */
+export const TIERS = ["whole", "cola", "detail", "trichome"] as const;
+export type Tier = (typeof TIERS)[number];
+
+export interface TierInfo {
+  tier: Tier;
+  title: string;
+  /** Anatomy part this tier foregrounds (null = the whole bud). */
+  focus: AnatomyPart | null;
+  blurb: string;
+}
+
+export const TIER_INFO: Record<Tier, TierInfo> = {
+  whole: {
+    tier: "whole",
+    title: "Whole bud",
+    focus: null,
+    blurb: "The full cola — a spiral of calyxes. Drag to orbit; scroll in to descend the tiers.",
+  },
+  cola: {
+    tier: "cola",
+    title: "Cola structure",
+    focus: "calyx",
+    blurb: "Calyxes accreted up the phyllotaxic spiral. The swollen pods carry the most resin.",
+  },
+  detail: {
+    tier: "detail",
+    title: "Pistils & frost",
+    focus: "pistil",
+    blurb: "Pistils (hairs) and the first trichome frost — the colour shift tracks ripeness.",
+  },
+  trichome: {
+    tier: "trichome",
+    title: "Trichome macro",
+    focus: "trichome",
+    blurb: "Resin glands up close: clear → cloudy → amber is how you call the harvest window.",
+  },
+};
+
+/**
+ * Map an OrbitControls camera distance (units; the Explorer clamps 0.6–3.2) to a
+ * LOD tier. Pure + monotonic — closer distance ⇒ deeper tier — so the renderer's
+ * tier readout and any per-tier emphasis stay deterministic and unit-testable.
+ */
+export function tierForDistance(d: number): Tier {
+  if (d >= 2.4) return "whole";
+  if (d >= 1.6) return "cola";
+  if (d >= 1.0) return "detail";
+  return "trichome";
+}
+
 /** 0..1 grow params that drive the generators (mirror the BudGL prop set). */
 export interface ExplorerParams {
   budDev: number; // bud development (accretion + swell)

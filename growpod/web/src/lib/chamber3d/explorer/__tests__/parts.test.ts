@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   buildExplorerInstances,
   drawCallCount,
+  tierForDistance,
+  TIERS,
+  TIER_INFO,
   DEFAULT_PARAMS,
   ANATOMY_PARTS,
   PART_LABELS,
@@ -50,6 +53,37 @@ describe("explorer parts", () => {
     for (const part of ANATOMY_PARTS) {
       expect(PART_LABELS[part].title).toBeTruthy();
       expect(PART_LABELS[part].blurb.length).toBeGreaterThan(10);
+    }
+  });
+
+  it("tierForDistance is monotonic outer→inner across the zoom range", () => {
+    expect(tierForDistance(3.2)).toBe("whole"); // max zoom-out
+    expect(tierForDistance(2.4)).toBe("whole");
+    expect(tierForDistance(2.0)).toBe("cola");
+    expect(tierForDistance(1.6)).toBe("cola");
+    expect(tierForDistance(1.2)).toBe("detail");
+    expect(tierForDistance(1.0)).toBe("detail");
+    expect(tierForDistance(0.8)).toBe("trichome");
+    expect(tierForDistance(0.6)).toBe("trichome"); // max zoom-in (A1 §9: zoom to T4)
+  });
+
+  it("the tier order never inverts as the camera pulls in", () => {
+    const order = TIERS.indexOf.bind(TIERS);
+    const samples = [3.2, 2.4, 2.0, 1.6, 1.2, 1.0, 0.8, 0.6];
+    for (let i = 1; i < samples.length; i++) {
+      // closer distance ⇒ same-or-deeper tier (index never decreases)
+      expect(order(tierForDistance(samples[i]))).toBeGreaterThanOrEqual(
+        order(tierForDistance(samples[i - 1])),
+      );
+    }
+  });
+
+  it("every tier has copy and a focus part drawn from the anatomy set", () => {
+    for (const tier of TIERS) {
+      const info = TIER_INFO[tier];
+      expect(info.title).toBeTruthy();
+      expect(info.blurb.length).toBeGreaterThan(10);
+      if (info.focus !== null) expect(ANATOMY_PARTS).toContain(info.focus);
     }
   });
 });

@@ -6,21 +6,28 @@
 // buildExplorerInstances() — three InstancedMeshes (calyxes / frost / pistils),
 // so the whole bud is a fixed 3 draw calls however many glands grow. This is a
 // RENDERER ONLY: no genetics/geometry logic lives here (it mirrors the proven
-// BudGL wiring); the teaching layer (LOD tiers, part picking, sliders) builds on
-// top in later commits. Must load via dynamic({ ssr: false }).
+// BudGL wiring). The teaching layer on top — LOD tiers (zoom→tier) and part
+// picking (hover→label) — reads from the same pure module. Sliders land next.
+// Must load via dynamic({ ssr: false }).
 
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import type { FrostMat } from "@/lib/chamber/bud3d/detail";
 import { budDnaFor, type BudDNA } from "@/lib/chamber/budDna";
 import { budColorFor } from "@/lib/chamber/morphology";
 import {
   buildExplorerInstances,
+  tierForDistance,
+  TIER_INFO,
+  PART_LABELS,
   DEFAULT_PARAMS,
+  type AnatomyPart,
   type ExplorerInstances,
   type ExplorerParams,
+  type Tier,
 } from "@/lib/chamber3d/explorer/parts";
 
 const Y_CENTER = -0.5; // cola spans y≈0..1 in unit space; centre it on the origin
@@ -64,7 +71,17 @@ function useCalyxGeometry() {
   }, []);
 }
 
-function Calyxes({ cola }: { cola: ExplorerInstances["cola"] }) {
+/** Pointer handlers that report which anatomy part is under the cursor. */
+type HoverProps = { onHover: (p: AnatomyPart | null) => void };
+
+function hoverHandlers(part: AnatomyPart, onHover: HoverProps["onHover"]) {
+  return {
+    onPointerOver: (e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); onHover(part); },
+    onPointerOut: () => onHover(null),
+  };
+}
+
+function Calyxes({ cola, onHover }: { cola: ExplorerInstances["cola"] } & HoverProps) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geom = useCalyxGeometry();
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.74, metalness: 0.0 }), []);
@@ -90,10 +107,10 @@ function Calyxes({ cola }: { cola: ExplorerInstances["cola"] }) {
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [cola, geom]);
-  return <instancedMesh key={cola.length} ref={ref} args={[geom, mat, cola.length]} />;
+  return <instancedMesh key={cola.length} ref={ref} args={[geom, mat, cola.length]} {...hoverHandlers("calyx", onHover)} />;
 }
 
-function Frost({ instances, purple }: { instances: ExplorerInstances["frost"]; purple: number }) {
+function Frost({ instances, purple, onHover }: { instances: ExplorerInstances["frost"]; purple: number } & HoverProps) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geom = useMemo(() => new THREE.IcosahedronGeometry(1, 1), []);
   const mat = useMemo(
@@ -115,10 +132,10 @@ function Frost({ instances, purple }: { instances: ExplorerInstances["frost"]; p
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [instances, purple]);
-  return instances.length ? <instancedMesh key={`f${instances.length}`} ref={ref} args={[geom, mat, instances.length]} /> : null;
+  return instances.length ? <instancedMesh key={`f${instances.length}`} ref={ref} args={[geom, mat, instances.length]} {...hoverHandlers("trichome", onHover)} /> : null;
 }
 
-function Pistils({ instances }: { instances: ExplorerInstances["pistils"] }) {
+function Pistils({ instances, onHover }: { instances: ExplorerInstances["pistils"] } & HoverProps) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geom = useMemo(() => {
     const g = new THREE.CylinderGeometry(0.18, 0.5, 1, 5, 1, true);
@@ -146,7 +163,18 @@ function Pistils({ instances }: { instances: ExplorerInstances["pistils"] }) {
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [instances]);
-  return instances.length ? <instancedMesh key={`p${instances.length}`} ref={ref} args={[geom, mat, instances.length]} /> : null;
+  return instances.length ? <instancedMesh key={`p${instances.length}`} ref={ref} args={[geom, mat, instances.length]} {...hoverHandlers("pistil", onHover)} /> : null;
+}
+
+/** Reads the camera distance each frame and reports the current LOD tier. */
+function TierWatcher({ onTier }: { onTier: (t: Tier) => void }) {
+  const camera = useThree((s) => s.camera);
+  const last = useRef<Tier | null>(null);
+  useFrame(() => {
+    const t = tierForDistance(camera.position.length()); // OrbitControls target ≈ origin
+    if (t !== last.current) { last.current = t; onTier(t); }
+  });
+  return null;
 }
 
 export interface AnatomyExplorerProps {
@@ -165,10 +193,32 @@ function defaultDna(): BudDNA {
   return budDnaFor(undefined, budColorFor(DEFAULT_SEED, 0.28));
 }
 
+/** Bottom-left readout: the current LOD tier, and the part under the cursor.
+ * Lives outside the Canvas (plain DOM) so it's selectable + screen-reader visible;
+ * pointer-events off so it never steals an orbit drag. */
+function ExplorerOverlay({ tier, hovered }: { tier: Tier; hovered: AnatomyPart | null }) {
+  const info = TIER_INFO[tier];
+  const part = hovered ? PART_LABELS[hovered] : null;
+  return (
+    <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="max-w-xs rounded-lg bg-ink-900/75 px-3 py-2 backdrop-blur-sm" aria-live="polite">
+        <p className="instrument-label text-accent-300">TIER · {info.title}</p>
+        <p className="mt-0.5 text-xs text-gray-300">{info.blurb}</p>
+      </div>
+      {part && (
+        <div className="max-w-xs rounded-lg border border-grow-600/50 bg-grow-950/80 px-3 py-2 backdrop-blur-sm" aria-live="polite">
+          <p className="font-semibold text-grow-200">{part.title}</p>
+          <p className="mt-0.5 text-xs text-gray-300">{part.blurb}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
- * The 3D Anatomy Explorer canvas. Genetics + params flow through the pure
- * generator; everything below is presentation. Orbit/zoom via OrbitControls
- * (zoom range will drive LOD tiers in a later commit).
+ * The 3D Anatomy Explorer. Genetics + params flow through the pure generator;
+ * everything below is presentation. Orbit/zoom via OrbitControls, whose zoom
+ * distance drives the LOD tier readout; hovering a part surfaces its label.
  */
 export function AnatomyExplorer({
   dna,
@@ -182,29 +232,36 @@ export function AnatomyExplorer({
     () => buildExplorerInstances(budDna, seed, { ...params, isMobile }),
     [budDna, seed, params, isMobile],
   );
+  const [tier, setTier] = useState<Tier>("whole");
+  const [hovered, setHovered] = useState<AnatomyPart | null>(null);
 
   return (
-    <Canvas
-      dpr={[1, 2]}
-      gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-      camera={{ position: [0, 0.05, 1.9], fov: 35 }}
-      frameloop={reducedMotion ? "demand" : "always"}
-    >
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[2, 4, 3]} intensity={1.4} color="#fff6e8" />
-      <pointLight position={[-2, 1, 2]} intensity={18} distance={9} color="#6cf0ff" />
-      <Calyxes cola={inst.cola} />
-      <Pistils instances={inst.pistils} />
-      <Frost instances={inst.frost} purple={params.purple} />
-      <OrbitControls
-        enablePan={false}
-        enableDamping
-        dampingFactor={0.08}
-        minDistance={0.6}
-        maxDistance={3.2}
-        autoRotate={!reducedMotion}
-        autoRotateSpeed={0.6}
-      />
-    </Canvas>
+    <div className="absolute inset-0">
+      <Canvas
+        dpr={[1, 2]}
+        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+        camera={{ position: [0, 0.05, 1.9], fov: 35 }}
+        frameloop={reducedMotion ? "demand" : "always"}
+        onPointerMissed={() => setHovered(null)}
+      >
+        <ambientLight intensity={0.55} />
+        <directionalLight position={[2, 4, 3]} intensity={1.4} color="#fff6e8" />
+        <pointLight position={[-2, 1, 2]} intensity={18} distance={9} color="#6cf0ff" />
+        <TierWatcher onTier={setTier} />
+        <Calyxes cola={inst.cola} onHover={setHovered} />
+        <Pistils instances={inst.pistils} onHover={setHovered} />
+        <Frost instances={inst.frost} purple={params.purple} onHover={setHovered} />
+        <OrbitControls
+          enablePan={false}
+          enableDamping
+          dampingFactor={0.08}
+          minDistance={0.6}
+          maxDistance={3.2}
+          autoRotate={!reducedMotion}
+          autoRotateSpeed={0.6}
+        />
+      </Canvas>
+      <ExplorerOverlay tier={tier} hovered={hovered} />
+    </div>
   );
 }
