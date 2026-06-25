@@ -267,3 +267,42 @@ def grade_exam(course_key: str, exam_id: str, responses: Mapping[str, Any]) -> d
     if not spec:
         raise AssessmentError(f"no exam {exam_id!r} for course {course_key!r}")
     return grade_assessment(spec["items"], responses, pass_threshold=spec["pass"])
+
+
+# ---------------------------------------------------------------------------
+# Client-safe projection — the ONLY shape an item may take toward the browser.
+# Answer keys, correct pairings, and explanations are stripped so a student
+# cannot read the answers off the wire; grading always happens server-side.
+# ---------------------------------------------------------------------------
+_CLIENT_SAFE_OMIT = ("answer", "pairs", "explain")
+
+
+def public_item(item: Mapping[str, Any]) -> dict:
+    """Project an authored item to its client-safe view (no answer/pairs/explain)."""
+    safe = {
+        "id": item.get("id"),
+        "type": item.get("type"),
+        "stem": item.get("stem"),
+        "objective": item.get("objective"),
+    }
+    itype = item.get("type")
+    if itype in ("mcq", "multi"):
+        safe["choices"] = list(item.get("choices") or [])
+    elif itype == "drag_sort" and isinstance(item.get("pairs"), Mapping):
+        # Expose the left-hand prompts and the pool of options, NOT the pairing.
+        safe["prompt_keys"] = list(item["pairs"].keys())
+        safe["options"] = sorted(item["pairs"].values())
+    return safe
+
+
+def public_exam(course_key: str, exam_id: str) -> dict:
+    """A named exam projected for the client: metadata + answer-stripped items."""
+    spec = exam(course_key, exam_id)
+    if not spec:
+        return {}
+    return {
+        "id": exam_id,
+        "title": spec["title"],
+        "pass": spec["pass"],
+        "items": [public_item(it) for it in spec["items"]],
+    }
