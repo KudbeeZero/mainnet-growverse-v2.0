@@ -19,12 +19,18 @@ from ..services.weather_service import WeatherService
 from ..services.contract_service import ContractService
 from ..services.cup_service import CupService
 from ..services.university_service import UniversityService
+from ..services.engagement_service import UniversityEngagementService
 from ..services.seasonal_service import SeasonalService
 from ..services.research_service import ResearchService
 from ..services import leveling_service
 from ..services.badge_service import BadgeService, rank_for_level
 from ..economy.ledger import InsufficientFundsError
-from ..feature_flags import all_flags, FeatureDisabledError, feature_required as require_feature
+from ..feature_flags import (
+    all_flags,
+    FeatureDisabledError,
+    feature_required as require_feature,
+    require_feature as require_feature_guard,
+)
 from .auth import require_player, require_admin
 from .ratelimit import limiter
 from .validation import positive_int, bounded_int, positive_money, number
@@ -143,6 +149,13 @@ def leaderboards(board):
         "level": "top_levels",
         "researchers": "top_researchers",
     }
+    if board == "scholars":
+        # The University KXP league (NON-ECONOMIC). Gated by the university flag;
+        # public read like the other boards.
+        require_feature_guard("university")
+        with session_scope() as s:
+            payload = UniversityEngagementService(s).scholars(limit)
+        return jsonify(payload)
     if board not in boards:
         return _error(f"Unknown leaderboard '{board}'", 404)
     with session_scope() as s:
@@ -1133,6 +1146,24 @@ def university_transcript(player_id):
     try:
         with session_scope() as s:
             payload = UniversityService(s).transcript(player_id)
+        return jsonify(payload)
+    except GameError as e:
+        return _error(str(e), 404)
+
+
+@game_bp.get("/players/<player_id>/university/progress")
+@require_feature("university")
+@require_player
+def university_progress(player_id):
+    """A player's NON-ECONOMIC engagement state (KXP, streak, freeze tokens)
+    plus a proactive nudge derived from their transcript."""
+    try:
+        with session_scope() as s:
+            # Ensure the player exists (404 on unknown), matching the other routes.
+            GameService(s).get_player(player_id)
+            eng = UniversityEngagementService(s)
+            payload = eng.progress(player_id)
+            payload["next_nudge"] = eng.next_nudge(player_id)
         return jsonify(payload)
     except GameError as e:
         return _error(str(e), 404)
