@@ -89,9 +89,11 @@ def test_mock_presenter_avatar_is_per_department():
 
 
 def test_mock_presenter_names_faculty_per_department():
+    # Names must match the code-authoritative _DEPT_VOICES roster exactly.
     video = MockVideoPresenter().present(LECTURE)  # cultivation
     assert video.presenter_name == "Professor Flora"
-    assert presenter_name_for("ipm") == "Dr. Sage Harlow"
+    assert presenter_name_for("nutrients") == "Dr. Sage Harlow"
+    assert presenter_name_for("ipm") == "Dr. Mira Okafor"
     assert presenter_name_for(None) == "The Professor"  # graceful default
 
 

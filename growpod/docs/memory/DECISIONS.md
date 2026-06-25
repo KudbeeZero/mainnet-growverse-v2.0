@@ -620,3 +620,28 @@ stray `vera-lindqvist` manifest entry for `bio-101` that conflicted with the Flo
 Flora — a one-line `_DEPT_VOICES` change; cached narration re-keys on the new voice and regenerates on
 next prewarm (no data loss). (2) Design docs `07-university-phase-2.md` and `bio-101-lecture-scripts.md`
 updated from "action item" to "resolved." (3) `make check-memory` green; 62 narration tests pass.
+
+## 2026-06-25 — University Phase 2: professor video is FREE (no HeyGen spend)
+**Decision:** Drop the planned paid HeyGen render (~$140 one-time). The owner has no budget for it.
+Phase 2 instead ships a **free "Narrated Lecture Theater"**: a deterministic CSS faculty-avatar card +
+the already-shipped ElevenLabs narration + karaoke-synced captions, degrading to a readable transcript.
+**Why:** No budget; the existing narration pipeline + caption data already give a professor-led "video"
+feel at $0/render with no provider lock-in.
+**Consequences:** (1) A swappable `VideoPresenterProvider` ABC + deterministic CI mock are kept, so a
+paid talking-head provider can drop in later behind the same interface if budget ever appears. (2) The
+factory is **owner-gated** — even a set `HEYGEN_API_KEY` returns the mock, so no spend can happen by
+accident. (3) `HeyGenVideoPresenter` is NOT built; building it is code-only (no spend) and the actual
+render would still require a funded HeyGen account the owner supplies. Shipped in PR #75.
+
+## 2026-06-25 — University faculty roster: ADDITIVE, not a rename
+**Decision:** When the multi-agent "Agent Campus" spec (Phase 6) re-introduced professor names
+(Lex/Atlas/Verdant/Mycelia/Nova) that conflict with the code-authoritative roster, **keep the shipped
+roster** (Professor Flora · Vera Lindqvist · Dr. Sage Harlow [nutrients] · Dr. Mira Okafor [ipm] ·
+Dr. Chem Torres · Dr. Petra Nance) and **add** the new-spec faculty only later, as NEW professors for
+the NEW schools (law/business/consumer/entrepreneurship) when those are actually built. Flora bridges both.
+**Why:** The shipped roster is wired into working code (`_DEPT_VOICES` → narration voices); renaming
+would break voice mappings and cached audio for no near-term benefit. The new names describe schools
+that don't exist yet, so they're an expansion, not a conflict.
+**Consequences:** (1) No renaming; voices/audio untouched. (2) Phase-2 presenter avatars use the shipped
+names; a swap bug (Harlow↔Okafor on nutrients/ipm) introduced in PR #75 was corrected to match
+`_DEPT_VOICES` exactly. (3) Phase 6's ⚠️ faculty flag is resolved in the master-plan ledger.
