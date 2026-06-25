@@ -264,3 +264,16 @@ to `claude/immersive-university-research`. ✅ **Complete.**
   + `lib/university/lectureTheater.ts` helpers. **$0/render**; the paid HeyGen provider is a future
   drop-in behind the same ABC if budget ever appears. Behind the `university` flag; 42 backend
   video/route tests + 360 web vitest green. **Next: Build Phase 4** (Master Grower bot — free).
+- 2026-06-25 — **Build Phase 4 ✅ done & MERGED** (PR #77, squash → main). The **FREE Master Grower
+  bot** — a grounded, READ-ONLY conversational coach with **no payment/entitlement code anywhere**.
+  Mirrors the advisor/lecturer/video provider pattern: `MasterGrowerProvider` ABC + `MasterGrowerReport`
+  /`Citation` schemas + a `MasterGrowerTools` Protocol (`ai/provider.py`); `MasterGrowerService`
+  (`services/master_grower_service.py`) whose 4 read-only tools REUSE shipped code —
+  `get_plant_state`/`diagnose_plant` → `AdvisorService.build_context`/`.advise`, `lookup_strain` →
+  the live `Strain` table + `strain_knowledge.yaml`, `search_knowledge` → `load_strain_knowledge()`;
+  a deterministic `MockMasterGrower` (`ai/master_grower_mock.py`) that grounds every answer in a cited
+  tool output, never invents figures, and refuses legal/medical + pay-to-win asks. Exposed at
+  `POST /players/<id>/master-grower/ask` (university-flagged, authed, rate-limited) and a web
+  `BotChatPanel` + `/university/coach` route with citation chips. **No real-money code**; the real
+  `ClaudeMasterGrower` is deferred (mock in CI — no key ever required). 18 new tests; full backend
+  suite 999 passed; 360 web vitest green. **Next: Build Phase 5** (engagement loop — non-economic).
