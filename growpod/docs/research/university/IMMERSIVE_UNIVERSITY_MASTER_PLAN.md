@@ -204,3 +204,11 @@ to `claude/immersive-university-research`. ✅ **Complete.**
   2026-06-25. **Build Phase 0 ✅ done:** faculty roster reconciled — Dr. Sage Harlow given a distinct
   voice (Charlotte), `bio-101 → Professor Flora/cultivation`, stale roster notes resolved;
   `make check-memory` green, 62 narration tests pass. **Next: Build Phase 1** (course framework + bio-101).
+- 2026-06-25 — **Build Phase 1 ✅ done & MERGED** (PR #72, squash → main as "Phase 0–1"). Owner
+  switched to **merge-per-phase** cadence. Shipped: pure deterministic assessment grader
+  (`services/assessment_service.py`), `bio-101` foundations course in `curriculum.yaml`, data-driven
+  bank (`data/assessments/bio-101.yaml`), exam API (client-safe fetch + server-side grading, no key
+  leakage), exam-attempt persistence (`AssessmentAttempt` + additive single-head migration) with
+  mastery-gated completion, and the web quiz UI (all 5 item types + instant feedback). Backend 969
+  passed; web 345 passed; all gates green. **Next: Build Phase 3** (3D Anatomy Explorer) on a fresh
+  `claude/university-explorer-3d` branch — renderer over the pure `bud3d` modules, behind the flag.
