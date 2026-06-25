@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildFrost, buildPistils, pistilColor } from "@/lib/chamber/bud3d/detail";
+import { buildFrost, buildPistils, buildSugarLeaves, pistilColor } from "@/lib/chamber/bud3d/detail";
 import { buildCola } from "@/lib/chamber/bud3d/cola";
 import { budDnaFor } from "@/lib/chamber/budDna";
 import { budColorForStrain } from "@/lib/chamber/strainVisuals";
@@ -62,5 +62,37 @@ describe("buildPistils", () => {
       const m = Math.hypot(p.dir[0], p.dir[1], p.dir[2]);
       expect(m).toBeCloseTo(1, 5);
     }
+  });
+});
+
+describe("buildSugarLeaves", () => {
+  it("is deterministic for a seed", () => {
+    const a = buildSugarLeaves(COLA, { seed: 5, amount: 0.7, frost: 0.5 });
+    const b = buildSugarLeaves(COLA, { seed: 5, amount: 0.7, frost: 0.5 });
+    expect(a).toEqual(b);
+  });
+  it("more amount → more leaves; zero amount → none", () => {
+    const lo = buildSugarLeaves(COLA, { seed: 5, amount: 0.15, frost: 0.5 }).length;
+    const hi = buildSugarLeaves(COLA, { seed: 5, amount: 0.95, frost: 0.5 }).length;
+    expect(hi).toBeGreaterThanOrEqual(lo);
+    expect(buildSugarLeaves(COLA, { seed: 5, amount: 0, frost: 0.5 })).toHaveLength(0);
+  });
+  it("directions are unit vectors and scales are positive", () => {
+    const ls = buildSugarLeaves(COLA, { seed: 5, amount: 1, frost: 0.8 });
+    for (const l of ls.slice(0, 20)) {
+      expect(Math.hypot(l.dir[0], l.dir[1], l.dir[2])).toBeCloseTo(1, 5);
+      expect(l.scale).toBeGreaterThan(0);
+    }
+  });
+  it("more frost → lighter (whiter-green) leaves", () => {
+    const avgR = (xs: { color: [number, number, number] }[]) =>
+      xs.reduce((s, x) => s + x.color[0], 0) / (xs.length || 1);
+    const dry = buildSugarLeaves(COLA, { seed: 7, amount: 1, frost: 0 });
+    const frosty = buildSugarLeaves(COLA, { seed: 7, amount: 1, frost: 1 });
+    expect(avgR(frosty)).toBeGreaterThan(avgR(dry));
+  });
+  it("respects the device budget (mobile ≤ desktop ceiling)", () => {
+    const m = buildSugarLeaves(COLA, { seed: 5, amount: 1, frost: 1, isMobile: true });
+    expect(m.length).toBeLessThanOrEqual(45);
   });
 });
