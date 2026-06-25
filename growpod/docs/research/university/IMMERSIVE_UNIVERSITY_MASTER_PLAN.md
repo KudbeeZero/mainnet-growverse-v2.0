@@ -173,12 +173,12 @@ student-success, compliance, librarian, career, certification, office-hours, ana
   debate), exactly matching the owner's stated principles. Cost: nearly every agent is a deterministic
   service (free, CI-mocked); only the professor LLM + HeyGen video carry real spend, both already gated.
 - **Cheapest high-value first step:** the centralized Learner Model — it unlocks Roadmap/Coach/Success.
-- ⚠️ **Owner decision needed (faculty names):** the new spec lists Professors Lex/Atlas/Verdant/
-  Mycelia/Nova, but the **resolved roster is code-authoritative** (Flora/Lindqvist/Harlow/Okafor/
-  Torres/Nance — see Owner decision #1 below, which retired the Verdant/Mycelia/Atlas/Nova set).
-  Reconcile before building persona-facing surfaces: keep the shipped roster, or owner re-approves
-  the new names. *Exit:* learner-state has one writer + audit log; admissions→roadmap path works on
-  mocks in CI; no economy/ledger coupling; all behind the `university` flag.
+- ✅ **Owner decision RESOLVED (faculty names, 2026-06-25): ADDITIVE.** Keep the shipped
+  code-authoritative roster (Flora/Lindqvist/Harlow/Okafor/Torres/Nance) and their voice mappings
+  untouched; add the new-spec faculty (Lex/Atlas/Verdant/Nova) only later, as NEW professors, when the
+  new schools (law/business/consumer/entrepreneurship) are actually built. Flora bridges both. No
+  renaming, no broken voices. *Exit:* learner-state has one writer + audit log; admissions→roadmap
+  path works on mocks in CI; no economy/ledger coupling; all behind the `university` flag.
 
 **Cross-cutting — Figma design system (D1/D2).** Stand up the Figma library from the extracted tokens,
 Code-Connect the new components, assemble the 7 §11 screens — runs alongside Phases 1–4.
@@ -252,3 +252,15 @@ to `claude/immersive-university-research`. ✅ **Complete.**
   lab presets. Behind the `university` flag; 11 explorer tests; web typecheck/lint/build/test green.
   A1 §9 fidelity defaults (stylized-botanical, zoom to T4) applied. **Next: persist the owner-asked
   Agent Campus plan (Phase 6 below), then Build Phase 2** (professor video / HeyGen — owner-gated).
+- 2026-06-25 — **Build Phase 2 ✅ done & MERGED** (PR #75, squash → main) — but **pivoted to FREE**.
+  Owner has **no budget for HeyGen**, so instead of a paid render Phase 2 ships a **free "Narrated
+  Lecture Theater"**: a deterministic CSS faculty-avatar card + the already-shipped ElevenLabs
+  narration + **karaoke-synced captions** (the active line highlights/scrolls), degrading to a
+  readable transcript when no audio. Built behind a swappable `VideoPresenterProvider` ABC
+  (`ai/provider.py`) with a deterministic CI mock (`video_presenter_mock.py`, reuses the narration
+  `(avatar_id, audio_hash)` cache key), an owner-gated factory (a set `HEYGEN_API_KEY` still returns
+  the mock — no accidental spend), a pure `video_captions.py` builder, the public
+  `GET /university/courses/<key>/presenter-video` endpoint, and the web `CoursePresenterVideo` theater
+  + `lib/university/lectureTheater.ts` helpers. **$0/render**; the paid HeyGen provider is a future
+  drop-in behind the same ABC if budget ever appears. Behind the `university` flag; 46 backend
+  video/route tests + 360 web vitest green. **Next: Build Phase 4** (Master Grower bot — free).

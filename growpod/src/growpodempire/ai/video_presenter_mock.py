@@ -21,8 +21,8 @@ from .elevenlabs_narrator import _build_spoken_text, _text_hash
 _AVATAR_FOR = {
     "cultivation": "avatar-flora",
     "genetics": "avatar-lindqvist",
-    "nutrients": "avatar-okafor",
-    "ipm": "avatar-harlow",
+    "nutrients": "avatar-harlow",
+    "ipm": "avatar-okafor",
     "chemistry": "avatar-torres",
     "postharvest": "avatar-nance",
 }
@@ -32,9 +32,9 @@ _DEFAULT_AVATAR = "avatar-faculty"
 # additive owner decision keeps these and adds new-school faculty later).
 _PRESENTER_NAME = {
     "cultivation": "Professor Flora",
-    "genetics": "Dr. Vera Lindqvist",
-    "nutrients": "Dr. Mira Okafor",
-    "ipm": "Dr. Sage Harlow",
+    "genetics": "Vera Lindqvist",
+    "nutrients": "Dr. Sage Harlow",
+    "ipm": "Dr. Mira Okafor",
     "chemistry": "Dr. Chem Torres",
     "postharvest": "Dr. Petra Nance",
 }
