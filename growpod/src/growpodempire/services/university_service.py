@@ -31,6 +31,7 @@ from ..simulation.clock import Clock, SystemClock
 from . import leveling_service
 from . import engagement_rules
 from .engagement_service import UniversityEngagementService
+from .learner_model_service import LearnerModelService
 from .research_service import _EFFECT_KEYS
 from .game_service import GameService, GameError
 
@@ -228,6 +229,20 @@ class UniversityService:
         eng = self.engagement.record_study_event(
             player_id, engagement_rules.KXP_COURSE_COMPLETE
         )
+        # Phase 6a: refresh the centralized LEARNER MODEL (mastery + risk) and
+        # audit the completion. All writes go through LearnerModelService.apply,
+        # which appends a matching LearnerEvent. NON-ECONOMIC; additive — the
+        # return shape below is unchanged.
+        learner = LearnerModelService(self.session, clock=self.clock)
+        learner.apply(
+            player_id,
+            agent="system",
+            kind="course_completed",
+            detail={"course_key": course_key},
+            reason=f"completed course {course_key}",
+        )
+        learner.recompute_mastery(player_id, reason="course completion")
+        learner.recompute_risk(player_id, reason="course completion")
         self.session.flush()
         return {
             "course_key": course_key,
@@ -291,6 +306,18 @@ class UniversityService:
             )
             out["kxp_awarded"] = eng["awarded_kxp"]
             out["streak_count"] = eng["streak_count"]
+            # Phase 6a: first pass refreshes the centralized LEARNER MODEL.
+            # Through apply(), so the exam_pass + mastery/risk changes are audited.
+            learner = LearnerModelService(self.session, clock=self.clock)
+            learner.apply(
+                player_id,
+                agent="system",
+                kind="exam_passed",
+                detail={"course_key": course_key, "exam_id": exam_id},
+                reason=f"first pass of {course_key}:{exam_id}",
+            )
+            learner.recompute_mastery(player_id, reason="exam passed")
+            learner.recompute_risk(player_id, reason="exam passed")
         return out
 
     def _exam_passed(self, player_id, course_key, exam_id) -> bool:
