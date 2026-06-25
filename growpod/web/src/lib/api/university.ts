@@ -6,6 +6,8 @@ import type {
   LectureReport,
   PresenterVideo,
   MasterGrowerReport,
+  UniversityProgress,
+  Scholar,
   Exam,
   ExamSubmission,
   ExamResponse,
@@ -56,6 +58,14 @@ export const university = {
       auth: true,
       body: { question, ...(plantId ? { plant_id: plantId } : {}) },
     }),
+
+  // Non-economic engagement: KXP / streak / freeze tokens + a proactive nudge.
+  progress: (playerId: string) =>
+    apiFetch<UniversityProgress>(`/players/${playerId}/university/progress`, { auth: true }),
+
+  // The KXP "Scholars" league (public read).
+  scholars: (limit = 10) =>
+    apiFetch<Scholar[]>(`/leaderboards/scholars`, { query: { limit } }),
 
   // An exam's questions — client-safe (answer keys stripped server-side). Public read.
   exam: (courseKey: string, examId: string) =>

@@ -634,6 +634,21 @@ export interface CaptionCue {
   text: string;
 }
 
+export interface UniversityProgress {
+  kxp: number;
+  streak_count: number;
+  freeze_tokens: number;
+  last_study_date: string | null;
+  next_nudge: string | null;
+}
+
+export interface Scholar {
+  id: string;
+  username: string;
+  kxp: number;
+  streak_count: number;
+}
+
 export interface MasterGrowerCitation {
   source: string;
   snippet: string;
