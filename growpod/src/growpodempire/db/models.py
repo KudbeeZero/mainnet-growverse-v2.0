@@ -14,13 +14,14 @@ Design notes:
     display-facing expressed values derived from it.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -585,6 +586,26 @@ class AssessmentAttempt(UUIDPrimaryKeyMixin, Base):
             "player_id", "course_key", "exam_id", unique=True,
         ),
     )
+
+
+class UniversityProgress(UUIDPrimaryKeyMixin, Base):
+    """Per-player NON-ECONOMIC engagement state for the University (Phase 5).
+
+    Knowledge-XP (``kxp``), the study ``streak_count`` / ``last_study_date``, and
+    ``freeze_tokens`` are a *separate* counter from game XP/level and from the
+    GROW currency. NONE of these ever post to the ledger, touch a Wallet, or read
+    ``balance.yaml`` — they are a self-contained "learning loop" tally. One row
+    per player (the unique FK is the upsert key)."""
+
+    __tablename__ = "university_progress"
+
+    player_id: Mapped[str] = mapped_column(
+        ForeignKey("players.id"), unique=True, nullable=False
+    )
+    kxp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    streak_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_study_date: Mapped[Optional[date]] = mapped_column(Date, default=None)
+    freeze_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
 class LectureAudio(UUIDPrimaryKeyMixin, Base):

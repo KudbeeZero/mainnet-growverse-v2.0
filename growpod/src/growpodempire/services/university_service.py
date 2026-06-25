@@ -29,6 +29,8 @@ from ..db.models import (
 from . import assessment_service
 from ..simulation.clock import Clock, SystemClock
 from . import leveling_service
+from . import engagement_rules
+from .engagement_service import UniversityEngagementService
 from .research_service import _EFFECT_KEYS
 from .game_service import GameService, GameError
 
@@ -116,6 +118,9 @@ class UniversityService:
         self.clock = clock or SystemClock()
         self._univ = self.cfg.raw.get("university", {})
         self.curriculum = load_curriculum()
+        # NON-ECONOMIC engagement loop (KXP / streaks). Shares this service's
+        # session + clock; never posts to the ledger.
+        self.engagement = UniversityEngagementService(self.session, clock=self.clock)
 
     # ----- helpers --------------------------------------------------------
     @property
@@ -218,12 +223,19 @@ class UniversityService:
         xp = int(self._univ.get("course_xp", 50))
         if xp:
             leveling_service.award_xp(self.session, player_id, xp, self.cfg)
+        # NON-ECONOMIC: accrue Knowledge-XP + advance the study streak. Additive
+        # to the return shape — existing keys are untouched.
+        eng = self.engagement.record_study_event(
+            player_id, engagement_rules.KXP_COURSE_COMPLETE
+        )
         self.session.flush()
         return {
             "course_key": course_key,
             "name": course.get("name", course_key),
             "status": "completed",
             "xp_awarded": xp,
+            "kxp_awarded": eng["awarded_kxp"],
+            "streak_count": eng["streak_count"],
         }
 
     # ----- assessments / exams -------------------------------------------
@@ -260,16 +272,26 @@ class UniversityService:
                 attempts=0, best_score=0.0, passed=False,
             )
             self.session.add(row)
+        was_passed = bool(row.passed)
         row.attempts += 1
         row.best_score = max(row.best_score, float(result["score"]))
         row.passed = row.passed or bool(result["passed"])  # forgiving: never un-pass
         row.last_attempt_at = self.clock.now()
         self.session.flush()
-        return {
+        out = {
             "attempts": row.attempts,
             "best_score": row.best_score,
             "passed": row.passed,
         }
+        # NON-ECONOMIC: award exam-pass KXP exactly ONCE, on the transition from
+        # not-passed -> passed. Additive key only.
+        if row.passed and not was_passed:
+            eng = self.engagement.record_study_event(
+                player_id, engagement_rules.KXP_EXAM_PASS
+            )
+            out["kxp_awarded"] = eng["awarded_kxp"]
+            out["streak_count"] = eng["streak_count"]
+        return out
 
     def _exam_passed(self, player_id, course_key, exam_id) -> bool:
         row = self._attempt_row(player_id, course_key, exam_id)
