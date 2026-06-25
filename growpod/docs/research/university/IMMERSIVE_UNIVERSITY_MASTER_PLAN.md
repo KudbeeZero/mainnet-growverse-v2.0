@@ -262,5 +262,5 @@ to `claude/immersive-university-research`. ✅ **Complete.**
   the mock — no accidental spend), a pure `video_captions.py` builder, the public
   `GET /university/courses/<key>/presenter-video` endpoint, and the web `CoursePresenterVideo` theater
   + `lib/university/lectureTheater.ts` helpers. **$0/render**; the paid HeyGen provider is a future
-  drop-in behind the same ABC if budget ever appears. Behind the `university` flag; 46 backend
+  drop-in behind the same ABC if budget ever appears. Behind the `university` flag; 42 backend
   video/route tests + 360 web vitest green. **Next: Build Phase 4** (Master Grower bot — free).
