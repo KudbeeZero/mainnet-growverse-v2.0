@@ -16,6 +16,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { queryKeys } from "@/lib/queryKeys";
 import { grow, hours, titleCase } from "@/lib/format";
+import { CoursePresenterVideo } from "@/components/university/CoursePresenterVideo";
 import { ExamSection } from "./ExamQuiz";
 
 const LEVELS = ["beginner", "intermediate", "advanced"] as const;
@@ -138,6 +139,7 @@ function CourseInner({ courseKey }: { courseKey: string }) {
         </Card>
 
         <div className="space-y-4 lg:col-span-2">
+          <CoursePresenterVideo courseKey={courseKey} />
           <LectureReader courseKey={courseKey} topic={course.lecture_topic} />
           <ExamSection
             courseKey={courseKey}

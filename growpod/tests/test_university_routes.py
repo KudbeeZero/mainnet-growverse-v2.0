@@ -118,6 +118,33 @@ def test_catalog_404s_when_feature_disabled(client, monkeypatch):
     assert client.get("/api/game/university/catalog").status_code == 404
 
 
+# ----- presenter video (Phase 2) ---------------------------------------------
+
+def test_presenter_video_is_public_and_mock_falls_back_to_audio(client):
+    r = client.get("/api/game/university/courses/cult-101/presenter-video")
+    assert r.status_code == 200  # public read, no auth header
+    body = r.get_json()
+    assert body["provider"] == "mock"
+    assert body["backend"] == "mock"
+    assert body["video_url"] is None  # mock → player uses narration audio
+    assert body["avatar_id"]
+    assert body["audio_hash"]
+    assert body["captions"] and body["captions"][0]["start_s"] == 0.0
+
+
+def test_presenter_video_404s_for_unknown_course(client):
+    assert client.get(
+        "/api/game/university/courses/not-a-course/presenter-video"
+    ).status_code == 404
+
+
+def test_presenter_video_404s_when_feature_disabled(client, monkeypatch):
+    monkeypatch.setenv("FEATURE_UNIVERSITY", "false")
+    assert client.get(
+        "/api/game/university/courses/cult-101/presenter-video"
+    ).status_code == 404
+
+
 # ----- transcript (authed) ---------------------------------------------------
 
 def test_transcript_requires_auth(client):

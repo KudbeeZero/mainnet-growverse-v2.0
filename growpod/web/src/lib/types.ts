@@ -628,6 +628,23 @@ export interface LectureReport {
   audio_url?: string;
 }
 
+export interface CaptionCue {
+  start_s: number;
+  end_s: number;
+  text: string;
+}
+
+export interface PresenterVideo {
+  provider: string;
+  avatar_id: string;
+  audio_hash: string;
+  backend: string;
+  video_url: string | null;
+  poster_url: string | null;
+  duration_s: number;
+  captions: CaptionCue[];
+}
+
 export interface SeasonalStrain {
   id: string;
   strain_id: string;
