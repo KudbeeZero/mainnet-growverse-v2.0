@@ -19,7 +19,10 @@ export type BudStage = "flower" | "harvest";
  * Add entries as licensed assets land, e.g.
  *   "blue-dream": { harvest: "/buds/blue-dream-harvest.webp" },
  */
-const BUD_PHOTOS: Record<string, Partial<Record<BudStage, string>>> = {};
+const BUD_PHOTOS: Record<string, Partial<Record<BudStage, string>>> = {
+  // First licensed photoreal hero — owner-provided render (we own/are licensed for it).
+  "blue-dream": { harvest: "/buds/blue-dream-harvest.jpg" },
+};
 
 /** Pure resolver (exported for tests): pick the requested stage, then fall back to any
  * stage we do have, then null. Key match is case/space-insensitive. */
