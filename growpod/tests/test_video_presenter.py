@@ -7,7 +7,11 @@ from growpodempire.ai.video_captions import (
     captions_duration,
     WORDS_PER_SECOND,
 )
-from growpodempire.ai.video_presenter_mock import MockVideoPresenter, avatar_for
+from growpodempire.ai.video_presenter_mock import (
+    MockVideoPresenter,
+    avatar_for,
+    presenter_name_for,
+)
 from growpodempire.ai.factory import (
     get_video_presenter_provider,
     reset_shared_video_presenter,
@@ -82,6 +86,13 @@ def test_mock_presenter_cache_key_matches_narration_hash():
 def test_mock_presenter_avatar_is_per_department():
     assert avatar_for("cultivation") != avatar_for("genetics")
     assert avatar_for(None) == avatar_for("unknown-dept")  # both → default
+
+
+def test_mock_presenter_names_faculty_per_department():
+    video = MockVideoPresenter().present(LECTURE)  # cultivation
+    assert video.presenter_name == "Professor Flora"
+    assert presenter_name_for("ipm") == "Dr. Sage Harlow"
+    assert presenter_name_for(None) == "The Professor"  # graceful default
 
 
 def test_mock_presenter_prefers_precomputed_spoken_text():

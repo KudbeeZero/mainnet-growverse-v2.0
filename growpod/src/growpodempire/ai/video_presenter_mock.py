@@ -28,10 +28,27 @@ _AVATAR_FOR = {
 }
 _DEFAULT_AVATAR = "avatar-faculty"
 
+# Department → faculty display name (the shipped code-authoritative roster; the
+# additive owner decision keeps these and adds new-school faculty later).
+_PRESENTER_NAME = {
+    "cultivation": "Professor Flora",
+    "genetics": "Dr. Vera Lindqvist",
+    "nutrients": "Dr. Mira Okafor",
+    "ipm": "Dr. Sage Harlow",
+    "chemistry": "Dr. Chem Torres",
+    "postharvest": "Dr. Petra Nance",
+}
+_DEFAULT_NAME = "The Professor"
+
 
 def avatar_for(department: str | None) -> str:
     """Stable presenter avatar id for a curriculum department."""
     return _AVATAR_FOR.get(department or "", _DEFAULT_AVATAR)
+
+
+def presenter_name_for(department: str | None) -> str:
+    """Faculty display name for a curriculum department."""
+    return _PRESENTER_NAME.get(department or "", _DEFAULT_NAME)
 
 
 def spoken_text_from_context(context: dict) -> str:
@@ -57,6 +74,7 @@ class MockVideoPresenter(VideoPresenterProvider):
         captions = build_captions(text, context.get("audio_duration_s"))
         return PresenterVideo(
             avatar_id=avatar_for(department),
+            presenter_name=presenter_name_for(department),
             audio_hash=_text_hash(text),
             backend="mock",
             video_url=None,  # no rendered video → player uses narration audio + captions

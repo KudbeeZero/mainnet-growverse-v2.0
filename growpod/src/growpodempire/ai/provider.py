@@ -123,6 +123,9 @@ class PresenterVideo(BaseModel):
     """
 
     avatar_id: str = Field(description="Presenter avatar identity (faculty/department).")
+    presenter_name: str = Field(
+        default="The Professor", description="Faculty display name shown on the avatar card."
+    )
     audio_hash: str = Field(description="Hash of the spoken script — the cache key.")
     backend: str = Field(description="Backend identifier ('mock' / 'heygen').")
     video_url: Optional[str] = Field(

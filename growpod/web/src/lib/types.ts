@@ -637,6 +637,7 @@ export interface CaptionCue {
 export interface PresenterVideo {
   provider: string;
   avatar_id: string;
+  presenter_name: string;
   audio_hash: string;
   backend: string;
   video_url: string | null;
