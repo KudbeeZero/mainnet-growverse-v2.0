@@ -28,6 +28,10 @@ export const queryKeys = {
   hallOfFame: () => ["cup", "hall-of-fame"] as const,
   uniCatalog: () => ["university", "catalog"] as const,
   transcript: (id: string) => ["university", "transcript", id] as const,
+  learner: (id: string) => ["university", "learner", id] as const,
+  roadmap: (id: string, horizon: number) =>
+    ["university", "roadmap", id, horizon] as const,
+  admissionsQuiz: () => ["university", "admissions", "quiz"] as const,
   lecture: (id: string, courseKey: string, level: string) =>
     ["university", "lecture", id, courseKey, level] as const,
   ftueStatus: (id: string) => ["ftue", "status", id] as const,

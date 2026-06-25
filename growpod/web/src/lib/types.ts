@@ -674,6 +674,85 @@ export interface PresenterVideo {
   captions: CaptionCue[];
 }
 
+// ---- Agent Campus: centralized learner model + roadmap + admissions (Phase 6) ----
+
+export type LearnerLevel = "beginner" | "intermediate" | "advanced";
+export type LearnerRisk = "none" | "at_risk";
+
+/** The engagement slice merged into the learner read model (no nudge here —
+ *  that lives on the separate /university/progress endpoint). */
+export interface LearnerEngagement {
+  kxp: number;
+  streak_count: number;
+  freeze_tokens: number;
+  last_study_date: string | null;
+}
+
+/** The centralized learner read model: NON-economic mastery / prefs / risk merged
+ *  with the engagement slice. `mastery_by_skill` maps skill_id -> 0..1 score. */
+export interface LearnerProfile {
+  mastery_by_skill: Record<string, number>;
+  misconceptions: Record<string, unknown>;
+  preferred_format: string | null;
+  goals: string | null;
+  experience_level: LearnerLevel;
+  risk_level: LearnerRisk;
+  updated_at: string | null;
+  engagement: LearnerEngagement;
+}
+
+/** One scheduled skill in the learning path. `day` is 1-based. */
+export interface RoadmapStep {
+  skill_id: string;
+  name: string;
+  domain: string;
+  day: number;
+  prerequisites: string[];
+}
+
+/** An ordered, prerequisite-respecting learning path for a learner. */
+export interface RoadmapPlan {
+  horizon_days: number;
+  steps: RoadmapStep[];
+  skipped_mastered: string[];
+  rationale: string;
+  mastery_by_skill: Record<string, number>;
+}
+
+export interface AdmissionsChoice {
+  id: string;
+  label: string;
+  /** Department weights (scoring questions) — present on most questions. */
+  weights?: Record<string, number>;
+  /** Starting level — present only on the experience question. */
+  level?: LearnerLevel;
+}
+
+export interface AdmissionsQuestion {
+  id: string;
+  prompt: string;
+  choices: AdmissionsChoice[];
+}
+
+export interface AdmissionsQuiz {
+  quiz: AdmissionsQuestion[];
+}
+
+/** The Admissions agent's intake recommendation. `track` is ordered real course keys. */
+export interface AdmissionsRecommendation {
+  school: string;
+  department: string;
+  track: string[];
+  level: LearnerLevel;
+  rationale: string;
+}
+
+/** POST /university/admissions result: the recommendation + the merged profile. */
+export interface AdmissionsResult {
+  recommendation: AdmissionsRecommendation;
+  profile: LearnerProfile;
+}
+
 export interface SeasonalStrain {
   id: string;
   strain_id: string;
