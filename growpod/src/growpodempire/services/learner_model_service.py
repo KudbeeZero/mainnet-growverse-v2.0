@@ -126,24 +126,36 @@ class LearnerModelService:
         """Deterministically derive ``mastery_by_skill`` from the player's
         ``AssessmentAttempt`` best_scores and store it through ``apply``.
 
-        6a keys mastery by ``course_key`` (or ``course_key:exam_id`` when a course
-        has more than one exam) -> best_score fraction. This remaps to the real
-        skills graph in 6b. Deterministic: same attempt rows -> same map."""
+        6b keys mastery by real ``skill_id`` (the data-driven skills graph), not
+        by ``course_key``. For each attempt we look up the skills the course
+        teaches (``skills_for_course``) and contribute that course's best_score to
+        each of its skills; a skill taught by multiple completed courses takes the
+        MAX best_score across them. Deterministic: same attempt rows -> same map,
+        with sorted keys so the stored map is byte-identical run to run."""
+        from .skills import skills_for_course
+
         attempts = (
             self.session.query(AssessmentAttempt)
             .filter(AssessmentAttempt.player_id == player_id)
             .all()
         )
-        # Count exams per course so single-exam courses key cleanly by course.
-        per_course: dict = {}
+        # First collapse to the BEST best_score per course (a course may have
+        # several exams; the course's contribution to its skills is its best).
+        best_by_course: dict = {}
         for a in attempts:
-            per_course.setdefault(a.course_key, set()).add(a.exam_id)
+            score = round(float(a.best_score), 6)
+            cur = best_by_course.get(a.course_key)
+            if cur is None or score > cur:
+                best_by_course[a.course_key] = score
 
+        # Fan each course's best score out to the skills it teaches; a skill taught
+        # by multiple completed courses takes the max.
         mastery: dict = {}
-        for a in attempts:
-            multi = len(per_course[a.course_key]) > 1
-            key = f"{a.course_key}:{a.exam_id}" if multi else a.course_key
-            mastery[key] = round(float(a.best_score), 6)
+        for course_key, score in best_by_course.items():
+            for skill_id in skills_for_course(course_key):
+                cur = mastery.get(skill_id)
+                if cur is None or score > cur:
+                    mastery[skill_id] = score
 
         # Stable ordering so the stored map is byte-identical run to run.
         mastery = {k: mastery[k] for k in sorted(mastery)}

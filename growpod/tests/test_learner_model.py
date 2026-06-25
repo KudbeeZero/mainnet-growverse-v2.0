@@ -132,18 +132,24 @@ def test_recompute_mastery_is_deterministic_and_matches_best_scores(session):
     m2 = dict(r2.mastery_by_skill)
 
     assert m1 == m2  # deterministic
-    # Single exam per course -> keyed by course_key, value == best_score.
-    assert m1 == {"cult-101": 0.8, "nut-101": 0.65}
+    # 6b: keyed by the real skill_id each course teaches, value == best_score.
+    assert m1 == {
+        "cultivation-fundamentals": 0.8,  # cult-101
+        "soil-nutrient-science": 0.65,    # nut-101
+    }
 
 
-def test_recompute_mastery_keys_multi_exam_courses_by_course_and_exam(session):
+def test_recompute_mastery_takes_max_best_score_across_a_courses_exams(session):
+    # 6b: a course's contribution to its skill is its BEST best_score across all
+    # of that course's exams (multiple exams collapse to one skill_id).
     p = _player(session)
     svc = LearnerModelService(session, clock=FrozenClock(BASE))
     _attempt(session, p.id, "cult-101", "midterm", 0.7)
     _attempt(session, p.id, "cult-101", "mastery", 0.95)
 
     m = dict(svc.recompute_mastery(p.id).mastery_by_skill)
-    assert m == {"cult-101:midterm": 0.7, "cult-101:mastery": 0.95}
+    # cult-101 teaches `cultivation-fundamentals`; the skill takes the max (0.95).
+    assert m == {"cultivation-fundamentals": 0.95}
 
 
 # ===== ledger-free ===========================================================
