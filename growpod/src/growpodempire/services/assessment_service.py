@@ -22,6 +22,10 @@ is graded incorrect (never an error); a malformed *item* raises
 """
 from __future__ import annotations
 
+import os
+
+import yaml
+
 from typing import Any, Mapping
 
 ITEM_TYPES = ("mcq", "multi", "tf", "numeric", "drag_sort")
@@ -195,3 +199,71 @@ def _self_answer(item: Mapping[str, Any]) -> Any:
         ans = item.get("answer")
         return ans.get("value") if isinstance(ans, Mapping) else ans
     return item.get("answer")
+
+
+# ---------------------------------------------------------------------------
+# Data-driven banks — load authored assessment YAML (data/assessments/<course>.yaml).
+# Cached per course; mirrors university_service.load_curriculum.
+# ---------------------------------------------------------------------------
+_BANK_CACHE: dict = {}
+
+
+def load_bank(course_key: str) -> dict:
+    """Load (and cache) the authored assessment bank for a course.
+
+    Returns ``{}`` when no bank file exists (courses without assessments yet).
+    """
+    if course_key not in _BANK_CACHE:
+        from ..config import get_settings
+
+        path = os.path.join(get_settings().assessments_dir, f"{course_key}.yaml")
+        if not os.path.exists(path):
+            _BANK_CACHE[course_key] = {}
+        else:
+            with open(path, "r", encoding="utf-8") as fh:
+                _BANK_CACHE[course_key] = yaml.safe_load(fh) or {}
+    return _BANK_CACHE[course_key]
+
+
+def all_items(course_key: str) -> list:
+    """Every authored item across all modules, in module then authored order."""
+    bank = load_bank(course_key)
+    items: list = []
+    for module in (bank.get("modules") or {}).values():
+        items.extend(module.get("items") or [])
+    return items
+
+
+def module_items(course_key: str, module_id: str) -> list:
+    """Items for one module (its knowledge check)."""
+    module = (load_bank(course_key).get("modules") or {}).get(module_id) or {}
+    return list(module.get("items") or [])
+
+
+def exam(course_key: str, exam_id: str) -> dict:
+    """Resolve a named exam into ``{title, pass, items: [...]}``.
+
+    Exams reference module item ids (``item_ids``) so item content lives once.
+    Inline ``items`` are also supported. Returns ``{}`` if the exam is absent.
+    """
+    spec = (load_bank(course_key).get("exams") or {}).get(exam_id)
+    if not spec:
+        return {}
+    if spec.get("items"):
+        items = list(spec["items"])
+    else:
+        by_id = {it.get("id"): it for it in all_items(course_key)}
+        items = [by_id[i] for i in (spec.get("item_ids") or []) if i in by_id]
+    return {
+        "title": spec.get("title", exam_id),
+        "pass": float(spec.get("pass", MIDTERM_PASS)),
+        "items": items,
+    }
+
+
+def grade_exam(course_key: str, exam_id: str, responses: Mapping[str, Any]) -> dict:
+    """Grade a named exam for a course against ``responses`` keyed by item id."""
+    spec = exam(course_key, exam_id)
+    if not spec:
+        raise AssessmentError(f"no exam {exam_id!r} for course {course_key!r}")
+    return grade_assessment(spec["items"], responses, pass_threshold=spec["pass"])

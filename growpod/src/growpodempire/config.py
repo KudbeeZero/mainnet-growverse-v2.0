@@ -47,6 +47,9 @@ class Settings:
         self.terpene_effects_file: str = os.environ.get(
             "TERPENE_EFFECTS_FILE", os.path.join(DATA_DIR, "terpene_effects.yaml")
         )
+        self.assessments_dir: str = os.environ.get(
+            "ASSESSMENTS_DIR", os.path.join(DATA_DIR, "assessments")
+        )
 
         # Optional global RNG seed for reproducible breeding in deterministic
         # contexts (tests / demos). When None, breeding draws a fresh seed.
