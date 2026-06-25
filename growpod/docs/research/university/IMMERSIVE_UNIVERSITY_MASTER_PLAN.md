@@ -149,6 +149,37 @@ touching the GROW ledger.**
 instant "small-win" feedback on knowledge checks, educational leagues, proactive bot nudges. *Exit:*
 none of it posts to the ledger; retention instrumentation in place.
 
+**Phase 6 — Agent Campus (owner-requested 2026-06-25; staged LAST, after P2/P4/P5).**
+Owner asked to expand the university into a multi-agent education system (centralized learner model +
+specialised worker agents: admissions, roadmap, professor-delivery, assessment, study-coach,
+student-success, compliance, librarian, career, certification, office-hours, analytics). **Finding:
+~60–70% already exists** — don't fork a parallel system, fold it onto the existing substrate.
+- **Already specced/built → maps to existing phases:** Domain model = `curriculum.yaml` (6 depts / 18
+  courses / 3 degrees) + `data/assessments/*`; faculty personas = reconciled roster (Phase 0);
+  Assessment agent = shipped `assessment_service.py` (Phase 1); Professor-delivery + Librarian +
+  Compliance + grounded retrieval = **Master Grower bot** (Phase 4, `MasterGrowerProvider` ABC + 4
+  read-only tool contracts + grounding/citation/refusal evals); Certification = `claim_degree` +
+  degree effects; Study-coach + Student-success + nudges = **Phase 5**; Professor video = **Phase 2**.
+- **Genuinely net-new (this phase's actual work):** (a) a **centralized Learner Model** as one
+  persisted, single-writer state object (mastery_by_skill, misconceptions, engagement_score,
+  risk_level, review_schedule, intervention_history) — additive migration; today this is scattered
+  across course progress. (b) **Admissions + Roadmap** agents (intake quiz → personalised 7/14-day
+  paths, prerequisite enforcement). (c) a **skills graph** distinct from courses (skill_id,
+  prerequisites, mastery_scale, career_links). (d) **Orchestration layer** with one authoritative
+  learner-state writer + an **audit log** of every recommendation/mastery-update/intervention. (e)
+  **Career / Office-Hours / Analytics** agents.
+- **Architecture rule:** each worker agent = a `services/` module behind a provider ABC with a
+  deterministic **CI mock** (the Phase-4 pattern); rule-based orchestration first (no free-form agent
+  debate), exactly matching the owner's stated principles. Cost: nearly every agent is a deterministic
+  service (free, CI-mocked); only the professor LLM + HeyGen video carry real spend, both already gated.
+- **Cheapest high-value first step:** the centralized Learner Model — it unlocks Roadmap/Coach/Success.
+- ⚠️ **Owner decision needed (faculty names):** the new spec lists Professors Lex/Atlas/Verdant/
+  Mycelia/Nova, but the **resolved roster is code-authoritative** (Flora/Lindqvist/Harlow/Okafor/
+  Torres/Nance — see Owner decision #1 below, which retired the Verdant/Mycelia/Atlas/Nova set).
+  Reconcile before building persona-facing surfaces: keep the shipped roster, or owner re-approves
+  the new names. *Exit:* learner-state has one writer + audit log; admissions→roadmap path works on
+  mocks in CI; no economy/ledger coupling; all behind the `university` flag.
+
 **Cross-cutting — Figma design system (D1/D2).** Stand up the Figma library from the extracted tokens,
 Code-Connect the new components, assemble the 7 §11 screens — runs alongside Phases 1–4.
 
@@ -212,3 +243,12 @@ to `claude/immersive-university-research`. ✅ **Complete.**
   mastery-gated completion, and the web quiz UI (all 5 item types + instant feedback). Backend 969
   passed; web 345 passed; all gates green. **Next: Build Phase 3** (3D Anatomy Explorer) on a fresh
   `claude/university-explorer-3d` branch — renderer over the pure `bud3d` modules, behind the flag.
+- 2026-06-25 — **Build Phase 3 ✅ done & MERGED** (PR #73, squash → main). The **3D Anatomy
+  Explorer** at `/university/explorer`, built as a renderer over the shipped pure `bud3d` generators
+  (zero edits to the pure core): pure `chamber3d/explorer/parts.ts` (`buildExplorerInstances`,
+  deterministic, draw-call-bounded to 3 InstancedMeshes); `AnatomyExplorer` R3F renderer with drei
+  OrbitControls; LOD tiers (`tierForDistance` whole→cola→detail→trichome + live readout); part
+  picking (instanced-mesh pointer events → labels); live grow-param sliders; and the five canonical
+  lab presets. Behind the `university` flag; 11 explorer tests; web typecheck/lint/build/test green.
+  A1 §9 fidelity defaults (stylized-botanical, zoom to T4) applied. **Next: persist the owner-asked
+  Agent Campus plan (Phase 6 below), then Build Phase 2** (professor video / HeyGen — owner-gated).
