@@ -634,6 +634,19 @@ export interface CaptionCue {
   text: string;
 }
 
+export interface MasterGrowerCitation {
+  source: string;
+  snippet: string;
+}
+
+export interface MasterGrowerReport {
+  answer: string;
+  citations: MasterGrowerCitation[];
+  suggested_actions: string[];
+  refused: boolean;
+  disclaimer: string;
+}
+
 export interface PresenterVideo {
   provider: string;
   avatar_id: string;

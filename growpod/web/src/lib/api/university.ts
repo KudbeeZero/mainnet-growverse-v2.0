@@ -5,6 +5,7 @@ import type {
   Enrollment,
   LectureReport,
   PresenterVideo,
+  MasterGrowerReport,
   Exam,
   ExamSubmission,
   ExamResponse,
@@ -47,6 +48,14 @@ export const university = {
   // Professor presenter video (deterministic mock until HeyGen is enabled). Public read.
   presenterVideo: (courseKey: string) =>
     apiFetch<PresenterVideo>(`/university/courses/${courseKey}/presenter-video`),
+
+  // Ask the FREE Master Grower bot a grounded question (player-scoped, authed).
+  askMasterGrower: (playerId: string, question: string, plantId?: string) =>
+    apiFetch<MasterGrowerReport>(`/players/${playerId}/master-grower/ask`, {
+      method: "POST",
+      auth: true,
+      body: { question, ...(plantId ? { plant_id: plantId } : {}) },
+    }),
 
   // An exam's questions — client-safe (answer keys stripped server-side). Public read.
   exam: (courseKey: string, examId: string) =>
