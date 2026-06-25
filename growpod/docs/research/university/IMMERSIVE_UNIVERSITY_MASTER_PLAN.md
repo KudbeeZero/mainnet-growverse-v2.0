@@ -323,4 +323,15 @@ to `claude/immersive-university-research`. ✅ **Complete.**
   mutates `LearnerProfile` directly). Flagged routes `POST /players/<id>/university/admissions` +
   `GET /university/admissions/quiz`. `tests/test_admissions.py` (18): determinism, real-key validity,
   audited write, ledger-free, no-economy-import, route gating. NON-economic; no migration. Independently
-  verified: 62 targeted tests + full suite green, `make check-memory` OK. **Next: 6d Roadmap → 6e web.**
+  verified: 62 targeted tests + full suite green, `make check-memory` OK.
+- 2026-06-25 — **Phase 6d ✅ done & gate-verified** (Roadmap agent). The **Roadmap agent**:
+  `RoadmapProvider` ABC + `RoadmapStep`/`RoadmapPlan` schemas (`ai/provider.py`) + deterministic
+  `MockRoadmap` (`ai/roadmap_mock.py`) — a PURE topological path-builder that reads `mastery_by_skill`
+  + the 6b skills-graph prerequisites and emits an ordered 7/14-day path that ENFORCES prerequisites
+  (a skill is placed only once all its prereqs are mastered-or-already-placed; stable `(domain, skill_id)`
+  tiebreak) and SKIPS already-mastered skills (`MASTERY_THRESHOLD = 0.7`). `RoadmapService` is
+  **READ-ONLY** — reads the learner profile, never calls `apply`/writes a row. `factory.get/shared/reset_roadmap`
+  (mock unless key, none in CI). Flagged route `GET /players/<id>/university/roadmap?horizon=7|14`.
+  `tests/test_roadmap.py` (19): prereqs-NEVER-violated (validated against skills.yaml), mastered-skills-skipped,
+  full-graph-coverage, deterministic, route gating. NON-economic; no migration; no DB writes. Independently
+  verified: 68 targeted tests + full suite green, `make check-memory` OK. **Next: 6e web learner dashboard.**

@@ -1329,6 +1329,28 @@ def university_admissions(player_id):
         return _error(str(e), 404)
 
 
+@game_bp.get("/players/<player_id>/university/roadmap")
+@require_feature("university")
+@require_player
+def university_roadmap(player_id):
+    """A player's ordered, prerequisite-respecting learning path (Phase 6d).
+
+    READ-ONLY and NON-ECONOMIC: reads the learner model's mastery and returns a
+    deterministic plan that skips mastered skills and never schedules a skill
+    before its prerequisites. ``?horizon=7|14`` chooses the span (default 7).
+    """
+    from ..services.roadmap_service import RoadmapService
+
+    horizon = 14 if request.args.get("horizon") == "14" else 7
+    try:
+        with session_scope() as s:
+            GameService(s).get_player(player_id)
+            payload = RoadmapService(s).roadmap(player_id, horizon_days=horizon)
+        return jsonify(payload)
+    except GameError as e:
+        return _error(str(e), 404)
+
+
 @game_bp.get("/players/<player_id>/courses/<course_key>/lecture")
 @require_feature("university")
 @require_player
