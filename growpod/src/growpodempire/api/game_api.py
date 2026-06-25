@@ -1251,6 +1251,33 @@ def university_lecture(player_id, course_key):
         return _error(f"Professor unavailable: {e}", 503)
 
 
+@game_bp.get("/university/courses/<course_key>/presenter-video")
+@require_feature("university")
+def university_presenter_video(course_key):
+    """The professor 'talking-head' video for a course (deterministic mock in CI).
+
+    Public read like the catalog/audio. Built from the same stable curriculum
+    script the narrator hashes, so the video reuses the cached MP3. ``video_url``
+    is null on the mock / no HeyGen key — the player falls back to the narration
+    audio and renders the returned caption track.
+    """
+    from ..ai.factory import shared_video_presenter
+    from ..ai.elevenlabs_narrator import build_course_spoken_text
+    from ..services.university_service import load_curriculum
+
+    course = load_curriculum().get("courses", {}).get(course_key)
+    if not course:
+        return _error("Course not found", 404)
+
+    presenter = shared_video_presenter()
+    context = {
+        "spoken_text": build_course_spoken_text(course),
+        "department": course.get("department"),
+    }
+    video = presenter.present(context)
+    return jsonify({"provider": presenter.name(), **video.model_dump()})
+
+
 @game_bp.get("/narration/<course_key>/<level>")
 def serve_narration(course_key, level):
     """Serve the cached TTS MP3 for a lecture (no auth — file name is a SHA hash)."""

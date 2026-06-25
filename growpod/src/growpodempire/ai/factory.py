@@ -9,9 +9,10 @@ and tests run with no network or secrets — mirroring chain/factory.py.
 from typing import Optional
 
 from ..config import get_settings
-from .provider import AdvisorProvider, LecturerProvider
+from .provider import AdvisorProvider, LecturerProvider, VideoPresenterProvider
 from .mock import MockAdvisorProvider
 from .lecturer_mock import MockLecturerProvider
+from .video_presenter_mock import MockVideoPresenter
 from .autocare import AutoCareProvider, MockAutoCareProvider
 
 
@@ -79,3 +80,32 @@ def get_auto_care_provider(settings=None) -> AutoCareProvider:
     return ClaudeAutoCareProvider(
         api_key=settings.anthropic_api_key, model=settings.advisor_model
     )
+
+
+def get_video_presenter_provider(settings=None) -> VideoPresenterProvider:
+    """Mock unless a real video backend is configured AND enabled.
+
+    The real HeyGen provider is owner-gated (one-time ~$140 spend) and not yet
+    enabled, so even with a key set we return the deterministic mock for now.
+    When the owner approves, add HeyGenVideoPresenter and flip this branch.
+    """
+    settings = settings or get_settings()
+    if settings.use_mock_ai or not getattr(settings, "heygen_api_key", None):
+        return MockVideoPresenter()
+    # Owner-gated: real HeyGen rendering deferred until spend is approved.
+    return MockVideoPresenter()
+
+
+_video_presenter: Optional[VideoPresenterProvider] = None
+
+
+def shared_video_presenter(settings=None) -> VideoPresenterProvider:
+    global _video_presenter
+    if _video_presenter is None:
+        _video_presenter = get_video_presenter_provider(settings)
+    return _video_presenter
+
+
+def reset_shared_video_presenter() -> None:
+    global _video_presenter
+    _video_presenter = None

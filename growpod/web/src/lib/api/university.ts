@@ -4,6 +4,7 @@ import type {
   Transcript,
   Enrollment,
   LectureReport,
+  PresenterVideo,
   Exam,
   ExamSubmission,
   ExamResponse,
@@ -42,6 +43,10 @@ export const university = {
       auth: true,
       query: opts,
     }),
+
+  // Professor presenter video (deterministic mock until HeyGen is enabled). Public read.
+  presenterVideo: (courseKey: string) =>
+    apiFetch<PresenterVideo>(`/university/courses/${courseKey}/presenter-video`),
 
   // An exam's questions — client-safe (answer keys stripped server-side). Public read.
   exam: (courseKey: string, examId: string) =>

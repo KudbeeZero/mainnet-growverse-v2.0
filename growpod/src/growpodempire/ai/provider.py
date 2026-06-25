@@ -9,7 +9,7 @@ the player (or, later, an agentic auto-care loop) can actually call.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -97,4 +97,63 @@ class LecturerProvider(ABC):
 
         `context` (built by LecturerService) carries the course name, lecture
         topic + objectives, requested level, and optional live game-state.
+        """
+
+
+class VideoPresenterError(Exception):
+    """Any failure producing a presenter video (e.g. the video backend errored)."""
+
+
+class CaptionCue(BaseModel):
+    """One timed caption line for a presenter video. Times are seconds from start."""
+
+    start_s: float = Field(description="Cue start, seconds from the video start.")
+    end_s: float = Field(description="Cue end, seconds from the video start.")
+    text: str = Field(description="The spoken text for this cue.")
+
+
+class PresenterVideo(BaseModel):
+    """A lecturer 'talking-head' video for a lecture, plus its caption track.
+
+    Built from the SAME spoken script the ElevenLabs narrator uses, keyed by
+    ``(avatar_id, audio_hash)`` so a given lecture's video is generated once and
+    cached (mirroring the narration cache). ``video_url`` is None in the
+    audio/text-only fallback (no backend key, or the mock), in which case the
+    course player falls back to the existing narration audio + these captions.
+    """
+
+    avatar_id: str = Field(description="Presenter avatar identity (faculty/department).")
+    presenter_name: str = Field(
+        default="The Professor", description="Faculty display name shown on the avatar card."
+    )
+    audio_hash: str = Field(description="Hash of the spoken script — the cache key.")
+    backend: str = Field(description="Backend identifier ('mock' / 'heygen').")
+    video_url: Optional[str] = Field(
+        default=None, description="Playable video URL, or None for audio/text fallback."
+    )
+    poster_url: Optional[str] = Field(default=None, description="Optional still/poster URL.")
+    duration_s: float = Field(default=0.0, description="Clip duration in seconds.")
+    captions: List[CaptionCue] = Field(
+        default_factory=list, description="Timed caption track (== the narration transcript)."
+    )
+
+
+class VideoPresenterProvider(ABC):
+    """Renders a faculty persona delivering a lecture as a talking-head video.
+
+    Swappable behind config (mock in CI / no key; real HeyGen in prod), exactly
+    like the advisor/lecturer providers. The mock is deterministic and never
+    touches the network, so the whole course-video path runs in CI for free.
+    """
+
+    @abstractmethod
+    def name(self) -> str:
+        """Backend identifier (e.g. 'mock', 'heygen:<avatar>')."""
+
+    @abstractmethod
+    def present(self, context: dict) -> PresenterVideo:
+        """Produce a PresenterVideo from a lecture context dict.
+
+        `context` carries the spoken script (or the fields to build it), the
+        department/faculty (→ avatar), and any precomputed narration timings.
         """
