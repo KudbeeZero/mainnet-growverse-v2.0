@@ -36,7 +36,7 @@ import { budDnaFor, applyEnvironmentToBudDNA } from "@/lib/chamber/budDna";
 import { budParamsFromTrichomes } from "@/lib/chamber/bud3d/serverBud";
 import { titleCase } from "@/lib/format";
 import { nudge } from "@/lib/slider";
-import { isBud3DEnabled } from "@/lib/features";
+import { isBud3DEnabled, hasWebGL } from "@/lib/features";
 
 const GrowChamber = dynamic(
   () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
@@ -130,13 +130,16 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const reducedMotion = usePrefersReducedMotion();
   // 3D bud renderer: build-flag OR a `?bud3d=1` preview override (read client-side
   // to avoid the useSearchParams Suspense requirement). Applies to the macro view.
-  const [bud3dOverride, setBud3dOverride] = useState(false);
+  const [bud3dOverride, setBud3dOverride] = useState<boolean | null>(null);
   useEffect(() => {
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("bud3d") === "1") {
-      setBud3dOverride(true);
-    }
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search).get("bud3d");
+    if (q === "1") setBud3dOverride(true);
+    else if (q === "0") setBud3dOverride(false);
   }, []);
-  const bud3d = isBud3DEnabled() || bud3dOverride;
+  // 3D when enabled (default on) or ?bud3d=1, unless ?bud3d=0 — AND the device
+  // actually has WebGL, else fall back to the 2D Canvas renderer.
+  const bud3d = (bud3dOverride ?? isBud3DEnabled()) && hasWebGL();
   const [tab, setTab] = useState<"grow" | "climate" | "time" | "view">("grow");
   const [view, setView] = useState<ChamberView>("chamber");
   const [climate, setClimate] = useState<ChamberClimate>(DEFAULT_CLIMATE);

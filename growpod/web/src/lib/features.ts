@@ -79,15 +79,36 @@ export function isFeatureEnabled(name: FeatureName): boolean {
 }
 
 /**
- * 3D bud renderer (WebGL/three.js) — experimental, OFF by default.
+ * 3D bud renderer (WebGL/three.js) — the high-fidelity frosted bud, now ON by
+ * default for the focused plant views (chamber / pod / strain hero).
  *
- * Opt-IN: only the exact string "true" enables it build-wide. The chamber page
- * additionally honours a `?bud3d=1` query param so it can be previewed (and
- * screenshotted in e2e) without a dedicated build. Falls back to the Canvas
- * `GrowChamber` when off / unsupported / reduced-motion.
+ * Set `NEXT_PUBLIC_ENABLE_BUD3D=false` to force the legacy Canvas `GrowChamber`
+ * build-wide. The chamber page also honours a `?bud3d=0/1` query override. Always
+ * pair with `hasWebGL()` at the mount so devices without WebGL fall back to 2D.
  */
 export function isBud3DEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_ENABLE_BUD3D === "true";
+  return process.env.NEXT_PUBLIC_ENABLE_BUD3D !== "false";
+}
+
+/**
+ * Whether this browser can create a WebGL context. Cached after the first probe.
+ * Used to gate the 3D bud renderer so no-WebGL devices fall back to the 2D
+ * Canvas renderer instead of crashing. SSR-safe (returns false on the server).
+ */
+let _webgl: boolean | null = null;
+export function hasWebGL(): boolean {
+  if (_webgl !== null) return _webgl;
+  if (typeof window === "undefined" || typeof document === "undefined") return false;
+  try {
+    const canvas = document.createElement("canvas");
+    _webgl = !!(
+      window.WebGLRenderingContext &&
+      (canvas.getContext("webgl") || canvas.getContext("experimental-webgl"))
+    );
+  } catch {
+    _webgl = false;
+  }
+  return _webgl;
 }
 
 /**
