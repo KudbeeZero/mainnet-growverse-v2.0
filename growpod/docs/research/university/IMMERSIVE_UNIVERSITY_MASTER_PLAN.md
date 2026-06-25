@@ -308,3 +308,19 @@ to `claude/immersive-university-research`. ✅ **Complete.**
   defaults ON with a `hasWebGL()` guard (2D `GrowChamber` fallback on no-WebGL devices). Maturity-
   driven (finished flower = frosted; seedling not), deterministic per strain. *Not* done: a photoreal
   WHOLE-PLANT render (stem+leaves+branch buds) — a separate owner-gated track if wanted.
+- 2026-06-25 — **Phase 6b ✅ done & MERGED** (PR #86). The data-driven **skills graph**:
+  `data/skills.yaml` (16 skills across 6 domains, a prerequisite DAG rooted at `plant-biology`) +
+  `course_skills` mapping all 15 courses 1:1; `services/skills.py` cached loader
+  (`skills_for_course` / `course_for_skill` / `all_skill_ids`); `LearnerModelService.recompute_mastery`
+  now keys `mastery_by_skill` by real `skill_id`. `tests/test_skills_graph.py` enforces referential
+  integrity + a 3-colour DFS no-prerequisite-cycle check. NON-economic; no migration.
+- 2026-06-25 — **Phase 6c ✅ done & gate-verified** (Admissions agent). The **Admissions
+  agent**: `AdmissionsProvider` ABC + `AdmissionsRecommendation` schema (`ai/provider.py`) +
+  deterministic `MockAdmissions` (`ai/admissions_mock.py`, a fixed 5-question `INTAKE_QUIZ` →
+  {department, real-course `track`, level}); `factory.get/shared/reset_admissions` (mock unless key,
+  none in CI); `AdmissionsService.run_intake` writes the recommendation through
+  `LearnerModelService.apply` ONLY (`agent="admissions"`, `kind="profile_update"` — audited, never
+  mutates `LearnerProfile` directly). Flagged routes `POST /players/<id>/university/admissions` +
+  `GET /university/admissions/quiz`. `tests/test_admissions.py` (18): determinism, real-key validity,
+  audited write, ledger-free, no-economy-import, route gating. NON-economic; no migration. Independently
+  verified: 62 targeted tests + full suite green, `make check-memory` OK. **Next: 6d Roadmap → 6e web.**
