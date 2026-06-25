@@ -49,6 +49,34 @@ function widthCurve(t: number): number {
   return Math.sin(Math.PI * (0.12 + 0.82 * t));
 }
 
+export interface ColaSilhouette {
+  /** Lathe profile points [radius, y] in UNIT space (y 0..1, closed at both ends). */
+  profile: [number, number][];
+  /** Max half-width (== the cola's outer radius). */
+  Rmax: number;
+  /** Unit cola height (== 1). */
+  H: number;
+}
+
+/**
+ * The cola's outer silhouette as a lathe profile — the SAME width curve the
+ * calyxes are placed against, so a solid "bud body" mesh built from this fills
+ * the space between calyxes (no see-through gaps) and reads as one fused cola
+ * instead of a loose cluster of balls. Pure; deterministic from genetics only.
+ */
+export function colaSilhouette(dna: BudDNA, samples = 16): ColaSilhouette {
+  const H = 1.0;
+  const aspect = Math.min(0.42, dna.maxBudWidth / Math.max(1, dna.budHeight));
+  const Rmax = H * aspect;
+  const profile: [number, number][] = [[0.0001, 0]];
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    profile.push([Math.max(0.0001, Rmax * widthCurve(t)), t * H]);
+  }
+  profile.push([0.0001, H]);
+  return { profile, Rmax, H };
+}
+
 export interface BuildColaOpts {
   /** 0..1 development: gates how many calyxes have formed AND how swollen they are. */
   budDev: number;
@@ -83,7 +111,7 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
     const t = rings > 1 ? i / (rings - 1) : 0;
     const wc = widthCurve(t);
     const ringR = Rmax * wc;
-    const perRing = Math.max(1, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * wc) * 1.35));
+    const perRing = Math.max(1, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * wc) * 1.6));
     for (let j = 0; j < perRing && out.length < cap; j++) {
       spiral += GOLDEN_ANGLE;
       // Hug the axis so calyxes overlap into a solid cola (tighter than a cluster).

@@ -63,6 +63,17 @@ describe("buildPistils", () => {
       expect(m).toBeCloseTo(1, 5);
     }
   });
+  it("each hair carries a roll in [0, 2π) so a bundle fans every way", () => {
+    const ps = buildPistils(COLA, { seed: 2, chance: 1, ripe: 0.3, brown: 0 });
+    expect(ps.length).toBeGreaterThan(0);
+    for (const p of ps.slice(0, 20)) {
+      expect(p.roll).toBeGreaterThanOrEqual(0);
+      expect(p.roll).toBeLessThan(Math.PI * 2);
+    }
+    // not all identical (the rolls actually vary)
+    const rolls = new Set(ps.map((p) => p.roll.toFixed(4)));
+    expect(rolls.size).toBeGreaterThan(1);
+  });
 });
 
 describe("buildSugarLeaves", () => {

@@ -92,6 +92,8 @@ export interface PistilInstance {
   dir: [number, number, number];
   /** Strand length in unit space. */
   len: number;
+  /** Roll about `dir` (radians) so each wispy hair curls a different way. */
+  roll: number;
   /** RGB 0..1 (white → amber → brown by ripeness/browning). */
   color: [number, number, number];
 }
@@ -130,28 +132,31 @@ export function pistilColor(ripe: number, brown: number, magenta = 0): [number, 
  */
 export function buildPistils(cola: ColaInstance[], opts: PistilOpts): PistilInstance[] {
   const rnd = mulberry32(((opts.seed >>> 0) ^ 0x85ebca6b) || 11);
-  const budget = opts.isMobile ? 70 : 150;
+  const budget = opts.isMobile ? 90 : 190;
   const chance = clamp01(opts.chance);
   const color = pistilColor(opts.ripe, opts.brown, opts.magenta ?? 0);
   const out: PistilInstance[] = [];
 
   for (const c of cola) {
     if (rnd() > chance) continue;
-    const bundle = 3 + Math.floor(rnd() * 3); // 3..5 strands
+    const bundle = 3 + Math.floor(rnd() * 4); // 3..6 strands per calyx
     // Outward (radial) direction from the central stem axis.
     const radial = Math.hypot(c.pos[0], c.pos[2]) || 1e-3;
     const ox = c.pos[0] / radial;
     const oz = c.pos[2] / radial;
     for (let k = 0; k < bundle && out.length < budget; k++) {
-      const spread = 0.5;
+      // Wider splay than before — real pistils fan out in every direction.
+      const spread = 0.8;
       const dx = ox + (rnd() - 0.5) * spread;
       const dz = oz + (rnd() - 0.5) * spread;
-      const dy = 0.5 + 0.5 * rnd() - opts.brown * 0.6; // curl down as it browns
+      const dy = 0.45 + 0.6 * rnd() - opts.brown * 0.7; // curl down as it browns
       const m = Math.hypot(dx, dy, dz) || 1;
       out.push({
         pos: [c.pos[0] + ox * c.scale[0] * 0.4, c.pos[1] + c.scale[1] * 0.3, c.pos[2] + oz * c.scale[2] * 0.4],
         dir: [dx / m, dy / m, dz / m],
-        len: (0.05 + 0.06 * rnd()) * (1 + opts.ripe * 0.3),
+        // Longer, finer hairs that read as wispy threads, not stubble.
+        len: (0.09 + 0.11 * rnd()) * (1 + opts.ripe * 0.35),
+        roll: rnd() * Math.PI * 2,
         color,
       });
     }
@@ -192,40 +197,43 @@ export interface SugarLeafOpts {
  */
 export function buildSugarLeaves(cola: ColaInstance[], opts: SugarLeafOpts): SugarLeafInstance[] {
   const rnd = mulberry32(((opts.seed >>> 0) ^ 0x27d4eb2f) || 13);
-  const budget = opts.isMobile ? 45 : 100;
+  const budget = opts.isMobile ? 45 : 140;
   const amount = clamp01(opts.amount);
   const frost = clamp01(opts.frost);
   const out: SugarLeafInstance[] = [];
   if (amount <= 0) return out;
 
   for (const c of cola) {
-    // Sugar leaves favour the lower/mid cola — weight the spawn by (1 - height).
+    // Sugar leaves favour the lower/mid cola — weight the spawn by (1 - height),
+    // but keep a strong floor so the bud always reads leafy (real plant matter).
     const h = clamp01(c.pos[1]); // 0 base .. ~1 apex
-    if (rnd() > amount * (0.45 + 0.55 * (1 - h))) continue;
+    if (rnd() > amount * (0.62 + 0.45 * (1 - h))) continue;
     if (out.length >= budget) break;
 
     const radial = Math.hypot(c.pos[0], c.pos[2]) || 1e-3;
     const ox = c.pos[0] / radial;
     const oz = c.pos[2] / radial;
     const dx = ox;
-    const dy = 0.3 + 0.45 * rnd(); // outward, tilted up
+    const dy = 0.28 + 0.42 * rnd(); // outward, tilted up
     const dz = oz;
     const m = Math.hypot(dx, dy, dz) || 1;
 
-    // Frosted green: a mid green lifted toward white-green as frost climbs.
-    const base = 0.34 + 0.12 * rnd();
-    const r = lerp(base * 0.55, 0.82, frost * 0.85);
-    const g = lerp(base, 0.92, frost * 0.7);
-    const b = lerp(base * 0.5, 0.8, frost * 0.85);
+    // Frosted green that stays GREEN: a mid leaf-green only modestly lifted toward
+    // white-green by frost, so the leaves read as plant matter, not white paddles.
+    const base = 0.36 + 0.14 * rnd();
+    const r = lerp(base * 0.5, 0.7, frost * 0.6);
+    const g = lerp(base * 1.05, 0.86, frost * 0.55);
+    const b = lerp(base * 0.42, 0.66, frost * 0.6);
 
     out.push({
       pos: [
-        c.pos[0] + ox * c.scale[0] * 0.5,
+        c.pos[0] + ox * c.scale[0] * 0.45,
         c.pos[1] + c.scale[1] * 0.1,
-        c.pos[2] + oz * c.scale[2] * 0.5,
+        c.pos[2] + oz * c.scale[2] * 0.45,
       ],
       dir: [dx / m, dy / m, dz / m],
-      scale: (0.12 + 0.12 * rnd()) * (c.scale[0] + c.scale[1]),
+      // Bigger blades so they give the bud visible mass / silhouette.
+      scale: (0.18 + 0.16 * rnd()) * (c.scale[0] + c.scale[1]),
       roll: rnd() * Math.PI * 2,
       color: [Math.min(1, r), Math.min(1, g), Math.min(1, b)],
     });

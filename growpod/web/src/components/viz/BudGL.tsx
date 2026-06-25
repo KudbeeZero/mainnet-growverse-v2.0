@@ -10,9 +10,9 @@
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { buildCola } from "@/lib/chamber/bud3d/cola";
+import { buildCola, colaSilhouette, hslToRgb } from "@/lib/chamber/bud3d/cola";
 import { buildFrost, buildPistils, buildSugarLeaves, type FrostMat } from "@/lib/chamber/bud3d/detail";
-import type { BudDNA } from "@/lib/chamber/budDna";
+import { pickPaletteColor, type BudDNA } from "@/lib/chamber/budDna";
 
 const Y_CENTER = -0.5; // cola spans y≈0..1 in unit space; centre it on the origin
 const UP = new THREE.Vector3(0, 1, 0);
@@ -27,6 +27,52 @@ function frostColor(mat: FrostMat, purple: number): THREE.Color {
   const t = Math.min(1, Math.max(0, purple)) * 0.35;
   r = r + (198 - r) * t; g = g + (178 - g) * t; b = b + (232 - b) * t;
   return new THREE.Color(r / 255, g / 255, b / 255);
+}
+
+/** The solid "bud body" — a lathed teardrop following the cola silhouette, sitting
+ * just inside the calyx shell so it fills the gaps BETWEEN calyxes. Without it the
+ * bud reads as a loose cluster of floating balls (you see the background through the
+ * seams); with it the calyxes look fused into one cohesive cola that "grows together"
+ * (owner's reference note). Vertex-coloured with a vertical GRADIENT — deeper strain
+ * colour at the base lifting to a frosty light-green crown — for depth/mass. One mesh. */
+function BudCore({ dna, trich, purple, spin }: { dna: BudDNA; trich: number; purple: number; spin: boolean }) {
+  const ref = useRef<THREE.Mesh>(null);
+  const geom = useMemo(() => {
+    const { profile, H } = colaSilhouette(dna);
+    // Pull the body in just inside the calyx centres so calyxes sit proud of it.
+    const pts = profile.map(([r, y]) => new THREE.Vector2(r * 0.82, y));
+    const geo = new THREE.LatheGeometry(pts, 24);
+
+    // Base strain colour (a representative palette pick), darkened for depth.
+    const [br, bg, bb] = hslToRgb(pickPaletteColor(dna.palette, 0.5));
+    let baseR = br * 0.62, baseG = bg * 0.66, baseB = bb * 0.6;
+    const pp = Math.min(1, Math.max(0, purple)) * 0.5;
+    if (pp > 0) { baseR = baseR + (0.34 - baseR) * pp; baseG = baseG + (0.16 - baseG) * pp; baseB = baseB + (0.4 - baseB) * pp; }
+    // Frosty crown colour the body lifts toward at the top.
+    const fr = 0.74, fg = 0.84, fb = 0.72;
+    const lift = 0.45 + 0.45 * Math.min(1, Math.max(0, trich));
+
+    const pos = geo.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+    const v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i);
+      const t = Math.min(1, Math.max(0, v.y / H)); // 0 base → 1 crown
+      const k = t * t * lift; // ease-in toward the frosty crown
+      colors[i * 3] = baseR + (fr - baseR) * k;
+      colors[i * 3 + 1] = baseG + (fg - baseG) * k;
+      colors[i * 3 + 2] = baseB + (fb - baseB) * k;
+    }
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geo.computeVertexNormals();
+    return geo;
+  }, [dna, trich, purple]);
+  const mat = useMemo(
+    () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0.0 }),
+    [],
+  );
+  useFrame((_, dt) => { if (spin && ref.current) ref.current.rotation.y += dt * 0.32; });
+  return <mesh ref={ref} geometry={geom} material={mat} position={[0, Y_CENTER, 0]} />;
 }
 
 /** A RIBBED teardrop calyx: bulbous swollen base → pointed tip (lathed), then
@@ -118,17 +164,51 @@ function Frost({
   return instances.length ? <instancedMesh key={`f${instances.length}`} ref={ref} args={[geom, mat, instances.length]} /> : null;
 }
 
+/** A single pistil "hair": a very thin, TAPERED, gently CURLING strand along +Y,
+ * base at the origin, ~1 unit long. The reference cola's hairs are fine wispy
+ * threads (not the old fat stubble), so this is a tube that arcs out then hooks and
+ * tapers to a fine point. Per-instance `roll` spins the curl so a bundle fans every
+ * which way. Built once; instanced. */
+function usePistilGeometry() {
+  return useMemo(() => {
+    const N = 10;
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      // lean outward (+x) low, then hook back as it rises — a soft S-curl.
+      const bend = 0.14 * Math.sin(t * Math.PI * 0.85) + 0.05 * t * t;
+      pts.push(new THREE.Vector3(bend, t, 0));
+    }
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const tubular = 16, radial = 4;
+    const geo = new THREE.TubeGeometry(curve, tubular, 0.12, radial, false);
+    // Taper the constant-radius tube to a fine point: scale each ring's offset from
+    // its centreline by (1 - t), so the tip closes to a hair.
+    const pos = geo.attributes.position;
+    const c = new THREE.Vector3();
+    const v = new THREE.Vector3();
+    for (let i = 0; i <= tubular; i++) {
+      const t = i / tubular;
+      curve.getPointAt(t, c);
+      const taper = Math.max(0.04, 1 - 0.95 * t);
+      for (let j = 0; j <= radial; j++) {
+        const idx = i * (radial + 1) + j;
+        v.fromBufferAttribute(pos, idx);
+        v.sub(c).multiplyScalar(taper).add(c);
+        pos.setXYZ(idx, v.x, v.y, v.z);
+      }
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }, []);
+}
+
 function Pistils({
   instances, spin,
 }: { instances: ReturnType<typeof buildPistils>; spin: boolean }) {
   const ref = useRef<THREE.InstancedMesh>(null);
-  // Thin tapered strand along +Y, base at the origin (translate so it grows out).
-  const geom = useMemo(() => {
-    const g = new THREE.CylinderGeometry(0.18, 0.5, 1, 5, 1, true);
-    g.translate(0, 0.5, 0);
-    return g;
-  }, []);
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0.0 }), []);
+  const geom = usePistilGeometry();
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.62, metalness: 0.0 }), []);
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
@@ -141,7 +221,8 @@ function Pistils({
       dir.set(p.dir[0], p.dir[1], p.dir[2]).normalize();
       q.setFromUnitVectors(UP, dir);
       d.quaternion.copy(q);
-      d.scale.set(0.02, p.len, 0.02);
+      d.rotateY(p.roll); // spin the curl about its own growth axis
+      d.scale.setScalar(p.len); // uniform: keeps the thread fine + curl undistorted
       d.updateMatrix();
       mesh.setMatrixAt(i, d.matrix);
       mesh.setColorAt(i, col.setRGB(p.color[0], p.color[1], p.color[2]));
@@ -218,7 +299,7 @@ function SugarLeaves({
 }
 
 export function BudGL({
-  dna, seed, budDev, ripe = 0, brown = 0, trich = 0, purple = 0, leaf = 0.6, reducedMotion = false,
+  dna, seed, budDev, ripe = 0, brown = 0, trich = 0, purple = 0, leaf = 0.8, reducedMotion = false,
 }: {
   dna: BudDNA;
   seed: number;
@@ -263,6 +344,7 @@ export function BudGL({
         <ambientLight intensity={0.55} />
         <directionalLight position={[2, 4, 3]} intensity={1.4} color="#fff6e8" />
         <pointLight position={[-2, 1, 2]} intensity={18} distance={9} color="#6cf0ff" />
+        <BudCore dna={dna} trich={trich} purple={purple} spin={spin} />
         <Calyxes cola={cola} spin={spin} />
         <SugarLeaves instances={sugarLeaves} spin={spin} />
         <Pistils instances={pistils} spin={spin} />
