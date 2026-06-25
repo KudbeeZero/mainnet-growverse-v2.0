@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -25,10 +26,17 @@ import { queryKeys } from "@/lib/queryKeys";
 import { num, titleCase, dateTime } from "@/lib/format";
 import { formatScalar, humanizeKnowledgeKey, humanizeList } from "@/lib/knowledgeFormat";
 import type { Strain } from "@/lib/types";
-import { GrowChamber } from "@/components/viz/GrowChamber";
-import { morphologyFor, devParams, seedForPlant } from "@/lib/chamber/morphology";
-import { budColorForStrain, silhouetteFor } from "@/lib/chamber/strainVisuals";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { morphologyFor, seedForPlant } from "@/lib/chamber/morphology";
+import { budColorForStrain } from "@/lib/chamber/strainVisuals";
 import { budDnaFor } from "@/lib/chamber/budDna";
+
+// The catalog hero bud is the 3D frost+pistil render (BudGL pipeline), loaded
+// client-side only (three.js touches window).
+const StrainBud3D = dynamic(
+  () => import("@/components/viz/StrainBud3D").then((m) => m.StrainBud3D),
+  { ssr: false, loading: () => <LoadingBlock label="Frosting the bud…" /> },
+);
 
 function StrainInner({ strainId }: { strainId: string }) {
   const { playerId } = useSession();
@@ -112,25 +120,13 @@ function StrainInner({ strainId }: { strainId: string }) {
 }
 
 function StrainHero({ strain }: { strain: Strain }) {
+  const reducedMotion = usePrefersReducedMotion();
   const morphology = morphologyFor(strain.indica_ratio);
-  const silhouette = silhouetteFor(strain.slug ?? strain.name, strain.indica_ratio);
   const budColor = budColorForStrain(strain.slug ?? strain.name, morphology.hue, seedForPlant(strain.id));
   const budDna = budDnaFor(strain.slug ?? strain.name, budColor, strain.bud_dna);
   return (
-    <div className="h-[420px] w-full overflow-hidden rounded-xl border border-ink-700 bg-[#050b12]">
-      <GrowChamber
-        seed={seedForPlant(strain.slug ?? strain.id)}
-        day={62}
-        stage="flowering"
-        morphology={morphology}
-        silhouette={silhouette}
-        dev={devParams(62)}
-        budColor={budColor}
-        budDna={budDna}
-        climate={{ fan: 45, temp: 24, hum: 50, co2: 900 }}
-        conditionFlags={[]}
-        view="macro"
-      />
+    <div className="relative h-[420px] w-full overflow-hidden rounded-xl border border-ink-700 bg-[#050b12]">
+      <StrainBud3D dna={budDna} seed={seedForPlant(strain.slug ?? strain.id)} reducedMotion={reducedMotion} />
     </div>
   );
 }
