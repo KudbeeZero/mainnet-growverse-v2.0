@@ -59,7 +59,8 @@ export function buildFrost(cola: ColaInstance[], opts: FrostOpts): FrostInstance
     // Frost concentrates up the cola (tips/edges) like a real plant — weight the
     // gland count by the calyx's height in the cola (y≈0 base .. 1 apex).
     const heightFrac = clamp01(c.pos[1]);
-    const per = Math.round((2 + 7 * density) * (0.5 + 0.9 * heightFrac));
+    // Many glands per calyx so a frosty bud reads caked in resin, not lightly dusted.
+    const per = Math.round((4 + 12 * density) * (0.55 + 0.85 * heightFrac));
     for (let k = 0; k < per && out.length < budget; k++) {
       // A point on the calyx ellipsoid surface (uniform-ish direction).
       const u = rnd() * Math.PI * 2;
@@ -68,14 +69,15 @@ export function buildFrost(cola: ColaInstance[], opts: FrostOpts): FrostInstance
       const ny = Math.cos(v);
       const nz = Math.sin(v) * Math.sin(u);
       const pos: [number, number, number] = [
-        c.pos[0] + nx * c.scale[0] * 0.56,
-        c.pos[1] + ny * c.scale[1] * 0.56,
-        c.pos[2] + nz * c.scale[2] * 0.56,
+        c.pos[0] + nx * c.scale[0] * 0.58,
+        c.pos[1] + ny * c.scale[1] * 0.58,
+        c.pos[2] + nz * c.scale[2] * 0.58,
       ];
       const m = maturityFor(rnd(), mix);
       out.push({
+        // Bigger gland heads so the frost actually reads at phone-screen scale.
+        r: (0.007 + 0.011 * rnd()) * (0.8 + 0.45 * density),
         pos,
-        r: (0.0035 + 0.0055 * rnd()) * (0.7 + 0.6 * density),
         mat: m === "clear" ? 0 : m === "cloudy" ? 1 : 2,
       });
     }

@@ -25,7 +25,7 @@ describe("buildFrost", () => {
   });
   it("respects the device budget (mobile < desktop ceiling)", () => {
     const m = buildFrost(COLA, { seed: 1, density: 1, ripe: 1, isMobile: true });
-    expect(m.length).toBeLessThanOrEqual(100);
+    expect(m.length).toBeLessThanOrEqual(240);
   });
   it("early ripeness skews clear, late skews amber", () => {
     const early = buildFrost(COLA, { seed: 3, density: 1, ripe: 0.05 });

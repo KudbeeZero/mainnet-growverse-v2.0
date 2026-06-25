@@ -35,22 +35,25 @@ function frostColor(mat: FrostMat, purple: number): THREE.Color {
  * seams); with it the calyxes look fused into one cohesive cola that "grows together"
  * (owner's reference note). Vertex-coloured with a vertical GRADIENT — deeper strain
  * colour at the base lifting to a frosty light-green crown — for depth/mass. One mesh. */
-function BudCore({ dna, trich, purple, spin }: { dna: BudDNA; trich: number; purple: number; spin: boolean }) {
+function BudCore({ dna, budDev, trich, purple, spin }: { dna: BudDNA; budDev: number; trich: number; purple: number; spin: boolean }) {
   const ref = useRef<THREE.Mesh>(null);
   const geom = useMemo(() => {
     const { profile, H } = colaSilhouette(dna);
-    // Pull the body in just inside the calyx centres so calyxes sit proud of it.
-    const pts = profile.map(([r, y]) => new THREE.Vector2(r * 0.82, y));
+    // Pull the body WELL inside the calyx centres — it's only a gap-filling backstop
+    // so the dense calyxes around it read as a fused mass; it must never become the
+    // visible surface (that made the bud look like a smooth egg with studs).
+    const pts = profile.map(([r, y]) => new THREE.Vector2(r * 0.66, y));
     const geo = new THREE.LatheGeometry(pts, 24);
 
-    // Base strain colour (a representative palette pick), darkened for depth.
+    // Deep, shadowed understructure colour (the calyxes + frost are the bright
+    // surface; the core sits behind them in shadow). Heavily darkened strain green.
     const [br, bg, bb] = hslToRgb(pickPaletteColor(dna.palette, 0.5));
-    let baseR = br * 0.62, baseG = bg * 0.66, baseB = bb * 0.6;
+    let baseR = br * 0.4, baseG = bg * 0.46, baseB = bb * 0.4;
     const pp = Math.min(1, Math.max(0, purple)) * 0.5;
-    if (pp > 0) { baseR = baseR + (0.34 - baseR) * pp; baseG = baseG + (0.16 - baseG) * pp; baseB = baseB + (0.4 - baseB) * pp; }
-    // Frosty crown colour the body lifts toward at the top.
-    const fr = 0.74, fg = 0.84, fb = 0.72;
-    const lift = 0.45 + 0.45 * Math.min(1, Math.max(0, trich));
+    if (pp > 0) { baseR = baseR + (0.22 - baseR) * pp; baseG = baseG + (0.1 - baseG) * pp; baseB = baseB + (0.28 - baseB) * pp; }
+    // A gentle lift toward a muted green crown — subtle, NOT a bright frosty egg.
+    const fr = 0.42, fg = 0.52, fb = 0.4;
+    const lift = 0.3 + 0.3 * Math.min(1, Math.max(0, trich));
 
     const pos = geo.attributes.position;
     const colors = new Float32Array(pos.count * 3);
@@ -58,7 +61,7 @@ function BudCore({ dna, trich, purple, spin }: { dna: BudDNA; trich: number; pur
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i);
       const t = Math.min(1, Math.max(0, v.y / H)); // 0 base → 1 crown
-      const k = t * t * lift; // ease-in toward the frosty crown
+      const k = t * t * lift; // ease-in toward the muted crown
       colors[i * 3] = baseR + (fr - baseR) * k;
       colors[i * 3 + 1] = baseG + (fg - baseG) * k;
       colors[i * 3 + 2] = baseB + (fb - baseB) * k;
@@ -68,11 +71,14 @@ function BudCore({ dna, trich, purple, spin }: { dna: BudDNA; trich: number; pur
     return geo;
   }, [dna, trich, purple]);
   const mat = useMemo(
-    () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0.0 }),
+    () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.0 }),
     [],
   );
+  // Scale the body with development so an unformed seed doesn't show a full bud:
+  // tiny early, swelling to full as it accretes — matching the calyx accretion.
+  const devScale = 0.18 + 0.82 * Math.min(1, Math.max(0, budDev));
   useFrame((_, dt) => { if (spin && ref.current) ref.current.rotation.y += dt * 0.32; });
-  return <mesh ref={ref} geometry={geom} material={mat} position={[0, Y_CENTER, 0]} />;
+  return <mesh ref={ref} geometry={geom} material={mat} position={[0, Y_CENTER, 0]} scale={devScale} />;
 }
 
 /** A RIBBED teardrop calyx: bulbous swollen base → pointed tip (lathed), then
@@ -344,7 +350,7 @@ export function BudGL({
         <ambientLight intensity={0.55} />
         <directionalLight position={[2, 4, 3]} intensity={1.4} color="#fff6e8" />
         <pointLight position={[-2, 1, 2]} intensity={18} distance={9} color="#6cf0ff" />
-        <BudCore dna={dna} trich={trich} purple={purple} spin={spin} />
+        <BudCore dna={dna} budDev={budDev} trich={trich} purple={purple} spin={spin} />
         <Calyxes cola={cola} spin={spin} />
         <SugarLeaves instances={sugarLeaves} spin={spin} />
         <Pistils instances={pistils} spin={spin} />
