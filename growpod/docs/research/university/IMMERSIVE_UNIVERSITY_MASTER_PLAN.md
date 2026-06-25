@@ -334,4 +334,16 @@ to `claude/immersive-university-research`. ✅ **Complete.**
   (mock unless key, none in CI). Flagged route `GET /players/<id>/university/roadmap?horizon=7|14`.
   `tests/test_roadmap.py` (19): prereqs-NEVER-violated (validated against skills.yaml), mastered-skills-skipped,
   full-graph-coverage, deterministic, route gating. NON-economic; no migration; no DB writes. Independently
-  verified: 68 targeted tests + full suite green, `make check-memory` OK. **Next: 6e web learner dashboard.**
+  verified: 68 targeted tests + full suite green, `make check-memory` OK.
+- 2026-06-25 — **Phase 6e ✅ done & gate-verified — PHASE 6 CORE COMPLETE** (web Learner Dashboard).
+  The player-facing **"My Path"** route `/university/learner` (`app/university/learner/page.tsx`, behind
+  `RequireAuth` + the `university` flag, graceful 404/flag-off `EmptyState`) surfaces the whole Agent
+  Campus: `RiskNudge` (risk_level + streak), `AdmissionsIntake` (quiz → recommendation, refetches the
+  path), `RoadmapPanel` (next lesson + per-day 7/14-day steps + skipped-mastered), `MasteryPanel`
+  (mastery-by-skill bars grouped by domain). New typed fetchers in `lib/api/university.ts`
+  (`learner`/`roadmap`/`admissionsQuiz`/`submitAdmissions`) + types + query keys; pure tested helpers in
+  `lib/university/learnerPath.ts` (`nextLesson`/`groupStepsByDay`/`masteryPercent`/`groupMasteryByDomain`/
+  `riskNudge`, 12 vitest). NON-economic; reuses the `useSession` player hook + `apiFetch` + PageHeader/
+  RequireAuth. Independently verified: web typecheck + lint + build + 385 vitest green. **Phase 6 (Agent
+  Campus: 6a Learner Model → 6b skills graph → 6c Admissions → 6d Roadmap → 6e dashboard) is COMPLETE.**
+  Deferred (optional, owner-gated): Career / Office-Hours / Analytics agents.

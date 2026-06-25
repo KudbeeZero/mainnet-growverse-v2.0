@@ -11,6 +11,10 @@ import type {
   Exam,
   ExamSubmission,
   ExamResponse,
+  LearnerProfile,
+  RoadmapPlan,
+  AdmissionsQuiz,
+  AdmissionsResult,
 } from "@/lib/types";
 
 export const university = {
@@ -82,4 +86,32 @@ export const university = {
       `/players/${playerId}/courses/${courseKey}/exams/${examId}/submit`,
       { method: "POST", body: { responses } },
     ),
+
+  // ---- Agent Campus (Phase 6): learner model, roadmap, admissions intake ----
+
+  // The centralized NON-economic learner read model (mastery / prefs / risk +
+  // engagement slice). Player-scoped, authed.
+  learner: (playerId: string) =>
+    apiFetch<LearnerProfile>(`/players/${playerId}/university/learner`, {
+      auth: true,
+    }),
+
+  // The ordered, prerequisite-respecting study path. horizon is 7 or 14 days.
+  roadmap: (playerId: string, horizon: 7 | 14 = 7) =>
+    apiFetch<RoadmapPlan>(`/players/${playerId}/university/roadmap`, {
+      auth: true,
+      query: { horizon },
+    }),
+
+  // The Admissions intake quiz definition (public read, like the catalog).
+  admissionsQuiz: () =>
+    apiFetch<AdmissionsQuiz>(`/university/admissions/quiz`),
+
+  // Run the intake quiz: seeds the learner model and returns the recommendation
+  // + the merged profile. Body is {answers: {question_id: choice_id}}.
+  submitAdmissions: (playerId: string, answers: Record<string, string>) =>
+    apiFetch<AdmissionsResult>(`/players/${playerId}/university/admissions`, {
+      method: "POST",
+      body: { answers },
+    }),
 };
