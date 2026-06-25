@@ -44,6 +44,9 @@ class Settings:
         self.curriculum_file: str = os.environ.get(
             "CURRICULUM_FILE", os.path.join(DATA_DIR, "curriculum.yaml")
         )
+        self.skills_file: str = os.environ.get(
+            "SKILLS_FILE", os.path.join(DATA_DIR, "skills.yaml")
+        )
         self.terpene_effects_file: str = os.environ.get(
             "TERPENE_EFFECTS_FILE", os.path.join(DATA_DIR, "terpene_effects.yaml")
         )

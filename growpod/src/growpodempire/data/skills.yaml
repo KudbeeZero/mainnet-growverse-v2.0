@@ -1,0 +1,186 @@
+# GrowPod University — SKILLS GRAPH (Phase 6b).
+#
+# A data-driven competency model that sits UNDER the curriculum. Where
+# `curriculum.yaml` is the catalog of COURSES a player enrolls in, this file is
+# the catalog of SKILLS those courses teach — the real, transferable competencies
+# the learner model tracks mastery against.
+#
+# Two top-level maps:
+#   * `skills:` — every skill_id -> { name, domain, description, prerequisites,
+#     mastery_scale, assessment_methods, career_links }. `prerequisites` are
+#     other skill_ids; the prerequisite edges form a DAG (no cycles — an intro
+#     skill is a prereq of the advanced skill that builds on it).
+#   * `course_skills:` — every curriculum course_key -> the list of skill_ids it
+#     teaches. EVERY course in curriculum.yaml appears here (1:1 coverage), and
+#     every skill_id referenced anywhere is defined in `skills`.
+#
+# `domain` aligns with the curriculum departments: cultivation / genetics /
+# nutrients / ipm / chemistry / postharvest. `career_links` are short role
+# strings the skill maps onto: cultivator / budtender / breeder / extraction-tech
+# / compliance / operator.
+#
+# NON-ECONOMIC: this is learning state only. Nothing here touches the GROW
+# ledger, a wallet, balance.yaml, or economy/.
+
+skills:
+  # ----- foundations (cross-cutting, no prerequisites) ----------------------
+  plant-biology:
+    name: "Plant Biology Foundations"
+    domain: cultivation
+    description: "Cell-to-canopy plant function: tissue systems, the apical meristem, photosynthesis and the light-saturation point, transpiration, and reading environmental stress on the plant."
+    prerequisites: []
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [quiz, mastery_exam]
+    career_links: [cultivator, operator]
+
+  # ----- cultivation --------------------------------------------------------
+  cultivation-fundamentals:
+    name: "Cultivation Fundamentals"
+    domain: cultivation
+    description: "The seed-to-harvest cycle, growth stages, and the abiotic/biotic factors that drive growth and cannabinoid production."
+    prerequisites: [plant-biology]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [quiz, practical]
+    career_links: [cultivator, operator]
+
+  environmental-control:
+    name: "Environmental Control (VPD & DLI)"
+    domain: cultivation
+    description: "Steering the canopy with vapor-pressure deficit and daily light integral: targeting VPD by stage and using DLI/PPFD to drive yield without light stress."
+    prerequisites: [cultivation-fundamentals]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [quiz, practical]
+    career_links: [cultivator, operator]
+
+  canopy-management:
+    name: "Advanced Canopy & Yield Management"
+    domain: cultivation
+    description: "Training, light penetration, and ripening: planning a canopy for even light and airflow and timing the harvest window for peak quality."
+    prerequisites: [environmental-control]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [practical, project]
+    career_links: [cultivator, operator]
+
+  # ----- genetics -----------------------------------------------------------
+  inheritance-genetics:
+    name: "Inheritance & Plant Genetics"
+    domain: genetics
+    description: "Single-gene vs. polygenic traits, Mendelian inheritance, and genotype-vs-phenotype under genotype-by-environment (G×E) effects."
+    prerequisites: [plant-biology]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [quiz, practical]
+    career_links: [breeder, cultivator]
+
+  breeding-selection:
+    name: "Breeding & Selection"
+    domain: genetics
+    description: "Mass and recurrent selection and hybridization: defining a breeding objective and evaluating offspring against a target trait."
+    prerequisites: [inheritance-genetics]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [practical, project]
+    career_links: [breeder]
+
+  line-stabilization:
+    name: "Stabilization & Pheno-Hunting"
+    domain: genetics
+    description: "Fixing a line through inbreeding/selfing, pheno-hunting, and building true-breeding cultivars across generations."
+    prerequisites: [breeding-selection]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [practical, project]
+    career_links: [breeder]
+
+  # ----- nutrients ----------------------------------------------------------
+  soil-nutrient-science:
+    name: "Soil & Nutrient Science"
+    domain: nutrients
+    description: "The soil food web, macro/micronutrients, and root-zone pH: diagnosing deficiencies by leaf signs and avoiding burn or lockout."
+    prerequisites: [plant-biology]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [quiz, practical]
+    career_links: [cultivator, operator]
+
+  hydroponic-management:
+    name: "Hydroponics & EC/pH Management"
+    domain: nutrients
+    description: "Soilless systems and nutrient-solution formulation: EC as the strength dial and pH as the availability gate, avoiding lockout and salt buildup."
+    prerequisites: [soil-nutrient-science]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [practical, project]
+    career_links: [cultivator, operator]
+
+  # ----- ipm ----------------------------------------------------------------
+  pest-disease-id:
+    name: "Pest & Disease Identification"
+    domain: ipm
+    description: "Scouting and ID of common cannabis pests and pathogens (mites, aphids, thrips, powdery mildew, botrytis) and setting up a monitoring log."
+    prerequisites: [plant-biology]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [quiz, practical]
+    career_links: [cultivator, compliance, operator]
+
+  ipm-systems:
+    name: "Integrated Pest Management Systems"
+    domain: ipm
+    description: "A systems approach: prevention first, action thresholds, and biological/cultural/physical/chemical controls applied in priority order."
+    prerequisites: [pest-disease-id]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [practical, project]
+    career_links: [cultivator, compliance, operator]
+
+  # ----- chemistry ----------------------------------------------------------
+  cannabis-phytochemistry:
+    name: "Cannabinoid & Terpene Phytochemistry"
+    domain: chemistry
+    description: "Cannabinoid and terpene biosynthesis and the three terpene chemotype clusters: why chemotype matters more than strain name."
+    prerequisites: [plant-biology]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [quiz, practical]
+    career_links: [breeder, budtender, extraction-tech]
+
+  analytical-chemistry:
+    name: "Chemotypes & GC/LC Analytics"
+    domain: chemistry
+    description: "Gas and liquid chromatography, calibration, and reading a certificate of analysis — including potency-label inflation and lab variance."
+    prerequisites: [cannabis-phytochemistry]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [practical, project]
+    career_links: [extraction-tech, compliance]
+
+  # ----- postharvest --------------------------------------------------------
+  drying-curing:
+    name: "Harvest, Drying & Curing"
+    domain: postharvest
+    description: "Harvest timing, a controlled dry, and the cure that stabilizes cannabinoids and develops aroma — avoiding over-drying and bud rot."
+    prerequisites: [cultivation-fundamentals]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [quiz, practical]
+    career_links: [cultivator, extraction-tech, operator]
+
+  postharvest-storage:
+    name: "Post-Harvest Quality & Storage"
+    domain: postharvest
+    description: "Preserving quality through storage: moisture/water-activity control and preventing degradation and contamination."
+    prerequisites: [drying-curing]
+    mastery_scale: [novice, developing, proficient, expert]
+    assessment_methods: [practical, project]
+    career_links: [extraction-tech, compliance, operator]
+
+# Every curriculum course_key -> the skill_ids it teaches (1:1 coverage with
+# curriculum.yaml `courses`). Advanced courses teach advanced skills whose
+# prerequisites are taught by the courses' own prereq chain.
+course_skills:
+  bio-101: [plant-biology]
+  cult-101: [cultivation-fundamentals]
+  cult-201: [environmental-control]
+  cult-301: [canopy-management]
+  gen-101: [inheritance-genetics]
+  gen-201: [breeding-selection]
+  gen-301: [line-stabilization]
+  nut-101: [soil-nutrient-science]
+  nut-201: [hydroponic-management]
+  ipm-101: [pest-disease-id]
+  ipm-201: [ipm-systems]
+  chem-101: [cannabis-phytochemistry]
+  chem-201: [analytical-chemistry]
+  ph-101: [drying-curing]
+  ph-201: [postharvest-storage]
