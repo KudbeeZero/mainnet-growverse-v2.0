@@ -26,10 +26,12 @@ describe("resolveBudPhoto", () => {
 });
 
 describe("budPhotoFor (live manifest)", () => {
-  it("returns null until a licensed asset is registered (currently none)", () => {
-    // The shipped manifest is intentionally empty — everything falls back to the 3D
-    // bud until we add assets we're allowed to ship. This guards that default.
-    expect(budPhotoFor("blue-dream")).toBeNull();
-    expect(hasAnyBudPhoto()).toBe(false);
+  it("resolves the registered photoreal hero (blue-dream) and stays null for the rest", () => {
+    // First licensed asset is wired in; strains without their own photo still fall
+    // back to the 3D bud (null here → caller renders StrainBud3D).
+    expect(budPhotoFor("blue-dream")).toBe("/buds/blue-dream-harvest.jpg");
+    expect(budPhotoFor("Blue-Dream")).toBe("/buds/blue-dream-harvest.jpg"); // case-insensitive
+    expect(budPhotoFor("some-unregistered-strain")).toBeNull();
+    expect(hasAnyBudPhoto()).toBe(true);
   });
 });
