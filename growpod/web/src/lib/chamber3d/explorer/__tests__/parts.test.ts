@@ -5,6 +5,7 @@ import {
   tierForDistance,
   TIERS,
   TIER_INFO,
+  EXPLORER_PRESETS,
   DEFAULT_PARAMS,
   ANATOMY_PARTS,
   PART_LABELS,
@@ -84,6 +85,32 @@ describe("explorer parts", () => {
       expect(info.title).toBeTruthy();
       expect(info.blurb.length).toBeGreaterThan(10);
       if (info.focus !== null) expect(ANATOMY_PARTS).toContain(info.focus);
+    }
+  });
+
+  it("exposes the five canonical lab presets, each well-formed", () => {
+    expect(EXPLORER_PRESETS).toHaveLength(5);
+    const ids = new Set<string>();
+    for (const p of EXPLORER_PRESETS) {
+      expect(p.id).toBeTruthy();
+      expect(ids.has(p.id)).toBe(false); // unique ids
+      ids.add(p.id);
+      expect(p.label).toBeTruthy();
+      expect(p.blurb.length).toBeGreaterThan(10);
+      expect(TIERS).toContain(p.focusTier);
+      for (const key of ["budDev", "ripe", "brown", "trich", "purple"] as const) {
+        expect(p.params[key]).toBeGreaterThanOrEqual(0);
+        expect(p.params[key]).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it("every preset renders to a non-empty, draw-call-bounded bud", () => {
+    const d = dna();
+    for (const p of EXPLORER_PRESETS) {
+      const inst = buildExplorerInstances(d, p.seed, p.params);
+      expect(inst.cola.length).toBeGreaterThan(0);
+      expect(drawCallCount(inst)).toBeLessThanOrEqual(ANATOMY_PARTS.length);
     }
   });
 });

@@ -159,3 +159,61 @@ export function drawCallCount(inst: ExplorerInstances): number {
     (inst.pistils.length ? 1 : 0)
   );
 }
+
+/**
+ * The five canonical Explorer "labs" — preset (seed, params, focus tier) combos
+ * that stage a specific bit of bud anatomy for a lesson. Selecting one drives the
+ * same pure generators; focusTier is the tier the lab is best read at (a teaching
+ * hint shown in the UI — zoom still controls the live tier).
+ */
+export interface ExplorerPreset {
+  id: string;
+  label: string;
+  blurb: string;
+  seed: number;
+  params: ExplorerParams;
+  focusTier: Tier;
+}
+
+export const EXPLORER_PRESETS: ExplorerPreset[] = [
+  {
+    id: "cola-structure",
+    label: "Calyx & Cola Structure",
+    blurb: "A mature cola: see how calyxes stack up the phyllotaxic spiral into a dense flower.",
+    seed: 4242,
+    params: { budDev: 1, ripe: 0.35, brown: 0.05, trich: 0.5, purple: 0, isMobile: false },
+    focusTier: "cola",
+  },
+  {
+    id: "pistil-maturation",
+    label: "Pistil Maturation",
+    blurb: "Pistils shift white → amber → brown as the flower ages. Ripeness is turned up here.",
+    seed: 7,
+    params: { budDev: 1, ripe: 0.8, brown: 0.45, trich: 0.55, purple: 0, isMobile: false },
+    focusTier: "detail",
+  },
+  {
+    id: "trichome-harvest",
+    label: "Trichome Harvest Window",
+    blurb: "Resin heads at peak frost — clear→cloudy→amber is how you call the harvest window.",
+    seed: 1337,
+    params: { budDev: 1, ripe: 0.95, brown: 0.2, trich: 1, purple: 0, isMobile: false },
+    focusTier: "trichome",
+  },
+  {
+    id: "purple-expression",
+    label: "Anthocyanin / Purple",
+    blurb: "Cool-night anthocyanin: lavender frost and magenta pistils on a purple-leaning pheno.",
+    seed: 909,
+    params: { budDev: 1, ripe: 0.6, brown: 0.15, trich: 0.8, purple: 0.9, isMobile: false },
+    focusTier: "cola",
+  },
+  {
+    id: "frost-density",
+    label: "Frost Density & Potency",
+    blurb: "Heavy trichome coverage across the calyxes — the visual proxy for potency.",
+    seed: 2024,
+    params: { budDev: 1, ripe: 0.7, brown: 0.1, trich: 1, purple: 0.2, isMobile: false },
+    focusTier: "detail",
+  },
+];

@@ -18,9 +18,12 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import {
   ANATOMY_PARTS,
   PART_LABELS,
+  EXPLORER_PRESETS,
   DEFAULT_PARAMS,
   type ExplorerParams,
 } from "@/lib/chamber3d/explorer/parts";
+
+const DEFAULT_SEED = 4242;
 
 const AnatomyExplorer = dynamic(
   () => import("@/components/university/AnatomyExplorer").then((m) => m.AnatomyExplorer),
@@ -30,6 +33,8 @@ const AnatomyExplorer = dynamic(
 function ExplorerInner() {
   const reducedMotion = usePrefersReducedMotion();
   const [params, setParams] = useState<ExplorerParams>(DEFAULT_PARAMS);
+  const [seed, setSeed] = useState<number>(DEFAULT_SEED);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
 
   return (
     <div className="space-y-5">
@@ -44,15 +49,49 @@ function ExplorerInner() {
         }
       />
 
+      {/* Lab presets — each stages a bit of anatomy for a lesson. */}
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Lab presets">
+        {EXPLORER_PRESETS.map((preset) => {
+          const active = activePreset === preset.id;
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => {
+                setParams(preset.params);
+                setSeed(preset.seed);
+                setActivePreset(preset.id);
+              }}
+              aria-pressed={active}
+              title={preset.blurb}
+              className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                active
+                  ? "border-grow-500 bg-grow-900/70 text-grow-100"
+                  : "border-ink-600 bg-ink-800 text-gray-300 hover:border-grow-700 hover:text-gray-100"
+              }`}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
+      </div>
+
       <Card className="relative aspect-square w-full overflow-hidden sm:aspect-[4/3]">
-        <AnatomyExplorer params={params} reducedMotion={reducedMotion} />
+        <AnatomyExplorer seed={seed} params={params} reducedMotion={reducedMotion} />
       </Card>
 
       <Card className="p-4">
         <ExplorerControls
           params={params}
-          onChange={setParams}
-          onReset={() => setParams(DEFAULT_PARAMS)}
+          onChange={(next) => {
+            setParams(next);
+            setActivePreset(null); // manual tweak → no longer a preset
+          }}
+          onReset={() => {
+            setParams(DEFAULT_PARAMS);
+            setSeed(DEFAULT_SEED);
+            setActivePreset(null);
+          }}
         />
       </Card>
 
