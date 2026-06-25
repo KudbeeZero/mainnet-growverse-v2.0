@@ -13,6 +13,7 @@ import { Card, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { api } from "@/lib/api";
 import { fmtTime, initials, hueFor, activeCueIndex } from "@/lib/university/lectureTheater";
+import { isSpeechSupported, LectureSpeaker, type SpeechState } from "@/lib/university/browserSpeech";
 
 export function CoursePresenterVideo({ courseKey }: { courseKey: string }) {
   const q = useQuery({
@@ -26,9 +27,23 @@ export function CoursePresenterVideo({ courseKey }: { courseKey: string }) {
   const [t, setT] = useState(0);
   const [audioOk, setAudioOk] = useState(true);
 
-  const active = q.data ? activeCueIndex(q.data.captions, t) : -1;
+  // FREE in-browser narration: the device voice reads the caption track aloud,
+  // cue-by-cue, driving the karaoke highlight. Resolved after mount to avoid a
+  // hydration mismatch (server can't know about speechSynthesis).
+  const [canSpeak, setCanSpeak] = useState(false);
+  const [speechState, setSpeechState] = useState<SpeechState>("idle");
+  const [spokenCue, setSpokenCue] = useState(-1);
+  const speakerRef = useRef<LectureSpeaker | null>(null);
+  useEffect(() => setCanSpeak(isSpeechSupported()), []);
+  // Stop any narration when leaving the lecture.
+  useEffect(() => () => speakerRef.current?.stop(), []);
 
-  // Keep the active caption scrolled into view as the audio advances.
+  // While the browser voice is speaking, the active line is the one being spoken;
+  // otherwise it tracks the audio player's time.
+  const speaking = speechState !== "idle";
+  const active = !q.data ? -1 : speaking ? spokenCue : activeCueIndex(q.data.captions, t);
+
+  // Keep the active caption scrolled into view as narration advances.
   useEffect(() => {
     activeRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [active]);
@@ -38,6 +53,19 @@ export function CoursePresenterVideo({ courseKey }: { courseKey: string }) {
   const video = q.data;
   const hue = hueFor(video.presenter_name);
   const audioUrl = `/api/game/university/courses/${courseKey}/audio`;
+
+  function playVoice() {
+    if (!video) return;
+    audioRef.current?.pause(); // don't double up with the MP3 player
+    const speaker = new LectureSpeaker(video.presenter_name, {
+      onCue: setSpokenCue,
+      onState: setSpeechState,
+      onEnd: () => setSpokenCue(-1),
+      rate: 0.98,
+    });
+    speakerRef.current = speaker;
+    speaker.start(video.captions);
+  }
 
   return (
     <Card>
@@ -84,8 +112,48 @@ export function CoursePresenterVideo({ courseKey }: { courseKey: string }) {
               />
             ) : (
               <p className="mt-0.5 text-xs text-gray-500">
-                Audio is warming up — follow the transcript below.
+                Audio is warming up — press play to hear the lecture.
               </p>
+            )}
+
+            {/* FREE browser-voice narration — the professor reads the lecture aloud,
+                no API key needed. Hidden where speech synthesis is unavailable. */}
+            {canSpeak && video.captions.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                {speechState === "idle" ? (
+                  <button
+                    type="button"
+                    onClick={playVoice}
+                    className="rounded-full border border-grow-600 bg-grow-950/60 px-3 py-1 text-xs font-medium text-grow-100 hover:bg-grow-900"
+                  >
+                    ▶ Play lecture (voice)
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        speechState === "paused"
+                          ? speakerRef.current?.resume()
+                          : speakerRef.current?.pause()
+                      }
+                      className="rounded-full border border-grow-600 bg-grow-950/60 px-3 py-1 text-xs font-medium text-grow-100 hover:bg-grow-900"
+                    >
+                      {speechState === "paused" ? "▶ Resume" : "⏸ Pause"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => speakerRef.current?.stop()}
+                      className="rounded-full border border-ink-600 bg-ink-800 px-3 py-1 text-xs font-medium text-gray-300 hover:bg-ink-700"
+                    >
+                      ⏹ Stop
+                    </button>
+                    <span className="text-[10px] uppercase tracking-wide text-grow-300/80">
+                      {video.presenter_name} is speaking…
+                    </span>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>

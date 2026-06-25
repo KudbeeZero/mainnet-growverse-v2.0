@@ -5,13 +5,14 @@
 // disclaimer; suggested care actions surface as chips. Read-only — it never
 // mutates the game (the bot's tools are reads), so this is purely informational.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { titleCase } from "@/lib/format";
 import type { MasterGrowerReport } from "@/lib/types";
+import { isSpeechSupported, LectureSpeaker, toCues } from "@/lib/university/browserSpeech";
 
 interface Msg {
   role: "user" | "bot";
@@ -31,6 +32,31 @@ export function BotChatPanel({ plantId }: { plantId?: string }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // FREE browser-voice read-aloud for the coach's answers (no key). `speakingIdx`
+  // is the message currently being spoken, or -1. Resolved after mount (no SSR).
+  const [canSpeak, setCanSpeak] = useState(false);
+  const [speakingIdx, setSpeakingIdx] = useState(-1);
+  const speakerRef = useRef<LectureSpeaker | null>(null);
+  useEffect(() => setCanSpeak(isSpeechSupported()), []);
+  useEffect(() => () => speakerRef.current?.stop(), []);
+
+  function toggleSpeak(i: number, text: string) {
+    if (speakingIdx === i) {
+      speakerRef.current?.stop();
+      return;
+    }
+    speakerRef.current?.stop();
+    const speaker = new LectureSpeaker("Master Grower", {
+      onState: (s) => {
+        if (s === "idle") setSpeakingIdx(-1);
+      },
+      onEnd: () => setSpeakingIdx(-1),
+    });
+    speakerRef.current = speaker;
+    speaker.start(toCues(text));
+    setSpeakingIdx(i);
+  }
 
   async function send() {
     const q = input.trim();
@@ -69,7 +95,20 @@ export function BotChatPanel({ plantId }: { plantId?: string }) {
             </div>
           ) : (
             <div key={i} className="max-w-[90%] space-y-2 rounded-lg bg-ink-800 px-3 py-2">
-              <p className="text-sm text-gray-200">{m.text}</p>
+              <div className="flex items-start gap-2">
+                <p className="flex-1 text-sm text-gray-200">{m.text}</p>
+                {canSpeak && (
+                  <button
+                    type="button"
+                    onClick={() => toggleSpeak(i, m.text)}
+                    aria-label={speakingIdx === i ? "Stop reading aloud" : "Read this answer aloud"}
+                    title={speakingIdx === i ? "Stop" : "Read aloud"}
+                    className="shrink-0 rounded-full border border-ink-600 bg-ink-700 px-2 py-0.5 text-xs text-gray-300 hover:bg-ink-600"
+                  >
+                    {speakingIdx === i ? "⏹" : "🔊"}
+                  </button>
+                )}
+              </div>
               {m.report?.disclaimer && (
                 <p className="rounded border border-amber-700/50 bg-amber-950/40 px-2 py-1 text-xs text-amber-200">
                   {m.report.disclaimer}
