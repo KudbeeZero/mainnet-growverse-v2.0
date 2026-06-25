@@ -5,6 +5,7 @@
 // loaded via dynamic({ ssr: false }) (three.js touches window), with a calm
 // loading block as the SSR/suspense fallback.
 
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { RequireAuth } from "@/components/layout/RequireAuth";
@@ -12,8 +13,14 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { LoadingBlock } from "@/components/ui/Spinner";
+import { ExplorerControls } from "@/components/university/ExplorerControls";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { ANATOMY_PARTS, PART_LABELS } from "@/lib/chamber3d/explorer/parts";
+import {
+  ANATOMY_PARTS,
+  PART_LABELS,
+  DEFAULT_PARAMS,
+  type ExplorerParams,
+} from "@/lib/chamber3d/explorer/parts";
 
 const AnatomyExplorer = dynamic(
   () => import("@/components/university/AnatomyExplorer").then((m) => m.AnatomyExplorer),
@@ -22,6 +29,7 @@ const AnatomyExplorer = dynamic(
 
 function ExplorerInner() {
   const reducedMotion = usePrefersReducedMotion();
+  const [params, setParams] = useState<ExplorerParams>(DEFAULT_PARAMS);
 
   return (
     <div className="space-y-5">
@@ -37,7 +45,15 @@ function ExplorerInner() {
       />
 
       <Card className="relative aspect-square w-full overflow-hidden sm:aspect-[4/3]">
-        <AnatomyExplorer reducedMotion={reducedMotion} />
+        <AnatomyExplorer params={params} reducedMotion={reducedMotion} />
+      </Card>
+
+      <Card className="p-4">
+        <ExplorerControls
+          params={params}
+          onChange={setParams}
+          onReset={() => setParams(DEFAULT_PARAMS)}
+        />
       </Card>
 
       {/* Anatomy key — also the 2D fallback if WebGL is unavailable. */}
