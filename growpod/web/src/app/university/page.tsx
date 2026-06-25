@@ -45,9 +45,14 @@ function UniversityInner() {
         title="Course Catalog"
         subtitle="Earn real degrees: enroll, study real time, pass a practical tied to your live grow, and claim permanent perks + a title."
         action={
-          <Link href="/university/transcript">
-            <Button variant="secondary">📜 Transcript</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/university/explorer">
+              <Button variant="secondary">🔬 Explorer</Button>
+            </Link>
+            <Link href="/university/transcript">
+              <Button variant="secondary">📜 Transcript</Button>
+            </Link>
+          </div>
         }
       />
 
