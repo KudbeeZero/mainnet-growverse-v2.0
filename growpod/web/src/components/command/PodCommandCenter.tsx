@@ -21,6 +21,8 @@ import type { Environment } from "@/lib/api";
 import type { Plant, Pod } from "@/lib/types";
 import { queryKeys } from "@/lib/queryKeys";
 import { clamp, previewDev, seedForPlant } from "@/lib/chamber/morphology";
+import { hasWebGL } from "@/lib/features";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { harvestMarkers, maxPreviewDay, resolvePreview } from "@/lib/chamber/growthPreview";
 import { STAGE_ORDER } from "@/lib/stageInfo";
 import { plantRender } from "@/lib/plantRender";
@@ -43,6 +45,13 @@ import { PlantSeedForm } from "@/components/plant/PlantSeedForm";
 const GrowChamber = dynamic(
   () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
   { ssr: false, loading: () => null },
+);
+
+// The frosted 3D bud close-up (same pipeline as the strain hero / chamber macro),
+// popped from the pod via the "View bud" toggle. Client-only (three.js).
+const BudGL = dynamic(
+  () => import("@/components/viz/BudGL").then((m) => m.BudGL),
+  { ssr: false, loading: () => <LoadingBlock label="Frosting the bud…" /> },
 );
 
 const DEFAULT_CLIMATE: Environment = {
@@ -79,6 +88,12 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   useEffect(() => {
     setPreviewDay(null);
   }, [activeId]);
+
+  // "View bud" — pop the frosted 3D bud close-up for the selected plant (whole-
+  // plant view stays the default). Only when the device actually has WebGL.
+  const reducedMotion = usePrefersReducedMotion();
+  const [viewBud, setViewBud] = useState(false);
+  const canViewBud = hasWebGL();
 
   // Keep the selection valid as the pod's plants change (harvest, switch pod).
   useEffect(() => {
@@ -173,6 +188,8 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   const preview = resolvePreview(previewDay, liveDay, flMid, plant?.growth_stage ?? "seed");
   const day = preview.day;
   const renderStage = preview.stage;
+  // Live development params for the bud close-up (same source the 2D chamber uses).
+  const budDev = render ? previewDev(day, render.flMid) : null;
   const stageIndex =
     plant?.forecast?.stage_index ?? (plant ? STAGE_ORDER.indexOf(plant.growth_stage) : 0);
   const status = plant ? podStatus(pod, plant) : null;
@@ -222,24 +239,47 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
               <LoadingBlock label="Loading plant…" />
             ) : (
               <>
-                <GrowChamber
-                  seed={seedForPlant(plant.id)}
-                  day={day}
-                  stage={renderStage}
-                  morphology={render.morphology}
-                  silhouette={render.silhouette}
-                  dev={previewDev(day, render.flMid)}
-                  budColor={render.budColor}
-                  budDna={render.budDna}
-                  climate={{
-                    fan: 45,
-                    temp: climate.temperature,
-                    hum: climate.humidity,
-                    co2: climate.co2_level,
-                  }}
-                  conditionFlags={plant.condition_flags}
-                  view="chamber"
-                />
+                {viewBud && canViewBud && budDev ? (
+                  <BudGL
+                    dna={render.budDna}
+                    seed={seedForPlant(plant.id)}
+                    budDev={budDev.budDev}
+                    ripe={budDev.ripe}
+                    brown={budDev.brown}
+                    trich={budDev.trich}
+                    purple={render.budColor.anthocyanin ?? 0}
+                    reducedMotion={reducedMotion}
+                  />
+                ) : (
+                  <GrowChamber
+                    seed={seedForPlant(plant.id)}
+                    day={day}
+                    stage={renderStage}
+                    morphology={render.morphology}
+                    silhouette={render.silhouette}
+                    dev={previewDev(day, render.flMid)}
+                    budColor={render.budColor}
+                    budDna={render.budDna}
+                    climate={{
+                      fan: 45,
+                      temp: climate.temperature,
+                      hum: climate.humidity,
+                      co2: climate.co2_level,
+                    }}
+                    conditionFlags={plant.condition_flags}
+                    view="chamber"
+                  />
+                )}
+                {canViewBud && (
+                  <button
+                    type="button"
+                    onClick={() => setViewBud((v) => !v)}
+                    aria-pressed={viewBud}
+                    className="absolute right-2 top-2 z-20 rounded-full border border-cyan-400/30 bg-ink-900/80 px-3 py-1 text-xs text-cyan-100 backdrop-blur-sm hover:border-cyan-300/60"
+                  >
+                    {viewBud ? "🌿 Whole plant" : "🔬 View bud"}
+                  </button>
+                )}
                 {/* glass grow-tube framing — grow-light glow up top, a glass
                     reflection down the left, and a soft cyan inner glow so the
                     center reads as a lit chamber (purely cosmetic, no clicks) */}
