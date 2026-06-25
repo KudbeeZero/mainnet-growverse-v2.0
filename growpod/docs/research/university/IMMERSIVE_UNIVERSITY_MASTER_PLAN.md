@@ -291,3 +291,20 @@ to `claude/immersive-university-research`. ✅ **Complete.**
   transcript page (behind the flag). Independently verified: full backend suite 1022 passed (single
   alembic head, ledger-free), 360 web vitest green. **v1's core university (Phases 0–5) is COMPLETE.**
   **Next: Phase 6 (Agent Campus)** — the big multi-agent expansion, staged last; pause for owner go-ahead.
+- 2026-06-25 — **Phase 6 STARTED (owner approved). Phase 6a ✅ done & MERGED** (PR #81). The Agent
+  Campus **spine**: a centralized **Learner Model** + audit log — additive `LearnerProfile`
+  (mastery_by_skill / misconceptions / risk / preferences) + `LearnerEvent` append-only audit table +
+  single-head migration `b4d1e2f3a6c7`; `LearnerModelService` whose `apply()` is the SOLE mutator and
+  always writes a matching `LearnerEvent` (recompute_mastery from `AssessmentAttempt`, recompute_risk
+  from the Phase-5 engagement cadence funnel through it); read-model `profile()` folds in the
+  engagement slice; flagged `GET /players/<id>/university/learner`. Imports nothing from
+  `economy`/`ledger`. Independently verified: 1037 backend tests, single head, ledger-free. **Next:
+  6b skills graph → 6c Admissions → 6d Roadmap → 6e web.**
+- 2026-06-25 — **Plant visual fidelity ✅ done & MERGED (owner monetization-priority; PRs #82/#83/#84).**
+  The in-game bud rendered as flat green discs vs a real frosted cola. Now the strain-lab hero, the
+  player's chamber bud close-up, and a new pod **"View bud"** toggle all route to the shipped 3D
+  `BudGL` pipeline (ribbed calyxes + trichome-frost icospheres w/ wet-resin material + amber pistils +
+  NEW frosted serrated **sugar-leaves** via `buildSugarLeaves` + a `leaf` prop). `isBud3DEnabled()`
+  defaults ON with a `hasWebGL()` guard (2D `GrowChamber` fallback on no-WebGL devices). Maturity-
+  driven (finished flower = frosted; seedling not), deterministic per strain. *Not* done: a photoreal
+  WHOLE-PLANT render (stem+leaves+branch buds) — a separate owner-gated track if wanted.

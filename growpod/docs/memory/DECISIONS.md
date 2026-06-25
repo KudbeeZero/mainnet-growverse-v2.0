@@ -645,3 +645,18 @@ that don't exist yet, so they're an expansion, not a conflict.
 **Consequences:** (1) No renaming; voices/audio untouched. (2) Phase-2 presenter avatars use the shipped
 names; a swap bug (Harlow↔Okafor on nutrients/ipm) introduced in PR #75 was corrected to match
 `_DEPT_VOICES` exactly. (3) Phase 6's ⚠️ faculty flag is resolved in the master-plan ledger.
+
+### 2026-06-25 — Plant bud render = the 3D BudGL pipeline, on by default
+**Decision:** The player-facing bud **close-up** (strain-lab hero, plant chamber macro view, and the
+new pod "View bud" toggle) renders the shipped 3D `BudGL` pipeline — ribbed calyxes + trichome-frost
+icospheres (wet-resin material) + amber pistils + frosted serrated **sugar-leaves** (`buildSugarLeaves`
++ a `leaf` prop) — instead of the flat Canvas-2D `GrowChamber`. `isBud3DEnabled()` now defaults **on**
+(`NEXT_PUBLIC_ENABLE_BUD3D !== "false"`), gated by a new `hasWebGL()` probe.
+**Why:** Owner (monetization-critical): the 2D bud looked like green discs, nothing like a real frosted
+cola — "nobody spends money unless the plants look close to that." The 3D pipeline already existed
+(Phase-3 Anatomy Explorer) and is server-maturity-driven, so it was mostly wiring.
+**Consequences:** (1) Devices without WebGL fall back to the 2D `GrowChamber` (no crash); `?bud3d=0/1`
+overrides. (2) The bud reflects real maturity — a finished flower is frosted, a seedling is not;
+deterministic per strain. (3) The grow-pod **whole-plant** view (stem+leaves) and list-grid thumbnails
+intentionally stay 2D (a photoreal whole-plant model + dozens of live WebGL canvases are out of scope).
+PRs #82 (close-up + default flip), #83 (sugar-leaves), #84 (pod toggle).
