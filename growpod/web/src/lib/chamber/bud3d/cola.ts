@@ -49,6 +49,34 @@ function widthCurve(t: number): number {
   return Math.sin(Math.PI * (0.12 + 0.82 * t));
 }
 
+export interface ColaSilhouette {
+  /** Lathe profile points [radius, y] in UNIT space (y 0..1, closed at both ends). */
+  profile: [number, number][];
+  /** Max half-width (== the cola's outer radius). */
+  Rmax: number;
+  /** Unit cola height (== 1). */
+  H: number;
+}
+
+/**
+ * The cola's outer silhouette as a lathe profile — the SAME width curve the
+ * calyxes are placed against, so a solid "bud body" mesh built from this fills
+ * the space between calyxes (no see-through gaps) and reads as one fused cola
+ * instead of a loose cluster of balls. Pure; deterministic from genetics only.
+ */
+export function colaSilhouette(dna: BudDNA, samples = 16): ColaSilhouette {
+  const H = 1.0;
+  const aspect = Math.min(0.42, dna.maxBudWidth / Math.max(1, dna.budHeight));
+  const Rmax = H * aspect;
+  const profile: [number, number][] = [[0.0001, 0]];
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    profile.push([Math.max(0.0001, Rmax * widthCurve(t)), t * H]);
+  }
+  profile.push([0.0001, H]);
+  return { profile, Rmax, H };
+}
+
 export interface BuildColaOpts {
   /** 0..1 development: gates how many calyxes have formed AND how swollen they are. */
   budDev: number;
@@ -63,7 +91,7 @@ export interface BuildColaOpts {
  */
 export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaInstance[] {
   const dev = Math.min(1, Math.max(0, opts.budDev));
-  const cap = opts.maxInstances ?? 260;
+  const cap = opts.maxInstances ?? 380;
   const rnd = mulberry32((seed >>> 0) || 1);
 
   const H = 1.0; // unit cola height
@@ -74,8 +102,9 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
   const Rmax = H * aspect;
 
   // Accretion: fewer rings early, filling toward the genetic `rows` as it
-  // develops; denser rings so calyxes pack into a cola, not a loose cluster.
-  const rings = Math.max(4, Math.round(dna.rows * (0.5 + 0.6 * dev)));
+  // develops; many dense rings so calyxes pack into a solid cola and fully clad
+  // the body (a sparse cluster reads as studs on an egg — owner's note).
+  const rings = Math.max(5, Math.round(dna.rows * (0.65 + 0.75 * dev)));
   const out: ColaInstance[] = [];
   let spiral = 0;
 
@@ -83,18 +112,19 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
     const t = rings > 1 ? i / (rings - 1) : 0;
     const wc = widthCurve(t);
     const ringR = Rmax * wc;
-    const perRing = Math.max(1, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * wc) * 1.35));
+    const perRing = Math.max(1, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * wc) * 2.3));
     for (let j = 0; j < perRing && out.length < cap; j++) {
       spiral += GOLDEN_ANGLE;
-      // Hug the axis so calyxes overlap into a solid cola (tighter than a cluster).
-      const r = ringR * (0.4 + 0.5 * rnd());
+      // Sit the calyxes out near the body surface and overlap them so they clad
+      // the whole cola (rather than hugging the axis and leaving the core bare).
+      const r = ringR * (0.58 + 0.4 * rnd());
       const x = Math.cos(spiral) * r;
       const z = Math.sin(spiral) * r;
       const y = t * H + (rnd() - 0.5) * 0.03;
 
       const sizeUnit = (dna.calyxSizeMin + (dna.calyxSizeMax - dna.calyxSizeMin) * rnd()) / Math.max(1, dna.budHeight);
-      const swell = 0.5 + 0.55 * dev;
-      const w = sizeUnit * H * swell * (0.78 + 0.34 * wc);
+      const swell = 0.7 + 0.6 * dev;
+      const w = sizeUnit * H * swell * (0.95 + 0.4 * wc);
       // Teardrop: taller than wide, more pointed when the strain foxtails.
       const h = w * (1.18 + 0.55 * (dna.foxtailBias ?? 0));
 

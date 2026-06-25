@@ -130,8 +130,10 @@ export function shimmer(
   return 1 + Math.sin(t * speed + phase) * a;
 }
 
-/** Max simultaneously-animated glands by device (static frost beyond this). */
-export const TRICHOME_BUDGET = { desktop: 250, mobile: 100 } as const;
+/** Trichome-gland instance budget by device. Sized so a mature bud reads caked in
+ * frost (the resin coating is the whole point of the macro view) while staying cheap
+ * — instanced low-poly icospheres, one draw call. Mobile kept lower for the phone GPU. */
+export const TRICHOME_BUDGET = { desktop: 600, mobile: 240 } as const;
 /** Shimmer stays subtle — hard ceiling on the brightness wobble amplitude. */
 export const SHIMMER_MAX_AMP = 0.16;
 /** Per-gland angular speed band for the shimmer (rad/s) — slow, never flashy. */

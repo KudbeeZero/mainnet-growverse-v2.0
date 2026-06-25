@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCola, hslToRgb } from "@/lib/chamber/bud3d/cola";
+import { buildCola, colaSilhouette, hslToRgb } from "@/lib/chamber/bud3d/cola";
 import { budDnaFor } from "@/lib/chamber/budDna";
 import { budColorForStrain } from "@/lib/chamber/strainVisuals";
 
@@ -52,5 +52,25 @@ describe("buildCola", () => {
     const ys = buildCola(DNA, 7, { budDev: 1 }).map((c) => c.pos[1]);
     expect(Math.min(...ys)).toBeGreaterThanOrEqual(-0.1);
     expect(Math.max(...ys)).toBeLessThanOrEqual(1.1);
+  });
+});
+
+describe("colaSilhouette", () => {
+  it("is closed at both ends and spans unit height", () => {
+    const { profile, H } = colaSilhouette(DNA);
+    expect(H).toBe(1);
+    expect(profile[0][0]).toBeLessThan(0.01); // pinched base
+    expect(profile[0][1]).toBe(0);
+    expect(profile[profile.length - 1][0]).toBeLessThan(0.01); // pinched tip
+    expect(profile[profile.length - 1][1]).toBeCloseTo(1, 5);
+  });
+  it("never bulges wider than the cola's own half-width (no see-through overhang)", () => {
+    const sil = colaSilhouette(DNA);
+    const widest = Math.max(...sil.profile.map(([r]) => r));
+    expect(widest).toBeLessThanOrEqual(sil.Rmax + 1e-9);
+    // The fattest point sits in the lower-middle, not at an end (it's a cola).
+    const fattest = sil.profile.reduce((a, b) => (b[0] > a[0] ? b : a));
+    expect(fattest[1]).toBeGreaterThan(0.1);
+    expect(fattest[1]).toBeLessThan(0.9);
   });
 });
