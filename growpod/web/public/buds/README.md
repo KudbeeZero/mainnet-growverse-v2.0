@@ -34,3 +34,7 @@ licensed** to use:
 - ✅ AI renders from a service whose terms grant commercial rights to the output.
 - ❌ **Never** seed-bank catalog photos, Google-image results, or any random web
   image. Those are someone else's copyright and will get the app pulled.
+
+The shipped photoreal renders (Blue Dream, Gorilla Glue #4, Wedding Cake, and the
+pod/cinematic assets) are owner-generated and covered by a Certificate of
+Authorization — see `growpod/docs/licenses/` for the rights record.

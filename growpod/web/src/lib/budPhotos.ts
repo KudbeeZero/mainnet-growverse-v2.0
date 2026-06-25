@@ -20,8 +20,12 @@ export type BudStage = "flower" | "harvest";
  *   "blue-dream": { harvest: "/buds/blue-dream-harvest.webp" },
  */
 const BUD_PHOTOS: Record<string, Partial<Record<BudStage, string>>> = {
-  // First licensed photoreal hero — owner-provided render (we own/are licensed for it).
+  // Licensed photoreal heroes — owner-provided renders (xAI Creative Studio, cert
+  // GP-VG-2026-001; see growpod/docs/licenses/). Strains without an entry fall back
+  // to the procedural 3D bud.
   "blue-dream": { harvest: "/buds/blue-dream-harvest.jpg" },
+  "gorilla-glue-no-4": { harvest: "/buds/gorilla-glue-no-4-harvest.jpg" },
+  "wedding-cake": { harvest: "/buds/wedding-cake-harvest.jpg" },
 };
 
 /** Pure resolver (exported for tests): pick the requested stage, then fall back to any
