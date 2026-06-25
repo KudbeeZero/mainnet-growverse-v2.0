@@ -158,3 +158,77 @@ export function buildPistils(cola: ColaInstance[], opts: PistilOpts): PistilInst
   }
   return out;
 }
+
+// ---- Sugar leaves --------------------------------------------------------
+
+export interface SugarLeafInstance {
+  /** Base position on a calyx, in the cola's UNIT space. */
+  pos: [number, number, number];
+  /** Unit direction the leaf points (outward + up). */
+  dir: [number, number, number];
+  /** Leaf size in unit space. */
+  scale: number;
+  /** Roll about `dir` (radians) so leaves don't all face the same way. */
+  roll: number;
+  /** Frosted-green RGB (0..1). */
+  color: [number, number, number];
+}
+
+export interface SugarLeafOpts {
+  seed: number;
+  /** 0..1 — how leafy the bud is (per-calyx spawn chance). */
+  amount: number;
+  /** 0..1 frost — lightens the leaf toward a sugar-coated white-green. */
+  frost: number;
+  isMobile?: boolean;
+}
+
+/**
+ * Grow small serrated SUGAR LEAVES out from a subset of calyxes — the frosted
+ * leaflets poking through a real cola. Deterministic from the same seed/genetics,
+ * budgeted for the device, and weighted toward the lower/mid cola (where sugar
+ * leaves are densest on a real plant). `frost` lightens them toward a sugar-coated
+ * white-green so a frosty bud reads leafier and brighter, like the reference photo.
+ */
+export function buildSugarLeaves(cola: ColaInstance[], opts: SugarLeafOpts): SugarLeafInstance[] {
+  const rnd = mulberry32(((opts.seed >>> 0) ^ 0x27d4eb2f) || 13);
+  const budget = opts.isMobile ? 45 : 100;
+  const amount = clamp01(opts.amount);
+  const frost = clamp01(opts.frost);
+  const out: SugarLeafInstance[] = [];
+  if (amount <= 0) return out;
+
+  for (const c of cola) {
+    // Sugar leaves favour the lower/mid cola — weight the spawn by (1 - height).
+    const h = clamp01(c.pos[1]); // 0 base .. ~1 apex
+    if (rnd() > amount * (0.45 + 0.55 * (1 - h))) continue;
+    if (out.length >= budget) break;
+
+    const radial = Math.hypot(c.pos[0], c.pos[2]) || 1e-3;
+    const ox = c.pos[0] / radial;
+    const oz = c.pos[2] / radial;
+    const dx = ox;
+    const dy = 0.3 + 0.45 * rnd(); // outward, tilted up
+    const dz = oz;
+    const m = Math.hypot(dx, dy, dz) || 1;
+
+    // Frosted green: a mid green lifted toward white-green as frost climbs.
+    const base = 0.34 + 0.12 * rnd();
+    const r = lerp(base * 0.55, 0.82, frost * 0.85);
+    const g = lerp(base, 0.92, frost * 0.7);
+    const b = lerp(base * 0.5, 0.8, frost * 0.85);
+
+    out.push({
+      pos: [
+        c.pos[0] + ox * c.scale[0] * 0.5,
+        c.pos[1] + c.scale[1] * 0.1,
+        c.pos[2] + oz * c.scale[2] * 0.5,
+      ],
+      dir: [dx / m, dy / m, dz / m],
+      scale: (0.12 + 0.12 * rnd()) * (c.scale[0] + c.scale[1]),
+      roll: rnd() * Math.PI * 2,
+      color: [Math.min(1, r), Math.min(1, g), Math.min(1, b)],
+    });
+  }
+  return out;
+}

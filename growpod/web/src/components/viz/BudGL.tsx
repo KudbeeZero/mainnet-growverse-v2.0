@@ -11,7 +11,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { buildCola } from "@/lib/chamber/bud3d/cola";
-import { buildFrost, buildPistils, type FrostMat } from "@/lib/chamber/bud3d/detail";
+import { buildFrost, buildPistils, buildSugarLeaves, type FrostMat } from "@/lib/chamber/bud3d/detail";
 import type { BudDNA } from "@/lib/chamber/budDna";
 
 const Y_CENTER = -0.5; // cola spans y≈0..1 in unit space; centre it on the origin
@@ -153,8 +153,72 @@ function Pistils({
   return instances.length ? <instancedMesh key={`p${instances.length}`} ref={ref} args={[geom, mat, instances.length]} /> : null;
 }
 
+/** A small serrated SUGAR-LEAF blade in the XY plane pointing +Y (so it orients
+ * along the instance `dir`, like the pistils). A pointed leaf with a few teeth so
+ * it reads as a frosted leaflet, not a paddle. */
+function useSugarLeafGeometry() {
+  return useMemo(() => {
+    const s = new THREE.Shape();
+    // Tip at +Y; a few zig-zag serrations down each side back to the base.
+    s.moveTo(0, 1.0);
+    s.lineTo(0.16, 0.74);
+    s.lineTo(0.10, 0.66);
+    s.lineTo(0.26, 0.44);
+    s.lineTo(0.16, 0.36);
+    s.lineTo(0.28, 0.12);
+    s.lineTo(0.12, 0.0);
+    s.lineTo(0, 0.04); // base notch
+    s.lineTo(-0.12, 0.0);
+    s.lineTo(-0.28, 0.12);
+    s.lineTo(-0.16, 0.36);
+    s.lineTo(-0.26, 0.44);
+    s.lineTo(-0.10, 0.66);
+    s.lineTo(-0.16, 0.74);
+    s.lineTo(0, 1.0);
+    const g = new THREE.ShapeGeometry(s);
+    g.computeVertexNormals();
+    return g;
+  }, []);
+}
+
+function SugarLeaves({
+  instances, spin,
+}: { instances: ReturnType<typeof buildSugarLeaves>; spin: boolean }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const geom = useSugarLeafGeometry();
+  // Double-sided (flat blade), low-ish roughness + faint emissive so frosted
+  // leaves catch light like the calyxes around them.
+  const mat = useMemo(
+    () => new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.05, side: THREE.DoubleSide, emissive: new THREE.Color(0.03, 0.05, 0.03) }),
+    [],
+  );
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const d = new THREE.Object3D();
+    const q = new THREE.Quaternion();
+    const dir = new THREE.Vector3();
+    const col = new THREE.Color();
+    instances.forEach((leaf, i) => {
+      d.position.set(leaf.pos[0], leaf.pos[1] + Y_CENTER, leaf.pos[2]);
+      dir.set(leaf.dir[0], leaf.dir[1], leaf.dir[2]).normalize();
+      q.setFromUnitVectors(UP, dir);
+      d.quaternion.copy(q);
+      d.rotateY(leaf.roll); // spin the blade about its growth axis for variety
+      d.scale.setScalar(leaf.scale);
+      d.updateMatrix();
+      mesh.setMatrixAt(i, d.matrix);
+      mesh.setColorAt(i, col.setRGB(leaf.color[0], leaf.color[1], leaf.color[2]));
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, [instances]);
+  useFrame((_, dt) => { if (spin && ref.current) ref.current.rotation.y += dt * 0.32; });
+  return instances.length ? <instancedMesh key={`l${instances.length}`} ref={ref} args={[geom, mat, instances.length]} /> : null;
+}
+
 export function BudGL({
-  dna, seed, budDev, ripe = 0, brown = 0, trich = 0, purple = 0, reducedMotion = false,
+  dna, seed, budDev, ripe = 0, brown = 0, trich = 0, purple = 0, leaf = 0.6, reducedMotion = false,
 }: {
   dna: BudDNA;
   seed: number;
@@ -168,6 +232,8 @@ export function BudGL({
   trich?: number;
   /** 0..1 purple/anthocyanin (lavender frost + magenta pistils). */
   purple?: number;
+  /** 0..1 sugar-leaf amount (frosted leaflets poking through the cola). */
+  leaf?: number;
   reducedMotion?: boolean;
 }) {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
@@ -179,6 +245,10 @@ export function BudGL({
   const pistils = useMemo(
     () => buildPistils(cola, { seed, chance: dna.pistilChance, ripe, brown, magenta: purple, isMobile }),
     [cola, seed, dna.pistilChance, ripe, brown, purple, isMobile],
+  );
+  const sugarLeaves = useMemo(
+    () => buildSugarLeaves(cola, { seed, amount: leaf * Math.max(0.4, budDev), frost: trich, isMobile }),
+    [cola, seed, leaf, budDev, trich, isMobile],
   );
   const spin = !reducedMotion;
 
@@ -194,6 +264,7 @@ export function BudGL({
         <directionalLight position={[2, 4, 3]} intensity={1.4} color="#fff6e8" />
         <pointLight position={[-2, 1, 2]} intensity={18} distance={9} color="#6cf0ff" />
         <Calyxes cola={cola} spin={spin} />
+        <SugarLeaves instances={sugarLeaves} spin={spin} />
         <Pistils instances={pistils} spin={spin} />
         <Frost instances={frost} purple={purple} spin={spin} />
       </Canvas>

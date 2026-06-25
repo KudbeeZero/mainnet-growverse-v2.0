@@ -50,6 +50,7 @@ export function StrainBud3D({ dna, seed, reducedMotion = false }: StrainBud3DPro
       ripe={0.58} // cloudy→amber: frost reads bright with warm glints
       brown={0.12} // a little pistil age
       trich={1} // PEAK frost — the catalog bud should look caked in resin
+      leaf={0.85} // lush frosted sugar-leaves poking through, like the reference
       purple={purple}
       reducedMotion={reducedMotion}
     />
