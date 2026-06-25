@@ -16,6 +16,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { queryKeys } from "@/lib/queryKeys";
 import { titleCase } from "@/lib/format";
+import { StudyProgressCard, ScholarsLeagueCard } from "@/components/university/EngagementPanel";
 import type { TranscriptDegree } from "@/lib/types";
 
 function TranscriptInner() {
@@ -50,6 +51,11 @@ function TranscriptInner() {
           </div>
         </Card>
       )}
+
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <StudyProgressCard />
+        <ScholarsLeagueCard />
+      </div>
 
       <div>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-300">Degrees</h2>

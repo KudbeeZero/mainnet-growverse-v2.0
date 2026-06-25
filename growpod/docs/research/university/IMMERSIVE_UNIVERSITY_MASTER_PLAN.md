@@ -277,3 +277,17 @@ to `claude/immersive-university-research`. ✅ **Complete.**
   `BotChatPanel` + `/university/coach` route with citation chips. **No real-money code**; the real
   `ClaudeMasterGrower` is deferred (mock in CI — no key ever required). 18 new tests; full backend
   suite 999 passed; 360 web vitest green. **Next: Build Phase 5** (engagement loop — non-economic).
+- 2026-06-25 — **Build Phase 5 ✅ done & MERGED** (backend PR #79 squash → main; web + this ledger
+  tick in the follow-up). The **NON-ECONOMIC engagement loop** — knowledge-XP, a forgiving study
+  streak, a KXP "Scholars" league, and proactive nudges, with the **hard rule that none of it touches
+  the GROW ledger, a Wallet, `balance.yaml`, or `economy/` code** (KXP is a separate counter from game
+  XP/level). Backend: pure `engagement_rules.py` (`streak_after` + KXP constants — same-day idempotent,
+  +1 consecutive, a freeze token grants a one-day grace, reset otherwise; freeze per 7-day milestone,
+  capped 3); additive `UniversityProgress` table + single-head migration `a1b2c3d4e5f6`;
+  `UniversityEngagementService` (`record_study_event`/`progress`/`scholars`/`next_nudge`) hooked
+  ADDITIVELY into `complete_course` + first exam pass; `GET /players/<id>/university/progress` + a
+  `scholars` leaderboard board (university-flagged); a 26-case suite incl. a ledger-untouched
+  assertion. Web: KXP+streak+freeze card with the nudge banner and a Scholars-league view on the
+  transcript page (behind the flag). Independently verified: full backend suite 1022 passed (single
+  alembic head, ledger-free), 360 web vitest green. **v1's core university (Phases 0–5) is COMPLETE.**
+  **Next: Phase 6 (Agent Campus)** — the big multi-agent expansion, staged last; pause for owner go-ahead.
