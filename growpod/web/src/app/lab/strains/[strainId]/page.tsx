@@ -31,8 +31,10 @@ import { morphologyFor, seedForPlant } from "@/lib/chamber/morphology";
 import { budColorForStrain } from "@/lib/chamber/strainVisuals";
 import { budDnaFor } from "@/lib/chamber/budDna";
 
-// The catalog hero bud is the 3D frost+pistil render (BudGL pipeline), loaded
-// client-side only (three.js touches window).
+// The catalog hero prefers a licensed photoreal photo (StrainBudHero) and falls back
+// to the 3D frost+pistil render (BudGL pipeline), loaded client-side only (three.js
+// touches window).
+import { StrainBudHero } from "@/components/viz/StrainBudHero";
 const StrainBud3D = dynamic(
   () => import("@/components/viz/StrainBud3D").then((m) => m.StrainBud3D),
   { ssr: false, loading: () => <LoadingBlock label="Frosting the bud…" /> },
@@ -126,7 +128,13 @@ function StrainHero({ strain }: { strain: Strain }) {
   const budDna = budDnaFor(strain.slug ?? strain.name, budColor, strain.bud_dna);
   return (
     <div className="relative h-[420px] w-full overflow-hidden rounded-xl border border-ink-700 bg-[#050b12]">
-      <StrainBud3D dna={budDna} seed={seedForPlant(strain.slug ?? strain.id)} reducedMotion={reducedMotion} />
+      <StrainBudHero
+        strainKey={strain.slug ?? strain.name}
+        alt={`${strain.name} bud`}
+        fallback={
+          <StrainBud3D dna={budDna} seed={seedForPlant(strain.slug ?? strain.id)} reducedMotion={reducedMotion} />
+        }
+      />
     </div>
   );
 }
