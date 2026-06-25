@@ -25,6 +25,32 @@ departments:
   postharvest: {name: "Post-Harvest & Processing"}
 
 courses:
+  # bio-101 is the no-prerequisite foundations course (the intended first step
+  # before cult-101). Faculty: Professor Flora (cultivation -> Rachel in
+  # _DEPT_VOICES). It is the Phase-1 immersive exemplar: full lecture scripts
+  # (bio-101-lecture-scripts.md) + a deterministic assessment bank
+  # (bio-101-assessment-bank.md). Added ADDITIVELY — it is not yet a prereq of
+  # cult-101 nor required by any degree, to avoid disturbing existing players.
+  # NOTE (balance, owner-tunable): tuition (sink) and the quality_bonus perk are
+  # conservative intro values; behind the unlaunched `university` flag.
+  bio-101:
+    name: "Foundations of Plant Biology"
+    department: cultivation
+    credits: 3
+    level_req: 1
+    duration_hours: 12
+    tuition: 100
+    prereqs: []
+    lecture:
+      topic: "How a cannabis plant actually works, from the cell up: tissues and growth zones, photosynthesis and the light-saturation point, water and nutrient transport, and reading the plant's response to its environment."
+      objectives:
+        - "Identify the four tissue systems and explain why the apical meristem drives new growth."
+        - "Describe the inputs to photosynthesis and what happens past the light-saturation point."
+        - "Explain how transpiration moves water, and why mobile vs. immobile nutrients show deficiencies in different places."
+        - "Diagnose environmental stress by reading where on the plant the symptoms appear."
+    practical: {type: level, threshold: 1}
+    perks: {quality_bonus: 1}
+
   cult-101:
     name: "Fundamentals of Cannabis Cultivation"
     department: cultivation
