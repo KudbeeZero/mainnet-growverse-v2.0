@@ -304,3 +304,76 @@ class AdmissionsProvider(ABC):
         answers must not crash — the provider defaults sensibly. The recommendation
         must reference only real curriculum department/course keys.
         """
+
+
+# ============================== Roadmap agent =============================
+#
+# A FREE, NON-ECONOMIC, READ-ONLY path-builder (Phase 6d). Given a learner's
+# ``mastery_by_skill`` (from the centralized learner model) and the skills-graph
+# prerequisites (``data/skills.yaml``), it produces an ordered learning path that
+# (1) ENFORCES prerequisites — a skill is never scheduled before all of its
+# prerequisites are satisfied (already-mastered OR placed earlier) — and (2) SKIPS
+# already-mastered skills. It NEVER mutates learner state (no LearnerModelService
+# .apply, no DB writes) and never touches the ledger/wallet/economy. The skill_ids
+# it references are REAL ids from the skills graph.
+
+
+class RoadmapError(Exception):
+    """Any failure producing a roadmap plan (e.g. the AI backend errored)."""
+
+
+class RoadmapStep(BaseModel):
+    """One scheduled skill in the learning path.
+
+    ``day`` is 1-based (the study day the skill is scheduled for); ``prerequisites``
+    echoes the skill's real prereq skill_ids for transparency.
+    """
+
+    skill_id: str = Field(description="The real skill_id (from the skills graph) to study.")
+    name: str = Field(description="Human-readable skill name.")
+    domain: str = Field(description="The skill's domain (cultivation/genetics/...).")
+    day: int = Field(description="The 1-based study day this skill is scheduled for.")
+    prerequisites: List[str] = Field(
+        default_factory=list,
+        description="The skill's real prerequisite skill_ids (for transparency).",
+    )
+
+
+class RoadmapPlan(BaseModel):
+    """An ordered, prerequisite-respecting learning path for a learner.
+
+    ``steps`` covers exactly the UNMASTERED skills in dependency order;
+    ``skipped_mastered`` lists the skills omitted because the learner already
+    mastered them (sorted). The path is deterministic — the same mastery + horizon
+    always yield an identical plan.
+    """
+
+    horizon_days: int = Field(description="The number of study days the path is spread across.")
+    steps: List[RoadmapStep] = Field(
+        default_factory=list,
+        description="The ordered, prerequisite-respecting study steps (unmastered skills).",
+    )
+    skipped_mastered: List[str] = Field(
+        default_factory=list,
+        description="Skill_ids skipped because the learner already mastered them (sorted).",
+    )
+    rationale: str = Field(description="A short, learner-facing summary of the path.")
+
+
+class RoadmapProvider(ABC):
+    """Turns a learner's mastery into a prerequisite-respecting RoadmapPlan."""
+
+    @abstractmethod
+    def name(self) -> str:
+        """Backend identifier (e.g. 'mock', 'claude:...')."""
+
+    @abstractmethod
+    def recommend(
+        self, *, mastery_by_skill: dict, horizon_days: int = 7
+    ) -> RoadmapPlan:
+        """Produce a RoadmapPlan from the learner's ``mastery_by_skill`` map.
+
+        ``mastery_by_skill`` maps skill_id -> best_score (0..1). The plan must skip
+        already-mastered skills and order the rest so no skill precedes any of its
+        prerequisites. Deterministic: same inputs -> identical plan.
+        """

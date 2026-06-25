@@ -14,12 +14,14 @@ from .provider import (
     AdvisorProvider,
     LecturerProvider,
     MasterGrowerProvider,
+    RoadmapProvider,
     VideoPresenterProvider,
 )
 from .mock import MockAdvisorProvider
 from .lecturer_mock import MockLecturerProvider
 from .master_grower_mock import MockMasterGrower
 from .admissions_mock import MockAdmissions
+from .roadmap_mock import MockRoadmap
 from .video_presenter_mock import MockVideoPresenter
 from .autocare import AutoCareProvider, MockAutoCareProvider
 
@@ -150,6 +152,37 @@ def shared_admissions(settings=None) -> AdmissionsProvider:
 def reset_shared_admissions() -> None:
     global _admissions
     _admissions = None
+
+
+def get_roadmap_provider(settings=None) -> RoadmapProvider:
+    """The Roadmap agent's provider (Phase 6d).
+
+    Returns the deterministic offline mock when the mock is forced or no Anthropic
+    key is configured (so CI never needs a key). A real ``ClaudeRoadmap`` is a later
+    sub-deliverable; until it lands, even a key-configured environment returns the
+    mock — mirroring the Admissions factory.
+    """
+    settings = settings or get_settings()
+    if settings.use_mock_ai or not settings.anthropic_api_key:
+        return MockRoadmap()
+    # Real Claude-backed Roadmap is a later sub-deliverable; until then the
+    # deterministic mock is the only implementation, so always return it.
+    return MockRoadmap()
+
+
+_roadmap: Optional[RoadmapProvider] = None
+
+
+def shared_roadmap(settings=None) -> RoadmapProvider:
+    global _roadmap
+    if _roadmap is None:
+        _roadmap = get_roadmap_provider(settings)
+    return _roadmap
+
+
+def reset_shared_roadmap() -> None:
+    global _roadmap
+    _roadmap = None
 
 
 def get_video_presenter_provider(settings=None) -> VideoPresenterProvider:
