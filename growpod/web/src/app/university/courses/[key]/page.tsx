@@ -16,6 +16,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { queryKeys } from "@/lib/queryKeys";
 import { grow, hours, titleCase } from "@/lib/format";
+import { ExamSection } from "./ExamQuiz";
 
 const LEVELS = ["beginner", "intermediate", "advanced"] as const;
 
@@ -44,7 +45,11 @@ function CourseInner({ courseKey }: { courseKey: string }) {
   const dept = transcript.data.departments?.[course.department ?? ""] ?? course.department ?? "";
   const studyLeft = course.progress?.study_hours_remaining ?? 0;
   const practicalMet = course.progress?.practical_met ?? false;
-  const canComplete = course.status === "enrolled" && studyLeft <= 0 && practicalMet;
+  const requiredExam = course.requires_exam;
+  const examPassed =
+    !requiredExam || (course.exams ?? []).some((e) => e.exam_id === requiredExam && e.passed);
+  const canComplete =
+    course.status === "enrolled" && studyLeft <= 0 && practicalMet && examPassed;
 
   return (
     <div className="space-y-5">
@@ -94,6 +99,9 @@ function CourseInner({ courseKey }: { courseKey: string }) {
                     practicalMet ? "✓ met" : course.progress?.practical ?? "in progress"
                   }
                 />
+                {requiredExam && (
+                  <Stat label="Mastery exam" value={examPassed ? "✓ passed" : "not passed"} />
+                )}
                 <Button
                   className="mt-1 w-full"
                   loading={complete.isPending}
@@ -129,8 +137,14 @@ function CourseInner({ courseKey }: { courseKey: string }) {
           )}
         </Card>
 
-        <div className="lg:col-span-2">
+        <div className="space-y-4 lg:col-span-2">
           <LectureReader courseKey={courseKey} topic={course.lecture_topic} />
+          <ExamSection
+            courseKey={courseKey}
+            exams={course.exams ?? []}
+            requiresExam={course.requires_exam}
+            invalidate={inv}
+          />
         </div>
       </div>
     </div>

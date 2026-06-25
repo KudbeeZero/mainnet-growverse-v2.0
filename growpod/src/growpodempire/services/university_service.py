@@ -275,6 +275,23 @@ class UniversityService:
         row = self._attempt_row(player_id, course_key, exam_id)
         return bool(row and row.passed)
 
+    def _exams_for(self, player_id, course_key) -> list:
+        """Per-exam state for a course (empty if the course has no bank)."""
+        bank = assessment_service.load_bank(course_key)
+        exams = bank.get("exams") or {}
+        out = []
+        for exam_id, spec in exams.items():
+            row = self._attempt_row(player_id, course_key, exam_id)
+            out.append({
+                "exam_id": exam_id,
+                "title": spec.get("title", exam_id),
+                "pass": float(spec.get("pass", assessment_service.MIDTERM_PASS)),
+                "attempts": row.attempts if row else 0,
+                "best_score": row.best_score if row else 0.0,
+                "passed": bool(row and row.passed),
+            })
+        return out
+
     # ----- degrees --------------------------------------------------------
     def claim_degree(self, player_id: str, degree_key: str) -> dict:
         player = self._player(player_id)
@@ -339,6 +356,8 @@ class UniversityService:
                 "prereqs": prereqs, "lecture_topic": (c.get("lecture") or {}).get("topic"),
                 "practical": c.get("practical"), "perks": c.get("perks", {}),
                 "status": status, "progress": ready,
+                "requires_exam": c.get("requires_exam"),
+                "exams": self._exams_for(player_id, key),
             })
 
         earned = _earned_degree_keys(self.session, player_id)

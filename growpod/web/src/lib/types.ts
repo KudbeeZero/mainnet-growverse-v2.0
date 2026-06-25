@@ -523,7 +523,77 @@ export interface TranscriptCourse extends CatalogCourse {
   practical: Record<string, unknown> | null;
   status: CourseStatus;
   progress: CourseProgress | null;
+  requires_exam: string | null;
+  exams: CourseExamState[];
 }
+
+// ----- assessments / exams ---------------------------------------------------
+
+export type AssessmentItemType = "mcq" | "multi" | "tf" | "numeric" | "drag_sort";
+
+/** Client-safe exam item — answer keys/feedback are stripped server-side. */
+export interface ExamItem {
+  id: string;
+  type: AssessmentItemType;
+  stem: string;
+  objective: number | null;
+  choices?: string[];        // mcq | multi
+  prompt_keys?: string[];    // drag_sort — left-hand prompts
+  options?: string[];        // drag_sort — pool of right-hand options
+}
+
+export interface Exam {
+  id: string;
+  title: string;
+  pass: number;              // 0..1 gate
+  items: ExamItem[];
+}
+
+export interface ExamResultItem {
+  id: string;
+  type: AssessmentItemType;
+  correct: boolean;
+  objective: number | null;
+  explain: string | null;
+}
+
+export interface ExamResult {
+  total: number;
+  correct_count: number;
+  score: number;             // 0..1
+  percent: number;
+  passed: boolean;
+  pass_threshold: number;
+  items: ExamResultItem[];
+}
+
+export interface ExamAttempt {
+  attempts: number;
+  best_score: number;
+  passed: boolean;
+}
+
+export interface ExamSubmission {
+  result: ExamResult;
+  attempt: ExamAttempt;
+}
+
+/** Per-exam state surfaced in the transcript. */
+export interface CourseExamState {
+  exam_id: string;
+  title: string;
+  pass: number;
+  attempts: number;
+  best_score: number;
+  passed: boolean;
+}
+
+/** A student's answer to one item: index | indices | bool | number | pairing. */
+export type ExamResponse =
+  | number
+  | number[]
+  | boolean
+  | Record<string, string>;
 
 export interface TranscriptDegree extends CatalogDegree {
   completed_required: string[];
