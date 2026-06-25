@@ -6,12 +6,11 @@
 > ElevenLabs narration pipeline voices (and the B1 avatar-video layer lip-syncs). Faculty: **Professor
 > Flora**. Part of the Immersive University pass (Track B). Status: **draft for owner review.**
 >
-> **⚠️ Roster flag (carry-over from B1):** Master Report §17 header + every narration excerpt say
-> **Professor Flora**, but the §17.11 narration manifest lists voice `vera-lindqvist`. The shipped
-> code (`ai/elevenlabs_narrator.py`) maps `cultivation → Flora (Rachel)` and `genetics → Vera
-> Lindqvist (Antoni)`; `bio-101` ("Foundations") has no clear department row yet. **Owner: confirm
-> bio-101's faculty + department→voice mapping.** Scripts below are written in Flora's voice; swapping
-> the voice is a one-line manifest change (no script edit).
+> **✅ Roster RESOLVED (2026-06-25, Phase 0 build):** `bio-101` ("Foundations of Plant Biology") is
+> taught by **Professor Flora** in the **cultivation** department, which maps to Rachel
+> (`EXAVITQu4vr4xnSDxMaL`) in `ai/elevenlabs_narrator.py` `_DEPT_VOICES`. The stray §17.11
+> `vera-lindqvist` manifest entry is superseded — code is authoritative. Scripts below are in Flora's
+> voice and require no edit.
 
 ## How to read this
 - Each voiced component = **one narration manifest row** (B1 / Master Report §15.2) → one cached MP3

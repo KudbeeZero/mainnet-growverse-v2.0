@@ -1,0 +1,159 @@
+# bio-101 "Foundations of Plant Biology" — assessment bank (data-authored).
+#
+# Authored from docs/research/university/bio-101-assessment-bank.md (F3). Every
+# item has a machine-checkable key, so grading is a PURE function
+# (services/assessment_service.py) — CI-safe, never a live AI. Feedback voice:
+# Professor Flora. Item types: mcq | multi | tf | numeric (value+tol) | drag_sort.
+#
+# Exams reference module item ids (DRY — item content lives once, in its module).
+# Midterm covers M1-M2 (>=70% gate); Mastery covers all 4 modules (>=80% -> Badge).
+
+course: bio-101
+
+modules:
+  m1:
+    title: "Cells & Tissues"
+    items:
+      - id: m1-kc-1
+        type: mcq
+        objective: 1
+        stem: "Your plant wilts at the end of a hot day, then recovers after watering. Which structure's loss of pressure best explains the wilting?"
+        choices: ["The cell wall", "The vacuole (turgor)", "The nucleus", "The chloroplast"]
+        answer: 1
+        explain: "The vacuole is the cell's water store; losing turgor pressure is what makes a thirsty plant lose its 'skeleton' and droop."
+      - id: m1-kc-2
+        type: drag_sort
+        objective: 1
+        stem: "Match each tissue to its job."
+        pairs:
+          dermal: "outer skin / cuticle / stomata"
+          vascular: "transport (xylem & phloem)"
+          ground: "bulk, storage, photosynthesis"
+          meristematic: "growth zone (dividing cells)"
+        answer: exact_pairing
+        explain: "Four tissue systems; the meristem at each tip is where new growth actually happens."
+      - id: m1-kc-3
+        type: tf
+        objective: 1
+        stem: "Topping a plant removes the apical meristem and releases lower branches from apical-dominance suppression."
+        answer: true
+        explain: "The shoot tip chemically suppresses laterals; remove it and side shoots compete — cell biology you can do with scissors."
+      - id: m1-scenario
+        type: mcq
+        objective: 1
+        stem: "A clone won't root and shows no new growth at the tip. Which tissue is most relevant to diagnose first?"
+        choices: ["Dermal", "Meristematic", "Ground", "Vascular"]
+        answer: 1
+        explain: "No new tip growth points at the apical meristem — the dividing-cell zone responsible for new growth."
+
+  m2:
+    title: "Photosynthesis & Energy"
+    items:
+      - id: m2-kc-1
+        type: mcq
+        objective: 2
+        stem: "Three inputs must show up together for photosynthesis. Which set?"
+        choices: ["Light, nitrogen, water", "Light, CO2, workable temperature", "CO2, phosphorus, oxygen", "Light, humidity, calcium"]
+        answer: 1
+        explain: "Light, CO2, and temperature form the trio; starve one and the others can't carry the load."
+      - id: m2-kc-2
+        type: numeric
+        objective: 2
+        stem: "On the assimilation curve you explored, above the light-saturation point, each extra unit of PPFD adds approximately how much additional sugar (relative %)?"
+        answer: {value: 0, tol: 5}
+        explain: "Past saturation the curve is flat — roughly zero extra gain, and beyond it you risk light/heat stress."
+      - id: m2-kc-3
+        type: mcq
+        objective: 2
+        stem: "Raising CO2 (within reason) does what to the light-saturation point?"
+        choices: ["Lowers it", "Removes it", "Raises it (more light now pays off)", "No effect"]
+        answer: 2
+        explain: "More CO2 moves saturation higher, so additional light becomes useful again — the next limiting factor shifted."
+      - id: m2-scenario
+        type: mcq
+        objective: 2
+        stem: "A grower doubled wattage; growth didn't improve and leaf-tip bleaching appeared. Best single description?"
+        choices: ["Nutrient lockout", "Past light saturation / light stress", "Overwatering", "Phosphorus deficiency"]
+        answer: 1
+        explain: "Bleaching at the top with no growth gain = light past saturation (heat usually riding along)."
+
+  m3:
+    title: "Water, Nutrients & Transport"
+    items:
+      - id: m3-kc-1
+        type: mcq
+        objective: 3
+        stem: "What primarily drives the upward movement of water and minerals in the xylem?"
+        choices: ["Root pressure pushing", "Transpiration pulling from the leaves", "Phloem sugar flow", "Gravity"]
+        answer: 1
+        explain: "Transpiration is the pump: water leaving the leaf pulls the whole column up behind it."
+      - id: m3-kc-2
+        type: mcq
+        objective: 3
+        stem: "Push VPD too high and the plant slams its stomata shut. What's the feeding consequence?"
+        choices: ["Faster uptake", "The transpiration pump stops, so uptake/feeding stops", "More CO2 intake", "Nothing"]
+        answer: 1
+        explain: "Closed stomata = pump off; a plant in perfect nutrients can starve with its mouth shut."
+      - id: m3-kc-3
+        type: mcq
+        objective: 3
+        stem: "A MOBILE-nutrient deficiency (e.g. magnesium) appears first on which leaves?"
+        choices: ["New top growth", "Lower, older leaves", "Only the stem", "Evenly everywhere"]
+        answer: 1
+        explain: "The plant cannibalizes old leaves to feed new growth, so mobile deficiencies show low and old."
+      - id: m3-kc-4
+        type: multi
+        objective: 3
+        stem: "Select the MOBILE nutrients (shown low/old when deficient)."
+        choices: ["Nitrogen", "Calcium", "Magnesium", "Iron", "Potassium"]
+        answer: [0, 2, 4]
+        explain: "N, Mg, K (and P) are mobile; Ca and Fe are immobile and show on new growth."
+
+  m4:
+    title: "Environmental Response & Integration"
+    items:
+      - id: m4-kc-1
+        type: mcq
+        objective: 4
+        stem: "Interveinal chlorosis on LOWER leaves, healthy top. Most likely cause and logic?"
+        choices: ["Iron (immobile, new growth)", "Magnesium (mobile, old growth)", "Overwatering", "Light stress"]
+        answer: 1
+        explain: "Lower/old + interveinal = mobile-nutrient logic = magnesium; the SAME pattern up top would suggest iron."
+      - id: m4-kc-2
+        type: tf
+        objective: 4
+        stem: "Leaf-edge cupping/'tacoing' with bleaching at the very top is consistent with combined heat + light stress."
+        answer: true
+        explain: "Light and heat stress travel together; check whether damage is worst directly under the lamps."
+      - id: m4-kc-3
+        type: mcq
+        objective: 4
+        stem: "First question to cut a deficiency diagnosis in half?"
+        choices: ["What nutrient brand?", "Bottom/old or top/new?", "What strain?", "What week?"]
+        answer: 1
+        explain: "Location (bottom-old vs top-new) splits mobile from immobile before you ever name the nutrient."
+
+exams:
+  midterm:
+    title: "Midterm — Foundations (M1-M2)"
+    pass: 0.70
+    item_ids: [m1-kc-1, m1-kc-2, m1-kc-3, m1-scenario, m2-kc-1, m2-kc-2, m2-kc-3, m2-scenario]
+  mastery:
+    title: "Mastery Exam — Plant Biology"
+    pass: 0.80
+    item_ids:
+      - m1-kc-1
+      - m1-kc-2
+      - m1-kc-3
+      - m1-scenario
+      - m2-kc-1
+      - m2-kc-2
+      - m2-kc-3
+      - m2-scenario
+      - m3-kc-1
+      - m3-kc-2
+      - m3-kc-3
+      - m3-kc-4
+      - m4-kc-1
+      - m4-kc-2
+      - m4-kc-3

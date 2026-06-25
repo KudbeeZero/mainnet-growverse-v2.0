@@ -56,7 +56,7 @@ _CACHE_DIR = Path(os.environ.get("NARRATION_CACHE_DIR", "/tmp/growpod_narration"
 _DEPT_VOICES = {
     "cultivation":  "EXAVITQu4vr4xnSDxMaL",   # Rachel — Professor Flora
     "genetics":     "ErXwobaYiN019PkySvjV",    # Antoni — Vera Lindqvist
-    "nutrients":    "EXAVITQu4vr4xnSDxMaL",   # Rachel — Dr. Sage Harlow
+    "nutrients":    "XB0fDUnXU5powFXDhCwa",   # Charlotte — Dr. Sage Harlow (distinct from Flora)
     "ipm":          "MF3mGyEYCl7XYWbV9V6O",   # Elli   — Dr. Mira Okafor
     "chemistry":    "AZnzlk1XvdvUeBnXmlld",   # Domi   — Dr. Chem Torres
     "postharvest":  "TxGEqnHWrfWFTfGW9XjX",   # Josh   — Dr. Petra Nance

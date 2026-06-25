@@ -600,3 +600,23 @@ faucet runs on the real 24h wall clock, so at a ~24h grow it's ≈ one stipend p
 the cycle much faster than 24h would let harvests outpace the stipend, a faucet/sink balance concern to
 revisit if pacing is shortened further. (3) Forecast tests derive expectations from the configured
 `time_scale` (not a magic number), so they stayed green.
+
+### 2026-06-25 — University Build Phase opened; faculty roster reconciled (Phase 0)
+**Decision (owner-directed):** The owner authorized the **Immersive University Build Phase** (full v1:
+graded courses, 3D Anatomy Explorer, professor video, Master Grower bot, engagement loop), built
+isolated on `claude/university-*` branches behind the existing `RequireFeature("university")` flag so it
+cannot reach players until the flag is flipped. This supersedes the UNI-011 "park until MVP" hold for
+build purposes; MVP remains the protected priority and no university work touches MVP critical-path
+surfaces (`balance.yaml`, feature-flag defaults, the pure `simulation/` engine, wallet/auth, lockfiles).
+As **Phase 0**, the faculty roster was reconciled to the **shipped-code-authoritative** roster
+(`ai/elevenlabs_narrator.py` `_DEPT_VOICES`): Professor Flora (cultivation) · Vera Lindqvist (genetics) ·
+Dr. Sage Harlow (nutrients) · Dr. Mira Okafor (ipm) · Dr. Chem Torres (chemistry) · Dr. Petra Nance
+(postharvest). The earlier Verdant/Mycelia/Atlas/Nova names are **retired**. `bio-101` "Foundations of
+Plant Biology" is taught by **Professor Flora** in the **cultivation** department.
+**Why:** Two faculty shared one voice — `nutrients` (Sage Harlow) reused Rachel, identical to
+`cultivation` (Flora) — so the personas were not audibly distinguishable. The design pass also left a
+stray `vera-lindqvist` manifest entry for `bio-101` that conflicted with the Flora scripts.
+**Consequences:** (1) Dr. Sage Harlow now uses **Charlotte** (`XB0fDUnXU5powFXDhCwa`), distinct from
+Flora — a one-line `_DEPT_VOICES` change; cached narration re-keys on the new voice and regenerates on
+next prewarm (no data loss). (2) Design docs `07-university-phase-2.md` and `bio-101-lecture-scripts.md`
+updated from "action item" to "resolved." (3) `make check-memory` green; 62 narration tests pass.

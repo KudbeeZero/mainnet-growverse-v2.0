@@ -76,9 +76,10 @@ personas** — distinct personalities, teaching styles, visual identities, and a
 > **Professor Flora** (Cultivation & Horticulture — also teaches the `bio-101` foundations course) ·
 > **Vera Lindqvist** (Plant Genetics) · **Dr. Sage Harlow** (Soil & Nutrient Science) ·
 > **Dr. Mira Okafor** (Integrated Pest Management) · **Dr. Chem Torres** (Cannabis Chemistry) ·
-> **Dr. Petra Nance** (Post-Harvest & Processing). **Action item:** give Dr. Sage Harlow a *distinct*
-> voice ID — she currently shares Rachel with Professor Flora. See
-> `docs/research/university/IMMERSIVE_UNIVERSITY_MASTER_PLAN.md` §Owner-decisions and the B1/B2 docs.
+> **Dr. Petra Nance** (Post-Harvest & Processing). **Resolved (2026-06-25, Phase 0 build):**
+> Dr. Sage Harlow now has a *distinct* voice (Charlotte, `XB0fDUnXU5powFXDhCwa`) in
+> `ai/elevenlabs_narrator.py` `_DEPT_VOICES["nutrients"]` — no longer shares Rachel with Professor
+> Flora. See `docs/research/university/IMMERSIVE_UNIVERSITY_MASTER_PLAN.md` §Owner-decisions and the B1/B2 docs.
 
 All generation
 (lab-instruction / quiz-feedback / certification-message) flows through the existing `LectureReport` shape

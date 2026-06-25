@@ -1177,6 +1177,46 @@ def university_claim_degree(player_id, degree_key):
         return _error(str(e))
 
 
+@game_bp.get("/university/courses/<course_key>/exams/<exam_id>")
+@require_feature("university")
+def university_exam(course_key, exam_id):
+    """An exam's questions, client-safe (answer keys/feedback stripped server-side).
+
+    Public read like the rest of the catalog; grading happens only on submit.
+    """
+    from ..services import assessment_service as A
+
+    payload = A.public_exam(course_key, exam_id)
+    if not payload:
+        return _error(f"No exam '{exam_id}' for course '{course_key}'", 404)
+    return jsonify(payload)
+
+
+@game_bp.post("/players/<player_id>/courses/<course_key>/exams/<exam_id>/submit")
+@require_feature("university")
+@require_player
+@limiter.limit("30 per minute")
+def university_exam_submit(player_id, course_key, exam_id):
+    """Grade a student's exam responses server-side and return scored feedback.
+
+    The answer keys never leave the server: the client posts ``{responses: {item_id: answer}}``
+    and gets back the per-item correctness + authored explanation (post-submit feedback).
+    """
+    body = request.get_json(silent=True) or {}
+    responses = body.get("responses") or {}
+    if not isinstance(responses, dict):
+        return _error("`responses` must be an object of {item_id: answer}")
+    try:
+        with session_scope() as s:
+            payload = UniversityService(s).submit_exam(
+                player_id, course_key, exam_id, responses
+            )
+            BadgeService(s).check_all(player_id)
+        return jsonify(payload), 201
+    except GameError as e:
+        return _error(str(e), 404 if "no exam" in str(e) else 400)
+
+
 @game_bp.get("/players/<player_id>/courses/<course_key>/lecture")
 @require_feature("university")
 @require_player

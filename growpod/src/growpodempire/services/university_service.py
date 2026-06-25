@@ -24,8 +24,9 @@ from ..economy.ledger import post, to_money
 from ..enums import LedgerEntryType
 from ..db.models import (
     Player, CourseEnrollment, DegreeProgress, Harvest, BreedingEvent, CupEntry,
-    ResearchProgress,
+    ResearchProgress, AssessmentAttempt,
 )
+from . import assessment_service
 from ..simulation.clock import Clock, SystemClock
 from . import leveling_service
 from .research_service import _EFFECT_KEYS
@@ -208,6 +209,10 @@ class UniversityService:
         if not met:
             raise GameError(f"Practical not met: {detail}")
 
+        required_exam = course.get("requires_exam")
+        if required_exam and not self._exam_passed(player_id, course_key, required_exam):
+            raise GameError(f"Pass the {required_exam} exam to complete this course")
+
         enrollment.status = "completed"
         enrollment.completed_at = now
         xp = int(self._univ.get("course_xp", 50))
@@ -220,6 +225,72 @@ class UniversityService:
             "status": "completed",
             "xp_awarded": xp,
         }
+
+    # ----- assessments / exams -------------------------------------------
+    def submit_exam(
+        self, player_id: str, course_key: str, exam_id: str, responses: dict
+    ) -> dict:
+        """Grade an exam server-side (pure) and persist the player's BEST attempt.
+
+        Returns ``{result, attempt}`` — the per-item scored result plus the
+        accumulated attempt state (attempts/best_score/passed).
+        """
+        self._player(player_id)
+        if self.courses.get(course_key) is None:
+            raise GameError(f"Unknown course '{course_key}'")
+        try:
+            result = assessment_service.grade_exam(course_key, exam_id, responses)
+        except assessment_service.AssessmentError as exc:
+            raise GameError(str(exc))
+        attempt = self._record_attempt(player_id, course_key, exam_id, result)
+        return {"result": result, "attempt": attempt}
+
+    def _attempt_row(self, player_id, course_key, exam_id):
+        return (
+            self.session.query(AssessmentAttempt)
+            .filter_by(player_id=player_id, course_key=course_key, exam_id=exam_id)
+            .one_or_none()
+        )
+
+    def _record_attempt(self, player_id, course_key, exam_id, result) -> dict:
+        row = self._attempt_row(player_id, course_key, exam_id)
+        if row is None:
+            row = AssessmentAttempt(
+                player_id=player_id, course_key=course_key, exam_id=exam_id,
+                attempts=0, best_score=0.0, passed=False,
+            )
+            self.session.add(row)
+        row.attempts += 1
+        row.best_score = max(row.best_score, float(result["score"]))
+        row.passed = row.passed or bool(result["passed"])  # forgiving: never un-pass
+        row.last_attempt_at = self.clock.now()
+        self.session.flush()
+        return {
+            "attempts": row.attempts,
+            "best_score": row.best_score,
+            "passed": row.passed,
+        }
+
+    def _exam_passed(self, player_id, course_key, exam_id) -> bool:
+        row = self._attempt_row(player_id, course_key, exam_id)
+        return bool(row and row.passed)
+
+    def _exams_for(self, player_id, course_key) -> list:
+        """Per-exam state for a course (empty if the course has no bank)."""
+        bank = assessment_service.load_bank(course_key)
+        exams = bank.get("exams") or {}
+        out = []
+        for exam_id, spec in exams.items():
+            row = self._attempt_row(player_id, course_key, exam_id)
+            out.append({
+                "exam_id": exam_id,
+                "title": spec.get("title", exam_id),
+                "pass": float(spec.get("pass", assessment_service.MIDTERM_PASS)),
+                "attempts": row.attempts if row else 0,
+                "best_score": row.best_score if row else 0.0,
+                "passed": bool(row and row.passed),
+            })
+        return out
 
     # ----- degrees --------------------------------------------------------
     def claim_degree(self, player_id: str, degree_key: str) -> dict:
@@ -285,6 +356,8 @@ class UniversityService:
                 "prereqs": prereqs, "lecture_topic": (c.get("lecture") or {}).get("topic"),
                 "practical": c.get("practical"), "perks": c.get("perks", {}),
                 "status": status, "progress": ready,
+                "requires_exam": c.get("requires_exam"),
+                "exams": self._exams_for(player_id, key),
             })
 
         earned = _earned_degree_keys(self.session, player_id)

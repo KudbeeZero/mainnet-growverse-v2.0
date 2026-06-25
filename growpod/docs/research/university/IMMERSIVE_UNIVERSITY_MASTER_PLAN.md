@@ -198,3 +198,9 @@ to `claude/immersive-university-research`. ✅ **Complete.**
 - 2026-06-24 — **Track F depth pass (F1–F5) done**: 3D Explorer technical spec, cult-101 scripts,
   bio-101 assessment bank, bot system design, WCAG a11y gate. **15 docs total.** Further progress now
   gated on the 6 owner decisions (esp. lifting the UNI-011 freeze). Branch left for owner review (no PR).
+- 2026-06-25 — **University Build Phase OPENED by owner** (full v1 scope; isolated on
+  `claude/university-*` behind the `university` flag; MVP stays the protected priority). HeyGen video
+  approved (~$140); Master Grower bot built **free** in v1 (no payment code). See DECISIONS.md
+  2026-06-25. **Build Phase 0 ✅ done:** faculty roster reconciled — Dr. Sage Harlow given a distinct
+  voice (Charlotte), `bio-101 → Professor Flora/cultivation`, stale roster notes resolved;
+  `make check-memory` green, 62 narration tests pass. **Next: Build Phase 1** (course framework + bio-101).

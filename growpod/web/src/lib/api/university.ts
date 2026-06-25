@@ -4,6 +4,9 @@ import type {
   Transcript,
   Enrollment,
   LectureReport,
+  Exam,
+  ExamSubmission,
+  ExamResponse,
 } from "@/lib/types";
 
 export const university = {
@@ -39,4 +42,20 @@ export const university = {
       auth: true,
       query: opts,
     }),
+
+  // An exam's questions — client-safe (answer keys stripped server-side). Public read.
+  exam: (courseKey: string, examId: string) =>
+    apiFetch<Exam>(`/university/courses/${courseKey}/exams/${examId}`),
+
+  // Submit exam responses for server-side grading; persists the best attempt.
+  submitExam: (
+    playerId: string,
+    courseKey: string,
+    examId: string,
+    responses: Record<string, ExamResponse>,
+  ) =>
+    apiFetch<ExamSubmission>(
+      `/players/${playerId}/courses/${courseKey}/exams/${examId}/submit`,
+      { method: "POST", body: { responses } },
+    ),
 };
