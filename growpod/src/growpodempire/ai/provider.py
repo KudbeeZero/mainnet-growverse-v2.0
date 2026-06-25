@@ -9,7 +9,7 @@ the player (or, later, an agentic auto-care loop) can actually call.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
@@ -156,4 +156,94 @@ class VideoPresenterProvider(ABC):
 
         `context` carries the spoken script (or the fields to build it), the
         department/faculty (→ avatar), and any precomputed narration timings.
+        """
+
+
+# ============================ Master Grower bot ============================
+#
+# A FREE, read-only conversational "Master Grower" that answers cultivation and
+# strain questions by calling the same shipped services the rest of the game
+# uses (advisor diagnosis, plant state, the strain catalog + knowledge base). It
+# is GROUNDED — every substantive answer cites the tool output it drew from and
+# states only numbers/facts that appear there — and REFUSES out-of-scope asks
+# (legal/medical advice, or "pay-to-win" requests to buy advantages). There is
+# no billing/entitlement anywhere; the tools never write to the DB or ledger.
+
+
+class MasterGrowerError(Exception):
+    """Any failure producing a Master Grower answer (e.g. the AI backend errored)."""
+
+
+class Citation(BaseModel):
+    """A provenance pointer for one claim in a Master Grower answer.
+
+    `source` identifies the tool/dataset the fact came from
+    (e.g. "strain_knowledge:afghani" or "plant_state"); `snippet` is the exact
+    text/figure relied on, so the answer can be audited against its evidence.
+    """
+
+    source: str = Field(description="Where the fact came from, e.g. 'strain_knowledge:afghani'.")
+    snippet: str = Field(description="The exact text/figure relied on from that source.")
+
+
+class MasterGrowerReport(BaseModel):
+    """The Master Grower's grounded answer to a single question."""
+
+    answer: str = Field(description="The answer, stating only facts present in the citations.")
+    citations: List[Citation] = Field(
+        default_factory=list,
+        description="Provenance for the answer; non-empty for any substantive reply.",
+    )
+    suggested_actions: List[CareAction] = Field(
+        default_factory=list,
+        description="Optional concrete care actions the player could take next.",
+    )
+    refused: bool = Field(
+        default=False,
+        description="True when the question was out of scope (legal/medical/pay-to-win).",
+    )
+    disclaimer: str = Field(
+        default="",
+        description="Educational/scope disclaimer shown alongside the answer when relevant.",
+    )
+
+
+@runtime_checkable
+class MasterGrowerTools(Protocol):
+    """The read-only toolbox a MasterGrowerProvider may call to ground an answer.
+
+    Defined here (not in services) so providers stay decoupled from the service
+    layer and there is no circular import. The concrete implementation is
+    `services.master_grower_service.MasterGrowerService`. Every method is a pure
+    read — no writes, no ledger, no spend.
+    """
+
+    def get_plant_state(self, player_id: str, plant_id: str) -> dict:
+        """Live plant-state context (stage, health, water/nutrient/pest/disease, …)."""
+
+    def diagnose_plant(self, player_id: str, plant_id: str) -> "AdvisorReport":
+        """A full advisor diagnosis for a plant."""
+
+    def lookup_strain(self, query: str) -> Optional[dict]:
+        """A strain's public traits (+ knowledge-base entry) by name/slug, or None."""
+
+    def search_knowledge(self, query: str) -> List[dict]:
+        """Keyword hits in the strain knowledge base: [{'slug','snippet'}, …]."""
+
+
+class MasterGrowerProvider(ABC):
+    """Answers a cultivation/strain question, grounded in the read-only tools."""
+
+    @abstractmethod
+    def name(self) -> str:
+        """Backend identifier (e.g. 'mock', 'claude:...')."""
+
+    @abstractmethod
+    def answer(self, question: str, tools: "MasterGrowerTools") -> MasterGrowerReport:
+        """Produce a grounded MasterGrowerReport for `question`.
+
+        The provider may call `tools` to fetch plant state, a diagnosis, or
+        strain/knowledge data, and MUST cite whatever it relies on. It must
+        refuse out-of-scope questions (legal/medical advice, pay-to-win) rather
+        than fabricate.
         """

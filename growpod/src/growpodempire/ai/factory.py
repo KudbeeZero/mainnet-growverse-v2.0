@@ -9,9 +9,15 @@ and tests run with no network or secrets — mirroring chain/factory.py.
 from typing import Optional
 
 from ..config import get_settings
-from .provider import AdvisorProvider, LecturerProvider, VideoPresenterProvider
+from .provider import (
+    AdvisorProvider,
+    LecturerProvider,
+    MasterGrowerProvider,
+    VideoPresenterProvider,
+)
 from .mock import MockAdvisorProvider
 from .lecturer_mock import MockLecturerProvider
+from .master_grower_mock import MockMasterGrower
 from .video_presenter_mock import MockVideoPresenter
 from .autocare import AutoCareProvider, MockAutoCareProvider
 
@@ -80,6 +86,37 @@ def get_auto_care_provider(settings=None) -> AutoCareProvider:
     return ClaudeAutoCareProvider(
         api_key=settings.anthropic_api_key, model=settings.advisor_model
     )
+
+
+def get_master_grower_provider(settings=None) -> MasterGrowerProvider:
+    """The FREE Master Grower bot's provider.
+
+    Returns the deterministic offline mock when the mock is forced or no
+    Anthropic key is configured (so CI never needs a key). The real
+    `ClaudeMasterGrower` is a later sub-deliverable; until it lands, even a
+    key-configured environment returns the mock.
+    """
+    settings = settings or get_settings()
+    if settings.use_mock_ai or not settings.anthropic_api_key:
+        return MockMasterGrower()
+    # Real Claude-backed Master Grower is a later sub-deliverable; until then the
+    # deterministic mock is the only implementation, so always return it.
+    return MockMasterGrower()
+
+
+_master_grower: Optional[MasterGrowerProvider] = None
+
+
+def shared_master_grower(settings=None) -> MasterGrowerProvider:
+    global _master_grower
+    if _master_grower is None:
+        _master_grower = get_master_grower_provider(settings)
+    return _master_grower
+
+
+def reset_shared_master_grower() -> None:
+    global _master_grower
+    _master_grower = None
 
 
 def get_video_presenter_provider(settings=None) -> VideoPresenterProvider:
