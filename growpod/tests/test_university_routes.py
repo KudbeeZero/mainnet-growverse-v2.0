@@ -145,6 +145,56 @@ def test_presenter_video_404s_when_feature_disabled(client, monkeypatch):
     ).status_code == 404
 
 
+# ----- master grower bot (Phase 4) -------------------------------------------
+
+def _ask_mg(client, pid, key, question, plant_id=None):
+    body = {"question": question}
+    if plant_id:
+        body["plant_id"] = plant_id
+    return client.post(
+        f"/api/game/players/{pid}/master-grower/ask", json=body, headers=_hdr(key)
+    )
+
+
+def test_master_grower_requires_auth(client):
+    pid, _ = _new_player(client, "mg_noauth")
+    r = client.post(
+        f"/api/game/players/{pid}/master-grower/ask",
+        json={"question": "Tell me about Blue Dream"},
+    )
+    assert r.status_code in (401, 403)
+
+
+def test_master_grower_404s_when_feature_disabled(client, monkeypatch):
+    pid, key = _new_player(client, "mg_off")
+    monkeypatch.setenv("FEATURE_UNIVERSITY", "false")
+    assert _ask_mg(client, pid, key, "hello").status_code == 404
+
+
+def test_master_grower_requires_a_question(client):
+    pid, key = _new_player(client, "mg_empty")
+    assert _ask_mg(client, pid, key, "   ").status_code == 400
+
+
+def test_master_grower_answers_strain_grounded(client):
+    pid, key = _new_player(client, "mg_strain")
+    r = _ask_mg(client, pid, key, "Tell me about Blue Dream")
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body["refused"] is False
+    assert body["citations"], "a substantive answer must be grounded"
+    assert any("strain_knowledge" in c["source"] for c in body["citations"])
+
+
+def test_master_grower_refuses_pay_to_win(client):
+    pid, key = _new_player(client, "mg_p2w")
+    r = _ask_mg(client, pid, key, "what should I buy to win fastest?")
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body["refused"] is True
+    assert not body["citations"]
+
+
 # ----- transcript (authed) ---------------------------------------------------
 
 def test_transcript_requires_auth(client):

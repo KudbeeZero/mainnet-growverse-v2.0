@@ -1217,6 +1217,29 @@ def university_exam_submit(player_id, course_key, exam_id):
         return _error(str(e), 404 if "no exam" in str(e) else 400)
 
 
+@game_bp.post("/players/<player_id>/master-grower/ask")
+@require_feature("university")
+@require_player
+@limiter.limit("20 per minute")
+def university_master_grower_ask(player_id):
+    """Ask the FREE Master Grower bot a grounded cultivation/strain question.
+
+    Body: ``{question: str, plant_id?: str}``. Read-only: the bot may call the
+    advisor/strain tools but nothing writes or spends. Answers are grounded
+    (cited) or refused (legal/medical, pay-to-win). Returns a MasterGrowerReport.
+    """
+    from ..services.master_grower_service import MasterGrowerService
+
+    body = request.get_json(silent=True) or {}
+    question = (body.get("question") or "").strip()
+    if not question:
+        return _error("`question` is required")
+    plant_id = body.get("plant_id") or None
+    with session_scope() as s:
+        report = MasterGrowerService(s).ask(question, player_id=player_id, plant_id=plant_id)
+    return jsonify(report.model_dump())
+
+
 @game_bp.get("/players/<player_id>/courses/<course_key>/lecture")
 @require_feature("university")
 @require_player
