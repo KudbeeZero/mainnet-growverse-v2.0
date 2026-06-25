@@ -139,6 +139,13 @@ class Settings:
         # Set ELEVENLABS_API_KEY in the host secret store to enable TTS audio.
         # Without it the lecture endpoint returns text only (audio_url omitted).
         self.elevenlabs_api_key: str | None = os.environ.get("ELEVENLABS_API_KEY")
+        # --- HeyGen presenter video (optional; owner-gated) -------------------
+        # University Phase 2: professor "talking-head" lecture videos. Without a
+        # key (or with USE_MOCK_AI=true) the deterministic mock presenter is used
+        # — captions + narration audio, no rendered video, no spend. The real
+        # HeyGen provider (one-time ~$140 catalog render) stays disabled until
+        # the owner approves the spend.
+        self.heygen_api_key: str | None = os.environ.get("HEYGEN_API_KEY")
         # Agentic auto-care lets the advisor CALL care actions itself (spending
         # in-game GROW within a per-invocation budget cap). On by default — the
         # budget/action caps are the guardrail — but can be disabled outright.
