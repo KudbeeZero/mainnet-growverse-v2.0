@@ -23,6 +23,8 @@ from ..services.engagement_service import UniversityEngagementService
 from ..services.learner_model_service import LearnerModelService
 from ..services.seasonal_service import SeasonalService
 from ..services.research_service import ResearchService
+from ..services.waitlist_service import WaitlistService
+from ..services.factions import load_factions
 from ..services import leveling_service
 from ..services.badge_service import BadgeService, rank_for_level
 from ..economy.ledger import InsufficientFundsError
@@ -63,6 +65,68 @@ def feature_flags():
     routes/components and acts as a launch kill-switch surface — no deploy needed
     to flip one."""
     return jsonify({"flags": all_flags()})
+
+
+# ----- Faction + launch waitlist (NON-ECONOMIC, flag-gated) --------------
+@game_bp.get("/factions")
+@require_feature("faction_waitlist")
+def list_factions():
+    """Public display catalog of the pre-launch factions, so the web client can
+    render the picker. Gated by the ``faction_waitlist`` flag; pure data."""
+    return jsonify(load_factions())
+
+
+@game_bp.post("/waitlist")
+@require_feature("faction_waitlist")
+@limiter.limit("10 per hour")
+def join_waitlist():
+    """Public, rate-limited join: choose a faction and optionally submit an
+    Algorand address and/or email. NON-ECONOMIC — stores a string for a future
+    reward; touches no ledger/wallet/economy and does no on-chain action."""
+    data = request.get_json(force=True, silent=True) or {}
+    if not data.get("faction"):
+        return _error("faction is required")
+    try:
+        with session_scope() as s:
+            payload = WaitlistService(s).join(
+                faction=data["faction"],
+                algorand_address=data.get("algorand_address"),
+                email=data.get("email"),
+                source=data.get("source", "web"),
+            )
+        return jsonify(payload), 201
+    except GameError as e:
+        return _error(str(e))
+
+
+@game_bp.get("/waitlist/standings")
+@require_feature("faction_waitlist")
+def waitlist_standings():
+    """Public per-faction signup counts + total for the live signup meter."""
+    with session_scope() as s:
+        payload = WaitlistService(s).standings()
+    return jsonify(payload)
+
+
+@game_bp.post("/waitlist/engage")
+@require_feature("faction_waitlist")
+@limiter.limit("30 per hour")
+def waitlist_engage():
+    """Public, rate-limited: add a small clamped amount of engagement points to
+    an existing signup (identified by address, email, or signup_id)."""
+    data = request.get_json(force=True, silent=True) or {}
+    points = bounded_int(data.get("points"), "points", default=1, low=0, high=50)
+    try:
+        with session_scope() as s:
+            payload = WaitlistService(s).add_engagement(
+                algorand_address=data.get("algorand_address"),
+                email=data.get("email"),
+                signup_id=data.get("signup_id"),
+                points=points,
+            )
+        return jsonify(payload)
+    except GameError as e:
+        return _error(str(e), 404)
 
 
 # ----- Players -----------------------------------------------------------
