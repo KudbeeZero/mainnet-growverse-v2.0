@@ -764,3 +764,29 @@ export interface SeasonalStrain {
   price_gc: number;
   is_current: boolean;
 }
+
+// --- Faction + launch waitlist (public, NON-economic pre-launch funnel) ---
+export interface Faction {
+  id: string;
+  name: string;
+  color: string;
+  crest: string;
+  tagline: string;
+  lore: string;
+}
+export interface FactionsResponse {
+  factions: Faction[];
+}
+export interface WaitlistStandings {
+  factions: Record<string, number>;
+  total: number;
+}
+export interface WaitlistSignup {
+  id: string;
+  faction: string;
+  algorand_address: string | null;
+  email: string | null;
+  engagement_points: number;
+  source: string;
+  created_at: string | null;
+}
