@@ -1,19 +1,25 @@
 factions:
-  - id: indica
-    name: Indica
-    color: "#7c5cff"
-    crest: "🌙"
-    tagline: "Rest, resin & heavy nights."
-    lore: "Broad-leaf and fast to finish — frost-drenched colas bred for deep rest."
-  - id: sativa
-    name: Sativa
+  - id: frostwardens
+    name: The Frostwardens
+    color: "#8b7cff"
+    crest: "❄️"
+    tagline: "Resin, rest & the long cold night."
+    lore: "Cultivators of frost-caked, sedative colas — they chase the cold finish where the trichomes run thickest."
+  - id: sunseekers
+    name: The Sunseekers
     color: "#f5a623"
     crest: "☀️"
-    tagline: "Soaring energy, long light."
-    lore: "Tall, airy and late to finish — the order of bright, soaring days."
-  - id: hybrid
-    name: Hybrid
+    tagline: "Soaring highs under the long light."
+    lore: "Tall, airy, late-finishing sativas — the order of bright energy and the endless day."
+  - id: loomkeepers
+    name: The Loomkeepers
     color: "#2dd4bf"
     crest: "🧬"
-    tagline: "Balance — the best of both."
-    lore: "Bred to balance both worlds and tuned to the grower's will."
+    tagline: "Weavers of the family tree."
+    lore: "Breeders and stabilizers who bend the genome to their will — every cross a thread in the loom."
+  - id: alchemists
+    name: The Alchemists
+    color: "#ff6b9d"
+    crest: "⚗️"
+    tagline: "Terpenes, extracts, pure essence."
+    lore: "Masters of cure and concentrate — they distill the plant down to its loudest, purest soul."
