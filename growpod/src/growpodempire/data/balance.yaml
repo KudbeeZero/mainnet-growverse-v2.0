@@ -564,3 +564,4 @@ feature_flags:
   chain: true                  # on-chain wallet / NFT minting (gated)
   contracts: true              # NPC contracts (gated)
   seasonal_strains: true       # monthly exclusive seed drops (token sink)
+  faction_waitlist: true       # pre-launch faction + waitlist (NON-economic)

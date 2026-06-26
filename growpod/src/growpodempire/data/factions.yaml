@@ -1,0 +1,19 @@
+factions:
+  - id: indica
+    name: Indica
+    color: "#7c5cff"
+    crest: "🌙"
+    tagline: "Rest, resin & heavy nights."
+    lore: "Broad-leaf and fast to finish — frost-drenched colas bred for deep rest."
+  - id: sativa
+    name: Sativa
+    color: "#f5a623"
+    crest: "☀️"
+    tagline: "Soaring energy, long light."
+    lore: "Tall, airy and late to finish — the order of bright, soaring days."
+  - id: hybrid
+    name: Hybrid
+    color: "#2dd4bf"
+    crest: "🧬"
+    tagline: "Balance — the best of both."
+    lore: "Bred to balance both worlds and tuned to the grower's will."

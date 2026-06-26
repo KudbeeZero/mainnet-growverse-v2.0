@@ -768,6 +768,29 @@ class Bundle(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
+class WaitlistSignup(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A pre-launch waitlist entry: a chosen FACTION plus an optional Algorand
+    address and/or email (NON-ECONOMIC).
+
+    This is a marketing/engagement surface, NOT part of the economy: it NEVER
+    posts to the ledger, touches a Wallet, or reads ``balance.yaml`` economy
+    values. ``algorand_address`` is stored only as a well-formed string for a
+    future reward airdrop — no on-chain action happens here. ``engagement_points``
+    is a self-contained tally distinct from GROW currency and game XP. Dedupe is
+    service-level (by address, else email) so a re-submit updates the chosen
+    faction in place rather than creating a duplicate row."""
+
+    __tablename__ = "waitlist_signups"
+
+    faction: Mapped[str] = mapped_column(String(32), nullable=False)
+    email: Mapped[Optional[str]] = mapped_column(String(255))
+    algorand_address: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    engagement_points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    source: Mapped[str] = mapped_column(String(32), default="web", nullable=False)
+
+    __table_args__ = (Index("ix_waitlist_signups_faction", "faction"),)
+
+
 class MarketListing(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "market_listings"
 
