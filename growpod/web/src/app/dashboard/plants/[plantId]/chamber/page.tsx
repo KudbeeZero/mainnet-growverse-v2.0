@@ -37,7 +37,7 @@ import { budParamsFromTrichomes } from "@/lib/chamber/bud3d/serverBud";
 import { titleCase } from "@/lib/format";
 import { nudge } from "@/lib/slider";
 import { isBud3DEnabled, hasWebGL } from "@/lib/features";
-import { getBoostMultiplier } from "@/lib/arcade/boostEngine";
+import { getBoostMultiplier, BOOST_APPLIED_EVENT, type BoostApplyDetail } from "@/lib/arcade/boostEngine";
 import { useRewindStore } from "@/lib/arcade/timeRewind";
 
 const GrowChamber = dynamic(
@@ -57,6 +57,17 @@ const ArcadeHUD = dynamic(
   () => import("@/components/arcade/ArcadeHUD").then((m) => m.ArcadeHUD),
   { ssr: false, loading: () => null },
 );
+
+// Chain row (wallet + mint). Lazy + only mounted when ALGO is enabled, so algosdk
+// stays out of the chamber bundle otherwise.
+const ChainRow = dynamic(
+  () => import("@/components/arcade/ChainRow").then((m) => m.ChainRow),
+  { ssr: false, loading: () => null },
+);
+
+// Plain env read (no chain import) so the chamber bundle doesn't pull in algosdk
+// unless the chain layer is actually enabled.
+const ALGO_ENABLED = process.env.NEXT_PUBLIC_ALGO_ENABLE === "true";
 
 // How fast a boost visually advances the bud's "look" (nominal grow-days per
 // second, per unit of multiplier above 1×). Purely cosmetic — no server/DB change.
@@ -208,6 +219,39 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     return () => window.clearInterval(id);
   }, [captureSnapshot]);
 
+  // --- Best-effort on-chain grow-event log (only when ALGO is enabled) ---
+  // Latest plant identity for the boost listener (kept in a ref to avoid re-subscribing).
+  const chainPlantRef = useRef<{ id: string; strain: string } | null>(null);
+  // Boost → BOOST_APPLIED event log. Dynamic import keeps algosdk lazy.
+  useEffect(() => {
+    if (!ALGO_ENABLED) return;
+    let cleanup = () => {};
+    void import("@/lib/chain/algorand/growEvents").then(({ logBoostEvent }) => {
+      const onBoost = (e: Event) => {
+        const d = (e as CustomEvent<BoostApplyDetail>).detail;
+        const p = chainPlantRef.current;
+        if (!d || !p || d.duration === 0) return; // skip the mint-celebration burst
+        logBoostEvent(p.id, p.strain, d.type, d.multiplier, d.duration);
+      };
+      window.addEventListener(BOOST_APPLIED_EVENT, onBoost);
+      cleanup = () => window.removeEventListener(BOOST_APPLIED_EVENT, onBoost);
+    });
+    return () => cleanup();
+  }, []);
+  // Stage transition → STAGE_TRANSITION event log.
+  const prevChainStage = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!ALGO_ENABLED || !plant) return;
+    const stage = plant.growth_stage;
+    const prev = prevChainStage.current;
+    prevChainStage.current = stage;
+    if (prev && prev !== stage) {
+      void import("@/lib/chain/algorand/growEvents").then(({ logStageTransition }) =>
+        logStageTransition(plant.id, plant.strain_id, prev, stage, 0),
+      );
+    }
+  }, [plant?.growth_stage, plant?.id, plant?.strain_id, plant]);
+
   const pod = pods?.find((p) => p.id === plant?.pod_id);
 
   // Seed the sliders from the pod's real environment, once, when it loads.
@@ -324,6 +368,8 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const budScalars = rewindOverride ?? liveScalars;
   // Keep the snapshot timer fed with the latest LIVE look (not the rewound override).
   scalarsRef.current = { ...liveScalars, day: boostedLiveDay, stage: renderStage };
+  // Keep plant identity current for the on-chain boost listener.
+  chainPlantRef.current = { id: plant.id, strain: plant.strain_id };
   // "To harvest" is the authoritative, pace-aware countdown from the server
   // forecast (so it tracks the compressed cycle); the client estimate is only a
   // pre-forecast fallback. Count whole days down, never showing 0 until ready.
@@ -646,7 +692,18 @@ function ChamberScreen({ plantId }: { plantId: string }) {
 
       {/* Arcade Mode controls — chamber-only, dismissible. */}
       {!ended && !hudHidden && (
-        <ArcadeHUD reducedMotion={reducedMotion} onClose={() => setHudHidden(true)} />
+        <ArcadeHUD
+          reducedMotion={reducedMotion}
+          onClose={() => setHudHidden(true)}
+          chainSlot={
+            ALGO_ENABLED ? (
+              <ChainRow
+                plant={plant}
+                mintOptions={{ strainName: strain?.name, growDay: Math.round(day), budDev: budScalars.budDev }}
+              />
+            ) : undefined
+          }
+        />
       )}
       {!ended && hudHidden && (
         <button
