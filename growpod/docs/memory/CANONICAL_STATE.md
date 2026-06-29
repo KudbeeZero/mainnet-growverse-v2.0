@@ -12,6 +12,25 @@
 > cite PRs by GitHub number. Routine churn belongs in BACKLOG (priority) and the dated standups.
 
 **Reconciled:** 2026-06-14 · **Against:** `main` (post-#46) · **By:** REC-004 (Records Department)
+**Partial update:** 2026-06-29 (web cinematic + arcade wave; §2 ledger below is pre-#56, not yet re-swept to #100+)
+
+---
+
+## 0) 2026-06-29 update — web cinematic + arcade wave
+
+> Repo is now **`kudbeezero/mainnet-growverse-v2.0`**. Recently merged to `main`:
+> - **#100** — Arcade Mode (chamber boosts/rewind/FX, default-off) + a **client-side Algorand
+>   TestNet layer** (`web/src/lib/chain/algorand/*`): Pera wallet, ARC-69 plant-NFT + grow-event
+>   stubs, genotype codec. **SIMULATE-default — no real value moves**; RISK #4/7 stays gated.
+> - **#101** — scroll-driven cinematic `/onboarding` login (GSAP + Lenis + the six baked-in
+>   effects); auth wiring unchanged. New web deps `gsap`, `lenis`.
+> - **#102** — cinematic `/factions` pre-launch door (reuses the landing layer; waitlist logic intact).
+>
+> New **web** env flags (default off / SIMULATE; `web/.env.local.example`): `NEXT_PUBLIC_ARCADE_SOUND`,
+> `NEXT_PUBLIC_ALGO_ENABLE`, `NEXT_PUBLIC_ALGO_SIMULATE` (+ `NEXT_PUBLIC_ALGO_NETWORK/NODE_URL/INDEXER_URL`).
+> New web deps: `gsap`, `lenis`, `algosdk`, `@perawallet/connect`. Backend `feature_flags:`
+> (`data/balance.yaml`, 12 flags) and the §5 launch critical path are **unchanged**. The §2 PR ledger
+> and §3 branch list below predate this wave (last full sweep ~#56) and need a future re-sweep.
 
 ---
 

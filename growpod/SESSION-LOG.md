@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-06-29 — Web cinematic + arcade wave (multiple PRs)
+
+### Entry — Three web PRs merged forward + upgrade-sprint reconciliation
+- **What:** Merged **#100** (Arcade Mode + client Algorand TestNet SIMULATE layer), **#101**
+  (scroll-driven cinematic `/onboarding`, GSAP + Lenis), **#102** (cinematic `/factions`) to `main`.
+  Then reconciled an incoming "upgrade sprint" spec against the repo (3 explore agents): ~half was
+  already done or wrong — active-clock already polls every 7s (`usePlantState`); the "PR #28 /
+  Circadian Leaf Motion" item is actually a **merged Fly.io deploy PR**; backend is **Flask** (not
+  FastAPI); there is **no `clone` table**; `/` is redirect-only.
+- **Decision (owner):** build the **corrected subset** — skip done / fix wrong; elevate the existing
+  `/onboarding` (no new public homepage); **scoped** 3D bud polish (no whole-plant lifecycle, no new
+  deps). New work orders: one PR each on `claude/*`, default-off behind flags, **opened for review —
+  not auto-merged**.
+- **Result:** #100/#101/#102 on `main`, CI green throughout. RISK #4/7 (real chain) untouched — the
+  new Algorand layer is SIMULATE-default. This PR (`claude/wo3-stale-docs`) refreshes the memory docs
+  (CLAUDE.md Current-State pointer, CANONICAL_STATE §0 update, BUILDLOG wave entry) to match `main`.
+
+---
+
 ## 2026-06-10 — Night-shift autonomous run (branch `claude/night-shift-2026-06-10`)
 
 ### Entry 10 — Rebase onto current main (I was 21 commits stale) — owner catch
