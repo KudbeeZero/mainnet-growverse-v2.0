@@ -6,19 +6,27 @@
 // a future reward; nothing here spends or earns currency. Degrades gracefully when
 // the `faction_waitlist` flag is off (the API 404s → "opening soon").
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
 import { ConnectWalletButton } from "@/components/wallet/ConnectWalletButton";
-import { VideoHero } from "@/components/onboarding/VideoHero";
+import { CinematicBackdrop } from "@/components/landing/CinematicBackdrop";
+import { GrainOverlay } from "@/components/landing/GrainOverlay";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { useSmoothScroll } from "@/lib/scroll/useSmoothScroll";
+import { useReveal } from "@/lib/scroll/reveal";
 import { api, ApiError } from "@/lib/api";
 import { factionShares } from "@/lib/factions";
 import type { Faction, WaitlistSignup } from "@/lib/types";
 
 export default function FactionsPage() {
   const qc = useQueryClient();
+  const reduced = usePrefersReducedMotion();
+  useSmoothScroll(!reduced);
+  const revealRef = useRef<HTMLDivElement>(null);
+  useReveal(revealRef, !reduced, { start: "top 92%", stagger: 0.08 });
   const factionsQ = useQuery({
     queryKey: ["factions"],
     queryFn: () => api.waitlist.factions(),
@@ -63,29 +71,34 @@ export default function FactionsPage() {
   // Flag off / API unavailable → tasteful "opening soon" state.
   if (factionsQ.isError) {
     return (
-      <div className="py-10">
-        <EmptyState
-          icon="🌱"
-          title="Factions are opening soon"
-          hint="The pre-launch faction draft isn't live yet — check back shortly."
-        />
-      </div>
+      <>
+        <CinematicBackdrop />
+        <GrainOverlay />
+        <div className="relative z-10 py-10">
+          <EmptyState
+            icon="🌱"
+            title="Factions are opening soon"
+            hint="The pre-launch faction draft isn't live yet — check back shortly."
+          />
+        </div>
+      </>
     );
   }
 
   const pickedFaction = factions.find((f) => f.id === picked) ?? null;
 
   return (
-    <div className="space-y-6 py-6">
-      <div className="overflow-hidden rounded-2xl">
-        <VideoHero />
+    <>
+      <CinematicBackdrop />
+      <GrainOverlay />
+      <div ref={revealRef} className="relative z-10 space-y-6 py-6">
+      <div data-reveal>
+        <PageHeader
+          eyebrow="GROWVERSE · CHOOSE YOUR SIDE"
+          title="Pick your faction"
+          subtitle="Three lineages, one grow. Align with yours, claim your spot on the launch waitlist — the more you commit now, the bigger your reward at launch."
+        />
       </div>
-
-      <PageHeader
-        eyebrow="GROWVERSE · CHOOSE YOUR SIDE"
-        title="Pick your faction"
-        subtitle="Three lineages, one grow. Align with yours, claim your spot on the launch waitlist — the more you commit now, the bigger your reward at launch."
-      />
 
       {/* Faction cards */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -102,13 +115,13 @@ export default function FactionsPage() {
           />
         ))}
       </div>
-      <p className="text-center text-xs text-gray-500">
+      <p data-reveal className="text-center text-xs text-gray-500">
         {total > 0 ? `${total.toLocaleString()} growers have aligned so far` : "Be the first to align"}
       </p>
 
       {/* Join panel */}
       {picked && (
-        <div className="mx-auto max-w-lg space-y-4 rounded-2xl border border-grow-700/50 bg-ink-900/60 p-5">
+        <div data-reveal className="mx-auto max-w-lg space-y-4 rounded-2xl border border-grow-700/50 bg-ink-900/60 p-5">
           {joined ? (
             <div className="space-y-1 text-center">
               <div className="text-3xl">{pickedFaction?.crest}</div>
@@ -166,7 +179,8 @@ export default function FactionsPage() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -184,6 +198,7 @@ function FactionCard({
   return (
     <button
       type="button"
+      data-reveal
       onClick={onPick}
       aria-pressed={selected}
       className={`flex flex-col gap-2 rounded-2xl border p-4 text-left transition-all ${
