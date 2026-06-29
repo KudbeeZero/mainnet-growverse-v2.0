@@ -311,6 +311,71 @@ body {
   animation: gpe-scan-ring 1.4s ease-out infinite;
 }
 
+/* ---- Arcade Mode FX (NutrientPop) — CSS-only, self-cleaning ---- */
+/* A single burst particle flung outward along its own --angle by --dist, shrinking
+   and fading. Duration is set per-particle inline (600–900ms). */
+@keyframes gpe-arcade-particle {
+  0% {
+    transform: rotate(var(--angle)) translateX(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--angle)) translateX(var(--dist)) scale(0);
+    opacity: 0;
+  }
+}
+.gpe-arcade-particle {
+  animation: gpe-arcade-particle var(--dur, 750ms) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+/* Strongest-boost screen shake (LIGHT_BLAST), 200ms. */
+@keyframes gpe-arcade-shake {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-4px, 2px); }
+  50% { transform: translate(4px, -2px); }
+  75% { transform: translate(-2px, 1px); }
+  100% { transform: translate(0, 0); }
+}
+.gpe-arcade-shake {
+  animation: gpe-arcade-shake 200ms ease-in-out;
+}
+
+/* Stage-unlock concentric ring burst, 800ms. */
+@keyframes gpe-arcade-ring {
+  0% { transform: scale(0.5); opacity: 0.85; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+.gpe-arcade-ring {
+  animation: gpe-arcade-ring 800ms ease-out forwards;
+}
+
+/* Ambient trichome shimmer: a highlight sweeps across once, then idles ~4s. */
+@keyframes gpe-arcade-shimmer {
+  0% { transform: translateX(-120%); opacity: 0; }
+  4% { opacity: 0.15; }
+  15% { transform: translateX(120%); opacity: 0; }
+  100% { transform: translateX(120%); opacity: 0; }
+}
+.gpe-arcade-shimmer {
+  animation: gpe-arcade-shimmer 4s linear infinite;
+}
+
+/* Boost badge: pops in then floats. */
+@keyframes gpe-arcade-badge-in {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes gpe-arcade-badge-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.gpe-arcade-badge {
+  animation:
+    gpe-arcade-badge-in 300ms ease-out both,
+    gpe-arcade-badge-float 2s ease-in-out 300ms infinite;
+}
+
 /* ---- Cinematic landing: film-grain "boil" (jitters a tiled noise layer) ---- */
 @keyframes gpe-grain {
   0%, 100% { transform: translate(0, 0); }
@@ -339,6 +404,11 @@ body {
   .gpe-celebrate-pop,
   .gpe-electric-flash,
   .gpe-electric-bolt,
+  .gpe-arcade-particle,
+  .gpe-arcade-shake,
+  .gpe-arcade-ring,
+  .gpe-arcade-shimmer,
+  .gpe-arcade-badge,
   .gpe-grain,
   .animate-spin,
   .animate-twinkle,

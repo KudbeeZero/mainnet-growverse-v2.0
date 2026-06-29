@@ -8,11 +8,13 @@
 // Three instanced meshes = three draw calls. Must load via dynamic({ssr:false}).
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { buildCola, colaSilhouette, hslToRgb } from "@/lib/chamber/bud3d/cola";
 import { buildFrost, buildPistils, buildSugarLeaves, type FrostMat } from "@/lib/chamber/bud3d/detail";
 import { pickPaletteColor, type BudDNA } from "@/lib/chamber/budDna";
+import { NutrientPop } from "@/components/arcade/NutrientPop";
+import { BOOST_APPLIED_EVENT, type BoostApplyDetail } from "@/lib/arcade/boostEngine";
 
 const Y_CENTER = -0.5; // cola spans y≈0..1 in unit space; centre it on the origin
 const UP = new THREE.Vector3(0, 1, 0);
@@ -305,7 +307,7 @@ function SugarLeaves({
 }
 
 export function BudGL({
-  dna, seed, budDev, ripe = 0, brown = 0, trich = 0, purple = 0, leaf = 0.8, reducedMotion = false,
+  dna, seed, budDev, ripe = 0, brown = 0, trich = 0, purple = 0, leaf = 0.8, reducedMotion = false, stage,
 }: {
   dna: BudDNA;
   seed: number;
@@ -322,6 +324,8 @@ export function BudGL({
   /** 0..1 sugar-leaf amount (frosted leaflets poking through the cola). */
   leaf?: number;
   reducedMotion?: boolean;
+  /** Current growth stage — drives the Arcade stage-unlock ring burst. */
+  stage?: string;
 }) {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const cola = useMemo(() => buildCola(dna, seed, { budDev }), [dna, seed, budDev]);
@@ -339,8 +343,24 @@ export function BudGL({
   );
   const spin = !reducedMotion;
 
+  // Arcade screen shake on the strongest boost (LIGHT_BLAST): the canvas wrapper
+  // jolts for 200ms. Particles/rings live in the NutrientPop overlay. The Three.js
+  // render loop is untouched — this is a CSS transform on the wrapper only.
+  const [shake, setShake] = useState(false);
+  useEffect(() => {
+    if (reducedMotion) return;
+    function onBoost(e: Event) {
+      const detail = (e as CustomEvent<BoostApplyDetail>).detail;
+      if (detail?.type !== "LIGHT_BLAST") return;
+      setShake(true);
+      window.setTimeout(() => setShake(false), 220);
+    }
+    window.addEventListener(BOOST_APPLIED_EVENT, onBoost);
+    return () => window.removeEventListener(BOOST_APPLIED_EVENT, onBoost);
+  }, [reducedMotion]);
+
   return (
-    <div className="absolute inset-0">
+    <div className={`absolute inset-0${shake ? " gpe-arcade-shake" : ""}`}>
       <Canvas
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
@@ -356,6 +376,8 @@ export function BudGL({
         <Pistils instances={pistils} spin={spin} />
         <Frost instances={frost} purple={purple} spin={spin} />
       </Canvas>
+      {/* CSS-only FX overlay — no canvas, no draw-call impact. */}
+      <NutrientPop stage={stage} reducedMotion={reducedMotion} />
     </div>
   );
 }

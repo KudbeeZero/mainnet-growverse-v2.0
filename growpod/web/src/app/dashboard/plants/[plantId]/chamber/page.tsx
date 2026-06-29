@@ -37,6 +37,8 @@ import { budParamsFromTrichomes } from "@/lib/chamber/bud3d/serverBud";
 import { titleCase } from "@/lib/format";
 import { nudge } from "@/lib/slider";
 import { isBud3DEnabled, hasWebGL } from "@/lib/features";
+import { getBoostMultiplier, BOOST_APPLIED_EVENT, type BoostApplyDetail } from "@/lib/arcade/boostEngine";
+import { useRewindStore } from "@/lib/arcade/timeRewind";
 
 const GrowChamber = dynamic(
   () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
@@ -49,6 +51,27 @@ const BudGL = dynamic(
   () => import("@/components/viz/BudGL").then((m) => m.BudGL),
   { ssr: false, loading: () => null },
 );
+
+// Arcade Mode HUD — lazy so it's tree-shaken from every non-chamber route.
+const ArcadeHUD = dynamic(
+  () => import("@/components/arcade/ArcadeHUD").then((m) => m.ArcadeHUD),
+  { ssr: false, loading: () => null },
+);
+
+// Chain row (wallet + mint). Lazy + only mounted when ALGO is enabled, so algosdk
+// stays out of the chamber bundle otherwise.
+const ChainRow = dynamic(
+  () => import("@/components/arcade/ChainRow").then((m) => m.ChainRow),
+  { ssr: false, loading: () => null },
+);
+
+// Plain env read (no chain import) so the chamber bundle doesn't pull in algosdk
+// unless the chain layer is actually enabled.
+const ALGO_ENABLED = process.env.NEXT_PUBLIC_ALGO_ENABLE === "true";
+
+// How fast a boost visually advances the bud's "look" (nominal grow-days per
+// second, per unit of multiplier above 1×). Purely cosmetic — no server/DB change.
+const BOOST_DAY_RATE = 0.6;
 
 // Local climate state: the five persisted fields + a visual-only FAN.
 interface ChamberClimate extends Environment {
@@ -160,6 +183,75 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     if (flashRef.current) clearTimeout(flashRef.current);
   }, []);
 
+  // --- Arcade Mode (client-only visual layer) ---
+  const [hudHidden, setHudHidden] = useState(false);
+  // Transient, in-memory "visual grow" offset that an active boost advances. It
+  // moves the bud's LOOK forward only — never the server/DB/economy state.
+  const [boostOffset, setBoostOffset] = useState(0);
+  const rewindOverride = useRewindStore((s) => s.override);
+  const rewindActive = useRewindStore((s) => s.rewindActive);
+  const captureSnapshot = useRewindStore((s) => s.captureSnapshot);
+  // Latest bud scalars, kept in a ref so the snapshot timer reads current values
+  // without re-subscribing each frame.
+  const scalarsRef = useRef({ budDev: 0, ripe: 0, brown: 0, trich: 0, purple: 0, day: 0, stage: "seed" });
+
+  // Boost driver: while a boost is active, accrue visual grow-days.
+  useEffect(() => {
+    let raf = 0;
+    let last = typeof performance !== "undefined" ? performance.now() : 0;
+    const loop = (t: number) => {
+      const dt = Math.min(0.1, (t - last) / 1000);
+      last = t;
+      const m = getBoostMultiplier();
+      if (m > 1) setBoostOffset((o) => o + (m - 1) * dt * BOOST_DAY_RATE);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Capture a rewind snapshot every few seconds from the live (non-preview) look.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const s = scalarsRef.current;
+      captureSnapshot({ ...s });
+    }, 6000);
+    return () => window.clearInterval(id);
+  }, [captureSnapshot]);
+
+  // --- Best-effort on-chain grow-event log (only when ALGO is enabled) ---
+  // Latest plant identity for the boost listener (kept in a ref to avoid re-subscribing).
+  const chainPlantRef = useRef<{ id: string; strain: string } | null>(null);
+  // Boost → BOOST_APPLIED event log. Dynamic import keeps algosdk lazy.
+  useEffect(() => {
+    if (!ALGO_ENABLED) return;
+    let cleanup = () => {};
+    void import("@/lib/chain/algorand/growEvents").then(({ logBoostEvent }) => {
+      const onBoost = (e: Event) => {
+        const d = (e as CustomEvent<BoostApplyDetail>).detail;
+        const p = chainPlantRef.current;
+        if (!d || !p || d.duration === 0) return; // skip the mint-celebration burst
+        logBoostEvent(p.id, p.strain, d.type, d.multiplier, d.duration);
+      };
+      window.addEventListener(BOOST_APPLIED_EVENT, onBoost);
+      cleanup = () => window.removeEventListener(BOOST_APPLIED_EVENT, onBoost);
+    });
+    return () => cleanup();
+  }, []);
+  // Stage transition → STAGE_TRANSITION event log.
+  const prevChainStage = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!ALGO_ENABLED || !plant) return;
+    const stage = plant.growth_stage;
+    const prev = prevChainStage.current;
+    prevChainStage.current = stage;
+    if (prev && prev !== stage) {
+      void import("@/lib/chain/algorand/growEvents").then(({ logStageTransition }) =>
+        logStageTransition(plant.id, plant.strain_id, prev, stage, 0),
+      );
+    }
+  }, [plant?.growth_stage, plant?.id, plant?.strain_id, plant]);
+
   const pod = pods?.find((p) => p.id === plant?.pod_id);
 
   // Seed the sliders from the pod's real environment, once, when it loads.
@@ -255,12 +347,29 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     ? nominalGrowDay(plant.growth_stage, plant.forecast.stage_progress_pct, flMid)
     : ageDays(plant.planted_at);
   const previewing = previewDay !== null;
-  const day = previewing ? previewDay : liveNominalDay;
+  const maxPreviewDay = Math.round(cycleDays(flMid) + 8);
+  // Fold the Arcade boost offset into the LIVE look only (clamped); the time-preview
+  // scrubber ignores it. Purely visual — server/plant state is never advanced.
+  const boostedLiveDay = previewing ? liveNominalDay : Math.min(maxPreviewDay, liveNominalDay + boostOffset);
+  const day = previewing ? previewDay : boostedLiveDay;
   const renderStage = previewing ? stageForDay(day, flMid) : plant.growth_stage;
-  const dev = previewing ? previewDev(day, flMid) : previewDev(liveNominalDay, flMid);
+  const dev = previewing ? previewDev(day, flMid) : previewDev(boostedLiveDay, flMid);
   // Server trichome telemetry → bud frost/maturity (live only); null while previewing.
   const serverBud = budParamsFromTrichomes(plant.trichomes, previewing);
-  const maxPreviewDay = Math.round(cycleDays(flMid) + 8);
+  // The bud's renderable scalars — replaced by the rewind override while scrubbing
+  // backward (the bud "un-grows": pistils retract, frost recedes, bud shrinks).
+  const liveScalars = {
+    budDev: dev.budDev,
+    ripe: serverBud?.ripe ?? dev.ripe,
+    brown: dev.brown,
+    trich: serverBud?.trich ?? dev.trich,
+    purple: budColor.anthocyanin ?? 0,
+  };
+  const budScalars = rewindOverride ?? liveScalars;
+  // Keep the snapshot timer fed with the latest LIVE look (not the rewound override).
+  scalarsRef.current = { ...liveScalars, day: boostedLiveDay, stage: renderStage };
+  // Keep plant identity current for the on-chain boost listener.
+  chainPlantRef.current = { id: plant.id, strain: plant.strain_id };
   // "To harvest" is the authoritative, pace-aware countdown from the server
   // forecast (so it tracks the compressed cycle); the client estimate is only a
   // pre-forecast fallback. Count whole days down, never showing 0 until ready.
@@ -300,20 +409,35 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           rail in landscape so the plant stays tall on short/foldable screens */}
       <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
       {/* stage */}
-      <div className="relative min-h-0 flex-1">
+      <div
+        className="relative min-h-0 flex-1"
+        style={rewindActive && !reducedMotion ? { filter: "hue-rotate(-20deg) saturate(0.85)" } : undefined}
+      >
+        {/* VHS scanline overlay during a rewind scrub. */}
+        {rewindActive && !reducedMotion && (
+          <div
+            className="pointer-events-none absolute inset-0 z-20"
+            style={{
+              background:
+                "repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 2px, transparent 4px)",
+            }}
+            aria-hidden
+          />
+        )}
         {bud3d && view === "macro" ? (
           <BudGL
             dna={budDna}
             seed={seedForPlant(plantId)}
-            budDev={dev.budDev}
-            // Live frost/maturity from server trichome truth (so the bud matches the
-            // 🔬 readout's harvest window); falls back to the client dev prediction
-            // while previewing a scrubbed day or before flowering.
-            ripe={serverBud?.ripe ?? dev.ripe}
-            brown={dev.brown}
-            trich={serverBud?.trich ?? dev.trich}
-            purple={budColor.anthocyanin ?? 0}
+            // Scalars come from `budScalars`: the live look (server trichome truth +
+            // client dev), folded with the Arcade boost offset, or replaced by the
+            // rewind override while scrubbing backward.
+            budDev={budScalars.budDev}
+            ripe={budScalars.ripe}
+            brown={budScalars.brown}
+            trich={budScalars.trich}
+            purple={budScalars.purple}
             reducedMotion={reducedMotion}
+            stage={renderStage}
           />
         ) : (
           <GrowChamber
@@ -565,6 +689,31 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         )}
       </div>
       </div>
+
+      {/* Arcade Mode controls — chamber-only, dismissible. */}
+      {!ended && !hudHidden && (
+        <ArcadeHUD
+          reducedMotion={reducedMotion}
+          onClose={() => setHudHidden(true)}
+          chainSlot={
+            ALGO_ENABLED ? (
+              <ChainRow
+                plant={plant}
+                mintOptions={{ strainName: strain?.name, growDay: Math.round(day), budDev: budScalars.budDev }}
+              />
+            ) : undefined
+          }
+        />
+      )}
+      {!ended && hudHidden && (
+        <button
+          onClick={() => setHudHidden(false)}
+          aria-label="Show arcade controls"
+          className="fixed bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+5rem))] left-1/2 z-40 -translate-x-1/2 rounded-full border border-cyan-400/40 bg-[#08141e]/85 px-3 py-1.5 text-xs font-bold text-cyan-200 backdrop-blur"
+        >
+          🎮 Arcade
+        </button>
+      )}
     </div>
   );
 }
