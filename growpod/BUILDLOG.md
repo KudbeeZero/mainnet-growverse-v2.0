@@ -143,3 +143,15 @@ health-observability, ci-github-actions, dockerize, openapi-docs,
 strain-search-favorites, leaderboards, market-auctions, weather-events,
 pod-automation, strain-stabilization, asa-wallet-settlement, contracts-orders,
 plus test-coverage-property. Tests: 79 -> 123, all green. No broken merges.
+
+## Web cinematic + arcade wave (2026-06-29)
+Web-client-only; no backend behaviour change. Each its own PR, reviewed + merged.
+- `claude/3d-engine-plant-strategy-vmrmnn` (#100) · Arcade Mode (chamber boosts / time-rewind /
+  NutrientPop FX / HUD / Web-Audio sound, all default-off) + a **client-side Algorand TestNet
+  layer** (Pera wallet, ARC-69 plant-NFT + grow-event stubs, genotype codec) — **SIMULATE-default,
+  no real value; RISK #4/7 still gated**. New web deps `algosdk`, `@perawallet/connect`. +20 web unit tests.
+- `claude/login-cinematic` (#101) · scroll-driven cinematic `/onboarding` login (GSAP + Lenis +
+  film grain / particles / vignette / glass / color-tints / scroll pacing); auth wiring unchanged;
+  reduced-motion static path. New web deps `gsap`, `lenis`.
+- `claude/cinematic-factions` (#102) · cinematic `/factions` pre-launch door (reuses the landing
+  layer; waitlist logic intact).

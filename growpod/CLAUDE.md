@@ -88,6 +88,15 @@ decision confidence, label each finding (Verified / Memory conflict / Needs owne
 Unsafe to proceed, …), and gate on the owner where required. BUILD_RULES is *what is safe to
 change*; this is *how to decide what's true and what to do next*.
 
+## Current state (snapshot — full ledger in `docs/memory/CANONICAL_STATE.md`)
+Recently merged to `main` — the **web cinematic + arcade wave**: Arcade Mode + a client-side
+Algorand TestNet layer (SIMULATE-default, no real value; #100), a scroll-driven cinematic
+`/onboarding` login (GSAP + Lenis; #101), and a cinematic `/factions` door (#102). New **web**
+flags (default off / SIMULATE): `NEXT_PUBLIC_ARCADE_SOUND`, `NEXT_PUBLIC_ALGO_ENABLE`,
+`NEXT_PUBLIC_ALGO_SIMULATE`. Backend `feature_flags:` (`data/balance.yaml`) and the launch
+critical path are unchanged. Real on-chain settlement stays gated (RISK #4/7). The point-in-time
+records ledger lives in `docs/memory/CANONICAL_STATE.md`; the live baton is `docs/HANDOFF.md`.
+
 ## Memory layer map (read deeper as needed)
 | Layer | File | Purpose | Volatility |
 |------|------|---------|-----------|
