@@ -8,6 +8,11 @@ import { Footer } from "./Footer";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  // The cinematic login landing is a full-bleed canvas: no nav chrome, no width
+  // cap, no footer/tab-bar — it owns the whole viewport and scrolls on its own.
+  if (pathname === "/onboarding") {
+    return <div className="min-h-[100dvh]">{children}</div>;
+  }
   // The Command Center is a dense, multi-rail "app" surface — on big desktop
   // monitors the 1152px content cap left huge empty gutters. Let it break out to
   // a much wider container on large screens. Text-led pages (store, university,
