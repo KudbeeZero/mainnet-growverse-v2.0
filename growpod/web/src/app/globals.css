@@ -376,6 +376,19 @@ body {
     gpe-arcade-badge-float 2s ease-in-out 300ms infinite;
 }
 
+/* ---- Cinematic landing: film-grain "boil" (jitters a tiled noise layer) ---- */
+@keyframes gpe-grain {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-3%, -2%); }
+  30% { transform: translate(2%, -3%); }
+  50% { transform: translate(-2%, 3%); }
+  70% { transform: translate(3%, 2%); }
+  90% { transform: translate(-2%, -2%); }
+}
+.gpe-grain {
+  animation: gpe-grain 0.55s steps(3) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gpe-agent-pop,
   .gpe-think-dot,
@@ -396,6 +409,7 @@ body {
   .gpe-arcade-ring,
   .gpe-arcade-shimmer,
   .gpe-arcade-badge,
+  .gpe-grain,
   .animate-spin,
   .animate-twinkle,
   .animate-pulse-ring,

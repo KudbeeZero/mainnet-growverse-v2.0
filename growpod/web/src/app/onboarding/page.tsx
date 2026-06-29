@@ -1,49 +1,114 @@
 "use client";
 
+// The main login page — rebuilt as a scroll-driven cinematic landing ("the method",
+// minus the generative video): Lenis smooth-scroll + GSAP ScrollTrigger pacing, the
+// six baked-in effects (film grain, particles, vignette, glass cards, color tints,
+// scroll pacing), ending in the existing login/create card. Auth wiring is unchanged
+// (OnboardingPanel + useSession). Reduced-motion → everything renders static.
+
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useSession } from "@/lib/session";
-import { OnboardingPanel } from "@/components/onboarding/OnboardingPanel";
-import { GroversWordmark } from "@/components/viz/GroversWordmark";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { useSmoothScroll } from "@/lib/scroll/useSmoothScroll";
+import { CinematicBackdrop } from "@/components/landing/CinematicBackdrop";
+import { GrainOverlay } from "@/components/landing/GrainOverlay";
+import { HeroSection } from "@/components/landing/HeroSection";
+import { StoryBeat } from "@/components/landing/StoryBeat";
+import { LoginSection } from "@/components/landing/LoginSection";
 import { AnnouncementsBanner } from "@/components/layout/AnnouncementsBanner";
-import { VideoHero } from "@/components/onboarding/VideoHero";
+
+const Constellation = dynamic(
+  () => import("@/components/viz/Constellation").then((m) => m.Constellation),
+  { ssr: false, loading: () => null },
+);
 
 export default function OnboardingPage() {
   const { isAuthed, hydrated } = useSession();
   const router = useRouter();
+  const reduced = usePrefersReducedMotion();
+  // Smooth-scroll + ScrollTrigger lifecycle (no-op under reduced motion).
+  useSmoothScroll(!reduced);
 
   useEffect(() => {
     if (hydrated && isAuthed) router.replace("/dashboard");
   }, [hydrated, isAuthed, router]);
 
   return (
-    <div className="py-6">
-      {/* News lives in its own row above the hero — it can never cover the logo. */}
-      <AnnouncementsBanner className="mb-8" />
-      <div className="grid items-center gap-8 lg:grid-cols-2">
-        <div>
-          <GroversWordmark className="mb-2" />
-          {/* The branded Grow-Pod growing seed → harvest — the public money shot. */}
-          <div className="instrument-label mb-3 text-center text-gray-600 motion-reduce:hidden">
-            LIVE GROW-POD · SEED TO HARVEST
-          </div>
-          <VideoHero />
-          <div className="mt-5">
-            <div className="instrument-label mb-1">GALACTIC SERIES · GROWPOD EMPIRE</div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-50">
-              Real genetics. Real time.{" "}
-              <span className="text-glow-grow text-grow-300">Provably yours.</span>
-            </h1>
-            <p className="mt-2 max-w-md text-sm text-gray-400">
-              Cultivate a living simulation, breed discovered cultivars, and register them on a
-              verifiable family tree. A genome is a graph — so we render it as one.
-            </p>
-          </div>
-        </div>
-        <div className="lg:pl-6">
-          <OnboardingPanel />
-        </div>
-      </div>
+    <div className="relative">
+      <CinematicBackdrop />
+      <GrainOverlay />
+
+      {/* News floats over the hero so it never covers the wordmark. */}
+      <AnnouncementsBanner className="absolute inset-x-0 top-0 z-40 mx-auto max-w-3xl px-4 pt-3" />
+
+      <main className="relative z-10">
+        <HeroSection />
+
+        <StoryBeat
+          eyebrow="THE GENOME"
+          title="A genome is a graph — so we render it as one."
+          body={
+            <>
+              Every strain carries real, heritable traits across multiple gene loci. Breed two
+              cultivars and the offspring inherit a provable lineage — not a random reroll. The
+              living particle leaf you see is that genome, rendered as a force-directed graph.
+            </>
+          }
+          visual={
+            <div className="panel h-full w-full overflow-hidden p-2">
+              <Constellation mode="leaf" frameless lockView height={340} leafCount={300} showCount={false} accent="#76c024" />
+            </div>
+          }
+        />
+
+        <StoryBeat
+          flip
+          eyebrow="THE SIMULATION"
+          title="Seed to harvest, in real time."
+          body={
+            <>
+              A pure, server-authoritative engine grows every plant tick-by-tick — light, water,
+              nutrients, trichome ripeness. Dial the chamber in, watch the buds frost over, and
+              harvest at the perfect window.
+            </>
+          }
+          visual={
+            <div className="grid h-full grid-cols-2 gap-3">
+              {[
+                { k: "THC", v: "18–28%" },
+                { k: "FLOWERING", v: "55–70d" },
+                { k: "YIELD", v: "400–600g" },
+                { k: "TRICHOMES", v: "live" },
+              ].map((s) => (
+                <div key={s.k} className="panel flex flex-col items-center justify-center gap-1 p-4 shadow-glow-soft">
+                  <span className="instrument-label text-accent-400">{s.k}</span>
+                  <span className="text-xl font-bold text-gray-50">{s.v}</span>
+                </div>
+              ))}
+            </div>
+          }
+        />
+
+        <StoryBeat
+          eyebrow="THE PROOF"
+          title={
+            <>
+              Discover it, breed it, <span className="text-glow-accent text-accent-300">own it.</span>
+            </>
+          }
+          body={
+            <>
+              Register a discovered cultivar on a verifiable family tree and mint it on-chain. A
+              rare phenotype you found in week one becomes a provably scarce asset — its lineage
+              readable by anyone, forever.
+            </>
+          }
+        />
+
+        <LoginSection />
+      </main>
     </div>
   );
 }
