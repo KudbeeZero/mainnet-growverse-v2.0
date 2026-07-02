@@ -39,6 +39,7 @@ flowchart TD
 | 1+ | `docs/memory/design/` | **Design Codex** — vision/intent (where we're going) | Low |
 | 2 | `docs/memory/DECISIONS.md` | Append-only "why" log (ADRs) | Append-only |
 | 3 | `docs/memory/BACKLOG.md` | Prioritized work — now / medium / low | High |
+| 3 | `docs/memory/INCIDENTS.md` | Recurring-problems ledger — the "twice rule": check before debugging, root-cause fix on second occurrence | Append-mostly |
 | 4 | `docs/memory/standups/` | Dated LUT round-table reports | Daily |
 
 Read **top-down** (Layer 0 is short + stable; each layer down is more detailed + volatile). Write
