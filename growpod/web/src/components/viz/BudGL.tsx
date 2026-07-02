@@ -11,25 +11,20 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { buildCola, colaSilhouette, hslToRgb } from "@/lib/chamber/bud3d/cola";
-import { buildFrost, buildPistils, buildSugarLeaves, type FrostMat } from "@/lib/chamber/bud3d/detail";
+import { buildFrost, buildPistils, buildSugarLeaves } from "@/lib/chamber/bud3d/detail";
 import { pickPaletteColor, type BudDNA } from "@/lib/chamber/budDna";
+import { makeCapitateGeom, trichomeHeadColor } from "@/components/viz/trichomeGeometry";
 import { NutrientPop } from "@/components/arcade/NutrientPop";
 import { BOOST_APPLIED_EVENT, type BoostApplyDetail } from "@/lib/arcade/boostEngine";
 
 const Y_CENTER = -0.5; // cola spans y≈0..1 in unit space; centre it on the origin
 const UP = new THREE.Vector3(0, 1, 0);
 
-/** Frost head colour by maturity (mirrors trichomes.ts trichHeadColor), with an
- * optional lavender tint for purple phenos. Returns a THREE.Color. */
-function frostColor(mat: FrostMat, purple: number): THREE.Color {
-  let r: number, g: number, b: number;
-  if (mat === 0) { r = 224; g = 242; b = 255; }          // clear / blue-white
-  else if (mat === 1) { r = 248; g = 250; b = 244; }     // cloudy / milky
-  else return new THREE.Color(228 / 255, 188 / 255, 110 / 255); // amber (no tint)
-  const t = Math.min(1, Math.max(0, purple)) * 0.35;
-  r = r + (198 - r) * t; g = g + (178 - g) * t; b = b + (232 - b) * t;
-  return new THREE.Color(r / 255, g / 255, b / 255);
-}
+/** A pale silver-teal the calyx albedo lerps toward as frost cakes the bud — so a
+ * frosty cola reads coated, not just where a discrete gland sits. Data-driven: the
+ * lerp AMOUNT comes from trichomeDensity × trich (zero when the bud isn't frosting
+ * yet), never a hardcoded recolour. */
+const FROST_TINT = new THREE.Color(0.74, 0.84, 0.86);
 
 /** The solid "bud body" — a lathed teardrop following the cola silhouette, sitting
  * just inside the calyx shell so it fills the gaps BETWEEN calyxes. Without it the
@@ -111,10 +106,15 @@ function useCalyxGeometry() {
   }, []);
 }
 
-function Calyxes({ cola, spin }: { cola: ReturnType<typeof buildCola>; spin: boolean }) {
+function Calyxes({ cola, frost, spin }: { cola: ReturnType<typeof buildCola>; frost: number; spin: boolean }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geom = useCalyxGeometry();
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.74, metalness: 0.0 }), []);
+  // Waxy, low-plastic calyx skin with a hint of subsurface softness via a soft
+  // emissive floor (reads in the crevices between packed calyxes).
+  const mat = useMemo(
+    () => new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0.0, emissive: new THREE.Color(0.02, 0.05, 0.05) }),
+    [],
+  );
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
@@ -134,11 +134,20 @@ function Calyxes({ cola, spin }: { cola: ReturnType<typeof buildCola>; spin: boo
       d.rotateZ(ins.rot[2] * 0.4);
       d.updateMatrix();
       mesh.setMatrixAt(i, d.matrix);
-      mesh.setColorAt(i, col.setRGB(ins.color[0], ins.color[1], ins.color[2]));
+      // Frost the calyx albedo toward silver — heavier up the cola, lighter at the
+      // skirt — but keep most of the blue-teal palette so the bright WHITE glands
+      // read as high-contrast crystal caking on a green bud (the reference look).
+      const hf = Math.min(1, Math.max(0, ins.pos[1]));
+      const amt = Math.min(0.62, frost * (0.18 + 0.6 * hf));
+      col.setRGB(ins.color[0], ins.color[1], ins.color[2]).lerp(FROST_TINT, amt);
+      // Deterministic per-calyx tonal jitter (±8%) so packed sacs read distinct.
+      const hsh = Math.sin(ins.pos[0] * 91.17 + ins.pos[1] * 47.33 + ins.pos[2] * 61.7) * 43758.5453;
+      col.multiplyScalar(0.92 + 0.16 * (hsh - Math.floor(hsh)));
+      mesh.setColorAt(i, col);
     });
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [cola, geom]);
+  }, [cola, geom, frost]);
   useFrame((_, dt) => { if (spin && ref.current) ref.current.rotation.y += dt * 0.32; });
   return <instancedMesh key={cola.length} ref={ref} args={[geom, mat, cola.length]} />;
 }
@@ -147,23 +156,48 @@ function Frost({
   instances, purple, spin,
 }: { instances: ReturnType<typeof buildFrost>; purple: number; spin: boolean }) {
   const ref = useRef<THREE.InstancedMesh>(null);
-  const geom = useMemo(() => new THREE.IcosahedronGeometry(1, 1), []);
-  // Low roughness + faint emissive so glands catch the light like wet resin.
+  // Capitate stalk + gland (smoother detail-1 gland — it's a single hero bud so
+  // the tris are cheap) so the close-up reads as real capitate-stalked trichomes
+  // caking the cola, not floating balls.
+  const geom = useMemo(() => makeCapitateGeom(1), []);
+  // Translucent silvery resin: low roughness so glands glint as wet sparkle, a
+  // brighter emissive floor so the coat never goes muddy in shadow.
   const mat = useMemo(
-    () => new THREE.MeshStandardMaterial({ roughness: 0.12, metalness: 0.1, emissive: new THREE.Color(0.05, 0.07, 0.08), transparent: true, opacity: 0.92 }),
+    () =>
+      new THREE.MeshStandardMaterial({
+        roughness: 0.16,
+        metalness: 0.0,
+        transparent: true,
+        opacity: 0.96,
+        emissive: new THREE.Color(0.22, 0.27, 0.3),
+        emissiveIntensity: 0.9,
+        depthWrite: true,
+      }),
     [],
   );
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
     const d = new THREE.Object3D();
+    const q = new THREE.Quaternion();
+    const nrm = new THREE.Vector3();
+    const col = new THREE.Color();
     instances.forEach((g, i) => {
       d.position.set(g.pos[0], g.pos[1] + Y_CENTER, g.pos[2]);
-      d.scale.setScalar(g.r);
-      d.rotation.set(0, 0, 0);
+      // Stand the trichome UP along the calyx surface normal, with a per-gland
+      // tilt jitter so the coat looks grown, not combed.
+      nrm.set(g.nrm[0], g.nrm[1], g.nrm[2]).normalize();
+      q.setFromUnitVectors(UP, nrm);
+      d.quaternion.copy(q);
+      d.rotateX((g.spark - 0.5) * 0.9);
+      const s = g.r * 2.4 * (0.8 + 0.6 * g.spark);
+      d.scale.set(s, s * 1.3, s);
       d.updateMatrix();
       mesh.setMatrixAt(i, d.matrix);
-      mesh.setColorAt(i, frostColor(g.mat, purple));
+      // Sparkle: keep glands bright (near-white) with a wide brightness spread so
+      // a fraction glint near-white for granular crystal frost.
+      col.copy(trichomeHeadColor(g.mat, purple)).multiplyScalar(0.85 + 0.5 * g.spark);
+      mesh.setColorAt(i, col);
     });
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -330,7 +364,18 @@ export function BudGL({
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const cola = useMemo(() => buildCola(dna, seed, { budDev }), [dna, seed, budDev]);
   const frost = useMemo(
-    () => buildFrost(cola, { seed, density: dna.trichomeDensity * trich, ripe, amberBias: purple * 0.4, isMobile }),
+    // A single hero bud at close range can afford a dense capitate coat — cap far
+    // higher than the whole-plant path so the cola reads truly caked in resin.
+    () =>
+      buildFrost(cola, {
+        seed,
+        density: dna.trichomeDensity * trich,
+        ripe,
+        amberBias: purple * 0.4,
+        isMobile,
+        budget: isMobile ? 900 : 2200,
+        perScale: 1.1,
+      }),
     [cola, seed, dna.trichomeDensity, trich, ripe, purple, isMobile],
   );
   const pistils = useMemo(
@@ -371,7 +416,7 @@ export function BudGL({
         <directionalLight position={[2, 4, 3]} intensity={1.4} color="#fff6e8" />
         <pointLight position={[-2, 1, 2]} intensity={18} distance={9} color="#6cf0ff" />
         <BudCore dna={dna} budDev={budDev} trich={trich} purple={purple} spin={spin} />
-        <Calyxes cola={cola} spin={spin} />
+        <Calyxes cola={cola} frost={dna.trichomeDensity * trich} spin={spin} />
         <SugarLeaves instances={sugarLeaves} spin={spin} />
         <Pistils instances={pistils} spin={spin} />
         <Frost instances={frost} purple={purple} spin={spin} />

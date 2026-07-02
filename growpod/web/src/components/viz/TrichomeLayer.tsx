@@ -22,65 +22,9 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { LODLevel, PlantAssembly } from "@/lib/plant3d/assembly";
-import type { FrostMat } from "@/lib/chamber/bud3d/detail";
+import { makeCapitateGeom, makeGlandOnlyGeom, trichomeHeadColor as frostColor } from "@/components/viz/trichomeGeometry";
 
 const UP = new THREE.Vector3(0, 1, 0);
-
-/** Resin-head base colour by maturity (mirrors trichomes.ts trichHeadColor). */
-function frostColor(mat: FrostMat): THREE.Color {
-  if (mat === 0) return new THREE.Color(0.88, 0.95, 1.0); // clear — blue-white
-  if (mat === 1) return new THREE.Color(0.97, 0.98, 0.955); // cloudy — milky white
-  return new THREE.Color(0.9, 0.74, 0.45); // amber — warm cream/gold
-}
-
-/** Merge child geometries (position + smooth normal) into one non-indexed mesh. */
-function concatGeom(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
-  const posArr: number[] = [];
-  const nrmArr: number[] = [];
-  for (const g of parts) {
-    const p = g.attributes.position;
-    const n = g.attributes.normal;
-    for (let i = 0; i < p.count; i++) {
-      posArr.push(p.getX(i), p.getY(i), p.getZ(i));
-      nrmArr.push(n.getX(i), n.getY(i), n.getZ(i));
-    }
-    g.dispose();
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(posArr, 3));
-  geo.setAttribute("normal", new THREE.Float32BufferAttribute(nrmArr, 3));
-  return geo;
-}
-
-/** A smooth-normal resin gland ball (octahedron shaded radially — a bead, not a
- * crystal), sized `r`, centred at height `y`. ~8 tris. */
-function glandGeom(r: number, y: number): THREE.BufferGeometry {
-  const g = new THREE.OctahedronGeometry(r, 0).toNonIndexed();
-  const p = g.attributes.position;
-  const n = g.attributes.normal;
-  const v = new THREE.Vector3();
-  for (let i = 0; i < p.count; i++) {
-    v.fromBufferAttribute(p, i).normalize(); // radial => smooth, no facets
-    n.setXYZ(i, v.x, v.y, v.z);
-  }
-  g.translate(0, y, 0);
-  return g;
-}
-
-/** Capitate stalk + gland (~14 tris). Unit height ≈ 1, base at y=0. The gland is
- * fat relative to the stalk so a field of them reads as a caked resin bead-coat. */
-function makeCapitateGeom(): THREE.BufferGeometry {
-  const stalk = new THREE.CylinderGeometry(0.09, 0.13, 0.52, 3, 1, true).toNonIndexed();
-  stalk.translate(0, 0.26, 0);
-  stalk.computeVertexNormals();
-  return concatGeom([stalk, glandGeom(0.5, 0.62)]);
-}
-
-/** Gland head only (mid LOD) — no stalk. ~8 tris. */
-function makeGlandOnlyGeom(): THREE.BufferGeometry {
-  return concatGeom([glandGeom(0.55, 0)]);
-}
-
 const UPv = new THREE.Vector3(0, 1, 0);
 
 /** World quaternion aligning unit-UP to a cola's growth axis (mirrors PlantGL). */
