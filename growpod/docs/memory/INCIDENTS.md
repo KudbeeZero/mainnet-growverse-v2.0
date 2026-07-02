@@ -76,6 +76,17 @@ Status legend: 🔴 open · 🟡 fix in flight · ✅ resolved (root cause fixed
   work inline in the main session instead of spawning. If a whole day is 529-heavy, batch work
   into fewer, bigger agent prompts.
 
+### ✅ Provider 400s on model-capability mismatch (adaptive thinking × Haiku)
+- **Symptom (live, 2026-07-02):** with `ADVISOR_MODEL=claude-haiku-4-5`, every Professor lecture
+  failed 503 — the API rejected the hardcoded `thinking={"type": "adaptive"}` ("adaptive thinking
+  is not supported on this model"). The advisor had the same latent bug.
+- **Root cause:** provider calls assumed a capability of the default big model; nothing degraded
+  when the operator picked a cheaper model.
+- **Permanent fix (2026-07-02):** `ai/anthropic_compat.parse_preferring_thinking` — try with
+  thinking, retry once without when the API says unsupported; both providers use it; regression
+  tests pin the fallback. **Rule:** provider calls must degrade on capability 400s, never assume
+  the default model's features.
+
 ## The rule, restated
 
 1. Hit a problem? **Check this ledger first** — if it's here, apply the recorded fix, don't
