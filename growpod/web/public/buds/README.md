@@ -1,3 +1,5 @@
+> **NOTE (2026-07-02):** the pod per-stage stills this file mentions were removed (grow room is procedural again); the three bud heroes below are still used by the strain lab.
+
 # Photoreal bud hero images
 
 Drop strain bud photos/renders here to make them the **showcase bud** on the strain

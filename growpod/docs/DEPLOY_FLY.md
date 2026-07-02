@@ -15,7 +15,11 @@ Node/Drizzle plant-minting service and is **not** the login backend.)
   `release_command` that runs migrations + seed.
 - `.dockerignore` — trims dev cruft / the dev SQLite DB / `web/` / `artifacts/`.
 
-**Nothing is deployed.** No Fly app, Postgres, or secret exists yet.
+> **STATUS UPDATE (2026-07-02): DEPLOYED.** The Fly app `growverse-api` is live with Postgres
+> attached and secrets set (`ELEVENLABS_API_KEY`; `RATELIMIT_ALLOW_MEMORY` temporary until
+> Redis). Deploys are AUTOMATIC on merge to `main` via `.github/workflows/deploy-api.yml`
+> (`FLY_API_TOKEN` repo secret, set 2026-07-02). The manual gates below are executed history;
+> the dual-head migration warning is resolved (single head verified 2026-07-02).
 
 ## Ship committed code only (no staking)
 The working tree currently has **uncommitted staking changes**. A normal

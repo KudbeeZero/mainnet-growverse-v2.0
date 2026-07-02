@@ -1,5 +1,11 @@
 # 🎓 GrowPod University — Master Bible (Canonical)
 
+> ## ✅ SUPERSEDED (2026-07-02): the freeze below was lifted and the University SHIPPED
+> University Phases 0–6 merged (PRs #72–#91) and the system now lives as **HERMES University
+> for cannabis** — wiring truth + open work in `docs/memory/design/10-hermes-university.md`,
+> which supersedes this bible for current-state questions. This file remains the deep design
+> record.
+
 > ## ❄️ FROZEN — UNI-011 Canonical Freeze & Implementation Hold (2026-06-14)
 > **GrowPod University development is PARKED until after MVP launch.** This file is the **single
 > authoritative source of truth** for all University systems (degrees, academic/Methods tracks,
