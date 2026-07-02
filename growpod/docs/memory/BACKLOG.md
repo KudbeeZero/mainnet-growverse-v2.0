@@ -39,6 +39,14 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   Grower; P3 `search_global_knowledge` retrieval tool (the teacher gets smarter from every
   player); P4 `global_insights` rollups + class-stats surface. Spec:
   `docs/memory/design/11-global-learning-memory.md`.
+- 🎨 🔨 **3D whole-plant asset (PlantGL) — owner spec 2026-07-02, pilot Blue Dream** — layered
+  R3F mesh system per the owner's 7-layer brief + 3 reference images: stem spline w/ nodes,
+  curved branch skeleton, instanced serrated fan leaves, colas from clustered calyx meshes
+  (reuses `web/src/lib/chamber/bud3d/` buildCola/buildFrost/buildPistils), sugar leaves,
+  curled orange pistils, instanced trichome frost; PBR materials, LOD (close/mid/far),
+  deterministic from authored strain DNA. Lands standalone at `/dev/plant3d` (studio-gray
+  preview) for owner review; pod wiring AFTER approval. Supersedes the 2026-06-25 ADR note
+  that the whole plant "intentionally stays 2D" (owner directive). Build in flight.
 - 🎨 ⬜ **Per-strain procedural fidelity pass** — `GrowChamber`/`BudGL` morphology + bud shape/color
   coverage across all 29 strains (the follow-up track from the 2026-07-02 revert ADR).
 
