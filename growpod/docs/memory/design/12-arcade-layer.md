@@ -57,6 +57,15 @@ layers absolute children; precedent: the chamber route mounts `ArcadeHUD` + `Nut
    (`chamber/bud3d/detail.ts`); seed difficulty from real `plant.trichomes` telemetry. Resin
    Combo = bounded cosmetic `trich`/`highlightBoost` offset (boostOffset pattern). **Build first**
    (smallest surface, proves score→receipt→cosmetic loop).
+   **The trichome layer IS the mechanic (owner spec 2026-07-02):** build a dedicated
+   `TrichomeLayer` (GPU-instanced capitate-stalked trichomes — tiny stalk capsule + gland-ball
+   micro-sphere, angled along the bud surface normal, density-mapped to bracts/sugar-leaves by
+   `trichomeDensity`, per-instance height/tilt/scale/opacity/sparkle jitter). LOD: CLOSE = real
+   stalk+gland meshes (~2–8k instances); MID = point/frost highlights + normal-map sparkle
+   (~0.5–2k); FAR/mobile = shader frost only (noise + light-catching material + baked normal).
+   Because glands are individually addressable instances, Trichome Rush makes some gland heads
+   glow → player collects → frost intensity rises: ONE system = photoreal frost + gameplay. Used
+   by PlantGL (3D whole-plant); keep BudGL's `buildFrost` working alongside.
 2. **Terpene Combo** → strain terpene data exists end-to-end (`Strain.terpenes`, backend
    `effects_service`); orb colors already authored in `web/src/lib/terpenes.ts`. Aura = new
    cosmetic overlay (NutrientPop CSS pattern / BudGL glow). Read light as beat source; never
