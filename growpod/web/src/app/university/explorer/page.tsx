@@ -39,7 +39,7 @@ function ExplorerInner() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="GROWPOD UNIVERSITY · LAB"
+        eyebrow="HERMES UNIVERSITY · LAB"
         title="3D Anatomy Explorer"
         subtitle="Spin and zoom a real genetics-driven bud. Drag to orbit, scroll to zoom from the whole cola down toward the resin glands."
         action={

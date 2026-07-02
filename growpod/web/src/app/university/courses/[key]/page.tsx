@@ -19,8 +19,6 @@ import { grow, hours, titleCase } from "@/lib/format";
 import { CoursePresenterVideo } from "@/components/university/CoursePresenterVideo";
 import { ExamSection } from "./ExamQuiz";
 
-const LEVELS = ["beginner", "intermediate", "advanced"] as const;
-
 function CourseInner({ courseKey }: { courseKey: string }) {
   const { playerId } = useSession();
   const transcript = useTranscript();
@@ -346,14 +344,15 @@ function CourseAudioPlayer({ courseKey }: { courseKey: string }) {
 
 function LectureReader({ courseKey, topic }: { courseKey: string; topic: string | null }) {
   const { playerId } = useSession();
-  const [level, setLevel] = useState<(typeof LEVELS)[number]>("beginner");
   const [plantId, setPlantId] = useState<string>("");
   const [open, setOpen] = useState(false);
   const plants = usePlantsList();
 
+  // One canonical delivery per course — the difficulty picker is gone (owner
+  // decision): every student attends the same produced-once lesson.
   const lecture = useQuery({
-    queryKey: [...queryKeys.lecture(playerId ?? "", courseKey, level), plantId],
-    queryFn: () => api.university.lecture(playerId!, courseKey, { level, plant_id: plantId || undefined }),
+    queryKey: [...queryKeys.lecture(playerId ?? "", courseKey), plantId],
+    queryFn: () => api.university.lecture(playerId!, courseKey, { plant_id: plantId || undefined }),
     enabled: open && !!playerId,
     staleTime: 60_000,
   });
@@ -367,19 +366,6 @@ function LectureReader({ courseKey, topic }: { courseKey: string; topic: string 
       />
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="flex gap-1">
-          {LEVELS.map((l) => (
-            <button
-              key={l}
-              onClick={() => setLevel(l)}
-              className={`rounded-md px-2.5 py-1 text-xs ${
-                level === l ? "bg-grow-700 text-white" : "bg-ink-700 text-gray-300 hover:bg-ink-600"
-              }`}
-            >
-              {titleCase(l)}
-            </button>
-          ))}
-        </div>
         {(plants.data ?? []).length > 0 && (
           <select
             value={plantId}
@@ -402,7 +388,7 @@ function LectureReader({ courseKey, topic }: { courseKey: string; topic: string 
 
       {!open && (
         <p className="text-sm text-gray-500">
-          Pick a level (and optionally a live plant for a contextual lecture), then attend.
+          Optionally pick a live plant for a contextual lecture, then attend.
         </p>
       )}
       {open && lecture.isLoading && <LoadingBlock label="The Professor is preparing…" />}

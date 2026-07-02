@@ -8,7 +8,13 @@ starts to *lie*:
   2. a Design Codex doc has fallen **out of the layer map** (`MAP.md`),
   3. a **markdown link** points at a path that doesn't exist,
   4. a **✅ ("done") claim cites a path that doesn't exist** — the classic
-     "claimed shipped, never built" drift.
+     "claimed shipped, never built" drift,
+  5. the **backlog goes stale while code ships** — BACKLOG.md's
+     `Last reconciled: **YYYY-MM-DD**` marker must be within
+     BACKLOG_MAX_STALE_DAYS of the HEAD commit date. Quiet repos never fail
+     (HEAD ages with the backlog); active repos must tick the backlog.
+     (Owner directive 2026-07-02: the backlog is part of the workflow —
+     it went unreconciled for 3 weeks of merged PRs once; never again.)
 
 Paths in the memory docs are repo-relative by convention, but may be written
 relative to the code root (`src/growpodempire/`) or the memory root
@@ -82,6 +88,50 @@ def _resolve(tok: str) -> bool:
     return False
 
 
+BACKLOG_MAX_STALE_DAYS = 14
+RECONCILED_RE = re.compile(r"Last reconciled: \*\*(\d{4}-\d{2}-\d{2})\*\*")
+
+
+def _backlog_staleness_error() -> str | None:
+    """Return an error string when BACKLOG.md's reconcile marker has fallen
+    more than BACKLOG_MAX_STALE_DAYS behind the HEAD commit date, else None.
+
+    Uses the HEAD commit date (not wall clock) so an untouched repo never
+    rots into a failure; only shipping code without ticking the backlog does.
+    Skips silently when git is unavailable (e.g. a source tarball).
+    """
+    import subprocess
+    from datetime import date
+
+    text = (REPO / "docs/memory/BACKLOG.md").read_text(encoding="utf-8")
+    m = RECONCILED_RE.search(text)
+    if not m:
+        return (
+            "BACKLOG.md is missing its 'Last reconciled: **YYYY-MM-DD**' marker "
+            "— the backlog-freshness gate needs it (see MAP.md maintenance)."
+        )
+    try:
+        head = subprocess.run(
+            ["git", "log", "-1", "--format=%cs"],
+            cwd=REPO, capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if head.returncode != 0 or not head.stdout.strip():
+        return None
+    head_date = date.fromisoformat(head.stdout.strip())
+    reconciled = date.fromisoformat(m.group(1))
+    stale = (head_date - reconciled).days
+    if stale > BACKLOG_MAX_STALE_DAYS:
+        return (
+            f"BACKLOG.md is stale: last reconciled {reconciled} but code shipped "
+            f"as recently as {head_date} ({stale}d > {BACKLOG_MAX_STALE_DAYS}d). "
+            "Reconcile the backlog (tick done/doing, add new work, bump the "
+            "'Last reconciled' date) — it is part of every session's closeout."
+        )
+    return None
+
+
 def main() -> int:
     errors: list[str] = []
 
@@ -89,6 +139,12 @@ def main() -> int:
     for rel in REQUIRED:
         if not (REPO / rel).exists():
             errors.append(f"required memory file missing: {rel}")
+
+    # 5. the backlog keeps up with shipped code
+    if (REPO / "docs/memory/BACKLOG.md").exists():
+        stale = _backlog_staleness_error()
+        if stale:
+            errors.append(stale)
 
     # 2. every Design Codex doc is referenced in the layer map
     map_text = (REPO / "docs/memory/MAP.md").read_text(encoding="utf-8")

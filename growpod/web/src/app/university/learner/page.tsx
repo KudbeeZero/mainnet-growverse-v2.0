@@ -26,7 +26,7 @@ function LearnerInner() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="GROWPOD UNIVERSITY · MY PATH"
+        eyebrow="HERMES UNIVERSITY · MY PATH"
         title="Learner Dashboard"
         subtitle="Your personalized path through the Agent Campus — intake, a day-by-day roadmap, and your skill mastery. Knowledge only; nothing here costs or earns currency."
         action={backLink}

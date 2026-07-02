@@ -28,6 +28,9 @@ core loop**: grow → care → harvest → cure → sell/breed/stabilize → min
 - **`balance.yaml` is the tuning surface.** Prefer data-driven balance changes over code changes.
 - Keep the test suite green and add a test with every feature. Property/invariant tests guard the
   ledger and genetics.
+- **The backlog is part of the workflow.** Every session that ships work reconciles
+  `docs/memory/BACKLOG.md` (tick done/doing, add new work, bump `Last reconciled`) before
+  closing. Enforced: `make check-memory` fails when the backlog is >14 days behind HEAD.
 
 ## Run it
 ```bash

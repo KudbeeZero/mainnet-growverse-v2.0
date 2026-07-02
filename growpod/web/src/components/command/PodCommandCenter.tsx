@@ -47,10 +47,6 @@ const GrowChamber = dynamic(
   { ssr: false, loading: () => null },
 );
 
-// The "whole plant" view: a photoreal pod still for the plant's growth stage when we
-// have one, else the 2D GrowChamber above (passed as its fallback).
-import { PodPlantPhoto } from "@/components/command/PodPlantPhoto";
-
 // The frosted 3D bud close-up (same pipeline as the strain hero / chamber macro),
 // popped from the pod via the "View bud" toggle. Client-only (three.js).
 const BudGL = dynamic(
@@ -255,29 +251,23 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
                     reducedMotion={reducedMotion}
                   />
                 ) : (
-                  <PodPlantPhoto
+                  <GrowChamber
+                    seed={seedForPlant(plant.id)}
+                    day={day}
                     stage={renderStage}
-                    alt={`${strain?.name ?? "Plant"} — ${renderStage} stage`}
-                    fallback={
-                      <GrowChamber
-                        seed={seedForPlant(plant.id)}
-                        day={day}
-                        stage={renderStage}
-                        morphology={render.morphology}
-                        silhouette={render.silhouette}
-                        dev={previewDev(day, render.flMid)}
-                        budColor={render.budColor}
-                        budDna={render.budDna}
-                        climate={{
-                          fan: 45,
-                          temp: climate.temperature,
-                          hum: climate.humidity,
-                          co2: climate.co2_level,
-                        }}
-                        conditionFlags={plant.condition_flags}
-                        view="chamber"
-                      />
-                    }
+                    morphology={render.morphology}
+                    silhouette={render.silhouette}
+                    dev={previewDev(day, render.flMid)}
+                    budColor={render.budColor}
+                    budDna={render.budDna}
+                    climate={{
+                      fan: 45,
+                      temp: climate.temperature,
+                      hum: climate.humidity,
+                      co2: climate.co2_level,
+                    }}
+                    conditionFlags={plant.condition_flags}
+                    view="chamber"
                   />
                 )}
                 {canViewBud && (

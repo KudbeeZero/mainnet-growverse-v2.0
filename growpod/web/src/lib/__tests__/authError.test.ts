@@ -3,9 +3,14 @@ import { ApiError } from "@/lib/api";
 import { isAuthError } from "@/lib/authError";
 
 describe("isAuthError", () => {
-  it("is true for 401 and 403 ApiErrors", () => {
+  it("is true for 401 ApiErrors (session key no longer valid)", () => {
     expect(isAuthError(new ApiError("unauthorized", 401))).toBe(true);
-    expect(isAuthError(new ApiError("forbidden", 403))).toBe(true);
+  });
+
+  it("is false for 403 (authorization failure, not session death)", () => {
+    // A valid non-admin player key hitting an /admin route returns 403; that
+    // must NOT tear down the session and log the player out.
+    expect(isAuthError(new ApiError("forbidden", 403))).toBe(false);
   });
 
   it("is false for other ApiError statuses", () => {

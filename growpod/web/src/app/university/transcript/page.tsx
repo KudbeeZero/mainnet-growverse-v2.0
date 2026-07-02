@@ -32,7 +32,7 @@ function TranscriptInner() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="REGISTRAR"
+        eyebrow="HERMES UNIVERSITY · REGISTRAR"
         title="Transcript"
         subtitle="Your degree progress, prestige title, and completed coursework."
         action={

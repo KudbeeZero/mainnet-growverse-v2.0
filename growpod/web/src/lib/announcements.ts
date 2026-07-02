@@ -16,7 +16,7 @@ export const announcements: Announcement[] = [
   {
     id: "university-open",
     date: "2026-06-08",
-    text: "GrowPod University is open: enroll, study, earn degrees with permanent grower perks.",
+    text: "HERMES University is open: enroll, study, earn degrees with permanent grower perks.",
   },
   {
     id: "cannabis-cup",

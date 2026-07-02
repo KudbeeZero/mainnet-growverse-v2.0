@@ -1,0 +1,45 @@
+# Deploys the Python game API (growpod/ → Fly app `growverse-api`) on every
+# merge to main that touches the backend, so the live API can never silently
+# drift weeks behind the repo again (it was 5+ weeks stale on 2026-07-02).
+#
+# Requires the FLY_API_TOKEN repo secret (Fly.io → Tokens → deploy token,
+# scoped to the growverse-api app). Until that secret exists every step
+# no-ops with a notice instead of failing, so CI stays green.
+# Manual runs: Actions → deploy-api → Run workflow.
+name: deploy-api
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "growpod/**"
+      - "!growpod/web/**"
+      - "!growpod/docs/**"
+      - "!growpod/*.md"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - name: Notice when FLY_API_TOKEN is not configured
+        if: env.FLY_API_TOKEN == ''
+        run: echo "::notice::FLY_API_TOKEN secret not set — skipping Fly deploy (add it to enable auto-deploy)."
+      - uses: actions/checkout@v4
+        if: env.FLY_API_TOKEN != ''
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: env.FLY_API_TOKEN != ''
+      - name: Deploy growverse-api (runs migrations via release_command)
+        if: env.FLY_API_TOKEN != ''
+        working-directory: growpod
+        run: flyctl deploy --remote-only

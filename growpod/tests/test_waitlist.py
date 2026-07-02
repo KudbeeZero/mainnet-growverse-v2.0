@@ -57,24 +57,31 @@ def test_join_creates_a_row(db):
             faction="frostwardens", email="a@example.com"
         )
         assert out["faction"] == "frostwardens"
-        assert out["email"] == "a@example.com"
         assert out["engagement_points"] == 0
-        assert out["algorand_address"] is None
-        assert "id" in out and out["created_at"] is not None
+        # The response is sanitized: it NEVER echoes stored contact PII (email /
+        # algorand_address), so the public endpoint can't be used as a
+        # email<->wallet disclosure oracle. A fresh creation does return its id.
+        assert "email" not in out
+        assert "algorand_address" not in out
+        assert out["id"] is not None and out["created_at"] is not None
 
     with session_scope() as s:
-        assert s.query(WaitlistSignup).count() == 1
+        row = s.query(WaitlistSignup).one()
+        # ...but the value is still persisted correctly.
+        assert row.email == "a@example.com"
+        assert row.algorand_address is None
 
 
 def test_join_with_existing_address_updates_faction_no_duplicate(db):
     with session_scope() as s:
         first = WaitlistService(s).join(faction="frostwardens", algorand_address=ADDR_A)
-        first_id = first["id"]
+        assert first["id"] is not None
 
     with session_scope() as s:
         second = WaitlistService(s).join(faction="loomkeepers", algorand_address=ADDR_A)
-        # Same row, faction switched — no duplicate created.
-        assert second["id"] == first_id
+        # Dedupe hit: no duplicate row, and the response withholds the signup_id
+        # (a capability) since the caller only matched via an unverified address.
+        assert second["id"] is None
         assert second["faction"] == "loomkeepers"
 
     with session_scope() as s:
@@ -111,7 +118,32 @@ def test_join_rejects_invalid_algorand_address(db):
 def test_join_accepts_valid_algorand_address(db):
     with session_scope() as s:
         out = WaitlistService(s).join(faction="frostwardens", algorand_address=ADDR_B)
-        assert out["algorand_address"] == ADDR_B
+        # Accepted and persisted, but not echoed back in the response.
+        assert "algorand_address" not in out
+    with session_scope() as s:
+        assert s.query(WaitlistSignup).one().algorand_address == ADDR_B
+
+
+def test_join_rejects_malformed_email(db):
+    with session_scope() as s:
+        with pytest.raises(GameError):
+            WaitlistService(s).join(faction="frostwardens", email="not-an-email")
+    with session_scope() as s:
+        assert s.query(WaitlistSignup).count() == 0
+
+
+def test_join_response_never_leaks_pii_on_dedupe(db):
+    """An attacker POSTing only a guessed email must not learn the linked wallet
+    address (or the signup_id) of an existing signup."""
+    with session_scope() as s:
+        WaitlistService(s).join(
+            faction="frostwardens", algorand_address=ADDR_A, email="victim@example.com"
+        )
+    with session_scope() as s:
+        probe = WaitlistService(s).join(faction="alchemists", email="victim@example.com")
+        assert "algorand_address" not in probe
+        assert "email" not in probe
+        assert probe["id"] is None
 
 
 # ===== service: engagement + standings =======================================
@@ -122,17 +154,31 @@ def test_add_engagement_accrues_clamped_points(db):
         out = WaitlistService(s).join(faction="frostwardens", algorand_address=ADDR_A)
         sid = out["id"]
     with session_scope() as s:
-        out = WaitlistService(s).add_engagement(signup_id=sid, points=5)
-        assert out["engagement_points"] == 5
-        # Negative points are clamped to a no-op.
-        out = WaitlistService(s).add_engagement(signup_id=sid, points=-3)
-        assert out["engagement_points"] == 5
-
-
-def test_add_engagement_missing_signup_raises(db):
+        WaitlistService(s).add_engagement(signup_id=sid, points=5)
     with session_scope() as s:
-        with pytest.raises(GameError):
-            WaitlistService(s).add_engagement(email="nobody@example.com", points=1)
+        # Negative points are clamped to a no-op.
+        WaitlistService(s).add_engagement(signup_id=sid, points=-3)
+    with session_scope() as s:
+        row = s.query(WaitlistSignup).filter(WaitlistSignup.id == sid).one()
+        assert row.engagement_points == 5
+
+
+def test_add_engagement_is_not_an_existence_oracle(db):
+    """The public engage endpoint returns an identical generic acknowledgement
+    whether or not a signup matched, so it can't be used to probe which
+    emails/addresses are on the waitlist. A miss must also create no row."""
+    with session_scope() as s:
+        hit_seed = WaitlistService(s).join(faction="frostwardens", email="here@example.com")
+        assert hit_seed["id"] is not None
+    with session_scope() as s:
+        hit = WaitlistService(s).add_engagement(email="here@example.com", points=1)
+        miss = WaitlistService(s).add_engagement(email="nobody@example.com", points=1)
+        assert hit == miss  # indistinguishable
+    with session_scope() as s:
+        # No phantom row was created for the unknown email.
+        assert s.query(WaitlistSignup).filter(
+            WaitlistSignup.email == "nobody@example.com"
+        ).count() == 0
 
 
 def test_standings_counts_per_faction_and_total(db):
@@ -193,8 +239,10 @@ def test_join_route_happy_path_returns_201(client):
     assert r.status_code == 201
     body = r.get_json()
     assert body["faction"] == "loomkeepers"
-    assert body["algorand_address"] == ADDR_A
     assert body["engagement_points"] == 0
+    # Sanitized response: no stored contact PII echoed back.
+    assert "algorand_address" not in body
+    assert "email" not in body
 
 
 def test_join_route_missing_faction_400(client):

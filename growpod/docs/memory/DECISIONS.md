@@ -660,3 +660,19 @@ overrides. (2) The bud reflects real maturity — a finished flower is frosted, 
 deterministic per strain. (3) The grow-pod **whole-plant** view (stem+leaves) and list-grid thumbnails
 intentionally stay 2D (a photoreal whole-plant model + dozens of live WebGL canvases are out of scope).
 PRs #82 (close-up + default flip), #83 (sugar-leaves), #84 (pod toggle).
+
+## 2026-07-02 — Grow-room whole-plant view: procedural render is canonical; photoreal stage stills REVERTED
+**Decision:** The pod/grow-room live "whole plant" view renders the procedural, simulation-driven
+pipeline again (`GrowChamber` whole-plant + the 3D `BudGL` close-up behind the "View bud" toggle).
+The photoreal stage-still layer introduced in PR #93 (`PodPlantPhoto` + `lib/podStagePhotos.ts` +
+`public/pod/*.jpg`) is removed outright — the photoreal-in-pod plan is dropped, not paused.
+**Why:** Owner: the stills replaced "the original plants we worked so hard on" with static photos of
+someone else's plant — one generic image per stage, identical for every strain, disconnected from the
+live simulation (health, condition flags, strain morphology/genetics all invisible). The direction is
+to keep improving the procedural plant + 3D buds so they read well across all strains, not to paper
+over them with photos.
+**Consequences:** (1) The pod again shows the strain-driven, live-sim plant at all stages; the
+2026-06-25 BudGL ADR above stands unchanged. (2) Photoreal imagery elsewhere (strain-lab bud heroes,
+onboarding cinematic `/media/grow-pod-hero.jpg`) is untouched by this decision — separate surfaces,
+separate call. (3) Follow-up track: tighten `GrowChamber`/`BudGL` per-strain fidelity (morphology,
+bud shape/color coverage across the catalog) — the work the stills had short-circuited.

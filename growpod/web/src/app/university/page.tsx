@@ -16,7 +16,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { queryKeys } from "@/lib/queryKeys";
 import { grow, hours, titleCase } from "@/lib/format";
-import type { TranscriptCourse, CourseStatus } from "@/lib/types";
+import type { TranscriptCourse, TranscriptDegree, CourseStatus } from "@/lib/types";
 
 const STATUS_STYLE: Record<CourseStatus, string> = {
   available: "border-accent-500/50 bg-accent-500/10 text-accent-300",
@@ -37,11 +37,19 @@ function UniversityInner() {
   const departments = Object.entries(t.departments ?? {});
   const courses = dept === "all" ? t.courses : t.courses.filter((c) => c.department === dept);
   const completed = t.courses.filter((c) => c.status === "completed").length;
+  // Catalog view: group by department ("schools") like a real course catalog.
+  const sections =
+    dept === "all"
+      ? departments
+          .map(([key, label]) => [key, label, t.courses.filter((c) => c.department === key)] as const)
+          .filter(([, , list]) => list.length > 0)
+      : null;
+  const unassigned = dept === "all" ? t.courses.filter((c) => !c.department || !(c.department in (t.departments ?? {}))) : [];
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="GROWPOD UNIVERSITY"
+        eyebrow="HERMES UNIVERSITY · CANNABIS SCIENCES"
         title="Course Catalog"
         subtitle="Earn real degrees: enroll, study real time, pass a practical tied to your live grow, and claim permanent perks + a title."
         action={
@@ -69,6 +77,14 @@ function UniversityInner() {
         </span>
       </div>
 
+      {t.degrees.length > 0 && (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {t.degrees.map((d) => (
+            <DegreeProgress key={d.key} degree={d} />
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <DepartmentChip label="All" active={dept === "all"} onClick={() => setDept("all")} />
         {departments.map(([key, label]) => (
@@ -76,12 +92,78 @@ function UniversityInner() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {courses.map((c) => (
-          <CourseCard key={c.key} course={c} deptLabel={t.departments?.[c.department ?? ""] ?? c.department ?? ""} />
-        ))}
-      </div>
+      {sections ? (
+        <div className="space-y-6">
+          {sections.map(([key, label, list]) => (
+            <section key={key}>
+              <div className="mb-2 flex items-baseline gap-2 border-b border-ink-700 pb-1.5">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-200">
+                  School of {label}
+                </h2>
+                <span className="instrument-label">
+                  {list.filter((c) => c.status === "completed").length}/{list.length} COMPLETE
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {list.map((c) => (
+                  <CourseCard key={c.key} course={c} deptLabel={label} />
+                ))}
+              </div>
+            </section>
+          ))}
+          {unassigned.length > 0 && (
+            <section>
+              <div className="mb-2 border-b border-ink-700 pb-1.5">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-200">Electives</h2>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {unassigned.map((c) => (
+                  <CourseCard key={c.key} course={c} deptLabel={c.department ?? ""} />
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {courses.map((c) => (
+            <CourseCard key={c.key} course={c} deptLabel={t.departments?.[c.department ?? ""] ?? c.department ?? ""} />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+function DegreeProgress({ degree }: { degree: TranscriptDegree }) {
+  const done = degree.completed_required.length;
+  const total = degree.required_courses.length || 1;
+  const pct = Math.round((Math.min(done, total) / total) * 100);
+  return (
+    <Link href="/university/transcript" className="block">
+      <div
+        className={`rounded-lg border px-3 py-2 transition-colors hover:border-grow-500/60 ${
+          degree.earned ? "border-grow-600 bg-grow-900/40" : "border-ink-700 bg-ink-900/50"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="truncate text-xs font-semibold text-gray-200">{degree.name}</span>
+          {degree.earned ? (
+            <span className="text-xs text-grow-300">🎓 Earned</span>
+          ) : degree.claimable ? (
+            <span className="text-xs text-amber-300">Claimable</span>
+          ) : (
+            <span className="instrument-label">{done}/{total}</span>
+          )}
+        </div>
+        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-ink-700">
+          <div
+            className={`h-full rounded-full ${degree.earned ? "bg-grow-500" : "bg-accent-500"}`}
+            style={{ width: `${degree.earned ? 100 : pct}%` }}
+          />
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -104,9 +186,10 @@ function CourseCard({ course, deptLabel }: { course: TranscriptCourse; deptLabel
         <Badge className={STATUS_STYLE[course.status]}>{titleCase(course.status)}</Badge>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-xs text-gray-400">
+      <div className="grid grid-cols-4 gap-2 text-xs text-gray-400">
         <span>Lv {course.level_req}</span>
         <span>{hours(course.duration_hours)}</span>
+        <span>{course.credits != null ? `${course.credits} cr` : "—"}</span>
         <span>{grow(course.tuition)}</span>
       </div>
 
