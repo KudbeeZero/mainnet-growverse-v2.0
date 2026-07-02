@@ -43,7 +43,7 @@ export interface LODMul {
 }
 
 export const LOD: Record<LODLevel, LODMul> = {
-  close: { calyxCap: 380, frost: 1.0, pistil: 1.0, sugar: 1.0 },
+  close: { calyxCap: 350, frost: 1.0, pistil: 1.0, sugar: 1.0 },
   mid: { calyxCap: 180, frost: 0.5, pistil: 0.6, sugar: 0.6 },
   far: { calyxCap: 70, frost: 0.0, pistil: 0.0, sugar: 0.25 },
 };

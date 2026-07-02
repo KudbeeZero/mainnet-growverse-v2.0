@@ -64,7 +64,8 @@ function taperedTube(pts: Vec3[], radii: number[], radial = 6): THREE.BufferGeom
  * (mirrors BudGL's BudCore). Instanced per cola, scaled by width/height. */
 function makeColaCoreGeom(): THREE.BufferGeometry {
   const pts: THREE.Vector2[] = [new THREE.Vector2(0.0001, 0)];
-  const N = 18;
+  // The core is a hidden filler body under the caked calyxes — keep it cheap.
+  const N = 12;
   for (let i = 0; i <= N; i++) {
     const t = i / N;
     // Fat-through-the-middle profile (matches the reshaped calyx envelope), so
@@ -74,7 +75,7 @@ function makeColaCoreGeom(): THREE.BufferGeometry {
     pts.push(new THREE.Vector2(Math.max(0.0001, 0.42 * fatWidthCurve(t) * 0.6 * tipPinch), t));
   }
   pts.push(new THREE.Vector2(0.0001, 1));
-  const geo = new THREE.LatheGeometry(pts, 14);
+  const geo = new THREE.LatheGeometry(pts, CORE_RADIAL);
   // Angular + vertical lobing so even the body silhouette is bumpy/irregular.
   const pos = geo.attributes.position;
   const v = new THREE.Vector3();
@@ -92,6 +93,9 @@ function makeColaCoreGeom(): THREE.BufferGeometry {
   geo.computeVertexNormals();
   return geo;
 }
+
+/** Radial segment count for the hidden core lathe — low; it's a filler body. */
+const CORE_RADIAL = 10;
 
 /** Detail level of the calyx icosphere (0 = 20 tris, 1 = 80 tris). Kept low for
  * the whole-plant tri budget; SMOOTH sphere normals (below) do the heavy lifting

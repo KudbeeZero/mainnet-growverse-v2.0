@@ -31,6 +31,7 @@ from ..simulation.clock import Clock, SystemClock
 from . import leveling_service
 from . import engagement_rules
 from .engagement_service import UniversityEngagementService
+from .knowledge_service import KnowledgeService
 from .learner_model_service import LearnerModelService
 from .research_service import _EFFECT_KEYS
 from .game_service import GameService, GameError
@@ -260,7 +261,11 @@ class UniversityService:
         """Grade an exam server-side (pure) and persist the player's BEST attempt.
 
         Returns ``{result, attempt}`` — the per-item scored result plus the
-        accumulated attempt state (attempts/best_score/passed).
+        accumulated attempt state (attempts/best_score/passed). The full
+        item-level ``result`` is ALSO saved as the attempt row's
+        ``last_result`` (exam replay — see ``_record_attempt``), and this
+        grading is captured as an "exam_result" ``knowledge_events`` row
+        (design/11 P1) via the single-writer ``KnowledgeService.append``.
         """
         self._player(player_id)
         if self.courses.get(course_key) is None:
@@ -270,6 +275,16 @@ class UniversityService:
         except assessment_service.AssessmentError as exc:
             raise GameError(str(exc))
         attempt = self._record_attempt(player_id, course_key, exam_id, result)
+        KnowledgeService(self.session, clock=self.clock).append(
+            "exam_result",
+            {
+                "course_key": course_key,
+                "exam_id": exam_id,
+                "score": result["score"],
+                "passed": result["passed"],
+            },
+            player_id=player_id,
+        )
         return {"result": result, "attempt": attempt}
 
     def _attempt_row(self, player_id, course_key, exam_id):
@@ -291,6 +306,11 @@ class UniversityService:
         row.attempts += 1
         row.best_score = max(row.best_score, float(result["score"]))
         row.passed = row.passed or bool(result["passed"])  # forgiving: never un-pass
+        # Replay (2026-07-02): ALWAYS overwritten by the latest submit — unlike
+        # best_score/passed, this is not "best ever" but "most recent", so a
+        # player reviewing their last attempt sees what they just did, even if
+        # it scored worse than an earlier pass.
+        row.last_result = dict(result)
         row.last_attempt_at = self.clock.now()
         self.session.flush()
         out = {
@@ -323,6 +343,20 @@ class UniversityService:
     def _exam_passed(self, player_id, course_key, exam_id) -> bool:
         row = self._attempt_row(player_id, course_key, exam_id)
         return bool(row and row.passed)
+
+    def last_exam_result(
+        self, player_id: str, course_key: str, exam_id: str
+    ) -> Optional[dict]:
+        """The player's most recently graded, item-level result for
+        ``(course_key, exam_id)`` — lets a "review my last attempt" replay flow
+        show exactly what they answered without re-grading or exposing answer
+        keys (the stored shape is already the answer-stripped
+        ``assessment_service.grade_exam`` result). Returns ``None`` if the
+        player has never attempted this exam."""
+        row = self._attempt_row(player_id, course_key, exam_id)
+        if row is None or row.last_result is None:
+            return None
+        return dict(row.last_result)
 
     def _exams_for(self, player_id, course_key) -> list:
         """Per-exam state for a course (empty if the course has no bank)."""

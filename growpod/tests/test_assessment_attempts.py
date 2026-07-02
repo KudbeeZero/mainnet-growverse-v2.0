@@ -67,6 +67,54 @@ class TestSubmitExamPersistence:
             UniversityService(session).submit_exam(p.id, "bio-101", "nope", {})
 
 
+class TestExamReplay:
+    """last_result: item-level replay of the MOST RECENT attempt (2026-07-02)."""
+
+    def test_submitting_persists_item_level_result(self, session):
+        p = _player(session)
+        uni = UniversityService(session)
+        out = uni.submit_exam(p.id, "bio-101", "mastery", _correct("mastery"))
+        row = session.query(AssessmentAttempt).filter_by(player_id=p.id, exam_id="mastery").one()
+        assert row.last_result is not None
+        assert row.last_result["items"] == out["result"]["items"]
+        assert row.last_result["score"] == out["result"]["score"]
+        # No answer keys ever land in the stored replay (already answer-stripped
+        # by assessment_service.grade_exam / grade_item).
+        for item in row.last_result["items"]:
+            assert "answer" not in item and "pairs" not in item
+
+    def test_worse_second_attempt_does_not_overwrite_best_score_but_updates_last_result(
+        self, session
+    ):
+        p = _player(session)
+        uni = UniversityService(session)
+        uni.submit_exam(p.id, "bio-101", "mastery", _correct("mastery"))  # pass, score 1.0
+        uni.submit_exam(p.id, "bio-101", "mastery", {})                  # worse (blank)
+
+        row = session.query(AssessmentAttempt).filter_by(player_id=p.id, exam_id="mastery").one()
+        # Forgiving invariant untouched: best_score/passed still reflect the
+        # best-ever attempt, not the latest.
+        assert row.best_score == 1.0
+        assert row.passed is True
+        # But last_result reflects the LATEST (worse) attempt, not the best.
+        assert row.last_result["score"] == 0.0
+        assert row.last_result["passed"] is False
+
+    def test_retrieval_returns_the_stored_result(self, session):
+        p = _player(session)
+        uni = UniversityService(session)
+        uni.submit_exam(p.id, "bio-101", "mastery", _correct("mastery"))
+        result = uni.last_exam_result(p.id, "bio-101", "mastery")
+        assert result is not None
+        assert result["score"] == 1.0
+        assert len(result["items"]) > 0
+
+    def test_retrieval_is_none_when_never_attempted(self, session):
+        p = _player(session)
+        uni = UniversityService(session)
+        assert uni.last_exam_result(p.id, "bio-101", "mastery") is None
+
+
 class TestExamGatedCompletion:
     def _enroll_and_age(self, session, p):
         """Enroll in bio-101 and backdate study time so only the exam gate remains."""

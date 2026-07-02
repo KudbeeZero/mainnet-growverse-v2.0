@@ -44,3 +44,4 @@ yarn-error.log*
 # Agent scratch helpers (screenshot/count probes) — never committed
 _*.mjs
 _*.mts
+.next-verify/

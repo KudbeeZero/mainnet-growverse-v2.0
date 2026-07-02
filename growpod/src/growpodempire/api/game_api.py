@@ -1347,6 +1347,27 @@ def university_exam_submit(player_id, course_key, exam_id):
         return _error(str(e), 404 if "no exam" in str(e) else 400)
 
 
+@game_bp.get("/players/<player_id>/courses/<course_key>/exams/<exam_id>/last-result")
+@require_feature("university")
+@require_player
+def university_exam_last_result(player_id, course_key, exam_id):
+    """Replay: the player's most recently graded attempt for this exam.
+
+    Item-level (correct/explain per question, answer-stripped — the exact
+    shape `submit` returns), not just best_score/passed, so a player can
+    review what they answered without re-grading. 404 if they've never
+    attempted this exam.
+    """
+    try:
+        with session_scope() as s:
+            result = UniversityService(s).last_exam_result(player_id, course_key, exam_id)
+        if result is None:
+            return _error("No attempt on record for this exam", 404)
+        return jsonify(result)
+    except GameError as e:
+        return _error(str(e), 404)
+
+
 @game_bp.post("/players/<player_id>/master-grower/ask")
 @require_feature("university")
 @require_player

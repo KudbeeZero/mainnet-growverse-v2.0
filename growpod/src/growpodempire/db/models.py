@@ -30,6 +30,7 @@ from sqlalchemy import (
     LargeBinary,
     Numeric,
     String,
+    Text,
     Index,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -576,6 +577,23 @@ class AssessmentAttempt(UUIDPrimaryKeyMixin, Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     best_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Item-level result of the MOST RECENT graded attempt (exam replay,
+    # 2026-07-02): the exact answer-stripped dict `assessment_service.grade_exam`
+    # returns — {total, correct_count, score, percent, passed, pass_threshold,
+    # items: [{id, type, correct, objective, explain}, ...]}. No answer keys or
+    # `pairs` mappings are in that shape (grade_item already omits them), so it
+    # is safe to store and later show back to the player verbatim.
+    #
+    # Unlike best_score/passed (which are "best ever" and forgiving — a worse
+    # retry never lowers them), `last_result` is ALWAYS overwritten by the
+    # latest submit, so a "review my last attempt" replay always shows the most
+    # recent try, not necessarily the best one. A JSON column (rather than a
+    # child table) was chosen because this is a 1:1 "latest snapshot" per
+    # attempt row, not a history to query independently, and the codebase
+    # already stores structured nested data this way (LearnerEvent.detail,
+    # PlantEvent.payload, Harvest.terpenes) — no new relationship/migration
+    # complexity for data that's always read/written atomically with its parent.
+    last_result: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     last_attempt_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )
@@ -681,6 +699,37 @@ class LectureAudio(UUIDPrimaryKeyMixin, Base):
 
     __table_args__ = (
         Index("uq_lecture_audio_voice_hash", "voice_id", "text_hash", unique=True),
+    )
+
+
+class LectureContent(UUIDPrimaryKeyMixin, Base):
+    """Cached lecture TEXT for a course — produced once, served to every player
+    thereafter. Mirrors ``LectureAudio``'s produce-once cache, but keyed on
+    ``course_key`` alone (not player/plant/level): HERMES's "one canonical
+    lesson per course" rule (design/10) means the lecture is generated exactly
+    ONCE via the AI provider (or mock) and never re-billed on repeat "Attend
+    lecture" / "Re-deliver" requests — every player who attends a given
+    course's lecture sees the identical saved copy, and it is instantly
+    replayable. The unique index on ``course_key`` is the hard backstop: a
+    concurrent double-generate (two players' first request racing) can insert
+    at most one row; the loser's insert fails and it re-reads the winner's row
+    (see ``LecturerService.teach``, mirroring
+    ``ai/elevenlabs_narrator._db_put``'s IntegrityError-and-refetch pattern).
+    """
+
+    __tablename__ = "lecture_content"
+
+    course_key: Mapped[str] = mapped_column(String(48), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    key_takeaways: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    quiz_question: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    # The AI backend identifier that generated this lecture (e.g. "mock",
+    # "claude:claude-opus-4-8") — provenance only, never re-derived per request.
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
     )
 
 
@@ -817,3 +866,36 @@ class MarketListing(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     __mapper_args__ = {"version_id_col": version}
+
+
+class KnowledgeEvent(UUIDPrimaryKeyMixin, Base):
+    """Global, APPEND-ONLY capture of every generative artifact any player
+    produces (design/11 Phase 1 — "the teacher gets smarter; never lose the
+    generative information users create").
+
+    One row per artifact: a Master Grower Q&A, a freshly-generated lecture, a
+    graded exam result, a care outcome. The ONLY writer is
+    ``KnowledgeService.append`` — mirrors ``LearnerModelService.apply``'s
+    single-writer invariant. No code path may UPDATE or DELETE a row here;
+    this is a durable audit trail, not a mutable cache.
+
+    ``player_id`` is kept for provenance/audit ONLY. Design/11 requires
+    retrieval to be ANONYMOUS by construction — no read API may expose
+    ``player_id`` to another player or to an unauthenticated caller.
+
+    ``payload`` carries the actual generative content (question/answer/
+    citations, a lecture reference, an exam score, ...). This table and
+    ``KnowledgeService`` NEVER touch the GROW ledger, a ``Wallet``, or
+    ``balance.yaml`` — university/knowledge stays NON-ECONOMIC.
+    """
+
+    __tablename__ = "knowledge_events"
+
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    player_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("players.id"), nullable=True
+    )
+    payload: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False, index=True
+    )

@@ -99,12 +99,14 @@ export function TrichomeLayer({ assembly, lod }: { assembly: PlantAssembly; lod:
       new THREE.MeshStandardMaterial({
         // Translucent silvery resin: low roughness so it catches the key light as
         // wet sparkle, a hair of emissive so the coat never goes muddy in shadow.
-        roughness: 0.22,
+        roughness: 0.16,
         metalness: 0.0,
         transparent: true,
-        opacity: 0.94,
-        emissive: new THREE.Color(0.12, 0.15, 0.18),
-        emissiveIntensity: 0.6,
+        opacity: 0.96,
+        // A brighter emissive floor so the glands glint as wet resin points even
+        // in shadow — the crystalline sparkle over the silvery coat.
+        emissive: new THREE.Color(0.22, 0.27, 0.30),
+        emissiveIntensity: 0.9,
         depthWrite: true,
       }),
     [],
@@ -140,12 +142,13 @@ export function TrichomeLayer({ assembly, lod }: { assembly: PlantAssembly; lod:
         d.quaternion.copy(qLocal);
         // Scale: gland size × cola width, with per-instance jitter; stalks stand a
         // touch taller than they are wide so they read as columns of resin.
-        const s = g.r * c.width * (lod === "close" ? 5.0 : 5.6) * (0.85 + 0.55 * g.spark);
+        const s = g.r * c.width * (lod === "close" ? 4.4 : 5.2) * (0.8 + 0.6 * g.spark);
         d.scale.set(s, s * (lod === "close" ? 1.3 : 1.0), s);
         d.updateMatrix();
         mesh.setMatrixAt(idx, d.matrix);
-        // Sparkle: brighten a fraction of glands so the coat glints unevenly.
-        col.copy(frostColor(g.mat)).multiplyScalar(0.9 + 0.35 * g.spark);
+        // Sparkle: spread gland brightness wide so a fraction glint near-white while
+        // others sit dim — a granular, uneven resin glitter, not a flat white wash.
+        col.copy(frostColor(g.mat)).multiplyScalar(0.72 + 0.7 * g.spark);
         mesh.setColorAt(idx, col);
         idx++;
       }

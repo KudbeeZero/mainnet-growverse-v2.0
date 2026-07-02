@@ -12,6 +12,11 @@ nothing to pay for here; the feature is free.
 `ask()` binds the in-scope player/plant onto the service itself (which IS the
 `MasterGrowerTools` handle) and delegates to the configured provider — the
 deterministic offline mock by default, so the whole path runs in CI with no key.
+
+`ask()` also appends a "master_grower_qa" row to the global, append-only
+`knowledge_events` log (design/11 P1) for every substantive (non-refused)
+answer, via the single-writer `KnowledgeService.append` — additive, NEVER the
+GROW ledger/wallet, and never a second write path.
 """
 
 from typing import List, Optional
@@ -26,6 +31,7 @@ from ..ai.provider import AdvisorReport, MasterGrowerProvider, MasterGrowerRepor
 from ..db.models import Strain
 from .advisor_service import AdvisorService
 from .game_service import load_strain_knowledge
+from .knowledge_service import KnowledgeService
 
 
 class MasterGrowerService:
@@ -126,9 +132,25 @@ class MasterGrowerService:
     ) -> MasterGrowerReport:
         """Answer a question via the configured (grounded, refusing) provider.
 
-        Read-only end to end: the provider may call the tools above but nothing
-        writes. `player_id`/`plant_id` scope the optional plant tools.
+        Read-only end to end w.r.t. game/economy state: the provider may call
+        the tools above but nothing writes there. The ONE write this method
+        performs is additive and NON-ECONOMIC — a "master_grower_qa"
+        ``knowledge_events`` row (design/11 P1), appended only for substantive
+        (non-refused) answers so refused/out-of-scope asks never pollute the
+        global knowledge layer. `player_id`/`plant_id` scope the optional
+        plant tools.
         """
         self.player_id = player_id
         self.plant_id = plant_id
-        return self.provider.answer(question, self)
+        report = self.provider.answer(question, self)
+        if not report.refused:
+            KnowledgeService(self.session).append(
+                "master_grower_qa",
+                {
+                    "question": question,
+                    "answer": report.answer,
+                    "citations": [c.model_dump() for c in report.citations],
+                },
+                player_id=player_id,
+            )
+        return report

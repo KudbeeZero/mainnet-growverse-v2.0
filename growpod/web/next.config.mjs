@@ -86,6 +86,11 @@ const nextConfig = {
   env: buildEnv,
   // Pin output file tracing to this app's directory (portable across hosts).
   outputFileTracingRoot: import.meta.dirname,
+  // Optional build-output override (defaults to the standard ".next") so a
+  // second `next dev` instance can run against an isolated cache without
+  // colliding with another one running from the same working directory.
+  // No-op unless NEXT_DIST_DIR is explicitly set.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
