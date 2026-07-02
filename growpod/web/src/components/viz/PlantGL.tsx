@@ -527,7 +527,7 @@ function PlantScene({
     // a bare cone — the calyxes + frost then just add texture on top.
     const [r, g, b] = hslToRgb({ hue: 162, sat: 24, lit: 47 });
     return new THREE.Color(r, g, b);
-  }, [dna]);
+  }, []);
   const yOffset = -assembly.skeleton.height * 0.5;
   const groupRef = useRef<THREE.Group>(null);
   useFrame((_, dt) => {
