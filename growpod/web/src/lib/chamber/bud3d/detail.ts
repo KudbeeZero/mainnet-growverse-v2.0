@@ -234,14 +234,20 @@ export function buildSugarLeaves(cola: ColaInstance[], opts: SugarLeafOpts): Sug
     const b = lerp(base * 0.42, 0.66, frost * 0.6);
 
     out.push({
+      // Anchor at (not beyond) the calyx surface — the old 0.45x outward push put
+      // the blade's BASE outside the bract cladding, so it read as pasted onto
+      // the bud rather than emerging from within it. A small inward pull tucks
+      // the base into the mass; the blade still reads because `dir` points it
+      // outward/upward from there.
       pos: [
-        c.pos[0] + ox * c.scale[0] * 0.45,
-        c.pos[1] + c.scale[1] * 0.1,
-        c.pos[2] + oz * c.scale[2] * 0.45,
+        c.pos[0] - ox * c.scale[0] * 0.08,
+        c.pos[1] + c.scale[1] * 0.06,
+        c.pos[2] - oz * c.scale[2] * 0.08,
       ],
       dir: [dx / m, dy / m, dz / m],
-      // Bigger blades so they give the bud visible mass / silhouette.
-      scale: (0.18 + 0.16 * rnd()) * (c.scale[0] + c.scale[1]),
+      // Narrower, smaller blades than before — visibly smaller than a fan leaf,
+      // a sliver of leaf poking from the bud rather than a leaf-sized paddle.
+      scale: (0.13 + 0.1 * rnd()) * (c.scale[0] + c.scale[1]),
       roll: rnd() * Math.PI * 2,
       color: [Math.min(1, r), Math.min(1, g), Math.min(1, b)],
     });

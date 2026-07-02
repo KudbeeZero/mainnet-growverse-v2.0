@@ -53,6 +53,21 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
  * big scallops. Returns the outline going up the right side, across the tip,
  * and back down the left side.
  */
+// Width envelope: a quick smoothstep rise to full width by ~22% up the blade,
+// then a LONG near-linear taper to an exact zero at the tip. A sine falls off
+// like a cosine near t=1 — tangentially, never truly pointed — which is why
+// the old outline read as a soft, slightly rounded hand leaf. This one reaches
+// width 0 with a real slope, so the tip reads as a genuine lance point.
+function leafletEnvelope(t: number): number {
+  const rise = 0.22;
+  if (t < rise) {
+    const k = t / rise;
+    return k * k * (3 - 2 * k); // smoothstep 0→1
+  }
+  const tt = (t - rise) / (1 - rise);
+  return Math.pow(1 - tt, 1.12);
+}
+
 function leafletOutline(
   length: number,
   width: number,
@@ -60,26 +75,25 @@ function leafletOutline(
 ): [number, number][] {
   const pts: [number, number][] = [];
   pts.push([0, 0]);
-  const teethCount = Math.max(4, teeth);
+  const teethCount = Math.max(5, teeth);
   for (let i = 0; i < teethCount; i++) {
     const t = (i + 0.5) / teethCount;
     const y = t * length;
-    // Leaflet is widest around 30% up, then tapers to a sharp tip.
-    const envelope = Math.sin(Math.PI * (0.1 + 0.75 * t)) * (1 - 0.15 * t);
-    const w = width * envelope;
-    const toothDepth = w * 0.22;
-    pts.push([w + toothDepth * 0.5, y - length * 0.012]);
-    pts.push([w - toothDepth * 0.5, y + length * 0.012]);
+    const w = width * leafletEnvelope(t);
+    // Deeper, sharper serration notches than before — a crisply toothed edge
+    // instead of a soft scalloped one.
+    const toothDepth = w * 0.3;
+    pts.push([w + toothDepth * 0.5, y - length * 0.01]);
+    pts.push([w - toothDepth * 0.5, y + length * 0.01]);
   }
   pts.push([0, length]);
   for (let i = teethCount - 1; i >= 0; i--) {
     const t = (i + 0.5) / teethCount;
     const y = t * length;
-    const envelope = Math.sin(Math.PI * (0.1 + 0.75 * t)) * (1 - 0.15 * t);
-    const w = width * envelope;
-    const toothDepth = w * 0.22;
-    pts.push([-w + toothDepth * 0.5, y + length * 0.012]);
-    pts.push([-w - toothDepth * 0.5, y - length * 0.012]);
+    const w = width * leafletEnvelope(t);
+    const toothDepth = w * 0.3;
+    pts.push([-w + toothDepth * 0.5, y + length * 0.01]);
+    pts.push([-w - toothDepth * 0.5, y - length * 0.01]);
   }
   return pts;
 }
@@ -110,16 +124,21 @@ export function buildFanLeaf(opts: LeafOpts): LeafGeometry {
   const petioleLen = 0.12;
   const originY = petioleLen;
 
-  // Central leaflet — the longest, points straight up (angle 0).
-  const centralLen = 0.72;
-  const centralW = 0.11 * wMul;
-  const centralTeeth = 9 + pairs * 2;
+  // Central leaflet — the longest, points straight up (angle 0). Longer and
+  // markedly narrower than before (lance-shaped, not a broad hand blade) —
+  // unmistakably a cannabis leaflet in silhouette alone.
+  const centralLen = 0.82;
+  const centralW = 0.082 * wMul;
+  const centralTeeth = 10 + pairs * 2;
 
   // Angular spread per pair, widening toward the outer leaflets (a real fan leaf's
   // outermost pair splays far out / slightly down, not bunched near the center).
-  const ANGLE_STEPS = [0, 0.46, 0.86, 1.18, 1.42]; // radians, index = pair number
-  // Outer leaflets shrink faster than a linear falloff (short "pinky" leaflets).
-  const LEN_STEPS = [1, 0.86, 0.68, 0.5, 0.36];
+  // Wider than before so narrower blades still read as clearly separated fingers.
+  const ANGLE_STEPS = [0, 0.54, 0.98, 1.3, 1.52]; // radians, index = pair number
+  // Outer leaflets shrink faster than a linear falloff (short "pinky" leaflets) —
+  // a steeper natural taper than before so the centre leaflet unmistakably reads
+  // as the longest.
+  const LEN_STEPS = [1, 0.8, 0.6, 0.42, 0.28];
 
   function addLeaflet(len: number, width: number, teeth: number, angle: number) {
     const outline = leafletOutline(len, width, teeth);

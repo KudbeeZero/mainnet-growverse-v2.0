@@ -153,13 +153,12 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
     // fuse into a solid, clad cola while still reading as stacked flower nodes.
     const bracts = Math.max(2, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * wc) * 2.35 * densRoot));
     for (let j = 0; j < bracts && out.length < cap; j++) {
-      // Tight angular spread around the node azimuth — tighter than a wide even
-      // spread, so bracts CLUSTER and overlap like scales instead of scattering
-      // into a sparse, gappy shell (the "berries floating on a ball" problem).
-      const az = nodeAz + (rnd() - 0.5) * 0.8;
-      // Hug close to the true surface (0.62..1.02×) so the cladding is dense and
-      // the smaller backstop core underneath never shows through.
-      const r = ringR * (0.62 + 0.4 * rnd());
+      // Tighter angular spread still — bracts CLUSTER and overlap like scales,
+      // not scatter into visible bead-like gaps.
+      const az = nodeAz + (rnd() - 0.5) * 0.62;
+      // Hug close to the true surface (0.7..1.02×, narrower band than before) so
+      // neighbouring bracts overlap instead of floating at different depths.
+      const r = ringR * (0.7 + 0.32 * rnd());
       const x = Math.cos(az) * r;
       const z = Math.sin(az) * r;
       // Bracts hug the node's height (small jitter) so the cluster stays one node.
@@ -167,7 +166,9 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
 
       const sizeUnit = (dna.calyxSizeMin + (dna.calyxSizeMax - dna.calyxSizeMin) * rnd()) / Math.max(1, dna.budHeight);
       const swell = 0.7 + 0.6 * dev;
-      const w = sizeUnit * H * swell * (0.95 + 0.4 * wc);
+      // Slightly bigger than before so adjacent bracts overlap into a continuous
+      // scaled surface instead of reading as discrete beads with gaps between.
+      const w = sizeUnit * H * swell * (1.04 + 0.42 * wc);
       // Teardrop: taller than wide, more pointed when the strain foxtails.
       const h = w * (1.18 + 0.55 * (dna.foxtailBias ?? 0));
 
@@ -223,15 +224,15 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
         subSpiral += GOLDEN_ANGLE;
         const sbracts = Math.max(2, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * swc) * 1.6 * densRoot));
         for (let m = 0; m < sbracts && out.length < cap; m++) {
-          const az = subSpiral + (rnd() - 0.5) * 0.85;
-          const rr = sringR * (0.62 + 0.4 * rnd());
+          const az = subSpiral + (rnd() - 0.5) * 0.65;
+          const rr = sringR * (0.7 + 0.32 * rnd());
           const x = ncx + Math.cos(az) * rr;
           const z = ncz + Math.sin(az) * rr;
           const y = ncy + (rnd() - 0.5) * 0.02;
 
           const sizeUnit = (dna.calyxSizeMin + (dna.calyxSizeMax - dna.calyxSizeMin) * rnd()) / Math.max(1, dna.budHeight);
           const swell = 0.7 + 0.6 * dev;
-          const w = sizeUnit * H * swell * (0.9 + 0.35 * swc) * 0.86; // sub-bracts a touch smaller
+          const w = sizeUnit * H * swell * (0.98 + 0.38 * swc) * 0.86; // sub-bracts a touch smaller
           const hh = w * (1.18 + 0.55 * (dna.foxtailBias ?? 0));
 
           out.push({
