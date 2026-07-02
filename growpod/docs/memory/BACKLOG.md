@@ -8,6 +8,59 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
 > PRs / branches / directives + the launch critical path + department status live in
 > `docs/memory/CANONICAL_STATE.md`.
 
+## 🎮 Core Game Loop (TOP-PRIORITY ACTIVE track — owner freeze directive 2026-07-02, PR #111)
+> Owner directive: **freeze advanced 3D bud/model work** and ship the playable core loop on the
+> existing stylized 2D chamber engine — "I'm not worried about the 3-D right now." This track
+> supersedes the 3D/Lab tracks below until the owner reopens them.
+- 🎮 ✅ **Bud Viewer route parked, "Coming soon" (2026-07-02, PR #111)** — the dedicated Tier-2
+  `/dashboard/plants/[plantId]/bud` screen (`BudGL` macro inspection) stays built and working
+  (zero cost to leave, one-line re-enable later) but the Grow Chamber's floating "🔬 View Bud"
+  CTA (`chamber/page.tsx`) is now a disabled "Coming soon" chip instead of a live link, per
+  owner: "If the View Bud button exists, it can be disabled, hidden, or marked 'Coming soon'
+  until the main game loop is stable."
+- 🎮 ✅ **Care button functionality wired (2026-07-02, PR #111)** — `web/src/components/plant/CareButtons.tsx` now renders
+  all 7 actions (Water, Feed, Treat Pests, Treat Disease, Prune, Train, Boost), not just
+  Water/Feed. New `lib/careAvailability.ts` (pure, 12 unit tests) derives per-button
+  available/disabled state + human reason from `plant.recent_events`: once-per-stage gating for
+  Prune/Train (mirrors the backend's `_last_event_stage()`), pressure-gating for Treat
+  Pests/Disease (`pest_level`/`disease_level` > 0), dead/harvested lockout with reason text.
+  Boost intentionally always shows "available" from the UI (the real cooldown length lives in
+  `balance.yaml`, not exposed to the client — fabricating a countdown would be dishonest; the
+  existing toast-on-error stays the ground truth for the rare still-cooling-down case). Each
+  button shows benefit text + last-used relative time (`formatSinceUsed`). Existing
+  particle-burst press feedback (`CareFeedback`/`careFeedbackData.ts`) and mutations
+  (`useCareActions`) were already built — this closed the actual gap (buttons not rendered +
+  no proactive disabled-reason UI).
+- 🎮 ✅ **Journal + Inspect + "what's next" wired into Care (2026-07-02, PR #111)** — `CareButtons`
+  gained direct 🔍 Inspect / 📓 Journal links (Journal deep-links to `#journal` on the plant
+  detail page, which now has `id="journal"` via `Card`'s new optional `id` prop). Chamber's GROW
+  tab now shows the existing `PlantActionCTA`/`nextPlantAction` "what to do next" banner
+  (previously only on the plant-detail page and PlantCard) so harvest-ready / critical-care state
+  is never ambiguous inside the chamber itself.
+- 🎮 ⬜ **Per-action visual plant reactions (owner spec, not yet built)** — owner asked for
+  *targeted* feedback beyond the existing generic particle burst: Water → blue pulse to the root
+  zone, Feed → green pulse traveling up the stem, Prune → trim/sparkle at the cut site, Train →
+  branch-guide animation, Inspect → scanner sweep. Today `CareFeedback` fires the same
+  screen-space glyph burst for every action; these need to be geometry-aware (root/stem/branch
+  targeted) inside `chamberCore.ts`/`GrowChamber`.
+- 🎮 ⬜ **Harvest-ready next-actions (owner spec, partially built)** — owner wants: Harvest Review,
+  Final Report, Grow Another, Enter Cup, Save Snapshot. Today only "✂️ Harvest & Sell" (via
+  `PlantActionCTA`/`CareButtons`) and post-harvest "Grow Another" (celebration overlay) exist.
+  Harvest Review / Final Report / Enter Cup / Save Snapshot are not implemented — needs product
+  scoping (Enter Cup touches `/cup`, in scope per owner's "Cup logic unless required for harvest
+  handoff" carve-out; the other three are new screens/state).
+- 🎮 ⬜ **Menu clarity review (owner spec: Grow/Lab/Market/Cup/More)** — not yet audited against
+  current nav (`navLinks.ts`) for the specific 5-menu read the owner described (Grow = main
+  plant care, Lab = parked for later, Market = seeds/items, Cup = competition/final plant,
+  More = settings/history/help).
+- 🎮 ❄️ **Parked for later (owner-named, do not resume without explicit direction)**: photoreal
+  bud viewer, full 3D cola inspection, trichome particle macro mode, scientific Lab breakdown,
+  university 3D model, advanced morphology layer toggles. See the ❄️ items under "HERMES
+  University + hardening" below for the specific backlog rows this covers.
+- 🎮 **Do-not-touch (owner-named, unrelated to this track, restated for visibility):** wallet/funds
+  path, staking, claim logic, Algorand production token flows, market purchases (unless required
+  for button state), Cup logic (unless required for harvest handoff).
+
 ## 🏛️ HERMES University + hardening (ACTIVE track — owner directive 2026-07-02)
 > The university keeps its systems (no overhaul) but becomes **HERMES University for cannabis** — an
 > online school with produced-once lessons. Plus the security-review follow-ups (PR #104) and the
@@ -39,8 +92,56 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   Grower; P3 `search_global_knowledge` retrieval tool (the teacher gets smarter from every
   player); P4 `global_insights` rollups + class-stats surface. Spec:
   `docs/memory/design/11-global-learning-memory.md`.
-- 🎨 ⬜ **Per-strain procedural fidelity pass** — `GrowChamber`/`BudGL` morphology + bud shape/color
-  coverage across all 29 strains (the follow-up track from the 2026-07-02 revert ADR).
+- 🎨 ❄️ **Per-strain procedural fidelity pass — PARKED (owner freeze directive 2026-07-02)** —
+  `GrowChamber`/`BudGL` morphology + bud shape/color coverage across all 29 strains (the
+  follow-up track from the 2026-07-02 revert ADR). Pilot strain Blue Dream is 4 rounds deep
+  against the owner's harvest reference photo (identity → renderer realism → cola-silhouette
+  smoothing → apex separation/mid-canopy fill, PRs #108-#110 + the handoff-audit session's
+  round 4). Owner: "freeze advanced 3D bud/model work for now... do not keep trying to make the
+  macro bud perfect." Do not resume without explicit owner direction; the core game loop is the
+  priority track now (see "Core Game Loop" section below).
+- 🎨 ✅ **Renderer tier architecture locked in (2026-07-02, PR #111)** — 4 tiers: Tier 1 gameplay
+  = `GrowChamber` (2D canvas, canonical, mobile-first — unchanged engine); Tier 2 Lab/University
+  = new `PlantGL` whole-plant Three.js model, wired into a "3D Model" tab on
+  `lab/strains/[strainId]/page.tsx`; Tier 3 View Bud = `BudGL` macro close-up (unchanged); Tier 4
+  dev-only = `/dev/plant-review`'s chamber/plant3d/macro toggle. The "Plant 3D" tab was **removed**
+  from the live gameplay chamber page (`dashboard/plants/[plantId]/chamber/page.tsx`) — it must
+  never resurface there; Tier 2/3 detail belongs in Lab/View Bud only, never forced into Tier 1.
+- 🎨 ✅ **`PlantGL` whole-plant 3D construction model built (2026-07-02, PR #111)** — new
+  `lib/chamber/plant3d/{skeleton,fanLeaf}.ts` + `components/viz/PlantGL.tsx`: stem → phyllotaxic
+  nodes/branches → bud sites → phytomer-node-clustered bracts/calyxes (botanically grounded,
+  Spitzer-Rimon et al. 2019) → sugar leaves from flower nodes → pistils → trichome frost → fan
+  leaves (true palmate hand, shared origin, wide angle spread) → axillary sub-shoot compound
+  raceme. Layer-inspection dev tooling (per-layer toggles, density sliders, skeleton/node debug
+  overlays) shipped in `/dev/plant-review`. 16 new unit tests; shares `bud3d/cola.ts` +
+  `bud3d/detail.ts` builders with `BudGL` so macro and Lab views can't drift apart.
+- 🎨 ✅ **Chamber mobile-readability pass (2026-07-02, PR #111)** — the live Tier-1 gameplay
+  renderer read as "moss on sticks" at real phone size (fine per-gland trichome detail + many
+  tiny calyx pods + thin branches, verified via real-phone-viewport screenshots of the actual
+  mocked gameplay route, not just the desktop dev panel). Fixed in `chamberCore.ts`
+  `buildFlowerSite`/`drawFlowerSite` only (View Bud/Lab detail untouched): ~60% fewer, ~35%
+  bigger calyx pods; ~65% fewer but bolder pistil strokes; per-gland trichome loop replaced with
+  1-2 clustered soft frost-glow blobs per cluster; thicker stem/branch/branchlet strokes; a
+  modest vegetative-stage node/leaf density boost (mirrors the existing flowering boost) so veg
+  plants read leafy/branchy instead of leggy.
+- 🎨 ❄️ **3D construction-model follow-ups — PARKED (owner freeze directive 2026-07-02, deferred
+  from PR #111, owner science-based-architecture spec)** — (a) formalize the explicit `PlantNode`
+  field-named data model (index/angle/radius/stage/branchPotential/… ) the spec calls for —
+  currently implicit in `skeleton.ts`; (b) finer growth-stage architecture for `PlantGL`
+  (cotyledon seedling, pre-flower, senescence/yellowing — today it's just veg → flower →
+  harvest); (c) true stalk-and-gland trichome geometry for close-up Lab/View-Bud distance (today
+  both use frost spheres) + LOD (near/mid/far detail tiers); (d) roll the 3D model out
+  per-strain the same way the 2D pilot above will — only Blue Dream/verified strains have been
+  visually checked in 3D. All parked alongside the photoreal bud viewer / full 3D cola
+  inspection / trichome particle macro mode / scientific Lab breakdown / university model /
+  advanced morphology layer toggles — see "Core Game Loop" section below.
+- 🎨 ⬜ **Chamber mobile-readability follow-ups (deferred from PR #111)** — (a) "shorten
+  exaggerated curved wire branches" was only partially addressed (stroke width bumped; branch
+  *curve amplitude* — `nd.curve`, `0.14–0.36` — was left untouched as lower-risk); revisit if
+  branches still read as too arced at phone size; (b) the mobile-viewport verification only
+  covered Blue Dream — spot-check a spiral/sativa-pattern strain (e.g. G13) and a bushy strain
+  (e.g. Purple Diddy Punch/White Rhino) since `buildFlowerSite`'s `pattern`/`fatMul` branches
+  weren't individually re-verified at phone size.
 
 ### 🕵️ Dormant investments (2026-07-02 sweep — built but unused; owner picks wire-in vs retire)
 > Full evidence (file:line per item) in the sweep report attached to PR #104. "Staged, not dead"

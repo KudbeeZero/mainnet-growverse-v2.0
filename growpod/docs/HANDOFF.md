@@ -4,11 +4,14 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-07-02 · **By:** the security-review → HERMES → prod-restore session.
-**Active branch:** `claude/code-review-security-vijkhs` (restarts from `origin/main` after each merge).
-**`main`:** PR #105 merge + the docs/master-grower follow-up PR — CI green.
+**Last rewritten:** 2026-07-02 · **By:** the handoff-audit session (baton catch-up + Blue Dream
+round 4; see `docs/audits/PR-110-global-learning-memory-blue-dream-r3.md` for the catch-up audit).
+**Active branch:** `claude/project-onboarding-review-vpx0aj` — open PR awaiting owner review/audit.
+**`main`:** PR #110 merge — CI green (backend + web checks both `success`); this session's PR not
+yet merged.
 **Production:** `growverse-api` on Fly is LIVE on current code (verified 2026-07-02: bio-101 +
-factions flag present, `/health` OK, lecture audio cache-hit). Deploys are AUTOMATIC on merge
+factions flag present, `/health` OK, lecture audio cache-hit **and** the Haiku adaptive-thinking
+fallback is live — see Incident below). Deploys are AUTOMATIC on merge
 (`.github/workflows/deploy-api.yml` at the repo root). growverse.dev (Vercel) deploys `web/`
 from `main`.
 
@@ -16,7 +19,7 @@ from `main`.
 
 ---
 
-## What shipped 2026-07-02 (PRs #104, #105 + follow-up)
+## What shipped 2026-07-02 (PRs #104–#110)
 
 1. **Security hardening** — waitlist PII/enumeration/DoS fixes, deposit fail-closed off-mock,
    401-only session death, root fly.toml `APP_ENV=production`, non-root Docker.
@@ -33,23 +36,41 @@ from `main`.
 6. **Real Claude Master Grower** — `ai/master_grower_claude.py` on `MASTER_GROWER_MODEL`
    (default Haiku 4.5, cheap); factory returns it with a key, mock in CI unchanged.
    Advisor/auto-care and the Professor lecturer already had real Claude providers.
+7. **AI stack activated live (PR #107)** — owner set `ANTHROPIC_API_KEY` + `ADVISOR_MODEL` in
+   Fly secrets; live traffic hit a real bug the mock never exercises: Haiku rejects the
+   hardcoded `thinking:{"type":"adaptive"}` param (400), 503-ing every lecture. Fixed with
+   `ai/anthropic_compat.parse_preferring_thinking` (retry once without thinking on a capability
+   400); both the advisor and lecturer now use it. **The AI-stack rollout is done, not
+   pending** — see `docs/memory/INCIDENTS.md` "Provider 400s on model-capability mismatch."
+8. **Blue Dream pilot, rounds 1–3 (PRs #108–#110)** — one strain, authored end-to-end against an
+   owner reference photo: round 1 identity (new blue-teal palette family, BudDNA, silhouette),
+   round 2 renderer realism (de-grape, cola proportion cap, leaf naturalism, connectivity),
+   round 3 smoothing (closed midpoint-quadratic spline bud-mass silhouette, node-leaf-driven
+   lower-canopy "skirt"). Template intended to roll out to the other 28 strains once approved.
+9. **Design Codex 11 (PR #110)** — `docs/memory/design/11-global-learning-memory.md`: spec for
+   per-player personalization + a global, append-only, anonymized-on-read knowledge layer so
+   the AI teacher gets smarter from every player. 4 additive phases (Capture → Personal →
+   Retrieve → Insights). Registered in `MAP.md`; **not built yet** (design only).
 
 ## NEXT ACTION (single)
 
-**AI-stack rollout on the small budget (~$13):** owner sets `ANTHROPIC_API_KEY` in Fly secrets
-**plus** `ADVISOR_MODEL=claude-haiku-4-5-20251001` (advisor/lecturer default is Opus — too
-expensive for the budget; the Master Grower already defaults to Haiku). Then verify:
-`/master-grower/ask` returns `provider: claude:claude-haiku-...`, one lecture generates and
-caches, spend shows a few cents. Config/env only — no code expected. Off-limits: economy
-values, treasury paths.
+**Owner is choosing the next backlog unit this session** (options on the table: Blue Dream
+round 4 renderer polish per the owner's reaction to round 3; the HERMES University wiring
+audit; the security follow-ups queued from PR #104; or Global Learning Memory design/11 P1
+build). Whichever is picked, scope it to the backlog's stated bounds before writing code — see
+`docs/memory/BACKLOG.md` for each item's detail. Off-limits unless separately approved: economy
+values, treasury paths, settlement deposit/withdraw.
 
 ## Verification split
 
-- **Agent-verified (test-backed):** backend 1111 passed / 6 skipped; web 417 + typecheck/lint/
-  build; check-memory green; live API probed (health / flags / catalog / audio-cache).
+- **Agent-verified (test-backed, this session):** `make lint` clean, `make check-memory` green
+  (33 files), web `typecheck`/`lint` clean on a fresh `npm ci`; backend `make test` re-run in
+  progress (results pending at time of this baton rewrite — confirm before trusting a red/green
+  claim beyond PR #110's own CI, which was green: backend + web jobs both `success`).
 - **Device-verify (owner):** growverse.dev in a browser — grow room shows the procedural
-  plant; HERMES catalog renders school sections; lecture audio plays. Optional one-tap:
-  GitHub → Settings → "Automatically delete head branches" (INCIDENTS.md branch entry).
+  plant; HERMES catalog renders school sections; lecture audio plays; Blue Dream round 3 render
+  reaction (round 4 go/no-go). Optional one-tap: GitHub → Settings → "Automatically delete head
+  branches" (INCIDENTS.md branch entry).
 
 ## OPEN RISKS (carried)
 

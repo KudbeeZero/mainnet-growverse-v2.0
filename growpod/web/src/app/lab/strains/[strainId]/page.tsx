@@ -27,7 +27,7 @@ import { num, titleCase, dateTime } from "@/lib/format";
 import { formatScalar, humanizeKnowledgeKey, humanizeList } from "@/lib/knowledgeFormat";
 import type { Strain } from "@/lib/types";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { morphologyFor, seedForPlant } from "@/lib/chamber/morphology";
+import { morphologyFor, seedForPlant, cycleDays, stageForDay, previewDev } from "@/lib/chamber/morphology";
 import { budColorForStrain } from "@/lib/chamber/strainVisuals";
 import { budDnaFor } from "@/lib/chamber/budDna";
 
@@ -38,6 +38,15 @@ import { StrainBudHero } from "@/components/viz/StrainBudHero";
 const StrainBud3D = dynamic(
   () => import("@/components/viz/StrainBud3D").then((m) => m.StrainBud3D),
   { ssr: false, loading: () => <LoadingBlock label="Frosting the bud…" /> },
+);
+
+// Lab-tier whole-plant model (Tier 2: higher-detail Three.js construction — full
+// bract/calyx/sugar-leaf/pistil/trichome anatomy). Not used on the live gameplay
+// Grow screen (that stays the stylized 2D chamber); this is where it belongs —
+// education/inspection, not the core loop.
+const PlantGL = dynamic(
+  () => import("@/components/viz/PlantGL").then((m) => m.PlantGL),
+  { ssr: false, loading: () => <LoadingBlock label="Building the 3D model…" /> },
 );
 
 function StrainInner({ strainId }: { strainId: string }) {
@@ -107,6 +116,7 @@ function StrainInner({ strainId }: { strainId: string }) {
         onChange={setTab}
         tabs={[
           { key: "encyclopedia", label: "Encyclopedia" },
+          { key: "plant3d", label: "3D Model" },
           { key: "dna", label: "DNA" },
           { key: "lineage", label: "Lineage" },
           { key: "verify", label: "Verify" },
@@ -114,6 +124,7 @@ function StrainInner({ strainId }: { strainId: string }) {
       />
 
       {tab === "encyclopedia" && <EncyclopediaTab strainId={strainId} />}
+      {tab === "plant3d" && <Plant3DTab strain={s} />}
       {tab === "dna" && <DnaTab strainId={strainId} />}
       {tab === "lineage" && <LineageTab strainId={strainId} />}
       {tab === "verify" && <VerifyTab strainId={strainId} />}
@@ -136,6 +147,43 @@ function StrainHero({ strain }: { strain: Strain }) {
         }
       />
     </div>
+  );
+}
+
+// Tier 2 (Lab/University): the full construction-model plant, shown near peak
+// late-flower so every layer (bracts, sugar leaves, pistils, trichome frost) is
+// visible for inspection — a fixed educational snapshot, not a live-tracking plant.
+function Plant3DTab({ strain }: { strain: Strain }) {
+  const reducedMotion = usePrefersReducedMotion();
+  const floweringMid = (strain.flowering_days[0] + strain.flowering_days[1]) / 2;
+  const showcaseDay = cycleDays(floweringMid) - Math.round(floweringMid * 0.15);
+  const stage = stageForDay(showcaseDay, floweringMid);
+  const dev = previewDev(showcaseDay, floweringMid);
+  const morphology = morphologyFor(strain.indica_ratio);
+  const budColor = budColorForStrain(strain.slug ?? strain.name, morphology.hue, seedForPlant(strain.id));
+
+  return (
+    <Card>
+      <CardHeader
+        title="Full plant construction model"
+        subtitle="Stem → branches → bracts/calyxes → sugar leaves → pistils → trichomes, built from this strain's genetics"
+      />
+      <div className="relative h-[480px] w-full overflow-hidden rounded-xl border border-ink-700 bg-[#050b12]">
+        <PlantGL
+          strain={strain.slug ?? strain.name}
+          indicaRatio={strain.indica_ratio}
+          seed={seedForPlant(strain.id)}
+          day={showcaseDay}
+          stage={stage}
+          dev={dev}
+          budColor={budColor}
+          reducedMotion={reducedMotion}
+        />
+      </div>
+      <p className="mt-2 text-xs text-gray-500">
+        Educational snapshot near peak late-flower — not this strain&apos;s live grow state.
+      </p>
+    </Card>
   );
 }
 

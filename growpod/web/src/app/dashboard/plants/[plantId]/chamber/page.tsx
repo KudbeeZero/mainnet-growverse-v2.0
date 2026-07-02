@@ -8,9 +8,8 @@ import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
 import { CareButtons } from "@/components/plant/CareButtons";
-import { TrichomeReadout } from "@/components/plant/TrichomeReadout";
+import { PlantActionCTA } from "@/components/plant/PlantActionCTA";
 import { useGrowthBoost } from "@/hooks/useCareActions";
-import type { ChamberView } from "@/components/viz/GrowChamber";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap, usePods } from "@/hooks/queries";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -36,19 +35,14 @@ import { budDnaFor, applyEnvironmentToBudDNA } from "@/lib/chamber/budDna";
 import { budParamsFromTrichomes } from "@/lib/chamber/bud3d/serverBud";
 import { titleCase } from "@/lib/format";
 import { nudge } from "@/lib/slider";
-import { isBud3DEnabled, hasWebGL } from "@/lib/features";
 import { getBoostMultiplier, BOOST_APPLIED_EVENT, type BoostApplyDetail } from "@/lib/arcade/boostEngine";
 import { useRewindStore } from "@/lib/arcade/timeRewind";
 
+// Grow Chamber = Tier 1, the canonical whole-plant gameplay renderer. It never
+// mounts the heavy WebGL bud/lab engines directly — those live behind the
+// dedicated "View Bud" screen (bud3d/BudGL) and Lab (plant3d/PlantGL).
 const GrowChamber = dynamic(
   () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
-  { ssr: false, loading: () => null },
-);
-
-// Experimental WebGL bud renderer (Phase 1a) — only mounted for the macro view
-// when enabled; otherwise the Canvas GrowChamber renders as before.
-const BudGL = dynamic(
-  () => import("@/components/viz/BudGL").then((m) => m.BudGL),
   { ssr: false, loading: () => null },
 );
 
@@ -151,20 +145,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const { data: pods } = usePods();
 
   const reducedMotion = usePrefersReducedMotion();
-  // 3D bud renderer: build-flag OR a `?bud3d=1` preview override (read client-side
-  // to avoid the useSearchParams Suspense requirement). Applies to the macro view.
-  const [bud3dOverride, setBud3dOverride] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const q = new URLSearchParams(window.location.search).get("bud3d");
-    if (q === "1") setBud3dOverride(true);
-    else if (q === "0") setBud3dOverride(false);
-  }, []);
-  // 3D when enabled (default on) or ?bud3d=1, unless ?bud3d=0 — AND the device
-  // actually has WebGL, else fall back to the 2D Canvas renderer.
-  const bud3d = (bud3dOverride ?? isBud3DEnabled()) && hasWebGL();
-  const [tab, setTab] = useState<"grow" | "climate" | "time" | "view">("grow");
-  const [view, setView] = useState<ChamberView>("chamber");
+  const [tab, setTab] = useState<"grow" | "climate" | "time">("grow");
   const [climate, setClimate] = useState<ChamberClimate>(DEFAULT_CLIMATE);
   // Growth-preview scrubber: null = track the real (server) age; a number =
   // preview that day on the cycle. Preview never mutates server state.
@@ -424,36 +405,19 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             aria-hidden
           />
         )}
-        {bud3d && view === "macro" ? (
-          <BudGL
-            dna={budDna}
-            seed={seedForPlant(plantId)}
-            // Scalars come from `budScalars`: the live look (server trichome truth +
-            // client dev), folded with the Arcade boost offset, or replaced by the
-            // rewind override while scrubbing backward.
-            budDev={budScalars.budDev}
-            ripe={budScalars.ripe}
-            brown={budScalars.brown}
-            trich={budScalars.trich}
-            purple={budScalars.purple}
-            reducedMotion={reducedMotion}
-            stage={renderStage}
-          />
-        ) : (
-          <GrowChamber
-            seed={seedForPlant(plantId)}
-            day={day}
-            stage={renderStage}
-            morphology={morphology}
-            silhouette={silhouette}
-            dev={dev}
-            budColor={budColor}
-            budDna={budDna}
-            climate={{ fan: climate.fan, temp: climate.temperature, hum: climate.humidity, co2: climate.co2_level }}
-            conditionFlags={plant.condition_flags}
-            view={view}
-          />
-        )}
+        <GrowChamber
+          seed={seedForPlant(plantId)}
+          day={day}
+          stage={renderStage}
+          morphology={morphology}
+          silhouette={silhouette}
+          dev={dev}
+          budColor={budColor}
+          budDna={budDna}
+          climate={{ fan: climate.fan, temp: climate.temperature, hum: climate.humidity, co2: climate.co2_level }}
+          conditionFlags={plant.condition_flags}
+          view="chamber"
+        />
         <div className="pointer-events-none absolute left-2.5 top-2.5 rounded-lg border border-cyan-400/40 bg-[#08141e]/70 px-2.5 py-1.5 font-mono text-[11px] tracking-wide backdrop-blur">
           {strain?.name ?? "Plant"} · {titleCase(renderStage)}
           {previewing && <span className="text-grow-300"> · preview</span>}
@@ -486,21 +450,16 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           />
         </div>
 
-        {/* Live trichome telemetry (server truth) — shown in the bud macro view. */}
-        {view === "macro" && plant.trichomes?.active && (
-          <div className="absolute bottom-3 left-2.5 w-[200px] max-w-[60%]">
-            <TrichomeReadout t={plant.trichomes} />
-          </div>
-        )}
-
-        {/* 🔬 View Buds — fades in once bud geometry starts rendering (flowering/harvest) */}
-        {(renderStage === "flowering" || renderStage === "late_flower" || renderStage === "harvest") && !ended && view !== "macro" && (
-          <button
-            onClick={() => { setView("macro"); setTab("view"); }}
-            className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full border border-cyan-400/50 bg-[#08141e]/85 px-4 py-2 text-xs font-bold text-cyan-200 backdrop-blur transition-all duration-500 hover:bg-[#16364c] hover:border-cyan-300"
+        {/* 🔬 View Bud — dedicated Tier-2 inspection screen (top cola only, the
+            heavy WebGL bud engine). Parked while we focus on the core game loop;
+            the route/component stay intact so this is a one-line re-enable later. */}
+        {(renderStage === "flowering" || renderStage === "late_flower" || renderStage === "harvest") && !ended && (
+          <span
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 flex cursor-not-allowed items-center gap-1.5 rounded-full border border-cyan-400/20 bg-[#08141e]/70 px-4 py-2 text-xs font-bold text-cyan-200/50 backdrop-blur"
+            title="View Bud is coming soon"
           >
-            🔬 View Buds
-          </button>
+            🔬 View Bud · Coming soon
+          </span>
         )}
 
         {ended && (
@@ -546,7 +505,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       {/* dashboard — bottom sheet in portrait, side rail in landscape */}
       <div className="max-h-[48dvh] flex-none overflow-y-auto bg-gradient-to-b from-transparent to-[#0a1622] px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 landscape:h-full landscape:max-h-none landscape:w-[clamp(260px,38vw,360px)] landscape:border-l landscape:border-[#11212e] landscape:bg-gradient-to-l landscape:pr-[max(0.75rem,env(safe-area-inset-right))]">
         <div className="mb-2 flex gap-1.5">
-          {(["grow", "climate", "time", "view"] as const).map((t) => (
+          {(["grow", "climate", "time"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -562,6 +521,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
 
         {tab === "grow" && (
           <div className="space-y-2">
+            {!ended && <PlantActionCTA plant={plant} pod={pod} compact />}
             <CareButtons plant={plant} />
             {/* Purchasable growth boost — fast-forward + revive for in-game GROW.
                 Cost mirrors balance.yaml simulation.actions.growth_boost.cost.
@@ -661,29 +621,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             </div>
             <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
               Scrub to watch this strain grow seed → harvest. Buds swell, pistils colour and
-              trichome frost builds in as it matures — try it in Bud Macro.
-            </p>
-          </div>
-        )}
-
-        {tab === "view" && (
-          <div className="space-y-2">
-            <div className="flex gap-1.5">
-              {(["chamber", "macro"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  aria-pressed={view === v}
-                  className={`flex min-h-[44px] flex-1 items-center justify-center rounded-lg border px-1 text-xs font-semibold transition-colors ${
-                    view === v ? "border-[#3a6a86] bg-[#16364c] text-[#eaf7ff]" : "border-[#1c3447] bg-[#0d1d2b] text-[#7fa9bf]"
-                  }`}
-                >
-                  {v === "chamber" ? "Chamber" : "Bud Macro"}
-                </button>
-              ))}
-            </div>
-            <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
-              Swipe across the plant to brush the branches — hard swipes shake trichome dust loose.
+              trichome frost builds in as it matures.
             </p>
           </div>
         )}

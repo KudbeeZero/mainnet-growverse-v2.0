@@ -79,12 +79,16 @@ export function isFeatureEnabled(name: FeatureName): boolean {
 }
 
 /**
- * 3D bud renderer (WebGL/three.js) — the high-fidelity frosted bud, now ON by
- * default for the focused plant views (chamber / pod / strain hero).
+ * 3D bud renderer (WebGL/three.js) — the high-fidelity frosted bud, ON by
+ * default for the pod/strain-hero previews (PodCommandCenter, StrainBud3D).
  *
- * Set `NEXT_PUBLIC_ENABLE_BUD3D=false` to force the legacy Canvas `GrowChamber`
- * build-wide. The chamber page also honours a `?bud3d=0/1` query override. Always
- * pair with `hasWebGL()` at the mount so devices without WebGL fall back to 2D.
+ * The dedicated Bud Viewer (`dashboard/plants/[plantId]/bud`) always renders
+ * BudGL when `hasWebGL()` is true — it doesn't consult this flag, since a 2D
+ * fallback would defeat the point of a screen whose entire purpose is the 3D
+ * inspection. The whole-plant Grow Chamber never mounts BudGL at all (2D
+ * `GrowChamber` is its sole renderer). Set `NEXT_PUBLIC_ENABLE_BUD3D=false` to
+ * force the remaining 3D-preview surfaces off build-wide. Always pair with
+ * `hasWebGL()` at the mount so devices without WebGL fall back gracefully.
  */
 export function isBud3DEnabled(): boolean {
   return process.env.NEXT_PUBLIC_ENABLE_BUD3D !== "false";

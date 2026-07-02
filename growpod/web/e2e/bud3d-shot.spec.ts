@@ -1,9 +1,10 @@
 import { test, type Page } from "@playwright/test";
 
-// Proof capture for Phase 1a — the WebGL/3D bud (macro "View Buds") rendering a
-// real lit, volumetric cola instead of the flat 2D blob. Hermetic (mock API),
-// mirrors slider-shot.spec.ts. The `?bud3d=1` query enables the renderer without
-// a dedicated build. Run: npx playwright test bud3d-shot
+// Proof capture — the dedicated Bud Viewer screen (/dashboard/plants/[id]/bud)
+// rendering a real lit, volumetric WebGL cola. The chamber's "View Bud" entry
+// point is parked as a "Coming soon" chip (owner core-game-loop freeze), so the
+// test asserts the chip then navigates to the still-working route directly.
+// Hermetic (mock API), mirrors slider-shot.spec.ts. Run: npx playwright test bud3d-shot
 
 const PLAYER = {
   id: "p1", username: "Tester", email: null, algorand_address: null,
@@ -76,13 +77,16 @@ async function setup(page: Page) {
   });
 }
 
-test("PROOF: 3D bud renders in the macro view", async ({ page }) => {
+test("PROOF: 3D bud renders in the dedicated Bud Viewer", async ({ page }) => {
   await setup(page);
-  await page.goto("/dashboard/plants/plant1/chamber?bud3d=1");
-  // "View Buds" appears once the plant is flowering; tap it to enter the macro view.
-  const viewBuds = page.getByRole("button", { name: /View Buds/i });
-  await viewBuds.waitFor({ timeout: 20_000 });
-  await viewBuds.click();
+  await page.goto("/dashboard/plants/plant1/chamber");
+  // Per the owner's core-game-loop freeze, the chamber shows "View Bud" as a
+  // disabled "Coming soon" chip (no link) once the plant is flowering — the
+  // heavy WebGL bud engine never mounts inside the Grow Chamber page itself.
+  await page.getByText(/View Bud · Coming soon/i).waitFor({ timeout: 20_000 });
+  // The dedicated Bud Viewer route stays built and working (parked, not
+  // removed) — navigate to it directly and prove the 3D bud still renders.
+  await page.goto("/dashboard/plants/plant1/bud");
   // Let the WebGL canvas mount + paint a few frames.
   await page.waitForSelector("canvas", { timeout: 15_000 });
   await page.waitForTimeout(2500);

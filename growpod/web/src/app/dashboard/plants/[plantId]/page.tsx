@@ -184,7 +184,7 @@ function PlantDetail({ plantId }: { plantId: string }) {
         <AdvisorPanel plantId={plant.id} />
       </div>
 
-      <Card>
+      <Card id="journal" className="scroll-mt-4">
         <CardHeader title="Event log" subtitle="Stage changes, stress onsets and care actions" />
         {events.isLoading ? (
           <LoadingBlock />

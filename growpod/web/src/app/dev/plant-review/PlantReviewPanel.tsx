@@ -31,9 +31,15 @@ import {
 import { silhouetteFor } from "@/lib/chamber/strainVisuals";
 import { budDnaFor } from "@/lib/chamber/budDna";
 import type { ChamberView } from "@/lib/chamber/chamberCore";
+import type { PlantLayerVisibility, PlantDensity } from "@/components/viz/PlantGL";
 
 const GrowChamber = dynamic(
   () => import("@/components/viz/GrowChamber").then((m) => m.GrowChamber),
+  { ssr: false, loading: () => null },
+);
+
+const PlantGL = dynamic(
+  () => import("@/components/viz/PlantGL").then((m) => m.PlantGL),
   { ssr: false, loading: () => null },
 );
 
@@ -47,7 +53,7 @@ const STAGES: GrowthStage[] = [
   "harvest",
 ];
 
-const VIEWS: ChamberView[] = ["chamber", "macro"];
+const VIEWS: ChamberView[] = ["chamber", "plant3d", "macro"];
 
 const SEVERITIES: Severity[] = ["mild", "moderate", "severe"];
 
@@ -79,6 +85,33 @@ const CLIMATE_FIELDS: ClimateField[] = [
   { key: "hum", label: "humidity %", min: 10, max: 95, step: 1 },
   { key: "co2", label: "CO₂ ppm", min: 400, max: 1500, step: 10 },
 ];
+
+// 3D layer-inspection toggles (plant3d view) — the 7-layer construction model
+// plus two debug overlays. Order mirrors the build order stem → … → frost.
+const LAYER_TOGGLES: { key: keyof PlantLayerVisibility; label: string }[] = [
+  { key: "woody", label: "stem+branch" },
+  { key: "fanLeaves", label: "fan leaves" },
+  { key: "budCore", label: "bud core" },
+  { key: "calyxes", label: "bracts/calyxes" },
+  { key: "sugarLeaves", label: "sugar leaves" },
+  { key: "pistils", label: "pistils" },
+  { key: "frost", label: "trichomes" },
+  { key: "skeleton", label: "⊹ skeleton" },
+  { key: "nodes", label: "⊹ nodes" },
+];
+
+const DENSITY_FIELDS: { key: keyof PlantDensity; label: string }[] = [
+  { key: "cola", label: "cola density" },
+  { key: "pistil", label: "pistil density" },
+  { key: "frost", label: "trichome density" },
+  { key: "leaf", label: "sugar-leaf density" },
+];
+
+const DEFAULT_LAYERS: PlantLayerVisibility = {
+  woody: true, fanLeaves: true, budCore: true, calyxes: true,
+  sugarLeaves: true, pistils: true, frost: true, skeleton: false, nodes: false,
+};
+const DEFAULT_DENSITY_3D: PlantDensity = { cola: 1, pistil: 1, frost: 1, leaf: 1 };
 
 const card = "rounded-lg border border-[#1c3447] bg-[#0d1d2b] px-3 py-2";
 const sectionLabel = "font-mono text-[10px] uppercase tracking-[0.14em] text-[#5e8ba3]";
@@ -134,6 +167,10 @@ export function PlantReviewPanel() {
   const [severity, setSeverity] = useState<Severity>("moderate");
   const [copied, setCopied] = useState(false);
 
+  // plant3d layer inspection (only affects the WebGL whole-plant renderer).
+  const [layers, setLayers] = useState<PlantLayerVisibility>(DEFAULT_LAYERS);
+  const [density3d, setDensity3d] = useState<PlantDensity>(DEFAULT_DENSITY_3D);
+
   // Morphology is driven by the indica/sativa archetype (morphologyFor); the full
   // 15-field tuner lives in the separate /dev/morphology panel.
   const morph = useMemo<Morphology>(() => morphologyFor(ratio), [ratio]);
@@ -175,6 +212,8 @@ export function PlantReviewPanel() {
     setClimate({ fan: 45, temp: 24, hum: 50, co2: 800 });
     setConditions(new Set());
     setSeverity("moderate");
+    setLayers(DEFAULT_LAYERS);
+    setDensity3d(DEFAULT_DENSITY_3D);
     setCopied(false);
   }
 
@@ -202,20 +241,32 @@ export function PlantReviewPanel() {
     <div className="flex min-h-screen flex-col bg-[#050b12] text-[#cfeeff] lg:flex-row">
       {/* LEFT — live chamber */}
       <div className="relative min-h-[50vh] flex-1 lg:min-h-screen">
-        <GrowChamber
-          key={chamberKey}
-          seed={seed}
-          day={day}
-          stage={stage}
-          morphology={morph}
-          silhouette={silhouette}
-          dev={dev}
-          budColor={budColor}
-          budDna={budDna}
-          climate={climate}
-          conditionFlags={conditionFlags}
-          view={view}
-        />
+        {view === "plant3d" ? (
+          <PlantGL
+            indicaRatio={ratio}
+            seed={seed}
+            day={day}
+            stage={stage}
+            dev={dev}
+            layers={layers}
+            density={density3d}
+          />
+        ) : (
+          <GrowChamber
+            key={chamberKey}
+            seed={seed}
+            day={day}
+            stage={stage}
+            morphology={morph}
+            silhouette={silhouette}
+            dev={dev}
+            budColor={budColor}
+            budDna={budDna}
+            climate={climate}
+            conditionFlags={conditionFlags}
+            view={view}
+          />
+        )}
         <div className="pointer-events-none absolute left-3 top-3 rounded-lg border border-cyan-400/40 bg-[#08141e]/70 px-2.5 py-1.5 font-mono text-[11px] tracking-wide backdrop-blur">
           PLANT VISUAL REVIEW · dev only · {stage} · day {day} · {view}
         </div>
@@ -283,6 +334,65 @@ export function PlantReviewPanel() {
             Full per-field morphology tuning lives in <span className="text-[#7fa9bf]">/dev/morphology</span>.
           </p>
         </div>
+
+        {/* 3D layer inspection — only affects the plant3d WebGL renderer */}
+        {view === "plant3d" && (
+          <div className="space-y-2">
+            <p className={sectionLabel}>3D layers · construction model (plant3d only)</p>
+            <div className="flex flex-wrap gap-1.5">
+              {LAYER_TOGGLES.map(({ key, label }) => {
+                const on = layers[key];
+                const debug = key === "skeleton" || key === "nodes";
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => { setLayers((p) => ({ ...p, [key]: !p[key] })); setCopied(false); }}
+                    className={`rounded px-2 py-1 font-mono text-[11px] ${
+                      on
+                        ? debug
+                          ? "bg-fuchsia-400/20 text-fuchsia-100 border border-fuchsia-400/40"
+                          : "bg-cyan-400/20 text-cyan-100 border border-cyan-400/40"
+                        : "bg-[#08141e] text-[#7fa9bf] border border-[#1c3447]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setLayers((p) => {
+                  const all = Object.keys(p).reduce((a, k) => ({ ...a, [k]: k !== "skeleton" && k !== "nodes" }), {} as PlantLayerVisibility);
+                  return all;
+                }); setCopied(false); }}
+                className="flex-1 rounded border border-[#1c3447] bg-[#08141e] px-2 py-1 font-mono text-[10px] text-[#7fa9bf] hover:bg-[#13283a]"
+              >
+                only plant
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLayers(DEFAULT_LAYERS); setCopied(false); }}
+                className="flex-1 rounded border border-[#1c3447] bg-[#08141e] px-2 py-1 font-mono text-[10px] text-[#7fa9bf] hover:bg-[#13283a]"
+              >
+                reset layers
+              </button>
+            </div>
+            {DENSITY_FIELDS.map(({ key, label }) => (
+              <Slider
+                key={key}
+                label={label}
+                value={density3d[key]}
+                min={0}
+                max={3}
+                step={0.1}
+                onChange={(v) => { setDensity3d((p) => ({ ...p, [key]: v })); setCopied(false); }}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Climate — wired */}
         <div className="space-y-2">

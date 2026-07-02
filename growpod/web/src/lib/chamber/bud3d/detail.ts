@@ -117,8 +117,11 @@ export interface PistilOpts {
  * magenta tint for purple phenos. */
 export function pistilColor(ripe: number, brown: number, magenta = 0): [number, number, number] {
   const r0 = 1.0, g0 = 1.0, b0 = 0.96;        // white
-  const r1 = 0.86, g1 = 0.58, b1 = 0.34;       // amber
-  const t = clamp01(ripe);
+  const r1 = 0.95, g1 = 0.46, b1 = 0.1;        // vivid orange (was a muted tan)
+  // Non-linear ramp: real pistils colour up fast once they start turning, not a
+  // slow even fade — reaching a visibly orange accent by mid-development instead
+  // of staying pale cream until the plant is nearly done.
+  const t = Math.pow(clamp01(ripe), 0.55);
   let r = lerp(r0, r1, t), g = lerp(g0, g1, t), b = lerp(b0, b1, t);
   const br = clamp01(brown);
   r = lerp(r, 0.42, br); g = lerp(g, 0.26, br); b = lerp(b, 0.16, br);
@@ -206,10 +209,16 @@ export function buildSugarLeaves(cola: ColaInstance[], opts: SugarLeafOpts): Sug
   if (amount <= 0) return out;
 
   for (const c of cola) {
-    // Sugar leaves favour the lower/mid cola — weight the spawn by (1 - height),
-    // but keep a strong floor so the bud always reads leafy (real plant matter).
+    // Sugar leaves are the phytomer's SUBTENDING LEAF — they emerge from the
+    // flower NODES, not from random calyxes. Spawn at each node's primary bract so
+    // leaves distribute up the whole cola, clustered with the bracts of that node.
+    // (Legacy colas with no node flag: `primary` is undefined, so every calyx is a
+    // candidate and the old per-calyx behaviour is preserved.)
+    if (c.primary === false) continue;
+    // Favour the lower/mid cola a little, but keep a strong floor so the whole
+    // cola reads leafy (real plant matter).
     const h = clamp01(c.pos[1]); // 0 base .. ~1 apex
-    if (rnd() > amount * (0.62 + 0.45 * (1 - h))) continue;
+    if (rnd() > amount * (0.72 + 0.4 * (1 - h))) continue;
     if (out.length >= budget) break;
 
     const radial = Math.hypot(c.pos[0], c.pos[2]) || 1e-3;
@@ -228,14 +237,20 @@ export function buildSugarLeaves(cola: ColaInstance[], opts: SugarLeafOpts): Sug
     const b = lerp(base * 0.42, 0.66, frost * 0.6);
 
     out.push({
+      // Anchor at (not beyond) the calyx surface — the old 0.45x outward push put
+      // the blade's BASE outside the bract cladding, so it read as pasted onto
+      // the bud rather than emerging from within it. A small inward pull tucks
+      // the base into the mass; the blade still reads because `dir` points it
+      // outward/upward from there.
       pos: [
-        c.pos[0] + ox * c.scale[0] * 0.45,
-        c.pos[1] + c.scale[1] * 0.1,
-        c.pos[2] + oz * c.scale[2] * 0.45,
+        c.pos[0] - ox * c.scale[0] * 0.08,
+        c.pos[1] + c.scale[1] * 0.06,
+        c.pos[2] - oz * c.scale[2] * 0.08,
       ],
       dir: [dx / m, dy / m, dz / m],
-      // Bigger blades so they give the bud visible mass / silhouette.
-      scale: (0.18 + 0.16 * rnd()) * (c.scale[0] + c.scale[1]),
+      // Narrower, smaller blades than before — visibly smaller than a fan leaf,
+      // a sliver of leaf poking from the bud rather than a leaf-sized paddle.
+      scale: (0.13 + 0.1 * rnd()) * (c.scale[0] + c.scale[1]),
       roll: rnd() * Math.PI * 2,
       color: [Math.min(1, r), Math.min(1, g), Math.min(1, b)],
     });
