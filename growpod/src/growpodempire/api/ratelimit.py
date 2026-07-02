@@ -10,6 +10,9 @@ Defaults to in-memory storage for dev/test; set RATELIMIT_STORAGE_URI to a Redis
 URL in production so limits hold across workers.
 """
 
+import logging
+import os
+
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -45,13 +48,26 @@ def init_limiter(app) -> None:
     # server lets an attacker round-robin requests across workers to bypass the
     # cap. Refuse to boot prod with ineffective rate limiting rather than provide
     # a false sense of protection. (Dev/CI keep memory:// for zero-config runs.)
+    # RATELIMIT_ALLOW_MEMORY=true is the explicit, logged acknowledgment that
+    # per-worker limits are accepted for now (weaker, NOT zero — still throttles
+    # each worker) — added 2026-07-02 after this guard took down the first prod
+    # deploy that carried it (no Redis existed). Remove once Redis is attached.
     if settings.is_production and storage_uri.startswith("memory://"):
-        raise RuntimeError(
-            "Rate limiting is in-memory (memory://) but APP_ENV is production. "
-            "In-memory limits are bypassable across workers — set "
-            "RATELIMIT_STORAGE_URI to a shared store (e.g. redis://...), or "
-            "explicitly set RATELIMIT_ENABLED=false to opt out."
-        )
+        if os.environ.get("RATELIMIT_ALLOW_MEMORY", "").strip().lower() == "true":
+            logging.getLogger(__name__).warning(
+                "Rate limiting is per-worker in-memory in PRODUCTION "
+                "(RATELIMIT_ALLOW_MEMORY=true). Limits are ~Nx the configured "
+                "cap across N workers — attach Redis via RATELIMIT_STORAGE_URI "
+                "and drop this override."
+            )
+        else:
+            raise RuntimeError(
+                "Rate limiting is in-memory (memory://) but APP_ENV is production. "
+                "In-memory limits are bypassable across workers — set "
+                "RATELIMIT_STORAGE_URI to a shared store (e.g. redis://...), "
+                "set RATELIMIT_ALLOW_MEMORY=true to accept per-worker limits, "
+                "or explicitly set RATELIMIT_ENABLED=false to opt out."
+            )
     app.config["RATELIMIT_STORAGE_URI"] = storage_uri
     # Keep the default limit headers off internal probes (health checks).
     limiter.init_app(app)
