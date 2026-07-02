@@ -23,6 +23,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { clamp, previewDev, seedForPlant } from "@/lib/chamber/morphology";
 import { hasWebGL } from "@/lib/features";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { useViewportClass } from "@/hooks/useViewportClass";
 import { harvestMarkers, maxPreviewDay, resolvePreview } from "@/lib/chamber/growthPreview";
 import { STAGE_ORDER } from "@/lib/stageInfo";
 import { plantRender } from "@/lib/plantRender";
@@ -34,6 +35,7 @@ import { HeroStatChips, PodStatusTag, StageHeader } from "@/components/command/H
 import { PlantDnaRail } from "@/components/command/PlantDnaRail";
 import { EnvironmentRail } from "@/components/command/EnvironmentRail";
 import { GrowConsole } from "@/components/plant/GrowConsole";
+import { CollapsiblePanel } from "@/components/ui/CollapsiblePanel";
 import { CareDeck } from "@/components/command/CareDeck";
 import { PlantCarousel, type CarouselPlant } from "@/components/command/PlantCarousel";
 import { GrowthScrubber } from "@/components/command/GrowthScrubber";
@@ -76,6 +78,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   const qc = useQueryClient();
   const toast = useToast();
   const { map } = useStrainMap();
+  const viewportClass = useViewportClass();
 
   // Up to four plants per pod (the current cap). Active selection is local —
   // switching plants never leaves the screen.
@@ -197,7 +200,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   const ended = plant ? !plant.is_alive || plant.harvested : false;
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-cyan-400/15 bg-[#050b12] p-3 text-[#cfeeff]">
+    <div className="flex flex-col gap-2 rounded-2xl border border-cyan-400/15 bg-[#050b12] p-2 text-[#cfeeff] xs:gap-3 xs:p-3">
       {/* header band: counters (left) · stage header (center) · stat chips (right) */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col items-start gap-1.5">
@@ -219,8 +222,11 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
 
       {/* main 3-rail grid (collapses to a single scrolling column below xl).
           Rails widen on larger screens so the layout fills a desktop monitor
-          instead of sitting in a narrow centered column. */}
-      <div className="grid gap-3 xl:grid-cols-[320px_1fr_340px] 2xl:grid-cols-[380px_1fr_420px] 2xl:gap-4">
+          instead of sitting in a narrow centered column. On desktop the center
+          column stays short — carousel, chamber, scrubber, care deck only — with
+          every read-only/informational panel (time, DNA, environment, grow
+          console, stage guide, next action) reachable from the side rails. */}
+      <div className="grid gap-2 xs:gap-3 xl:grid-cols-[320px_1fr_340px] 2xl:grid-cols-[380px_1fr_420px] 2xl:gap-4">
         {/* center: carousel + chamber + time controls (first in DOM → leads on mobile) */}
         <div className="flex min-h-0 flex-col gap-2 xl:col-start-2 xl:row-start-1">
           <PlantCarousel plants={carousel} activeId={activeId} onSelect={setActiveId} />
@@ -320,8 +326,6 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             )}
           </div>
 
-          <TimeControls forecast={plant?.forecast} />
-
           {/* Client-only growth preview — scrub forward/back through the whole
               lifecycle. Works with no backend (unlike server ACCELERATE TIME). */}
           {plant && render && (
@@ -337,19 +341,13 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             />
           )}
 
-          {/* Right under the slider: where this stage is at + what's happening,
-              then the most-reached-for tools (do-next hint, levels, care bar). */}
-          {plant && (
-            <StageInfoCard
-              stage={renderStage}
-              progressPct={plant.forecast?.stage_progress_pct ?? null}
-              previewing={preview.previewing}
-            />
-          )}
-          {plant && <NextActionHint plant={plant} />}
+          {/* Direct-interaction only from here down: the preview scrubber above
+              and the care bar. Everything read-only (time, DNA, environment,
+              grow console, stage guide, next-action hint) lives in the side
+              rails below — never a big stack under the chamber. */}
           {plant && <CareDeck plant={plant} />}
 
-          {/* On mobile the stat chips sit in a clean row under the time strip
+          {/* On mobile the stat chips sit in a clean row under the care deck
               (on desktop they live in the header band) — never over the plant. */}
           {plant && (
             <div className="xl:hidden">
@@ -358,13 +356,30 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
           )}
         </div>
 
-        {/* left rail */}
-        <div className="min-h-0 xl:col-start-1 xl:row-start-1">
+        {/* Mobile-only section break: everything below is the "rail" content
+            (time, DNA, environment, grow console, stage guide, next action) —
+            reachable, but deliberately AFTER the core grow/care flow above
+            instead of interleaved with it. On xl+ this collapses away entirely
+            and the same content renders in the side rails instead. */}
+        <div className="flex items-center gap-2 px-1 pt-1 xl:hidden">
+          <span className="h-px flex-1 bg-ink-700" aria-hidden />
+          <span className="instrument-label text-[9px] text-cyan-200/40">
+            {viewportClass === "phone-sm" ? "MORE" : "GROW DETAILS & CONSOLE"}
+          </span>
+          <span className="h-px flex-1 bg-ink-700" aria-hidden />
+        </div>
+
+        {/* left rail: read-only time countdown, up top, near where the header's
+            STAGE/TOTAL TIME LEFT chips live, then plant genetics. */}
+        <div className="flex min-h-0 flex-col gap-2 xs:gap-3 xl:col-start-1 xl:row-start-1">
+          <TimeControls forecast={plant?.forecast} />
           <PlantDnaRail strain={strain} plantId={activeId} stage={renderStage} />
         </div>
 
-        {/* right rail: environment controls + read-only grow console */}
-        <div className="flex min-h-0 flex-col gap-3 xl:col-start-3 xl:row-start-1">
+        {/* right rail: environment controls, the read-only grow console, and
+            (moved out of the center column) the stage guide + next-action hint
+            — every informational panel, one collapsible card each. */}
+        <div className="flex min-h-0 flex-col gap-2 xs:gap-3 xl:col-start-3 xl:row-start-1">
           {plant && (
             <EnvironmentRail
               climate={climate}
@@ -375,6 +390,20 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             />
           )}
           {plant && <GrowConsole plant={plant} pod={pod} />}
+          {plant && (
+            <CollapsiblePanel title="🌱 STAGE GUIDE" titleClassName="text-grow-300">
+              <StageInfoCard
+                stage={renderStage}
+                progressPct={plant.forecast?.stage_progress_pct ?? null}
+                previewing={preview.previewing}
+              />
+            </CollapsiblePanel>
+          )}
+          {plant && (
+            <CollapsiblePanel title="👉 DO NEXT" titleClassName="text-cyan-300">
+              <NextActionHint plant={plant} />
+            </CollapsiblePanel>
+          )}
         </div>
       </div>
     </div>

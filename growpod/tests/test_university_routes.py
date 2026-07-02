@@ -420,14 +420,20 @@ def test_lecture_returns_mock_professor_output(client):
     assert body["quiz_question"]
 
 
-def test_lecture_respects_level_query_param(client):
+def test_lecture_level_query_param_is_ignored_by_produce_once(client):
+    """PRODUCE-ONCE (2026-07-02): `level` is accepted for API back-compat but no
+    longer varies the delivered lecture — HERMES's "one canonical lesson per
+    course" rule (the same rule that removed the web difficulty picker). A
+    request with `?level=advanced` gets the SAME saved lecture a beginner
+    request would (generated once, always with the canonical "beginner"
+    context), not a distinct per-level regeneration."""
     pid, key = _new_player(client, "advanced_listener")
     r = client.get(
         f"/api/game/players/{pid}/courses/cult-101/lecture?level=advanced",
         headers=_hdr(key),
     )
     assert r.status_code == 200
-    assert r.get_json()["summary"].startswith("A advanced-level lecture")
+    assert r.get_json()["summary"].startswith("A beginner-level lecture")
 
 
 def test_lecture_unknown_course_404s(client):

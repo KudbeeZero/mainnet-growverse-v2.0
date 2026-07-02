@@ -52,6 +52,30 @@ outcome.
   (the bot "knows" what you've been certified in) — paid depth that *rewards* earned mastery instead of
   bypassing it. Optional, owner call.
 
+## 4b. ALGO-token payment rail (owner idea, 2026-07-02 — an alternative/complement to §5's
+real-money entitlement)
+The owner's framing: a player who **doesn't want to use the university** should still be able to
+get expert help, for a small cost, paid via the arcade's existing Algorand layer rather than a
+traditional subscription. This slots into §3/§4 exactly — it's a SECOND entitlement rail, not a
+new product:
+- **What it buys:** the SAME "Master Grower+" capability tier already specified in §3 (unlimited
+  Q&A, deeper diagnosis, priority/faster responses) — never GROW/XP/KXP/degrees/yield, per §2's
+  hard rule. A paid answer and a free player's own research reach the same in-game outcome.
+- **How it could work (sketch, NOT built):** a player spends a small amount of real value —
+  either GROW-token-adjacent-but-off-ledger (a distinct token/NFT-gated pass, so it never touches
+  the game economy ledger, preserving §5's two-ledgers-never-touch invariant) or a direct
+  Algorand microtransaction — to unlock a bounded batch of "Priority Consult" credits. Reuses the
+  wallet + `growEvents` receipt machinery already shipped for arcade (`web/src/lib/chain/
+  algorand/`) — a consult purchase would be a new typed on-chain event, same pattern as
+  `logBoostEvent`.
+- **Why it fits the arcade:** the arcade layer (design/12) already establishes the game's
+  Algorand-native economy (optional proof receipts, wallet connect); a paid-consult pass is a
+  natural SINK on that same rail, distinct from the free/skill-based arcade mini-games.
+- **Still fully owner-gated per §5:** real pricing, whether it's a fungible token or an NFT pass,
+  refund policy, and — critically — a from-scratch review that spending it can NEVER mint GROW,
+  XP, or any economy value, are stop-and-ask items. This paragraph is scope capture, not a green
+  light to build.
+
 ## 5. Entitlement model to build LATER (design only — no code now)
 - A **real-money entitlement** (via an external billing provider — Stripe / app-store IAP) that sets a
   simple `pro` flag on the account. **Strictly decoupled from the in-game GROW economy:** buying Pro

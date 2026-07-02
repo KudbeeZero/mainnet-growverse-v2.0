@@ -142,13 +142,13 @@ export function TrichomeLayer({ assembly, lod }: { assembly: PlantAssembly; lod:
         d.quaternion.copy(qLocal);
         // Scale: gland size × cola width, with per-instance jitter; stalks stand a
         // touch taller than they are wide so they read as columns of resin.
-        const s = g.r * c.width * (lod === "close" ? 4.4 : 5.2) * (0.8 + 0.6 * g.spark);
+        const s = g.r * c.width * (lod === "close" ? 5.0 : 5.6) * (0.8 + 0.6 * g.spark);
         d.scale.set(s, s * (lod === "close" ? 1.3 : 1.0), s);
         d.updateMatrix();
         mesh.setMatrixAt(idx, d.matrix);
-        // Sparkle: spread gland brightness wide so a fraction glint near-white while
-        // others sit dim — a granular, uneven resin glitter, not a flat white wash.
-        col.copy(frostColor(g.mat)).multiplyScalar(0.72 + 0.7 * g.spark);
+        // Sparkle: keep glands bright (near-white) so they read as crystal frost
+        // against the teal calyx, with a wide brightness spread for granular glint.
+        col.copy(frostColor(g.mat)).multiplyScalar(0.85 + 0.5 * g.spark);
         mesh.setColorAt(idx, col);
         idx++;
       }

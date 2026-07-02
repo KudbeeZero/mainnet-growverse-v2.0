@@ -40,12 +40,24 @@ export interface LODMul {
   pistil: number;
   /** Sugar-leaf amount multiplier. */
   sugar: number;
+  /** Trichome-gland cap on the hero apex cola (satellites get a fraction). The
+   * resin coat is spent where the camera looks so the apex reads truly caked. */
+  frostBudget: number;
+  /** Extra glands-per-calyx multiplier for the caked 3D coat. */
+  frostPer: number;
+  /** Pistil-strand cap on the hero apex cola (satellites get a fraction). */
+  pistilBudget: number;
 }
 
+/** Satellite colas carry a fraction of the apex's frost/pistil budget (they're
+ * the background of the plant; the apex is the hero). */
+const SAT_FROST_FRAC = 0.12;
+const SAT_PISTIL_FRAC = 0.4;
+
 export const LOD: Record<LODLevel, LODMul> = {
-  close: { calyxCap: 350, frost: 1.0, pistil: 1.0, sugar: 1.0 },
-  mid: { calyxCap: 180, frost: 0.5, pistil: 0.6, sugar: 0.6 },
-  far: { calyxCap: 70, frost: 0.0, pistil: 0.0, sugar: 0.25 },
+  close: { calyxCap: 350, frost: 1.0, pistil: 1.0, sugar: 1.0, frostBudget: 1500, frostPer: 1.0, pistilBudget: 180 },
+  mid: { calyxCap: 180, frost: 0.5, pistil: 0.6, sugar: 0.6, frostBudget: 500, frostPer: 0.7, pistilBudget: 90 },
+  far: { calyxCap: 70, frost: 0.0, pistil: 0.0, sugar: 0.25, frostBudget: 0, frostPer: 0, pistilBudget: 0 },
 };
 
 /** One cola placed in the world: unit-space instances + a world transform. */
@@ -159,6 +171,8 @@ function buildOneCola(
 ): Pick<ColaPlacement, "cola" | "frost" | "pistils" | "sugar"> {
   const cap = satellite ? Math.round(lod.calyxCap * 0.6) : lod.calyxCap;
   const cola = chunkifyCola(buildCola(dna, seed, { budDev: 1, maxInstances: cap }), seed);
+  const frostBudget = satellite ? Math.round(lod.frostBudget * SAT_FROST_FRAC) : lod.frostBudget;
+  const pistilBudget = satellite ? Math.round(lod.pistilBudget * SAT_PISTIL_FRAC) : lod.pistilBudget;
   const frost =
     lod.frost > 0
       ? buildFrost(cola, {
@@ -167,6 +181,8 @@ function buildOneCola(
           ripe,
           amberBias: 0,
           isMobile: satellite,
+          budget: frostBudget,
+          perScale: lod.frostPer,
         })
       : [];
   const pistils =
@@ -180,6 +196,7 @@ function buildOneCola(
           brown: 0,
           magenta: 0,
           isMobile: satellite,
+          budget: pistilBudget,
         })
       : [];
   const sugar =

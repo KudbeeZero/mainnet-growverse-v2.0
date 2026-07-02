@@ -132,6 +132,9 @@ export interface PistilOpts {
   /** 0..1 purple/magenta phenotype tint. */
   magenta?: number;
   isMobile?: boolean;
+  /** Override the per-device strand budget (the 3D path concentrates strands on
+   * the hero apex). Default: 190 desktop / 90 mobile. */
+  budget?: number;
 }
 
 /** Pistil colour: fresh white → ripe amber → late brown, with an optional
@@ -155,7 +158,7 @@ export function pistilColor(ripe: number, brown: number, magenta = 0): [number, 
  */
 export function buildPistils(cola: ColaInstance[], opts: PistilOpts): PistilInstance[] {
   const rnd = mulberry32(((opts.seed >>> 0) ^ 0x85ebca6b) || 11);
-  const budget = opts.isMobile ? 90 : 190;
+  const budget = opts.budget ?? (opts.isMobile ? 90 : 190);
   const chance = clamp01(opts.chance);
   const color = pistilColor(opts.ripe, opts.brown, opts.magenta ?? 0);
   const out: PistilInstance[] = [];

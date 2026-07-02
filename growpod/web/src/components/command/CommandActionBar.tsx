@@ -65,7 +65,11 @@ export function CommandActionBar({
   };
 
   return (
-    <div className="relative flex flex-wrap gap-2">
+    // On the smallest phones (<=375px, no `xs:` match) the seven-action bar's
+    // flex-wrap runs at ~41px/button — below the 44px tap-target floor — so it
+    // stacks 2-wide instead; from 376px up (`xs:`, tablets, desktop) there's
+    // room for the original flex-wrap row.
+    <div className="relative grid grid-cols-2 gap-2 xs:flex xs:flex-wrap">
       {layer}
       {ACTIONS.map((a) => {
         const kind = CARE_KIND[a.key];

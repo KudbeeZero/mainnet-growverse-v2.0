@@ -376,6 +376,26 @@ body {
     gpe-arcade-badge-float 2s ease-in-out 300ms infinite;
 }
 
+/* ---- Arcade Mode — Trichome Rush target pop-in (a target sparkles as it
+   spawns, then holds steady — the TTL ring itself is a plain numeric
+   conic-gradient recomputed on tick, not a CSS animation, so it stays
+   accurate even under reduced motion). ---- */
+@keyframes gpe-trich-pop {
+  0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+  60% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+.gpe-trich-pop {
+  animation: gpe-trich-pop 220ms ease-out both;
+}
+@keyframes gpe-trich-hit {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+}
+.gpe-trich-hit {
+  animation: gpe-trich-hit 260ms ease-out forwards;
+}
+
 /* ---- Cinematic landing: film-grain "boil" (jitters a tiled noise layer) ---- */
 @keyframes gpe-grain {
   0%, 100% { transform: translate(0, 0); }
@@ -409,6 +429,8 @@ body {
   .gpe-arcade-ring,
   .gpe-arcade-shimmer,
   .gpe-arcade-badge,
+  .gpe-trich-pop,
+  .gpe-trich-hit,
   .gpe-grain,
   .animate-spin,
   .animate-twinkle,

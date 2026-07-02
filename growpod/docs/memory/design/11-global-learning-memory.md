@@ -45,12 +45,12 @@ knowledge layer that captures every generative artifact and feeds it back throug
 
 ## Build order (each phase ships alone, additive)
 
-| Phase | What | Touches |
-|---|---|---|
-| P1 Capture | `knowledge_events` migration + `KnowledgeService.append` + hooks at the 4 generative call sites | db/models, services (additive) |
-| P2 Personal | admissions persistence + `personal_context` assembler → lecture + Master Grower contexts | learner model (audited writer), lecturer/master-grower context assembly |
-| P3 Retrieve | `search_global_knowledge` tool → MasterGrowerTools + lecture digest | ai/provider tools, services |
-| P4 Insights | `global_insights` rollups + Professor "class stats" surface + owner dashboard card | services, web |
+| Phase | What | Touches | Status |
+|---|---|---|---|
+| P1 Capture | `knowledge_events` migration + `KnowledgeService.append` + hooks at the generative call sites | db/models, services (additive) | ✅ **built 2026-07-02** — migration `4f2e8ab64721`; hooked at 3 of the 4 listed sites: `MasterGrowerService.ask` (skips `report.refused`), `LecturerService.teach` (cache-MISS only — a cache-hit replay is not a new artifact), `UniversityService.submit_exam` (every grade). Advisor auto-care is the one remaining, unhooked site (deferred — no owner-directed urgency yet; tracked in BACKLOG). |
+| P2 Personal | admissions persistence + `personal_context` assembler → lecture + Master Grower contexts | learner model (audited writer), lecturer/master-grower context assembly | ⬜ not started |
+| P3 Retrieve | `search_global_knowledge` tool → MasterGrowerTools + lecture digest | ai/provider tools, services | ⬜ not started |
+| P4 Insights | `global_insights` rollups + Professor "class stats" surface + owner dashboard card | services, web | ⬜ not started |
 
 ## Invariants (must not drift)
 

@@ -344,11 +344,13 @@ function Calyxes({ assembly, frost }: { assembly: PlantAssembly; frost: number }
         d.scale.set(ins.scale[0] * s, ins.scale[1] * s * 1.15, ins.scale[2] * s);
         d.updateMatrix();
         mesh.setMatrixAt(idx, d.matrix);
-        // Frost the calyx albedo toward silver — heavier up the cola (where resin
-        // cakes thickest), lighter at the leafy skirt — so the whole flower reads
-        // coated, not just where a discrete gland happens to sit.
+        // Lightly frost the calyx albedo toward silver — heavier up the cola,
+        // lighter at the leafy skirt — but keep the calyx mostly its blue-teal
+        // palette colour so the bright WHITE trichome glands read as high-contrast
+        // crystal caking ON a green bud (the reference look), not a washed-out
+        // grey mass.
         const hf = Math.min(1, Math.max(0, ins.pos[1]));
-        const amt = Math.min(0.9, frost * (0.28 + 0.72 * hf));
+        const amt = Math.min(0.72, frost * (0.2 + 0.62 * hf));
         col.setRGB(ins.color[0], ins.color[1], ins.color[2]).lerp(FROST_TINT, amt);
         mesh.setColorAt(idx, col);
         idx++;

@@ -20,17 +20,24 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   (`web/src/app/university/page.tsx`). No data-model changes.
 - 🏛️ 🔨 **University wiring audit** — end-to-end trace (curriculum → skills → learner model → agents →
   exams → web). Owner suspects mis-wiring; findings + fixes land in the HERMES memory doc.
-- 🏛️ 🔨 **University "made real" — produce-once TEXT + replay + global capture
-  (owner directive 2026-07-02)** — closes the produce-once gap for real: lecture AUDIO was
-  already cached (2026-07-02 fix), but lecture TEXT was still regenerated on every single
-  request (a live bug against the HERMES hard rule). New `LectureContent` cache (one per
-  course, mirrors `LectureAudio`) makes `LecturerService.teach()` cache-first — every player
-  now gets the SAME saved lecture, and it's instantly replayable. Exam replay: a `last_result`
-  store on `AssessmentAttempt` so a player can review their most recent graded attempt
-  (item-level, not just best_score). Global memory Phase 1 (design/11): new `knowledge_events`
-  append-only table + `KnowledgeService.append()` single writer, hooked at Master Grower asks
+- 🏛️ ✅ **University "made real" — produce-once TEXT + replay + global capture
+  (owner directive 2026-07-02, shipped 2026-07-02)** — closes the produce-once gap for real:
+  lecture AUDIO was already cached (2026-07-02 fix), but lecture TEXT was still regenerated on
+  every single request (a live bug against the HERMES hard rule). New `LectureContent` cache
+  (one per `course_key`, mirrors `LectureAudio`) makes `LecturerService.teach()` cache-first —
+  every player now gets the SAME saved lecture, generated via the provider AT MOST ONCE, and
+  it's instantly replayable (`plant_id`/`level` dropped from the prompt context — see the
+  service's module docstring for why). Exam replay: a `last_result` JSON column on
+  `AssessmentAttempt` so a player can review their most recent graded attempt (item-level, not
+  just best_score/passed, which stay "best ever" and forgiving); a new
+  `GET .../exams/<id>/last-result` route + `UniversityService.last_exam_result()` serve it.
+  Global memory Phase 1 (design/11): new `knowledge_events` append-only table +
+  `KnowledgeService.append()` single writer, hooked at exactly 3 call sites — Master Grower asks
   (non-refused only), lecture generation (cache-miss only), and exam submissions — nothing any
-  player generates is lost, feeding future retrieval (P3). Non-economic; ledger-free by test.
+  player generates there is lost, feeding future retrieval (P3). Non-economic; ledger-free by
+  test. Migration `4f2e8ab64721` (single alembic head, verified before/after). Advisor auto-care
+  is NOT yet hooked into `knowledge_events` (design/11 lists it as a 4th capture site) — deferred,
+  tracked below.
 
 - 🏛️ ⬜ **HERMES memory layer** — `docs/memory/design/HERMES_UNIVERSITY.md`: identity, layer map,
   wiring truths, lesson-production pipeline, open work (this session starts it).
@@ -41,11 +48,13 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   missing `snapshot.yml` backup workflow (or correct SECURITY.md); enforce CODEOWNERS on protected
   surfaces; replace post-merge `drizzle-kit push` with generated migrations; delete the stale nested
   `growpod/artifacts/api-server` copy; dev-bypass explicit opt-in for previews.
-- 🏛️ ⬜ **Global Learning Memory + personalization (design/11, owner directive 2026-07-02)** —
-  P1 `knowledge_events` capture (append-only, anonymized-on-read, single-writer) at the 4
-  generative call sites; P2 admissions persistence + `personal_context` into lecture/Master
-  Grower; P3 `search_global_knowledge` retrieval tool (the teacher gets smarter from every
-  player); P4 `global_insights` rollups + class-stats surface. Spec:
+- 🏛️ 🔨 **Global Learning Memory + personalization (design/11, owner directive 2026-07-02)** —
+  P1 `knowledge_events` capture (append-only, anonymized-on-read, single-writer) ✅ **shipped
+  2026-07-02** at 3 of the 4 generative call sites (`master_grower_service.ask`,
+  `lecturer_service.teach` cache-miss, `university_service.submit_exam`); advisor auto-care is
+  the one remaining hook. Still open: P2 admissions persistence + `personal_context` into
+  lecture/Master Grower; P3 `search_global_knowledge` retrieval tool (the teacher gets smarter
+  from every player); P4 `global_insights` rollups + class-stats surface. Spec:
   `docs/memory/design/11-global-learning-memory.md`.
 - 🖥️ 🔨 **Command Center: side-rail consolidation + device-aware mobile (owner directive
   2026-07-02)** — Desktop: Grow Console (`components/plant/GrowConsole.tsx`) and its sibling

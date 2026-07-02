@@ -42,8 +42,11 @@ export function PlantCarousel({
     onSelect(plants[next].id);
   };
 
+  // 44px on phones (the mobile-first tap-target floor — see DECISIONS.md
+  // "Mobile-first navigation"), stepping back down to the tighter 36px chip
+  // size at `sm`+ (tablet/desktop, precision-pointer territory).
   const arrow =
-    "z-20 flex h-9 w-9 flex-none items-center justify-center rounded-full border border-cyan-400/25 bg-[#0b1b27]/80 text-lg text-cyan-200 transition-colors hover:bg-cyan-400/15";
+    "z-20 flex h-11 w-11 sm:h-9 sm:w-9 flex-none items-center justify-center rounded-full border border-cyan-400/25 bg-[#0b1b27]/80 text-lg text-cyan-200 transition-colors hover:bg-cyan-400/15";
 
   return (
     <div className="flex items-center justify-center gap-1">

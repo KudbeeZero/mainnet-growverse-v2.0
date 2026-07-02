@@ -4,6 +4,16 @@ const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      // Small-phone tier below Tailwind's own `sm` (640px): the Command Center's
+      // mobile rework needs to tighten density on iPhone SE / mini-class screens
+      // (<=375px) beyond what standard-to-large phones (390-430px, e.g. iPhone
+      // 14/15/16 through Pro Max) need. Default (unprefixed) utilities target the
+      // small-phone baseline; `xs:` (this breakpoint) opts back up to the roomier
+      // treatment from 376px up. Matches PHONE_SM_MAX_WIDTH+1 in
+      // src/hooks/useViewportClass.ts so the CSS and JS tiers agree.
+      screens: {
+        xs: "376px",
+      },
       fontFamily: {
         // Set by next/font in layout.tsx; falls back to system stacks.
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
