@@ -136,11 +136,12 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     const bc = live.current.budColor;
     const mature = clamp(live.current.dev.budDev, 0, 1);
     const teal = clamp(((bc?.calyxHue ?? S.hue) - 130) / 40, 0, 1);
-    leafTone.hue = S.hue + teal * 44;
-    leafTone.sat = S.sat + teal * 10;
-    // Deep mature-fan darkening (owner reference: harvest fans are a DEEP
-    // blue-green, not bright grass). Teal strains darken hardest.
-    leafTone.litBias = -mature * 8 - teal * 8;
+    // Deep mature-fan tone (owner reference: harvest fans are a DEEP, muted
+    // blue-green, not bright saturated grass). Teal strains shift furthest and
+    // DESATURATE toward sage; green strains only pick up the mature darkening.
+    leafTone.hue = S.hue + teal * 52;
+    leafTone.sat = S.sat - teal * 8;
+    leafTone.litBias = -mature * 8 - teal * 9;
     // Mature fans arch over; deeper for the flowering canopy.
     leafTone.arch = 0.1 + mature * 0.16;
   }
@@ -335,7 +336,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const d = clusterDev(cl, P.budDev);
       if (d <= 0.01) { geo.push(null); continue; }
       const cyc = jig ? Math.sin(tt * 30 + cl.ph) * jig : 0;
-      const cx = cl.lateral * (0.4 + 0.6 * d) + cyc * 0.5;
+      // Lateral damped to 0.65: the cluster spiral gives the TEXTURE variety,
+      // but the anchors must hug the axis so pods stay inside the smooth
+      // spear envelope drawn below (they poked out as loose bubbles otherwise).
+      const cx = cl.lateral * (0.4 + 0.6 * d) * 0.65 + cyc * 0.5;
       const cy = -cl.along * site.axisLen + (jig ? Math.cos(tt * 26 + cl.ph) * jig * 0.5 : 0);
       const cw = site.baseW * cl.fat * cl.tipTaper * (0.55 + 0.45 * d);
       const podW = Math.max(1.1, cw * 0.16);
@@ -365,11 +369,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // Clean spear taper: width may only shrink toward the tip (a wide bulge
       // above a waist is what made the old outline read as stacked lobes).
       for (let i = n - 2; i >= 0; i--) hw[i] = Math.min(hw[i], hw[i + 1]);
-      // Centreline: smooth then damp the lateral swing — the spiral jitter
-      // belongs to the calyx texture, not the envelope, which should stand as
-      // one gently-leaning spear.
+      // Centreline: 3-tap smoothed so the envelope leans gently instead of
+      // zigzagging cluster-to-cluster (the anchors themselves are already
+      // damped toward the axis above, keeping texture and mass in lock-step).
       const cxs = mass.map(
-        (m, i) => ((mass[Math.max(0, i - 1)].cx + 2 * m.cx + mass[Math.min(n - 1, i + 1)].cx) / 4) * 0.55,
+        (m, i) => (mass[Math.max(0, i - 1)].cx + 2 * m.cx + mass[Math.min(n - 1, i + 1)].cx) / 4,
       );
       const tipY = mass[0].cy - Math.min(hw[0] * 1.7, hw[n - 1] * 1.1); // spear point (capped so it can't spike)
       const botY = mass[n - 1].cy + hw[n - 1] * 1.05; // rounded base below the last
