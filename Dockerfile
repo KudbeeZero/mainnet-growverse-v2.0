@@ -25,12 +25,19 @@ WORKDIR /app
 COPY growpod/requirements.txt ./
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
+# Non-root runtime user (container hardening — mirrors growpod/Dockerfile). A
+# process compromise then can't run as root inside the container. Prod uses
+# Postgres and writes nothing to /app, so read-only app code is fine.
+RUN useradd --system --create-home --uid 10001 appuser
+
 # Application code. server.py exposes `app` (the Flask app factory result); the
 # growpodempire package lives under src/ (PYTHONPATH=src). alembic/ + alembic.ini
 # are included so the Fly release_command can run migrations.
 COPY growpod/server.py growpod/alembic.ini ./
 COPY growpod/alembic ./alembic
 COPY growpod/src ./src
+
+USER appuser
 
 EXPOSE 8080
 

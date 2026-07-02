@@ -199,10 +199,13 @@ def test_lecture_includes_audio_url_when_narration_present(client, monkeypatch):
 
     from growpodempire.ai import elevenlabs_narrator
 
-    # Our own narrator returns a truthy path -> audio_url branch is taken.
+    # Our own narrator returns a truthy path -> audio_url branch is taken. The
+    # cache filename is "{voice_id}_{content_hash}.mp3"; the route threads that
+    # content hash into the URL as ?h= so serve_narration can return exactly this
+    # lecture's audio rather than any file sharing the department voice.
     monkeypatch.setattr(
         elevenlabs_narrator, "generate_narration",
-        lambda payload, department=None, api_key=None: "/tmp/fake-narration.mp3",
+        lambda payload, department=None, api_key=None: "/tmp/VOICEID_0123456789abcdef.mp3",
     )
 
     r = client.get(
@@ -211,7 +214,7 @@ def test_lecture_includes_audio_url_when_narration_present(client, monkeypatch):
     )
     assert r.status_code == 200
     body = r.get_json()
-    assert body.get("audio_url") == "/api/game/narration/cult-101/beginner"
+    assert body.get("audio_url") == "/api/game/narration/cult-101/beginner?h=0123456789abcdef"
 
 
 def test_lecture_without_narration_has_no_audio_url(client, monkeypatch):

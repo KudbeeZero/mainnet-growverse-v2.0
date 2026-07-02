@@ -20,6 +20,7 @@ from ..economy.ledger import post, to_money, get_wallet
 from ..enums import LedgerEntryType
 from ..db.models import Player, LedgerEntry
 from ..chain.provider import ChainProvider, ChainError, TREASURY
+from ..chain.mock import MockChainProvider
 from ..chain.factory import shared_provider
 from ..chain.token import create_token_asa
 from .game_service import GameError
@@ -118,6 +119,23 @@ class SettlementService:
         wallet = get_wallet(self.session, player_id)
         if (wallet.asa_balance or Decimal("0")) < amount:
             raise GameError("Insufficient on-chain ASA balance")
+
+        # SAFETY (treasury): the current deposit implementation can only work as a
+        # self-contained DB fiction on the MockChainProvider. On a REAL chain the
+        # player's ASA lives in their own custodial wallet, so a treasury-signed
+        # transfer_asset(..., TREASURY, ...) is a treasury->treasury self-transfer
+        # that pulls back NONE of the player's tokens — yet the code below would
+        # still credit in-game GROW and debit asa_balance. That lets a player who
+        # withdrew real ASA keep it on-chain AND get re-credited (treasury drain).
+        # Until deposits are driven by a player-SIGNED inbound transfer that we
+        # verify on-chain (submit signed player->treasury AssetTransferTxn, confirm
+        # txid/amount/asset/sender via the indexer, THEN credit), fail closed on
+        # any non-mock provider rather than mis-credit against a live treasury.
+        if not isinstance(self.provider, MockChainProvider):
+            raise GameError(
+                "On-chain deposit is temporarily unavailable: it requires a "
+                "player-signed, on-chain-verified inbound transfer."
+            )
 
         try:
             txid = self.provider.transfer_asset(

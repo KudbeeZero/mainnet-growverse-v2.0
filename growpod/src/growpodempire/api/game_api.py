@@ -828,18 +828,36 @@ def _care_action(player_id, plant_id, method_name, **kwargs):
         return _error(str(e))
 
 
+def _optional_amount(data):
+    """Validate an optional care `amount` in [0, 100]; None (absent) falls back
+    to the config default in the service. Rejects non-numeric/negative input at
+    the boundary as a clean 400 instead of a deep 500 or a silent resource drain."""
+    raw = data.get("amount")
+    if raw is None:
+        return None
+    return number(raw, "amount", low=0, high=100)
+
+
 @game_bp.post("/players/<player_id>/plants/<plant_id>/water")
 @require_player
 def water_plant(player_id, plant_id):
     data = request.get_json(force=True, silent=True) or {}
-    return _care_action(player_id, plant_id, "water", amount=data.get("amount"))
+    try:
+        amount = _optional_amount(data)
+    except GameError as e:
+        return _error(str(e))
+    return _care_action(player_id, plant_id, "water", amount=amount)
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/feed")
 @require_player
 def feed_plant(player_id, plant_id):
     data = request.get_json(force=True, silent=True) or {}
-    return _care_action(player_id, plant_id, "feed", amount=data.get("amount"))
+    try:
+        amount = _optional_amount(data)
+    except GameError as e:
+        return _error(str(e))
+    return _care_action(player_id, plant_id, "feed", amount=amount)
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/treat-pests")
@@ -1440,7 +1458,14 @@ def university_lecture(player_id, course_key):
         audio_path = generate_narration(payload, department=dept,
                                         api_key=get_settings().elevenlabs_api_key)
         if audio_path:
-            payload["audio_url"] = f"/api/game/narration/{course_key}/{level}"
+            # The cache filename is "{voice_id}_{content_hash}.mp3"; pass the
+            # content hash through so serve_narration returns THIS lecture's
+            # audio exactly, not the most-recent file sharing the dept voice.
+            import os as _os
+            content_hash = _os.path.basename(audio_path).rsplit(".", 1)[0].split("_")[-1]
+            payload["audio_url"] = (
+                f"/api/game/narration/{course_key}/{level}?h={content_hash}"
+            )
 
         return jsonify(payload)
     except GameError as e:
@@ -1478,24 +1503,42 @@ def university_presenter_video(course_key):
 
 @game_bp.get("/narration/<course_key>/<level>")
 def serve_narration(course_key, level):
-    """Serve the cached TTS MP3 for a lecture (no auth — file name is a SHA hash)."""
+    """Serve the cached TTS MP3 for a lecture (no auth — file name is a SHA hash).
+
+    The lecture endpoint embeds the exact content hash (?h=) in the audio_url it
+    hands the client. We serve the file named ``{voice_id}_{h}.mp3`` for THIS
+    course's department voice, so a request can only ever get audio tied to the
+    lecture it was generated for — not "the most recent MP3 sharing this
+    department's voice", which previously mixed content across courses/levels.
+
+    ``h`` is validated as a 16-char hex digest and the voice id is derived
+    server-side, so neither can be used for path traversal.
+    """
     import os
+    import re
     from flask import send_file
-    from ..ai.elevenlabs_narrator import _CACHE_DIR, _voice_for, _build_spoken_text
+    from ..ai.elevenlabs_narrator import _CACHE_DIR, _voice_for
     from ..services.university_service import load_curriculum
-    import hashlib
 
     curriculum = load_curriculum()
     course = curriculum.get("courses", {}).get(course_key)
     if not course:
         return _error("Course not found", 404)
 
-    dept = course.get("department")
-    voice_id = _voice_for(dept)
+    voice_id = _voice_for(course.get("department"))
 
-    # Re-derive the cache key the same way generate_narration does.
-    # We don't have the full LectureReport here, so we serve the first cached file
-    # matching the voice prefix for this course_key+level combo.
+    content_hash = request.args.get("h", "")
+    if content_hash:
+        if not re.fullmatch(r"[0-9a-f]{16}", content_hash):
+            return _error("Invalid audio reference", 400)
+        exact = _CACHE_DIR / f"{voice_id}_{content_hash}.mp3"
+        if not exact.exists():
+            return _error("Audio not yet generated", 404)
+        return send_file(str(exact), mimetype="audio/mpeg")
+
+    # Legacy fallback (no hash supplied): serve the most recent file for this
+    # voice. Kept only for backward compatibility with any cached client URL;
+    # new lecture responses always include ?h=.
     prefix = f"{voice_id}_"
     candidates = sorted(_CACHE_DIR.glob(f"{prefix}*.mp3"), key=os.path.getmtime, reverse=True)
     if not candidates:

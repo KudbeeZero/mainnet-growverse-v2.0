@@ -16,6 +16,15 @@ primary_region = "ord"
   PORT = "8080"
   # src/ layout: make the growpodempire package importable (mirrors render.yaml).
   PYTHONPATH = "src"
+  # Fail-closed posture (mirrors growpod/fly.toml): force-disables the dev
+  # test-clock (/api/dev/clock/*) regardless of GROW_TEST_CLOCK, and makes admin
+  # endpoints 503 unless ADMIN_SECRET is explicitly set — WITHOUT this, config.py
+  # resolves is_production=False, and require_admin falls back to accepting ANY
+  # valid player API key as admin. See config.py is_production and api/auth.py.
+  APP_ENV = "production"
+  # Browser origin allowed to call /api/* directly (this API lives behind
+  # api.frontierprotocol.app; the UI is served from frontierprotocol.app).
+  CORS_ALLOWED_ORIGINS = "https://frontierprotocol.app"
 
 # Run schema migrations + the idempotent strain seed before each new version goes
 # live, mirroring the existing Render preDeployCommand. This runs in a temporary
