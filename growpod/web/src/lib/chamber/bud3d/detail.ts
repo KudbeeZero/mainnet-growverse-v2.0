@@ -206,10 +206,16 @@ export function buildSugarLeaves(cola: ColaInstance[], opts: SugarLeafOpts): Sug
   if (amount <= 0) return out;
 
   for (const c of cola) {
-    // Sugar leaves favour the lower/mid cola — weight the spawn by (1 - height),
-    // but keep a strong floor so the bud always reads leafy (real plant matter).
+    // Sugar leaves are the phytomer's SUBTENDING LEAF — they emerge from the
+    // flower NODES, not from random calyxes. Spawn at each node's primary bract so
+    // leaves distribute up the whole cola, clustered with the bracts of that node.
+    // (Legacy colas with no node flag: `primary` is undefined, so every calyx is a
+    // candidate and the old per-calyx behaviour is preserved.)
+    if (c.primary === false) continue;
+    // Favour the lower/mid cola a little, but keep a strong floor so the whole
+    // cola reads leafy (real plant matter).
     const h = clamp01(c.pos[1]); // 0 base .. ~1 apex
-    if (rnd() > amount * (0.62 + 0.45 * (1 - h))) continue;
+    if (rnd() > amount * (0.72 + 0.4 * (1 - h))) continue;
     if (out.length >= budget) break;
 
     const radial = Math.hypot(c.pos[0], c.pos[2]) || 1e-3;

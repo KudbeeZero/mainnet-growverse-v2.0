@@ -18,6 +18,10 @@ export interface ColaInstance {
   rot: [number, number, number];
   /** Linear RGB 0..1, picked from the strain palette. */
   color: [number, number, number];
+  /** Phytomer index this bract belongs to (stack order up the cola; 0 = base). */
+  node?: number;
+  /** True for the node's primary bract — the sugar-leaf / flower anchor point. */
+  primary?: boolean;
 }
 
 /** Golden angle — nature's phyllotaxic spacing, so calyxes nest without seams. */
@@ -112,26 +116,43 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
   const aspect = Math.min(0.42, dna.maxBudWidth / Math.max(1, dna.budHeight));
   const Rmax = H * aspect;
 
-  // Accretion: fewer rings early, filling toward the genetic `rows` as it
-  // develops; many dense rings so calyxes pack into a solid cola and fully clad
-  // the body (a sparse cluster reads as studs on an egg — owner's note).
-  const rings = Math.max(5, Math.round(dna.rows * (0.65 + 0.75 * dev) * densRoot));
+  // The cola is a STACK OF PHYTOMERS — the repeating flower node of the female
+  // inflorescence. Each phytomer bears a tight cluster of bracts (calyxes) at one
+  // phyllotaxic azimuth, a subtending sugar leaf, and flowers (pistils) in the
+  // bract axils; the axillary shoots of a compound raceme repeat the same unit.
+  // Nodes accrete as the bud develops and their INTERNODES COMPRESS toward the
+  // apex, so the bracts stack into a dense, clustered cola instead of a smooth
+  // even sheath. (Botany: Spitzer-Rimon et al. 2019, Front. Plant Sci. —
+  // phytomer architecture & florogenesis in female Cannabis.)
+  // Many finely-spaced nodes so the node clusters overlap into a fully-clad cola
+  // (a real cola is solid, its phytomers reading as banding/texture — not gaps).
+  const nodes = Math.max(6, Math.round(dna.rows * (0.95 + 0.85 * dev) * densRoot));
   const out: ColaInstance[] = [];
   let spiral = 0;
 
-  for (let i = 0; i < rings && out.length < cap; i++) {
-    const t = rings > 1 ? i / (rings - 1) : 0;
+  for (let i = 0; i < nodes && out.length < cap; i++) {
+    const u = nodes > 1 ? i / (nodes - 1) : 0;
+    // Internode compression: node gaps shrink toward the apex (dense foxtail tip),
+    // but gently — too much bunches every node at the top and bares the lower body.
+    const t = 1 - Math.pow(1 - u, 1.18);
     const wc = widthCurve(t);
     const ringR = Rmax * wc;
-    const perRing = Math.max(1, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * wc) * 2.3 * densRoot));
-    for (let j = 0; j < perRing && out.length < cap; j++) {
-      spiral += GOLDEN_ANGLE;
-      // Sit the calyxes out near the body surface and overlap them so they clad
-      // the whole cola (rather than hugging the axis and leaving the core bare).
-      const r = ringR * (0.58 + 0.4 * rnd());
-      const x = Math.cos(spiral) * r;
-      const z = Math.sin(spiral) * r;
-      const y = t * H + (rnd() - 0.5) * 0.03;
+
+    spiral += GOLDEN_ANGLE;          // this phytomer's phyllotaxic azimuth
+    const nodeAz = spiral;
+
+    // A cluster of bracts at THIS node — enough that neighbouring node clusters
+    // fuse into a solid, clad cola while still reading as stacked flower nodes.
+    const bracts = Math.max(2, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * wc) * 1.95 * densRoot));
+    for (let j = 0; j < bracts && out.length < cap; j++) {
+      // Moderate angular spread around the node azimuth so the bracts CLUSTER at
+      // the node (a wide even spread read as a smooth shell, not stacked nodes).
+      const az = nodeAz + (rnd() - 0.5) * 1.0;
+      const r = ringR * (0.55 + 0.42 * rnd());
+      const x = Math.cos(az) * r;
+      const z = Math.sin(az) * r;
+      // Bracts hug the node's height (small jitter) so the cluster stays one node.
+      const y = t * H + (rnd() - 0.5) * 0.025;
 
       const sizeUnit = (dna.calyxSizeMin + (dna.calyxSizeMax - dna.calyxSizeMin) * rnd()) / Math.max(1, dna.budHeight);
       const swell = 0.7 + 0.6 * dev;
@@ -143,8 +164,10 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
         pos: [x, y, z],
         scale: [w, h, w],
         // Tilt the long axis up-and-outward from the stem so calyxes face out.
-        rot: [Math.atan2(z, ringR || 1) * 0.4, spiral, (rnd() - 0.5) * 0.6],
+        rot: [Math.atan2(z, ringR || 1) * 0.4, az, (rnd() - 0.5) * 0.6],
         color: hslToRgb(pickPaletteColor(dna.palette, rnd())),
+        node: i,
+        primary: j === 0,
       });
     }
   }
