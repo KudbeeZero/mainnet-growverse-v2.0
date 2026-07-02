@@ -673,8 +673,14 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const f = clamp(Math.pow(fBase, stackExp) + (rnd() - 0.5) * 0.045, 0.04, 0.96);
       const p = spine[Math.round(f * 24)];
       const low = Math.pow(1 - f, 0.75); // 1 at the base → 0 at the apex
+      // Round 4 (owner harvest reference): the near-apex flowering side-colas
+      // used to sit almost flush against the leader (spread≈1, same as any
+      // upper node), so their bud spikes overlapped it. Widen their lateral
+      // reach too — not just their tilt (below) — so the top 2-3 colas read
+      // as a clearly separated candelabra instead of one fused column.
+      const apexSplay = smooth(clamp((f - 0.58) / 0.3, 0, 1));
       // Lower branches splay wide (skirt); upper branches tuck in and shorten.
-      const spread = lerp(1, SK.lowerSpread, low);
+      const spread = lerp(1, SK.lowerSpread, low) * lerp(1, 1.8, apexSplay);
       const shorten = 1 - SK.upperShorten * f;
       // Engine 3/4: azimuth → signed-and-foreshortened horizontal projection
       // (lateral) + front/back depth. `side` keeps its legacy ±1 meaning for the
@@ -685,7 +691,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const lateral = az.lateral;
       // Engines 1&2: is this node a co-dominant top (one of the highest `nTop`)?
       const topK = nTop > 0 && i >= topFromIdx ? i - topFromIdx : -1;
-      let tilt = (0.92 + rnd() * 0.3) * (1 - f * 0.22) * lerp(1, 1.12, low);
+      // Splay the near-apex flowering side-colas outward (see `apexSplay`
+      // above) so they visibly lean away from the leader instead of tucking
+      // in parallel to it — this is what actually separates the spike tips,
+      // not just their attachment point.
+      let tilt = (0.92 + rnd() * 0.3) * (1 - f * 0.22 + apexSplay * 0.55) * lerp(1, 1.12, low);
       let len = A * 0.27 * S.branchMul * (0.35 + 0.65 * low) * grow * shorten;
       if (topK >= 0) {
         // A released top straightens toward vertical and extends up to race the
@@ -699,7 +709,13 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // canopies (nodeLeaf ≳ 1.1 — Blue Dream 1.18, White Rhino 1.2) carry a
       // full skirt of LARGE fans low on the plant; spear strains (G13 0.95)
       // stay tidy. Scales with lowness so the upper canopy is unchanged.
-      const skirt = low * clamp((SK.nodeLeaf - 1) / 0.2, 0, 1);
+      // Round 4: `low` alone decays quickly above the base, leaving a bare
+      // stretch of naked stem between the skirt and the flowering top on tall
+      // strains (owner harvest reference shows full foliage all the way up
+      // to the colas) — a bump centered on the mid-canopy band fills it in,
+      // additive to the base-driven skirt so the true skirt is unchanged.
+      const midFill = smooth(clamp(1 - Math.abs(f - 0.5) / 0.38, 0, 1));
+      const skirt = clamp(low + midFill * 0.55, 0, 1) * clamp((SK.nodeLeaf - 1) / 0.2, 0, 1);
       const nd: Node = {
         x: p.x, y: p.y, f, side, tilt, len, spread,
         leafSize: A * (0.08 + 0.05 * low) * (0.55 + 0.45 * grow) * (1 - 0.4 * P.budDev * f) * depthSize * (1 + skirt * 0.4),
@@ -737,7 +753,14 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         nd.budRot = nd.side * 0.06;
         nd.weight = lerp(0.95, 1.7, f) * S.clusterFat; // a top cola is heavy
       } else if (P.budDev > 0 && f > S.flowerFrom) {
-        const sizeUp = lerp(0.55, 1.15, f);
+        // Round 4 (owner harvest reference): every flowering side-node used to
+        // grow a near-full-size spike, so 6-8 stacked spikes visually swamped
+        // the mid-canopy into a "bare stem + random spikes" read instead of a
+        // leafy plant with a few clear colas. A steeper, f-weighted curve
+        // keeps only the nodes nearest the apex prominent; mid-canopy sites
+        // shrink to small accents so the fan leaves (skirt/nodeFans) read as
+        // the dominant mass there, matching the reference's leaf-heavy middle.
+        const sizeUp = lerp(0.26, 1.18, Math.pow(f, 1.8));
         const axis = A * (0.055 + 0.10 * f) * S.clusterLen * sizeUp * (0.5 + 0.5 * P.budDev);
         // Slimmer + more stacked clusters → a small tapered side cola, not a
         // two-lobed peanut.

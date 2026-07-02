@@ -39,8 +39,14 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   Grower; P3 `search_global_knowledge` retrieval tool (the teacher gets smarter from every
   player); P4 `global_insights` rollups + class-stats surface. Spec:
   `docs/memory/design/11-global-learning-memory.md`.
-- 🎨 ⬜ **Per-strain procedural fidelity pass** — `GrowChamber`/`BudGL` morphology + bud shape/color
-  coverage across all 29 strains (the follow-up track from the 2026-07-02 revert ADR).
+- 🎨 🔨 **Per-strain procedural fidelity pass** — `GrowChamber`/`BudGL` morphology + bud shape/color
+  coverage across all 29 strains (the follow-up track from the 2026-07-02 revert ADR). Pilot
+  strain Blue Dream is 4 rounds deep against the owner's harvest reference photo (identity →
+  renderer realism → cola-silhouette smoothing → apex separation/mid-canopy fill, PRs #108-#110 +
+  the handoff-audit session's round 4). Template rolls out to the other 28 strains once the
+  owner approves the pilot. Known round-4 gaps (owner to react): the leader cola and its nearest
+  side-cola still touch on some seeds; mid-canopy foliage denser than before but still short of
+  the reference's full leaf coverage.
 
 ### 🕵️ Dormant investments (2026-07-02 sweep — built but unused; owner picks wire-in vs retire)
 > Full evidence (file:line per item) in the sweep report attached to PR #104. "Staged, not dead"
