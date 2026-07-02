@@ -236,3 +236,42 @@ def test_lecturer_raises_on_empty_structured_output(monkeypatch):
     provider = ClaudeLecturerProvider(api_key="test-key")
     with pytest.raises(AdvisorError, match="no structured output"):
         provider.lecture({})
+
+
+# ----- adaptive-thinking capability fallback (2026-07-02 live incident) -----
+def test_thinking_falls_back_when_model_rejects_it(monkeypatch):
+    """ADVISOR_MODEL=haiku 400'd with 'adaptive thinking is not supported on
+    this model' — the wrapper must retry once without `thinking`."""
+
+    class _PickyMessages:
+        def __init__(self, parsed_output):
+            self._parsed_output = parsed_output
+            self.calls = []
+
+        def parse(self, **kwargs):
+            self.calls.append(kwargs)
+            if "thinking" in kwargs:
+                raise RuntimeError(
+                    "Error code: 400 - adaptive thinking is not supported on this model"
+                )
+            return types.SimpleNamespace(parsed_output=self._parsed_output)
+
+    messages = _PickyMessages(_lecture_report())
+    _install_fake_anthropic(monkeypatch, messages)
+    p = ClaudeLecturerProvider(api_key="k", model="claude-haiku-4-5-20251001")
+    report = p.lecture({"course": "cult-101"})
+    assert report.title == "Inheritance Basics"
+    assert len(messages.calls) == 2                      # tried with, retried without
+    assert "thinking" in messages.calls[0]
+    assert "thinking" not in messages.calls[1]
+
+
+def test_thinking_other_errors_still_raise(monkeypatch):
+    class _AlwaysFails:
+        def parse(self, **kwargs):
+            raise RuntimeError("Error code: 500 - upstream exploded")
+
+    _install_fake_anthropic(monkeypatch, _AlwaysFails())
+    p = ClaudeLecturerProvider(api_key="k")
+    with pytest.raises(AdvisorError, match="lecturer backend error"):
+        p.lecture({})

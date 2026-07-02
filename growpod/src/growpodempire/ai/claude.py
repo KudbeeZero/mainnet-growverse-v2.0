@@ -55,10 +55,12 @@ class ClaudeAdvisorProvider(AdvisorProvider):
 
     def diagnose(self, context: dict) -> AdvisorReport:
         try:
-            response = self._client.messages.parse(
+            from .anthropic_compat import parse_preferring_thinking
+
+            response = parse_preferring_thinking(
+                self._client.messages,
                 model=self._model,
                 max_tokens=16000,
-                thinking={"type": "adaptive"},
                 system=_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": json.dumps(context, default=str)}],
                 output_format=AdvisorReport,
