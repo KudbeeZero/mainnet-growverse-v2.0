@@ -137,8 +137,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     const mature = clamp(live.current.dev.budDev, 0, 1);
     const teal = clamp(((bc?.calyxHue ?? S.hue) - 130) / 40, 0, 1);
     leafTone.hue = S.hue + teal * 44;
-    leafTone.sat = S.sat + teal * 8;
-    leafTone.litBias = -mature * 6 - teal * 6;
+    leafTone.sat = S.sat + teal * 10;
+    // Deep mature-fan darkening (owner reference: harvest fans are a DEEP
+    // blue-green, not bright grass). Teal strains darken hardest.
+    leafTone.litBias = -mature * 8 - teal * 8;
     // Mature fans arch over; deeper for the flowering canopy.
     leafTone.arch = 0.1 + mature * 0.16;
   }
@@ -342,39 +344,47 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
 
     // ---- De-grape: continuous bud-mass silhouette (ported from PR #25) ----
     // At chamber distance the calyx pods are too small to overlap on their own,
-    // so a flower site read as a handful of loose circles (grapes). Paint a
-    // single SOLID, stacked column behind them first: each developed cluster
-    // contributes an overlapping blob, all fused into one fill so the gaps
-    // close. The calyx texture below then sits ON this mass. Width follows the
-    // existing per-cluster `cw`, so the silhouette stays strain-recognisable
-    // (G13 spiral = slim spear cola; PDP/Animal Mints = chunky stacked mass).
+    // so a flower site read as a handful of loose circles (grapes). Round 2
+    // fused the clusters behind them with unioned ellipses, but each blob still
+    // bulged — the cola read as a lumpy peanut. Round 3: draw the mass as ONE
+    // smooth tapered outline instead — a closed midpoint-quadratic spline
+    // through the cluster envelope (rounded base → pointed tip), with the calyx
+    // texture riding inside it. Width still follows the per-cluster `cw`, so
+    // the silhouette stays strain-recognisable (G13 spiral = slim spear cola;
+    // PDP/Animal Mints = chunky stacked mass).
     const mass = geo.filter((g): g is NonNullable<typeof g> => !!g && g.d > 0.06);
     if (mass.length) {
-      mass.sort((a, b) => a.cy - b.cy);
+      mass.sort((a, b) => a.cy - b.cy); // tip (most negative cy) → base
       const bc = live.current.budColor;
-      let top = Infinity, bot = -Infinity;
-      const blobs = mass.map((m, i) => {
-        const up = i > 0 ? Math.abs(m.cy - mass[i - 1].cy) : Infinity;
-        const dn = i < mass.length - 1 ? Math.abs(mass[i + 1].cy - m.cy) : Infinity;
-        const gap = Math.min(up, dn);
-        const rw = Math.max(m.podW * 1.25, m.cw * 0.56) * (0.66 + 0.34 * m.d);
-        // Reach most of the way to the nearest neighbour so adjacent blobs fuse
-        // into one continuous silhouette (no gaps between sites = no grapes).
-        const rh = Math.min(rw * 2.5, Math.max(rw * 1.2, (isFinite(gap) ? gap : rw) * 0.82));
-        top = Math.min(top, m.cy - rh);
-        bot = Math.max(bot, m.cy + rh);
-        return { cx: m.cx, cy: m.cy, rw, rh };
-      });
+      const n = mass.length;
+      // Per-cluster half-width and centreline, 3-tap smoothed across neighbours
+      // so fat/lateral jitter can't lobe the outline into a peanut. The jitter
+      // still lives in the calyx texture — only the envelope is calmed.
+      const raw = mass.map((m) => Math.max(m.podW * 1.25, m.cw * 0.56) * (0.66 + 0.34 * m.d));
+      const hw = raw.map((r, i) => (raw[Math.max(0, i - 1)] + 2 * r + raw[Math.min(n - 1, i + 1)]) / 4);
+      const cxs = mass.map((m, i) => (mass[Math.max(0, i - 1)].cx + 2 * m.cx + mass[Math.min(n - 1, i + 1)].cx) / 4);
+      const tipY = mass[0].cy - hw[0] * 1.7; // spear point above the top cluster
+      const botY = mass[n - 1].cy + hw[n - 1] * 1.05; // rounded base below the last
+      // Outline vertices, clockwise: tip → right edge down → base → left edge up.
+      const pts: Array<[number, number]> = [[cxs[0], tipY]];
+      for (let i = 0; i < n; i++) pts.push([cxs[i] + hw[i], mass[i].cy]);
+      pts.push([cxs[n - 1], botY]);
+      for (let i = n - 1; i >= 0; i--) pts.push([cxs[i] - hw[i], mass[i].cy]);
       const massLit = 37 + bc.anthocyanin * 2;
-      const mg = ctx!.createLinearGradient(0, top, 0, bot);
+      const mg = ctx!.createLinearGradient(0, tipY, 0, botY);
       mg.addColorStop(0, `hsl(${bc.calyxHue + 4}, ${bc.calyxSat}%, ${massLit + 7}%)`);
       mg.addColorStop(1, `hsl(${bc.calyxHue}, ${Math.min(88, bc.calyxSat + 8)}%, ${Math.max(12, massLit - 13)}%)`);
       ctx!.fillStyle = mg;
+      // Closed midpoint-quadratic spline: each vertex is a control point, so the
+      // outline is C1-smooth all the way round; the extended tip vertex keeps a
+      // gently pointed apex instead of a bulb.
       ctx!.beginPath();
-      for (const b of blobs) {
-        ctx!.moveTo(b.cx + b.rw, b.cy);
-        ctx!.ellipse(b.cx, b.cy, b.rw, b.rh, 0, 0, TAU);
+      ctx!.moveTo((pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2);
+      for (let i = 1; i <= pts.length; i++) {
+        const p = pts[i % pts.length], q = pts[(i + 1) % pts.length];
+        ctx!.quadraticCurveTo(p[0], p[1], (p[0] + q[0]) / 2, (p[1] + q[1]) / 2);
       }
+      ctx!.closePath();
       ctx!.fill();
     }
 
@@ -540,6 +550,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     litAdj: number; // atmospheric depth shade (HSL lightness delta)
     leafYaw: number; // horizontal squash of the tip fan (1 = face-on, →0 edge-on)
     leafRoll: number; // small per-node leaf roll so no two fans align
+    skirt: number; // 0..1 lower-canopy fullness (high-nodeLeaf strains, low nodes)
   }
   interface Plant {
     P: DevParams; CL: ReturnType<typeof climateModel>; stage: string;
@@ -669,16 +680,21 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       }
       // Back branches read a touch smaller as well as darker (aerial perspective).
       const depthSize = lerp(0.86, 1.06, (az.depth + 1) / 2);
+      // Lower-canopy skirt (scaling law, not a strain branch): broad-leaf
+      // canopies (nodeLeaf ≳ 1.1 — Blue Dream 1.18, White Rhino 1.2) carry a
+      // full skirt of LARGE fans low on the plant; spear strains (G13 0.95)
+      // stay tidy. Scales with lowness so the upper canopy is unchanged.
+      const skirt = low * clamp((SK.nodeLeaf - 1) / 0.2, 0, 1);
       const nd: Node = {
         x: p.x, y: p.y, f, side, tilt, len, spread,
-        leafSize: A * (0.08 + 0.05 * low) * (0.55 + 0.45 * grow) * (1 - 0.4 * P.budDev * f) * depthSize,
+        leafSize: A * (0.08 + 0.05 * low) * (0.55 + 0.45 * grow) * (1 - 0.4 * P.budDev * f) * depthSize * (1 + skirt * 0.4),
         leaflets: Math.min(S.leafletMax, 3 + 2 * Math.floor(d / 14)),
         phase: rnd() * TAU,
         tipX: 0, tipY: 0, site: null, budRot: 0,
         curve: 0.14 + rnd() * 0.22, // upward bend
         weight: 0,
         branchlets: [],
-        nodeLeafSize: A * (0.05 + 0.04 * low) * (0.55 + 0.45 * grow) * SK.nodeLeaf * (1 - 0.35 * P.budDev * f),
+        nodeLeafSize: A * (0.05 + 0.04 * low) * (0.55 + 0.45 * grow) * SK.nodeLeaf * (1 - 0.35 * P.budDev * f) * (1 + skirt * 0.5),
         nodeBud: null,
         depth: az.depth,
         litAdj: depthShade(az.depth),
@@ -686,6 +702,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // side-facing one shows it broad — so leaves no longer all billboard.
         leafYaw: foreshorten(lateral, 0.34),
         leafRoll: (rnd() - 0.5) * 0.5,
+        skirt,
       };
       // Horizontal projection foreshortens with |lateral|; the tip drops toward the
       // viewer (depth>0, front) or lifts behind the stem (depth<0, back) for volume.
@@ -1442,10 +1459,17 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.restore();
       // Leaf cluster hugging the stem at the node — every node carries foliage,
       // not just the branch tip, so internodes don't read as bare gaps.
-      for (const [ang, scl] of [[-nd.side * 0.32, 0.55], [-nd.side * 0.74, 0.36], [nd.side * 0.22, 0.3]] as const) {
+      const nodeFans: Array<readonly [number, number]> = [
+        [-nd.side * 0.32, 0.55], [-nd.side * 0.74, 0.36], [nd.side * 0.22, 0.3],
+      ];
+      // Full lower skirt (owner harvest reference): broad-leaf strains add two
+      // more big fans on the low/mid nodes so the bottom canopy reads as a
+      // dense layered skirt, not a bare diagram. Skirt fans sit in shade.
+      if (nd.skirt > 0.25) nodeFans.push([nd.side * 0.62, 0.52], [-nd.side * 1.08, 0.46]);
+      for (const [ang, scl] of nodeFans) {
         ctx!.save();
         ctx!.rotate(ang);
-        drawFan(nd.nodeLeafSize * scl, Math.max(3, nd.leaflets - 2), 0, claw, nd.litAdj, lerp(nd.leafYaw, 1, 0.4));
+        drawFan(nd.nodeLeafSize * scl, Math.max(3, nd.leaflets - 2), 0, claw, nd.litAdj - nd.skirt * 5, lerp(nd.leafYaw, 1, 0.4));
         ctx!.restore();
       }
       // Secondary branchlets — forks part-way along the branch (sharing the
