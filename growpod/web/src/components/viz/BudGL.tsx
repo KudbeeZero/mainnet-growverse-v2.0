@@ -8,6 +8,7 @@
 // Three instanced meshes = three draw calls. Must load via dynamic({ssr:false}).
 
 import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { buildCola, colaSilhouette, hslToRgb } from "@/lib/chamber/bud3d/cola";
@@ -308,6 +309,7 @@ function SugarLeaves({
 
 export function BudGL({
   dna, seed, budDev, ripe = 0, brown = 0, trich = 0, purple = 0, leaf = 0.8, reducedMotion = false, stage,
+  interactive = false,
 }: {
   dna: BudDNA;
   seed: number;
@@ -326,6 +328,9 @@ export function BudGL({
   reducedMotion?: boolean;
   /** Current growth stage — drives the Arcade stage-unlock ring burst. */
   stage?: string;
+  /** Player-driven drag-to-rotate + scroll-to-zoom (Bud Viewer). Off by default
+   * so the existing passive-preview usages (chamber, strain hero) are unchanged. */
+  interactive?: boolean;
 }) {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const cola = useMemo(() => buildCola(dna, seed, { budDev }), [dna, seed, budDev]);
@@ -341,7 +346,9 @@ export function BudGL({
     () => buildSugarLeaves(cola, { seed, amount: leaf * Math.max(0.4, budDev), frost: trich, isMobile }),
     [cola, seed, leaf, budDev, trich, isMobile],
   );
-  const spin = !reducedMotion;
+  // In interactive mode the player drives rotation via OrbitControls — auto-spin
+  // would fight their drag, so it's off; passive usages keep the ambient spin.
+  const spin = !reducedMotion && !interactive;
 
   // Arcade screen shake on the strongest boost (LIGHT_BLAST): the canvas wrapper
   // jolts for 200ms. Particles/rings live in the NutrientPop overlay. The Three.js
@@ -375,6 +382,15 @@ export function BudGL({
         <SugarLeaves instances={sugarLeaves} spin={spin} />
         <Pistils instances={pistils} spin={spin} />
         <Frost instances={frost} purple={purple} spin={spin} />
+        {interactive && (
+          <OrbitControls
+            enablePan={false}
+            enableZoom
+            minDistance={0.9}
+            maxDistance={3.2}
+            target={[0, 0, 0]}
+          />
+        )}
       </Canvas>
       {/* CSS-only FX overlay — no canvas, no draw-call impact. */}
       <NutrientPop stage={stage} reducedMotion={reducedMotion} />

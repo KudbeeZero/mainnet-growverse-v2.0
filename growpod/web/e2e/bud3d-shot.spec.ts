@@ -76,13 +76,16 @@ async function setup(page: Page) {
   });
 }
 
-test("PROOF: 3D bud renders in the macro view", async ({ page }) => {
+test("PROOF: 3D bud renders in the dedicated Bud Viewer", async ({ page }) => {
   await setup(page);
-  await page.goto("/dashboard/plants/plant1/chamber?bud3d=1");
-  // "View Buds" appears once the plant is flowering; tap it to enter the macro view.
-  const viewBuds = page.getByRole("button", { name: /View Buds/i });
-  await viewBuds.waitFor({ timeout: 20_000 });
-  await viewBuds.click();
+  await page.goto("/dashboard/plants/plant1/chamber");
+  // "View Bud" appears once the plant is flowering; it navigates to the
+  // dedicated Bud Viewer screen (Tier 2 — the heavy WebGL bud engine no
+  // longer mounts inside the Grow Chamber page itself).
+  const viewBud = page.getByRole("link", { name: /View Bud/i });
+  await viewBud.waitFor({ timeout: 20_000 });
+  await viewBud.click();
+  await page.waitForURL(/\/dashboard\/plants\/plant1\/bud/, { timeout: 10_000 });
   // Let the WebGL canvas mount + paint a few frames.
   await page.waitForSelector("canvas", { timeout: 15_000 });
   await page.waitForTimeout(2500);
