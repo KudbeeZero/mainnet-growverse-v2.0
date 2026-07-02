@@ -31,6 +31,9 @@ core loop**: grow → care → harvest → cure → sell/breed/stabilize → min
 - **The backlog is part of the workflow.** Every session that ships work reconciles
   `docs/memory/BACKLOG.md` (tick done/doing, add new work, bump `Last reconciled`) before
   closing. Enforced: `make check-memory` fails when the backlog is >14 days behind HEAD.
+- **The twice rule.** Before debugging any operational problem, check
+  `docs/memory/INCIDENTS.md`; apply recorded fixes instead of re-deriving them. Any problem
+  hit a second time gets a root-cause fix recorded there — never a second workaround.
 
 ## Run it
 ```bash

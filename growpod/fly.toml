@@ -32,6 +32,12 @@ primary_region = "ord"
   # Browser origin allowed to call /api/* directly. Same-origin proxy traffic
   # (Vercel rewrite) isn't subject to this, but set it for safety/direct calls.
   CORS_ALLOWED_ORIGINS = "https://growverse.dev"
+  # TEMPORARY (2026-07-02): accept per-worker in-memory rate limits so the app
+  # boots in production — no Redis is attached yet, and the fail-closed guard
+  # in api/ratelimit.py otherwise refuses to start (this 502'd the first deploy
+  # that carried it). Proper fix: `fly redis create`, set RATELIMIT_STORAGE_URI
+  # as a secret, then DELETE this line so the guard protects again.
+  RATELIMIT_ALLOW_MEMORY = "true"
 
 [http_service]
   internal_port = 8080
