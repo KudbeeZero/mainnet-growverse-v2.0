@@ -36,6 +36,39 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
 - 🎨 ⬜ **Per-strain procedural fidelity pass** — `GrowChamber`/`BudGL` morphology + bud shape/color
   coverage across all 29 strains (the follow-up track from the 2026-07-02 revert ADR).
 
+### 🕵️ Dormant investments (2026-07-02 sweep — built but unused; owner picks wire-in vs retire)
+> Full evidence (file:line per item) in the sweep report attached to PR #104. "Staged, not dead"
+> items (HeyGen presenter, `/mission`, Clone Room TS stack, boost-economy docs, WO-1/WO-2) are
+> deliberately parked and NOT listed here.
+- 🔴 ⬜ **5 of 12 feature flags gate nothing** — `ftue_tutorial`, `grow_chamber`,
+  `master_grower_advisor`, `breeding_lab`, `daily_stipend` (`data/balance.yaml` `feature_flags:`)
+  have zero `require_feature` call sites: flipping them off does nothing. False kill switches are
+  worse than none — decorate the FTUE/breeding/advisor/stipend routes. **Protected surface (flags):
+  needs owner OK.**
+- 🔴 ⬜ **Web gating never reads `GET /api/game/flags`** — `web/src/lib/features.ts` is env-var-driven
+  default-ON; the planned re-point (DECISIONS 2026-06-14 "Web Gating PR") never landed, so backend
+  kill switches don't reach the web UI. Land the re-point.
+- 🟠 ⬜ **Wire in: finished backends one UI hop from paying off** — `POST .../plants/<id>/apply`
+  (consumables; store sells them but has no "use item"), `GET /strains/<id>/effects` (effects panel),
+  admissions department/track recommendation (persist + surface; HERMES open-work #2),
+  `Player.last_active_at` (exactly what WO-2 "welcome-back delta" needs), `/contracts` page
+  (whole built surface with no nav entry — one `navLinks.ts` line).
+- 🟠 ⬜ **Retire: superseded/dead web code** — `components/intro/` (4 files; superseded by FTUE),
+  `components/pod/PodCard.tsx` + `EnvironmentForm`/`WeatherRoller` (superseded by Command Center),
+  `command/CommandTopBar.tsx`/`CommandFooter.tsx` (+ stranded `hooks/useLiveClock.ts`, cosmetics
+  exports), `lib/timeControls.ts`, backend `serve_narration` route (superseded by produce-once
+  audio). Owner-taste call: `onboarding/VideoHero.tsx` + `public/media/*` (revive on landing or
+  retire).
+- 🟡 ⬜ **Retire: stale infra** — `growpod/artifacts/*` nested duplicates (confirmed stale vs root),
+  `scripts/build-production.sh` + `start-production.sh` (describe a deploy that doesn't exist),
+  `scripts/src/hello.ts` scaffolds, `attached_assets/` dumps, empty `growpod/lib/db` schema stub.
+- 🟡 ⬜ **Dead DB columns** — `ResearchProgress.unlocked_at`, `GrowthMeasurement.leaf_count`/
+  `growth_rate` (drop migration when convenient); `Player.last_active_at` is the wire-in above.
+  `INDEXER_URL` is read but unconsumed — it's needed by the settlement-deposit redesign; keep.
+- 🟡 ⬜ **Simplify: unreachable AI-factory branches** — master-grower/admissions/roadmap "real
+  provider" arms always return the mock (classes don't exist); build the Claude providers or
+  simplify the guards. (HeyGen arm stays — owner-gated spend.)
+
 ## 🚀 New-Player / Launch-Readiness (ACTIVE track — onboarding → MVP launch)
 > Player-facing, additive work on existing rails toward a launchable MVP — **no economy / chain /
 > breeding / factions / combat / new crop families, no new Phase-2 systems.** Off-chain MVP first.
