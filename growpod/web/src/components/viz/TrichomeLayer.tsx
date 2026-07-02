@@ -67,17 +67,18 @@ function glandGeom(r: number, y: number): THREE.BufferGeometry {
   return g;
 }
 
-/** Capitate stalk + gland (~14 tris). Unit height ≈ 1, base at y=0. */
+/** Capitate stalk + gland (~14 tris). Unit height ≈ 1, base at y=0. The gland is
+ * fat relative to the stalk so a field of them reads as a caked resin bead-coat. */
 function makeCapitateGeom(): THREE.BufferGeometry {
-  const stalk = new THREE.CylinderGeometry(0.07, 0.11, 0.6, 3, 1, true).toNonIndexed();
-  stalk.translate(0, 0.3, 0);
+  const stalk = new THREE.CylinderGeometry(0.09, 0.13, 0.52, 3, 1, true).toNonIndexed();
+  stalk.translate(0, 0.26, 0);
   stalk.computeVertexNormals();
-  return concatGeom([stalk, glandGeom(0.34, 0.72)]);
+  return concatGeom([stalk, glandGeom(0.5, 0.62)]);
 }
 
 /** Gland head only (mid LOD) — no stalk. ~8 tris. */
 function makeGlandOnlyGeom(): THREE.BufferGeometry {
-  return concatGeom([glandGeom(0.42, 0)]);
+  return concatGeom([glandGeom(0.55, 0)]);
 }
 
 const UPv = new THREE.Vector3(0, 1, 0);
@@ -98,13 +99,13 @@ export function TrichomeLayer({ assembly, lod }: { assembly: PlantAssembly; lod:
       new THREE.MeshStandardMaterial({
         // Translucent silvery resin: low roughness so it catches the key light as
         // wet sparkle, a hair of emissive so the coat never goes muddy in shadow.
-        roughness: 0.24,
+        roughness: 0.22,
         metalness: 0.0,
         transparent: true,
-        opacity: 0.82,
-        emissive: new THREE.Color(0.10, 0.13, 0.15),
-        emissiveIntensity: 0.5,
-        depthWrite: false,
+        opacity: 0.94,
+        emissive: new THREE.Color(0.12, 0.15, 0.18),
+        emissiveIntensity: 0.6,
+        depthWrite: true,
       }),
     [],
   );
@@ -139,12 +140,12 @@ export function TrichomeLayer({ assembly, lod }: { assembly: PlantAssembly; lod:
         d.quaternion.copy(qLocal);
         // Scale: gland size × cola width, with per-instance jitter; stalks stand a
         // touch taller than they are wide so they read as columns of resin.
-        const s = g.r * c.width * (lod === "close" ? 3.1 : 3.8) * (0.7 + 0.7 * g.spark);
-        d.scale.set(s, s * (lod === "close" ? 1.35 : 1.0), s);
+        const s = g.r * c.width * (lod === "close" ? 5.0 : 5.6) * (0.85 + 0.55 * g.spark);
+        d.scale.set(s, s * (lod === "close" ? 1.3 : 1.0), s);
         d.updateMatrix();
         mesh.setMatrixAt(idx, d.matrix);
         // Sparkle: brighten a fraction of glands so the coat glints unevenly.
-        col.copy(frostColor(g.mat)).multiplyScalar(0.82 + 0.5 * g.spark);
+        col.copy(frostColor(g.mat)).multiplyScalar(0.9 + 0.35 * g.spark);
         mesh.setColorAt(idx, col);
         idx++;
       }

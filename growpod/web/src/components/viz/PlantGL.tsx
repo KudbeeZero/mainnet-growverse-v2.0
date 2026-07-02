@@ -145,7 +145,7 @@ function makePistilGeom(): THREE.BufferGeometry {
     pts.push(new THREE.Vector3(bend, t, 0));
   }
   const curve = new THREE.CatmullRomCurve3(pts);
-  const tubular = 4, radial = 3;
+  const tubular = 3, radial = 3;
   const geo = new THREE.TubeGeometry(curve, tubular, 0.13, radial, false);
   const pos = geo.attributes.position;
   const c = new THREE.Vector3();
@@ -291,10 +291,26 @@ function ColaCores({ assembly, coreColor }: { assembly: PlantAssembly; coreColor
   return <instancedMesh key={colas.length} ref={ref} args={[geom, mat, colas.length]} />;
 }
 
-function Calyxes({ assembly }: { assembly: PlantAssembly }) {
+/** Frosted-calyx tint target — a pale silver-teal the calyx albedo lerps toward
+ * as trichome caking builds up the cola (Blue Dream = blue-teal bud under a
+ * silver resin coat). Kept data-driven: the lerp AMOUNT comes from the strain's
+ * trichomeDensity, not a hardcoded recolour. */
+const FROST_TINT = new THREE.Color(0.74, 0.84, 0.86);
+
+function Calyxes({ assembly, frost }: { assembly: PlantAssembly; frost: number }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geom = useMemo(makeCalyxGeom, []);
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.72, metalness: 0.0 }), []);
+  // Waxy, low-plastic calyx skin with a hint of translucency read via a soft
+  // emissive floor (cheap subsurface-ish softness in the crevices).
+  const mat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        roughness: 0.58,
+        metalness: 0.0,
+        emissive: new THREE.Color(0.02, 0.05, 0.05),
+      }),
+    [],
+  );
   const total = useMemo(() => assembly.colas.reduce((n, c) => n + c.cola.length, 0), [assembly]);
   useLayoutEffect(() => {
     const mesh = ref.current;
@@ -324,13 +340,19 @@ function Calyxes({ assembly }: { assembly: PlantAssembly }) {
         d.scale.set(ins.scale[0] * s, ins.scale[1] * s * 1.15, ins.scale[2] * s);
         d.updateMatrix();
         mesh.setMatrixAt(idx, d.matrix);
-        mesh.setColorAt(idx, col.setRGB(ins.color[0], ins.color[1], ins.color[2]));
+        // Frost the calyx albedo toward silver — heavier up the cola (where resin
+        // cakes thickest), lighter at the leafy skirt — so the whole flower reads
+        // coated, not just where a discrete gland happens to sit.
+        const hf = Math.min(1, Math.max(0, ins.pos[1]));
+        const amt = Math.min(0.9, frost * (0.28 + 0.72 * hf));
+        col.setRGB(ins.color[0], ins.color[1], ins.color[2]).lerp(FROST_TINT, amt);
+        mesh.setColorAt(idx, col);
         idx++;
       }
     }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [assembly]);
+  }, [assembly, frost]);
   return <instancedMesh key={total} ref={ref} args={[geom, mat, total]} />;
 }
 
@@ -469,11 +491,19 @@ function FanLeaves({ assembly, seed }: { assembly: PlantAssembly; seed: number }
 /** Dev-studio only: publish the last-frame rendered triangle count so the tri
  * budget stays visible while tuning (read by the studio HUD / screenshot loop). */
 function TriProbe() {
-  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
   useFrame(() => {
-    if (typeof window !== "undefined") {
-      (window as unknown as { __triCount?: number }).__triCount = gl.info.render.triangles;
-    }
+    if (typeof window === "undefined") return;
+    let tris = 0;
+    scene.traverse((o) => {
+      const m = o as THREE.Mesh & { isMesh?: boolean; isInstancedMesh?: boolean; count?: number };
+      if (!m.isMesh || !m.geometry) return;
+      const g = m.geometry as THREE.BufferGeometry;
+      const verts = g.index ? g.index.count : g.attributes.position.count;
+      const inst = m.isInstancedMesh ? (m.count ?? 0) : 1;
+      tris += (verts / 3) * inst;
+    });
+    (window as unknown as { __triCount?: number }).__triCount = Math.round(tris);
   });
   return null;
 }
@@ -522,7 +552,7 @@ function PlantScene({
         <NodeRings assembly={assembly} stemColor={stemColor} />
         <FanLeaves assembly={assembly} seed={seed} />
         <ColaCores assembly={assembly} coreColor={coreColor} />
-        <Calyxes assembly={assembly} />
+        <Calyxes assembly={assembly} frost={dna.trichomeDensity} />
         <SugarLeaves assembly={assembly} />
         <Pistils assembly={assembly} />
         <TrichomeLayer assembly={assembly} lod={lod} />
