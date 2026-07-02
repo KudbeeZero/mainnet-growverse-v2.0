@@ -9,6 +9,7 @@ describe("computeFeatures", () => {
       cup: false,
       university: false,
       contracts: false,
+      arcade: false,
     });
   });
 

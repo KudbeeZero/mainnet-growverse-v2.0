@@ -36,7 +36,7 @@ import { budDnaFor, applyEnvironmentToBudDNA } from "@/lib/chamber/budDna";
 import { budParamsFromTrichomes } from "@/lib/chamber/bud3d/serverBud";
 import { titleCase } from "@/lib/format";
 import { nudge } from "@/lib/slider";
-import { isBud3DEnabled, hasWebGL } from "@/lib/features";
+import { isBud3DEnabled, hasWebGL, isFeatureEnabled } from "@/lib/features";
 import { getBoostMultiplier, BOOST_APPLIED_EVENT, type BoostApplyDetail } from "@/lib/arcade/boostEngine";
 import { useRewindStore } from "@/lib/arcade/timeRewind";
 
@@ -690,11 +690,14 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       </div>
       </div>
 
-      {/* Arcade Mode controls — chamber-only, dismissible. */}
-      {!ended && !hudHidden && (
+      {/* Arcade Mode controls — chamber-only, dismissible, behind the `arcade`
+          feature flag (default ON — see lib/features.ts). */}
+      {!ended && !hudHidden && isFeatureEnabled("arcade") && (
         <ArcadeHUD
           reducedMotion={reducedMotion}
           onClose={() => setHudHidden(true)}
+          plantId={plant.id}
+          strainName={strain?.slug ?? strain?.name}
           chainSlot={
             ALGO_ENABLED ? (
               <ChainRow
@@ -705,7 +708,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           }
         />
       )}
-      {!ended && hudHidden && (
+      {!ended && hudHidden && isFeatureEnabled("arcade") && (
         <button
           onClick={() => setHudHidden(false)}
           aria-label="Show arcade controls"

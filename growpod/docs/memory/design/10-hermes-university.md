@@ -80,7 +80,12 @@
 
 ## What must NOT drift
 
-- Produce-once: no code path may narrate per-delivery/variable text with a live key.
+- Produce-once: no code path may narrate per-delivery/variable text with a live key, and (2026-
+  07-02) no code path may call the lecture provider for a `course_key` that already has a saved
+  `LectureContent` row.
 - `LearnerModelService.apply` stays the only learner-profile writer (audited).
-- University stays NON-ECONOMIC (no GROW ledger writes from learner/engagement/agents).
+- `KnowledgeService.append` (design/11) stays the only writer of `knowledge_events` — append-
+  only, never updated/deleted by app code (2026-07-02).
+- University stays NON-ECONOMIC (no GROW ledger writes from learner/engagement/agents/knowledge
+  capture).
 - No overhaul: the systems above are kept and tightened, not replaced.

@@ -22,7 +22,8 @@ export type GrowEventType =
   | "STAGE_TRANSITION"
   | "HARVEST"
   | "GENETIC_DISCOVERY"
-  | "REWIND";
+  | "REWIND"
+  | "ARCADE_SCORE";
 
 export interface GrowEvent {
   v: 1;
@@ -103,6 +104,12 @@ export function logGeneticDiscovery(plantId: string, strain: string, traitName: 
 }
 export function logRewind(plantId: string, strain: string, fromDay: number, toDay: number) {
   enqueue(mk("REWIND", plantId, strain, { from_day: fromDay, to_day: toDay }));
+}
+/** Arcade mini-game score receipt (e.g. Trichome Rush). Cosmetic/local score
+ *  only — never a currency or economy mutation. `gameId` identifies the mini-
+ *  game (e.g. "trichome-rush") so the log can grow to cover future games. */
+export function logArcadeScore(plantId: string, strain: string, gameId: string, score: number, comboPeak: number) {
+  enqueue(mk("ARCADE_SCORE", plantId, strain, { game_id: gameId, score, combo_peak: comboPeak }));
 }
 
 /** Send a batch of events as one or more atomic groups (≤16 each). Returns tx ids. */

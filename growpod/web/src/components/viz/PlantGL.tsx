@@ -415,16 +415,20 @@ function Pistils({ assembly }: { assembly: PlantAssembly }) {
   return total ? <instancedMesh key={`p${total}`} ref={ref} args={[geom, mat, total]} /> : null;
 }
 
-function SugarLeaves({ assembly }: { assembly: PlantAssembly }) {
+/** Sugar-coated frosted white-green the sugar leaves lerp toward so they read as
+ * the resin-dusted leaflets poking through the bud, not dark spikes. */
+const SUGAR_FROST = new THREE.Color(0.74, 0.83, 0.74);
+
+function SugarLeaves({ assembly, frost }: { assembly: PlantAssembly; frost: number }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geom = useMemo(makeSugarLeafGeom, []);
   const mat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        roughness: 0.5,
-        metalness: 0.04,
+        roughness: 0.42,
+        metalness: 0.03,
         side: THREE.DoubleSide,
-        emissive: new THREE.Color(0.03, 0.05, 0.03),
+        emissive: new THREE.Color(0.05, 0.07, 0.06),
       }),
     [],
   );
@@ -455,7 +459,11 @@ function SugarLeaves({ assembly }: { assembly: PlantAssembly }) {
         d.scale.setScalar(leaf.scale * c.width * 2.4);
         d.updateMatrix();
         mesh.setMatrixAt(idx, d.matrix);
-        mesh.setColorAt(idx, col.setRGB(leaf.color[0], leaf.color[1], leaf.color[2]));
+        // Sugar-dust the leaflets toward frosted white-green (heavier up the cola)
+        // so they read as resin-caked sugar leaves, not dark spikes.
+        const hf = Math.min(1, Math.max(0, leaf.pos[1]));
+        col.setRGB(leaf.color[0], leaf.color[1], leaf.color[2]).lerp(SUGAR_FROST, Math.min(0.6, frost * (0.25 + 0.4 * hf)));
+        mesh.setColorAt(idx, col);
         idx++;
       }
     }
@@ -571,7 +579,7 @@ function PlantScene({
         <FanLeaves assembly={assembly} seed={seed} />
         <ColaCores assembly={assembly} coreColor={coreColor} />
         <Calyxes assembly={assembly} frost={dna.trichomeDensity} />
-        <SugarLeaves assembly={assembly} />
+        <SugarLeaves assembly={assembly} frost={dna.trichomeDensity} />
         <Pistils assembly={assembly} />
         <TrichomeLayer assembly={assembly} lod={lod} />
       </group>

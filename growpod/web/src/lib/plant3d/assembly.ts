@@ -203,7 +203,7 @@ function buildOneCola(
     lod.sugar > 0
       ? buildSugarLeaves(cola, {
           seed,
-          amount: dna.sugarLeafChance * 4 * lod.sugar,
+          amount: dna.sugarLeafChance * 4.6 * lod.sugar,
           frost: trich,
           isMobile: satellite,
         })

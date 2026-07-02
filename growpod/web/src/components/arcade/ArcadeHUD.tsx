@@ -11,6 +11,7 @@
 // the Phase-2 chain row is mounted via the optional `chainSlot`.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import {
   useBoostStore,
   BOOST_CONFIG,
@@ -22,6 +23,13 @@ import {
 import { useRewindStore } from "@/lib/arcade/timeRewind";
 import { resumeAudio, playBoostApply, playRewindActive } from "@/lib/arcade/soundHooks";
 
+// Trichome Rush overlay — lazy so its game-loop code stays out of the base
+// ArcadeHUD bundle until a player actually opens it.
+const TrichomeRush = dynamic(
+  () => import("@/components/arcade/TrichomeRush").then((m) => m.TrichomeRush),
+  { ssr: false, loading: () => null },
+);
+
 function fmtMult(m: number): string {
   return Number.isInteger(m) ? `${m}×` : `${m}×`;
 }
@@ -30,13 +38,19 @@ export function ArcadeHUD({
   reducedMotion = false,
   onClose,
   chainSlot,
+  plantId,
+  strainName,
 }: {
   reducedMotion?: boolean;
   /** Dismiss the HUD (clean simulation mode). */
   onClose?: () => void;
   /** Phase-2 chain row (WalletConnect + mint). Rendered above the boost buttons. */
   chainSlot?: ReactNode;
+  /** Optional plant context, forwarded to Trichome Rush's best-effort receipt. */
+  plantId?: string;
+  strainName?: string;
 }) {
+  const [rushOpen, setRushOpen] = useState(false);
   const applyBoost = useBoostStore((s) => s.applyBoost);
   const activeBoost = useBoostStore((s) => s.activeBoost);
   const boostExpiresAt = useBoostStore((s) => s.boostExpiresAt);
@@ -213,8 +227,26 @@ export function ArcadeHUD({
             <span className="text-base leading-none">⏪</span>
             <span className="font-mono text-[8px] uppercase tracking-wide">Rewind</span>
           </button>
+
+          {/* Trichome Rush launcher. */}
+          <button
+            onClick={() => setRushOpen(true)}
+            aria-label="Play Trichome Rush"
+            className="flex min-h-[56px] w-12 flex-none flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/30 bg-[#0d1d2b] text-cyan-200/80 transition-colors hover:border-cyan-300/60"
+          >
+            <span className="text-base leading-none">🧬</span>
+            <span className="font-mono text-[8px] uppercase tracking-wide">Rush</span>
+          </button>
         </div>
       </div>
+
+      <TrichomeRush
+        open={rushOpen}
+        onClose={() => setRushOpen(false)}
+        reducedMotion={reducedMotion}
+        plantId={plantId}
+        strainName={strainName}
+      />
     </div>
   );
 }
