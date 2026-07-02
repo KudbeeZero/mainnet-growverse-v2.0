@@ -159,41 +159,43 @@ export function buildPlantSkeleton(sil: Silhouette, seed: number): PlantSkeleton
     // lower branches keep their skirt reach from lowerSpread.
     const domCut = 1 - sil.apicalDominance * hf * 0.92;
     const shorten = 1 - sil.upperShorten * hf;
-    const lenBase = height * 0.5 * skirt;
-    const length = clamp(lenBase * shorten * domCut * (0.85 + rnd() * 0.3), height * 0.08, height * 0.62);
+    const lenBase = height * 0.34 * skirt;
+    const length = clamp(lenBase * shorten * domCut * (0.85 + rnd() * 0.3), height * 0.08, height * 0.46);
 
     // A pair of branches at each node (decussate), rotated by the golden angle
     // between nodes so the canopy fills evenly rather than stacking in a plane.
     for (let s = 0; s < 2; s++) {
       const az = azimuth + s * Math.PI + (rnd() - 0.5) * 0.5;
       const out: Vec3 = [Math.cos(az), 0, Math.sin(az)];
-      // Path: springs out low, then arcs upward (buds held high). branchStrength
-      // lifts the tip; heavy buds (budWeightMul) would sag it, already folded in.
       const o = node.pos;
+      // A straight-ish branch climbing out and up at ~35–60° (steeper when the
+      // stems are sturdy / apical). No inward curl — the tip ends past the elbow
+      // so the cola clearly sits ON the branch tip (reference 3), not looped back.
+      const theta = 0.62 + 0.5 * upright; // up-angle in radians
+      const horiz = length * Math.cos(theta);
+      const vert = length * Math.sin(theta);
+      const tip: Vec3 = [o[0] + out[0] * horiz, o[1] + vert, o[2] + out[2] * horiz];
       const elbow: Vec3 = [
-        o[0] + out[0] * length * 0.52,
-        o[1] + length * (0.1 + 0.12 * upright),
-        o[2] + out[2] * length * 0.52,
+        o[0] + out[0] * horiz * 0.5,
+        o[1] + vert * 0.42,
+        o[2] + out[2] * horiz * 0.5,
       ];
-      const tip: Vec3 = [
-        o[0] + out[0] * length * (0.72 - 0.28 * upright),
-        o[1] + length * (0.42 + 0.9 * upright),
-        o[2] + out[2] * length * (0.72 - 0.28 * upright),
-      ];
+      // Gentle upward bow: pull the mid a touch above the chord.
       const mid: Vec3 = [
-        (o[0] + tip[0]) * 0.5 + out[0] * length * 0.06,
-        lerp(o[1], tip[1], 0.5) + length * 0.08,
-        (o[2] + tip[2]) * 0.5 + out[2] * length * 0.06,
+        o[0] + out[0] * horiz * 0.76,
+        o[1] + vert * 0.72 + length * 0.03,
+        o[2] + out[2] * horiz * 0.76,
       ];
-      const colaAxis = norm([tip[0] - elbow[0], (tip[1] - elbow[1]) * 1.5 + length * 0.2, tip[2] - elbow[2]]);
+      // Side cola points mostly UP with a little outward lean (like the ref).
+      const colaAxis = norm([out[0] * 0.4, 1, out[2] * 0.4]);
 
       // Side cola: smaller than the leader, sized off branch length × colaScale.
-      const colaHeight = length * lerp(0.62, 0.4, hf) * sil.colaScale;
-      const colaWidth = colaHeight * 0.3;
+      const colaHeight = length * lerp(0.58, 0.4, hf) * sil.colaScale;
+      const colaWidth = colaHeight * 0.4;
 
       // Fan-leaf slots: a big node fan at the branch base + a couple along it.
       const leafSlots: LeafSlot[] = [];
-      const nodeLeafSize = height * 0.16 * sil.nodeLeaf;
+      const nodeLeafSize = height * 0.11 * sil.nodeLeaf;
       const slotCount = 2 + Math.floor(rnd() * 2);
       for (let l = 0; l < slotCount; l++) {
         const lt = l / Math.max(1, slotCount - 1); // 0 base .. 1 near tip

@@ -38,10 +38,11 @@ export function buildFanLeafOutlines(leaflets: number, seed: number): Leaflet[] 
     const k = i - half; // -half .. +half (0 = centre)
     const angle = k * spread;
     // Central leaflet longest; falls off toward the outer fingers.
-    const lenFall = 1 - 0.42 * Math.abs(k) / Math.max(1, half);
-    const L = (0.9 + 0.2 * rnd()) * lenFall;
-    const W = 0.15 * lenFall * (0.9 + 0.2 * rnd());
-    const teeth = 4; // saw-teeth per side
+    const lenFall = 1 - 0.4 * Math.abs(k) / Math.max(1, half);
+    const L = (0.95 + 0.2 * rnd()) * lenFall;
+    // Slim lance fingers (cannabis leaflets are narrow, not broad blades).
+    const W = 0.092 * lenFall * (0.9 + 0.2 * rnd());
+    const teeth = 5; // saw-teeth per side
 
     // Build the outline up one side (base→tip) then down the other, adding
     // little outward teeth so edges are serrated.
@@ -52,7 +53,7 @@ export function buildFanLeafOutlines(leaflets: number, seed: number): Leaflet[] 
       // Lance width profile: swells low, tapers to a point.
       const wsw = Math.sin(Math.PI * (0.1 + 0.85 * t)) * W;
       const y = t * L;
-      const tooth = s === teeth ? 0 : (s % 2 === 0 ? 1.28 : 0.85);
+      const tooth = s === teeth ? 0 : (s % 2 === 0 ? 1.18 : 0.86);
       right.push([wsw * tooth, y]);
       left.push([-wsw * tooth, y]);
     }
