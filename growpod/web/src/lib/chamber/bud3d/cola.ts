@@ -171,5 +171,67 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
       });
     }
   }
+
+  // --- Axillary sub-shoots (compound raceme) ---------------------------------
+  // Each phytomer's axillary shoot repeats the whole flower unit, so a mature cola
+  // is a compound raceme: smaller sub-colas bud OUTWARD from the lower-mid nodes,
+  // giving the fat, lumpy, "many buds fused" look instead of one smooth spindle.
+  // Only larger, developed colas branch this way (a tiny nug stays a single spike,
+  // and the close-up macro bud — densityMul 1 — is left as an unbranched cola).
+  if (densRoot > 1.15 && dev > 0.35 && out.length < cap) {
+    const subCount = Math.min(7, Math.floor((densRoot - 1.15) * 2.1 * (0.5 + 0.5 * dev)));
+    for (let s = 0; s < subCount && out.length < cap; s++) {
+      // Attach point: lower-to-mid on the main axis, on its surface.
+      const fBase = 0.18 + rnd() * 0.5;
+      spiral += GOLDEN_ANGLE;
+      const az0 = spiral;
+      const attachR = Rmax * widthCurve(fBase) * 0.85;
+      const cx = Math.cos(az0) * attachR;
+      const cz = Math.sin(az0) * attachR;
+      const cy = fBase * H;
+
+      // The sub-cola is a short phytomer stack leaning outward as it rises.
+      const subLen = (0.13 + 0.12 * rnd()) * H * (0.6 + 0.4 * dev);
+      const subRmax = Rmax * (0.32 + 0.14 * rnd());
+      const subNodes = 3 + Math.floor(rnd() * 3);
+      const lean = 0.4; // outward lean fraction vs. upward growth
+      let subSpiral = az0 * 1.7;
+
+      for (let k = 0; k < subNodes && out.length < cap; k++) {
+        const su = subNodes > 1 ? k / (subNodes - 1) : 0;
+        const st = 1 - Math.pow(1 - su, 1.15);
+        const swc = widthCurve(st);
+        const sringR = subRmax * swc;
+        const ncx = cx + Math.cos(az0) * lean * subLen * st;
+        const ncz = cz + Math.sin(az0) * lean * subLen * st;
+        const ncy = cy + st * subLen;
+
+        subSpiral += GOLDEN_ANGLE;
+        const sbracts = Math.max(2, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * swc) * 1.25 * densRoot));
+        for (let m = 0; m < sbracts && out.length < cap; m++) {
+          const az = subSpiral + (rnd() - 0.5) * 1.1;
+          const rr = sringR * (0.5 + 0.45 * rnd());
+          const x = ncx + Math.cos(az) * rr;
+          const z = ncz + Math.sin(az) * rr;
+          const y = ncy + (rnd() - 0.5) * 0.02;
+
+          const sizeUnit = (dna.calyxSizeMin + (dna.calyxSizeMax - dna.calyxSizeMin) * rnd()) / Math.max(1, dna.budHeight);
+          const swell = 0.7 + 0.6 * dev;
+          const w = sizeUnit * H * swell * (0.9 + 0.35 * swc) * 0.86; // sub-bracts a touch smaller
+          const hh = w * (1.18 + 0.55 * (dna.foxtailBias ?? 0));
+
+          out.push({
+            pos: [x, y, z],
+            scale: [w, hh, w],
+            rot: [Math.atan2(z - ncz, sringR || 1) * 0.4, az, (rnd() - 0.5) * 0.6],
+            color: hslToRgb(pickPaletteColor(dna.palette, rnd())),
+            node: 1000 + s * 16 + k,
+            primary: m === 0,
+          });
+        }
+      }
+    }
+  }
+
   return out;
 }
