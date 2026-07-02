@@ -67,6 +67,7 @@ repo-relative (under `src/growpodempire/` unless noted); every ✅ here is check
 | `design/09-master-grower-bot.md` | extends `04`/advisor — `services/advisor_service.py` · `ai/provider.py`; RAG-over-corpus Master Grower bot + monetization (sell guidance, decoupled from the GROW ledger) | ⬜ research/spec (immersive-university) |
 | `design/10-hermes-university.md` | wiring truth + identity for **HERMES University** — `services/learner_model_service.py` · `services/admissions_service.py`/`roadmap_service.py` · `ai/elevenlabs_narrator.py` · `api/audio_prewarm.py` · `data/curriculum.yaml` · `data/skills.yaml` · `data/assessments/` · `web/src/app/university/` | ✅ audited 2026-07-02; produce-once audio + mastery fix live |
 | `design/11-global-learning-memory.md` | personalized experience + the global learning memory — `services/learner_model_service.py` · `services/master_grower_service.py` · `services/lecturer_service.py` · `db/models.py` (planned `knowledge_events`) | ⬜ design (owner directive 2026-07-02); P1–P4 build order |
+| `design/12-arcade-layer.md` | arcade layer + control-panel map — `web/src/components/command/PodCommandCenter.tsx` · `web/src/lib/arcade/` · `web/src/lib/chain/algorand/growEvents.ts` · `web/src/lib/plant3d/` (Cola Builder) | ⬜ design (owner directive 2026-07-02); recon done, 6-game build order |
 
 **What the sim engine actually reads today** (`simulation/engine.py`): water, nutrient (single
 scalar), temperature, humidity, pH, **light (PPFD)**, **derived leaf VPD**, pest & disease levels;

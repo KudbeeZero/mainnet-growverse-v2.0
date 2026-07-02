@@ -73,7 +73,7 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   Updates local plant visuals + generates challenge scores; OPTIONAL Algorand proof receipts
   for completed challenges (reuses the PR #100 client SIMULATE layer). Builds on the existing
   arcade foundation (`web/src/lib/arcade/` boostEngine/timeRewind) — extend, don't duplicate.
-  Prereq: recon report (control-panel layout + arcade inventory) → design doc → owner approval
+  Recon done + design doc `docs/memory/design/12-arcade-layer.md` (control-panel map + per-game hook map + guardrails + build order). Next: owner approval
   → build. Depends on the plant3d asset for Cola Builder + cosmetic mutation overrides.
 - 🎨 ⬜ **Per-strain procedural fidelity pass** — `GrowChamber`/`BudGL` morphology + bud shape/color
   coverage across all 29 strains (the follow-up track from the 2026-07-02 revert ADR).
