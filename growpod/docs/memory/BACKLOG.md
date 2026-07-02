@@ -20,10 +20,18 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   (`web/src/app/university/page.tsx`). No data-model changes.
 - 🏛️ 🔨 **University wiring audit** — end-to-end trace (curriculum → skills → learner model → agents →
   exams → web). Owner suspects mis-wiring; findings + fixes land in the HERMES memory doc.
-- 🏛️ 🔨 **Produce-once lesson audio (ElevenLabs)** — lectures must be produced once and saved, never
-  re-billed per delivery. Today `/lecture` can mint a fresh AI lecture *and* fresh TTS per attend
-  (content-hash keyed); the produced-once path exists only on `/university/courses/<key>/audio`.
-  Unify on produce-once; `ELEVENLABS_API_KEY` stays host-secret-only (never in chat/repo).
+- 🏛️ 🔨 **University "made real" — produce-once TEXT + replay + global capture
+  (owner directive 2026-07-02)** — closes the produce-once gap for real: lecture AUDIO was
+  already cached (2026-07-02 fix), but lecture TEXT was still regenerated on every single
+  request (a live bug against the HERMES hard rule). New `LectureContent` cache (one per
+  course, mirrors `LectureAudio`) makes `LecturerService.teach()` cache-first — every player
+  now gets the SAME saved lecture, and it's instantly replayable. Exam replay: a `last_result`
+  store on `AssessmentAttempt` so a player can review their most recent graded attempt
+  (item-level, not just best_score). Global memory Phase 1 (design/11): new `knowledge_events`
+  append-only table + `KnowledgeService.append()` single writer, hooked at Master Grower asks
+  (non-refused only), lecture generation (cache-miss only), and exam submissions — nothing any
+  player generates is lost, feeding future retrieval (P3). Non-economic; ledger-free by test.
+
 - 🏛️ ⬜ **HERMES memory layer** — `docs/memory/design/HERMES_UNIVERSITY.md`: identity, layer map,
   wiring truths, lesson-production pipeline, open work (this session starts it).
 - 🔴 ⬜ **Security follow-ups from PR #104** (before public launch): settlement **deposit** redesign
