@@ -33,6 +33,12 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   missing `snapshot.yml` backup workflow (or correct SECURITY.md); enforce CODEOWNERS on protected
   surfaces; replace post-merge `drizzle-kit push` with generated migrations; delete the stale nested
   `growpod/artifacts/api-server` copy; dev-bypass explicit opt-in for previews.
+- 🏛️ ⬜ **Global Learning Memory + personalization (design/11, owner directive 2026-07-02)** —
+  P1 `knowledge_events` capture (append-only, anonymized-on-read, single-writer) at the 4
+  generative call sites; P2 admissions persistence + `personal_context` into lecture/Master
+  Grower; P3 `search_global_knowledge` retrieval tool (the teacher gets smarter from every
+  player); P4 `global_insights` rollups + class-stats surface. Spec:
+  `docs/memory/design/11-global-learning-memory.md`.
 - 🎨 ⬜ **Per-strain procedural fidelity pass** — `GrowChamber`/`BudGL` morphology + bud shape/color
   coverage across all 29 strains (the follow-up track from the 2026-07-02 revert ADR).
 
