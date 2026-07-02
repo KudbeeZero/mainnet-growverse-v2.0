@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { buildPlantSkeleton } from "@/lib/plant3d/skeleton";
 import { buildFanLeafOutlines, buildLeafPlacements } from "@/lib/plant3d/leaves";
-import { buildPlantAssembly, LOD } from "@/lib/plant3d/assembly";
+import { buildPlantAssembly, chunkifyCola, fatWidthCurve, LOD } from "@/lib/plant3d/assembly";
+import { buildCola } from "@/lib/chamber/bud3d/cola";
 import { budDnaFor } from "@/lib/chamber/budDna";
 import { budColorForStrain, silhouetteFor } from "@/lib/chamber/strainVisuals";
 
@@ -74,6 +75,40 @@ describe("buildLeafPlacements", () => {
     expect(a).toEqual(b);
     const slotTotal = sk.branches.reduce((n, br) => n + br.leafSlots.length, 0);
     expect(a.length).toBe(slotTotal);
+  });
+});
+
+describe("fatWidthCurve (chunky, no-turd cola profile)", () => {
+  it("stays fat through the middle then rounds to a modest tip", () => {
+    // Fat (>= ~0.8 of max) across the whole body up to the last third...
+    for (let t = 0; t <= 0.66; t += 0.06) expect(fatWidthCurve(t)).toBeGreaterThan(0.78);
+    // ...then tapers over the last third, but never to a sharp zero point.
+    expect(fatWidthCurve(0.85)).toBeLessThan(fatWidthCurve(0.6));
+    expect(fatWidthCurve(1)).toBeLessThan(0.2);
+    // Fatter through the body than the original smooth taper it replaces.
+    const orig = (t: number) => Math.sin(Math.PI * (0.12 + 0.82 * t));
+    expect(fatWidthCurve(0.75)).toBeGreaterThan(orig(0.75));
+  });
+});
+
+describe("chunkifyCola", () => {
+  const raw = buildCola(DNA, 99, { budDev: 1, maxInstances: 120 });
+
+  it("is deterministic and preserves the instance count", () => {
+    expect(chunkifyCola(raw, 99)).toEqual(chunkifyCola(raw, 99));
+    expect(chunkifyCola(raw, 99).length).toBe(raw.length);
+  });
+
+  it("swells the calyxes (chunkier than the raw bud)", () => {
+    const a = chunkifyCola(raw, 99);
+    const grew = a.filter((c, i) => c.scale[0] > raw[i].scale[0]).length;
+    expect(grew).toBe(raw.length); // every calyx swells
+  });
+
+  it("keeps calyxes within a sane radius (no runaway lobes)", () => {
+    const a = chunkifyCola(raw, 99);
+    const maxR = Math.max(...a.map((c) => Math.hypot(c.pos[0], c.pos[2])));
+    expect(maxR).toBeLessThan(1.5);
   });
 });
 
