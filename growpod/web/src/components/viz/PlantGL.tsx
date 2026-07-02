@@ -635,7 +635,7 @@ export function PlantGL({
         <directionalLight position={[-4, 2, 2]} intensity={0.5} color="#eaf4ff" />
         <directionalLight position={[0, 3, -5]} intensity={0.7} color="#ffffff" />
         <PlantScene dna={dna} sil={sil} seed={seed} lod={lod} spin={spin} />
-        <TriProbe />
+        {process.env.NODE_ENV === "development" && <TriProbe />}
         <OrbitControls
           enablePan={false}
           target={[0, cameraTight ? 1.45 : 0.35, 0]}
