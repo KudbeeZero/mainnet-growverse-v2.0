@@ -6,7 +6,7 @@
 // diverge again. Output is plain instance transforms in UNIT space (~1 tall,
 // centred on the origin by the renderer); three.js wiring lives in BudGL.tsx.
 
-import { mulberry32 } from "../morphology";
+import { mulberry32, lerp, clamp, smooth } from "../morphology";
 import { pickPaletteColor, type BudDNA, type PaletteColor } from "../budDna";
 
 export interface ColaInstance {
@@ -47,10 +47,18 @@ export function hslToRgb({ hue, sat, lit }: Pick<PaletteColor, "hue" | "sat" | "
   return [hk(h + 1 / 3), hk(h), hk(h - 1 / 3)];
 }
 
-/** A bud-width curve along the cola: rounded base, fattest in the lower-middle,
- * tapering to a tip — so it reads as a cola, not a ball. `t` is 0 (base) → 1 (tip). */
+/** A bud-width curve along the cola: a SPEAR/CONE, not a lens or a ball — quick
+ * fill from the base, a full-bodied plateau through the lower-mid, then a long
+ * tapering cone to a point at the apex. This is the shape of a real cola (and
+ * matches the reference architecture: "elongated spear/cone, not a round ball").
+ * `t` is 0 (base) → 1 (tip). */
 function widthCurve(t: number): number {
-  return Math.sin(Math.PI * (0.12 + 0.82 * t));
+  const c = clamp(t, 0, 1);
+  if (c < 0.2) return lerp(0.42, 1.0, smooth(c / 0.2));
+  if (c < 0.5) return lerp(1.0, 0.95, (c - 0.2) / 0.3);
+  const k = (c - 0.5) / 0.5;
+  // Convex power taper (not a symmetric sine) so the tip comes to a real point.
+  return 0.95 * Math.pow(1 - k, 1.4) + 0.02;
 }
 
 export interface ColaSilhouette {
@@ -143,16 +151,19 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
 
     // A cluster of bracts at THIS node — enough that neighbouring node clusters
     // fuse into a solid, clad cola while still reading as stacked flower nodes.
-    const bracts = Math.max(2, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * wc) * 1.95 * densRoot));
+    const bracts = Math.max(2, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * wc) * 2.35 * densRoot));
     for (let j = 0; j < bracts && out.length < cap; j++) {
-      // Moderate angular spread around the node azimuth so the bracts CLUSTER at
-      // the node (a wide even spread read as a smooth shell, not stacked nodes).
-      const az = nodeAz + (rnd() - 0.5) * 1.0;
-      const r = ringR * (0.55 + 0.42 * rnd());
+      // Tight angular spread around the node azimuth — tighter than a wide even
+      // spread, so bracts CLUSTER and overlap like scales instead of scattering
+      // into a sparse, gappy shell (the "berries floating on a ball" problem).
+      const az = nodeAz + (rnd() - 0.5) * 0.8;
+      // Hug close to the true surface (0.62..1.02×) so the cladding is dense and
+      // the smaller backstop core underneath never shows through.
+      const r = ringR * (0.62 + 0.4 * rnd());
       const x = Math.cos(az) * r;
       const z = Math.sin(az) * r;
       // Bracts hug the node's height (small jitter) so the cluster stays one node.
-      const y = t * H + (rnd() - 0.5) * 0.025;
+      const y = t * H + (rnd() - 0.5) * 0.018;
 
       const sizeUnit = (dna.calyxSizeMin + (dna.calyxSizeMax - dna.calyxSizeMin) * rnd()) / Math.max(1, dna.budHeight);
       const swell = 0.7 + 0.6 * dev;
@@ -210,10 +221,10 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
         const ncy = cy + st * subLen;
 
         subSpiral += GOLDEN_ANGLE;
-        const sbracts = Math.max(2, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * swc) * 1.25 * densRoot));
+        const sbracts = Math.max(2, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * swc) * 1.6 * densRoot));
         for (let m = 0; m < sbracts && out.length < cap; m++) {
-          const az = subSpiral + (rnd() - 0.5) * 1.1;
-          const rr = sringR * (0.5 + 0.45 * rnd());
+          const az = subSpiral + (rnd() - 0.5) * 0.85;
+          const rr = sringR * (0.62 + 0.4 * rnd());
           const x = ncx + Math.cos(az) * rr;
           const z = ncz + Math.sin(az) * rr;
           const y = ncy + (rnd() - 0.5) * 0.02;

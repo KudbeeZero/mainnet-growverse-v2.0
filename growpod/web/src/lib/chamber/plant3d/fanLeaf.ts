@@ -47,9 +47,11 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
 }
 
 /**
- * Build one serrated leaflet as a list of 2D points (XY), tip at the top.
- * Returns the outline going up the right side, across the tip, and back down
- * the left side.
+ * Build one serrated LANCEOLATE leaflet as a list of 2D points (XY), tip at the
+ * top. Narrow width:length ratio (real cannabis leaflets run ~1:6-1:8) and many
+ * fine teeth — a cannabis leaflet has a long, deeply serrated edge, not a few
+ * big scallops. Returns the outline going up the right side, across the tip,
+ * and back down the left side.
  */
 function leafletOutline(
   length: number,
@@ -57,32 +59,27 @@ function leafletOutline(
   teeth: number,
 ): [number, number][] {
   const pts: [number, number][] = [];
-  // Right side going up
   pts.push([0, 0]);
-  const teethCount = Math.max(2, teeth);
+  const teethCount = Math.max(4, teeth);
   for (let i = 0; i < teethCount; i++) {
     const t = (i + 0.5) / teethCount;
     const y = t * length;
-    // Leaflet is widest around 30-40% up, then tapers to the tip.
-    const envelope = Math.sin(Math.PI * (0.15 + 0.7 * t));
+    // Leaflet is widest around 30% up, then tapers to a sharp tip.
+    const envelope = Math.sin(Math.PI * (0.1 + 0.75 * t)) * (1 - 0.15 * t);
     const w = width * envelope;
-    const toothDepth = w * 0.18;
-    // Outer point of serration
-    pts.push([w + toothDepth * 0.5, y - length * 0.02]);
-    // Inner notch
-    pts.push([w - toothDepth * 0.5, y + length * 0.02]);
+    const toothDepth = w * 0.22;
+    pts.push([w + toothDepth * 0.5, y - length * 0.012]);
+    pts.push([w - toothDepth * 0.5, y + length * 0.012]);
   }
-  // Tip
   pts.push([0, length]);
-  // Left side going down (mirror)
   for (let i = teethCount - 1; i >= 0; i--) {
     const t = (i + 0.5) / teethCount;
     const y = t * length;
-    const envelope = Math.sin(Math.PI * (0.15 + 0.7 * t));
+    const envelope = Math.sin(Math.PI * (0.1 + 0.75 * t)) * (1 - 0.15 * t);
     const w = width * envelope;
-    const toothDepth = w * 0.18;
-    pts.push([-w + toothDepth * 0.5, y + length * 0.02]);
-    pts.push([-w - toothDepth * 0.5, y - length * 0.02]);
+    const toothDepth = w * 0.22;
+    pts.push([-w + toothDepth * 0.5, y + length * 0.012]);
+    pts.push([-w - toothDepth * 0.5, y - length * 0.012]);
   }
   return pts;
 }
@@ -105,77 +102,65 @@ export function buildFanLeaf(opts: LeafOpts): LeafGeometry {
   const allIndices: number[] = [];
   const allColors: number[] = [];
 
-  // Petiole (stem) — a short segment before the leaflets fan out.
+  // Petiole (stem) — a short segment before the leaflets fan out. EVERY leaflet
+  // radiates from the SAME point at its tip (palmately compound — fingers from
+  // one palm), not from staggered points up the stem; that shared origin plus a
+  // wide angular spread is what separates the leaflets into a real hand shape
+  // instead of one fused paddle.
   const petioleLen = 0.12;
+  const originY = petioleLen;
 
-  // Central leaflet — the longest.
-  const centralLen = 0.7;
-  const centralW = 0.08 * wMul;
-  const centralTeeth = 5 + pairs;
-  const centralOutline = leafletOutline(centralLen, centralW, centralTeeth);
+  // Central leaflet — the longest, points straight up (angle 0).
+  const centralLen = 0.72;
+  const centralW = 0.11 * wMul;
+  const centralTeeth = 9 + pairs * 2;
 
-  // Triangulate the central leaflet as a triangle fan from centroid.
-  const cCx = 0, cCy = petioleLen + centralLen * 0.4;
-  const baseIdx = allVerts.length / 3;
-  // Add centroid
-  allVerts.push(cCx, cCy, 0);
-  const midColor = Math.min(1, baseG * 0.95);
-  allColors.push(baseR * 0.9, midColor, baseB * 0.85);
+  // Angular spread per pair, widening toward the outer leaflets (a real fan leaf's
+  // outermost pair splays far out / slightly down, not bunched near the center).
+  const ANGLE_STEPS = [0, 0.46, 0.86, 1.18, 1.42]; // radians, index = pair number
+  // Outer leaflets shrink faster than a linear falloff (short "pinky" leaflets).
+  const LEN_STEPS = [1, 0.86, 0.68, 0.5, 0.36];
 
-  for (let i = 0; i < centralOutline.length; i++) {
-    const [ox, oy] = centralOutline[i];
-    allVerts.push(ox, oy + petioleLen, 0);
-    // Tips lighter, base darker.
-    const tf = oy / centralLen;
-    allColors.push(
-      Math.min(1, baseR * (0.85 + 0.2 * tf)),
-      Math.min(1, baseG * (0.9 + 0.15 * tf)),
-      Math.min(1, baseB * (0.8 + 0.25 * tf)),
-    );
-    if (i > 0) {
-      allIndices.push(baseIdx, baseIdx + i, baseIdx + i + 1);
+  function addLeaflet(len: number, width: number, teeth: number, angle: number) {
+    const outline = leafletOutline(len, width, teeth);
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const baseIdx = allVerts.length / 3;
+
+    // Centroid for the triangle fan.
+    const rcx = sin * len * 0.42;
+    const rcy = originY + cos * len * 0.42;
+    allVerts.push(rcx, rcy, 0);
+    allColors.push(baseR * 0.9, Math.min(1, baseG * 0.94), baseB * 0.84);
+
+    for (let i = 0; i < outline.length; i++) {
+      const [ox, oy] = outline[i];
+      // Rotate the outline about the SHARED origin (petiole tip).
+      const rx = cos * ox + sin * oy;
+      const ry = originY + (-sin * ox + cos * oy);
+      allVerts.push(rx, ry, 0);
+      const tf = oy / len;
+      allColors.push(
+        Math.min(1, baseR * (0.84 + 0.2 * tf)),
+        Math.min(1, baseG * (0.89 + 0.16 * tf)),
+        Math.min(1, baseB * (0.79 + 0.26 * tf)),
+      );
+      if (i > 0) allIndices.push(baseIdx, baseIdx + i, baseIdx + i + 1);
     }
+    allIndices.push(baseIdx, baseIdx + outline.length, baseIdx + 1);
   }
-  // Close the fan
-  allIndices.push(baseIdx, baseIdx + centralOutline.length, baseIdx + 1);
 
-  // Side leaflets — progressively shorter, angled outward.
+  addLeaflet(centralLen, centralW, centralTeeth, 0);
+
+  // Side leaflets — progressively shorter AND wider-angled outward, each pair
+  // symmetric about the central leaflet.
   for (let p = 1; p <= pairs; p++) {
-    const pairFrac = p / (pairs + 1);
-    const leafletLen = centralLen * (0.9 - 0.2 * pairFrac);
-    const leafletW = centralW * (0.85 + 0.1 * (wMul > 1 ? 1 : 0));
-    const teeth = Math.max(3, centralTeeth - p);
-    const angle = (0.25 + 0.35 * pairFrac) * (wMul > 1 ? 1.1 : 0.9);
-    const attachY = petioleLen * (0.6 - 0.15 * pairFrac);
-
+    const leafletLen = centralLen * LEN_STEPS[p];
+    const leafletW = centralW * (0.82 - 0.04 * p);
+    const teeth = Math.max(4, centralTeeth - p * 2);
+    const angle = ANGLE_STEPS[p] * (wMul > 1 ? 0.88 : 1.08); // indica: tighter fan; sativa: wider
     for (const sideSign of [-1, 1]) {
-      const outline = leafletOutline(leafletLen, leafletW, teeth);
-      const cos = Math.cos(sideSign * angle);
-      const sin = Math.sin(sideSign * angle);
-
-      const sBaseIdx = allVerts.length / 3;
-      // Centroid of this leaflet (rotated)
-      const rcx = sin * leafletLen * 0.4;
-      const rcy = attachY + cos * leafletLen * 0.4;
-      allVerts.push(rcx, rcy, 0);
-      allColors.push(baseR * 0.88, Math.min(1, baseG * 0.92), baseB * 0.82);
-
-      for (let i = 0; i < outline.length; i++) {
-        const [ox, oy] = outline[i];
-        const rx = cos * ox + sin * oy;
-        const ry = attachY + (-sin * ox + cos * oy);
-        allVerts.push(rx, ry, 0);
-        const tf = oy / leafletLen;
-        allColors.push(
-          Math.min(1, baseR * (0.82 + 0.22 * tf)),
-          Math.min(1, baseG * (0.88 + 0.17 * tf)),
-          Math.min(1, baseB * (0.78 + 0.27 * tf)),
-        );
-        if (i > 0) {
-          allIndices.push(sBaseIdx, sBaseIdx + i, sBaseIdx + i + 1);
-        }
-      }
-      allIndices.push(sBaseIdx, sBaseIdx + outline.length, sBaseIdx + 1);
+      addLeaflet(leafletLen, leafletW, teeth, sideSign * angle);
     }
   }
 

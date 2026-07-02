@@ -226,7 +226,10 @@ function FloraBudCore({
 }: { sites: ColaPlacement[]; dna: BudDNA; dev: DevParams; refColaSize: number; purple: number }) {
   const geom = useMemo(() => {
     const { profile, H } = colaSilhouette(dna);
-    const pts = profile.map(([r, y]) => new THREE.Vector2(r * 0.66, y));
+    // Pulled WELL inside the bract cladding (0.42x, vs. BudGL's close-up 0.66x) —
+    // at whole-plant scale a bigger core pokes through the bracts and reads as a
+    // smooth round berry/egg. It only needs to backstop the gaps between bracts.
+    const pts = profile.map(([r, y]) => new THREE.Vector2(r * 0.42, y));
 
     // Deep understructure colour → muted crown (mirrors BudGL.BudCore).
     const [br, bg, bb] = hslToRgb(pickPaletteColor(dna.palette, 0.5));

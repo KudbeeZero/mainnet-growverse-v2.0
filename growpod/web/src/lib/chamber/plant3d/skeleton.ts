@@ -243,21 +243,22 @@ export function buildPlantSkeleton(opts: BuildPlantOpts): PlantSkeleton {
       const coShare = tops.secondaryShares[topK] / tops.leaderShare;
       // Secondary colas are SUBORDINATE to the main cola and swell in AFTER it —
       // the apical leader "starts to really bud" first and biggest, then the rest
-      // of the top cluster forms up around that foundation.
+      // of the top cluster forms up around that foundation. Capped well under the
+      // main cola's floor (see topCola below) so the hierarchy always reads clearly.
       const sideSwell = clamp((P.budDev - 0.12) / 0.88, 0, 1);
-      const colaScale = lerp(0.5, 0.8, coShare) * SK.colaScale * (0.42 + 0.5 * sideSwell);
+      const colaScale = lerp(0.36, 0.62, coShare) * SK.colaScale * (0.38 + 0.42 * sideSwell);
       budSite = {
         pos: tipPos,
-        scale: Math.min(colaScale, 0.82),
+        scale: Math.min(colaScale, 0.68),
         rot: [side * 0.06, az.az, 0],
         budgetMul: Math.max(0.3, colaScale),
       };
     } else if (P.budDev > 0 && f > S.flowerFrom) {
-      const sizeUp = lerp(0.26, 1.18, Math.pow(f, 1.8));
+      const sizeUp = lerp(0.22, 1.0, Math.pow(f, 1.8));
       const colaScale = sizeUp * (0.5 + 0.5 * P.budDev) * 0.5;
       budSite = {
         pos: tipPos,
-        scale: Math.min(colaScale, 0.55),
+        scale: Math.min(colaScale, 0.48),
         rot: [side * 0.1, az.az, 0],
         budgetMul: Math.max(0.15, colaScale * 0.5),
       };
@@ -355,9 +356,9 @@ export function buildPlantSkeleton(opts: BuildPlantOpts): PlantSkeleton {
   let topCola: ColaPlacement | null = null;
   if (P.budDev > 0) {
     const lateMass = 1 + P.ripe * 0.18;
-    const leaderMul = lerp(0.95, 1.35, tops.leaderShare);
-    let colaScale = SK.colaScale * lateMass * leaderMul * (0.66 + 0.5 * P.budDev);
-    colaScale = Math.min(colaScale, 2.0);
+    const leaderMul = lerp(1.05, 1.5, tops.leaderShare);
+    let colaScale = SK.colaScale * lateMass * leaderMul * (0.7 + 0.5 * P.budDev);
+    colaScale = Math.min(colaScale, 2.4);
     const apex = stem[stem.length - 1].pos;
     topCola = {
       pos: [apex[0], apex[1], apex[2]],
