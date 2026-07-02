@@ -301,7 +301,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       for (let j = 0; j < nH; j++)
         hairs.push({ a: -Math.PI / 2 + (rnd() - 0.5) * 2.2, len: 0.55 + rnd() * 0.6, bend: (rnd() - 0.5) * 1.3, ball: 0.7 + rnd() * 0.4, k: rnd() * 0.85 });
       const tris = [];
-      const nT = Math.round(6 * lush * lush);
+      const nT = Math.round(9 * lush * lush);
       for (let j = 0; j < nT; j++)
         tris.push({ a: rnd() * TAU, len: 0.5 + rnd() * 0.5, headR: 0.7 + rnd() * 0.5, k: rnd(), mat: rnd() });
       clusters.push({
@@ -539,13 +539,15 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
           const sh = motionOK
             ? shimmer(tt, tr.a * 7.13, 0.6 + tr.len * 1.2, SHIMMER_MAX_AMP * 0.7)
             : 1;
-          const hr = tr.headR * Math.max(0.55, cw * 0.013);
+          // Round 4: smaller heads (fatter buds inflated cw, turning fine frost into
+          // scattered snow-specks). A frost is MANY tiny heads, not fewer big dots.
+          const hr = tr.headR * Math.max(0.42, cw * 0.0092);
           ctx!.fillStyle = trichHeadColor(m, clamp(0.85 * sh, 0, 1), purple);
           ctx!.beginPath();
           ctx!.arc(x1, y1, hr, 0, TAU);
           ctx!.fill();
           // faint matte glint (shimmers with the head, not a wet-plastic specular)
-          ctx!.fillStyle = `rgba(236,242,236,${(0.22 * sh).toFixed(2)})`;
+          ctx!.fillStyle = `rgba(236,242,236,${(0.15 * sh).toFixed(2)})`;
           ctx!.beginPath();
           ctx!.arc(x1 - hr * 0.3, y1 - hr * 0.3, hr * 0.26, 0, TAU);
           ctx!.fill();
@@ -776,9 +778,8 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       } else if (P.budDev > 0 && f > S.flowerFrom) {
         const sizeUp = lerp(0.55, 1.15, f);
         const axis = A * (0.055 + 0.10 * f) * S.clusterLen * sizeUp * (0.5 + 0.5 * P.budDev);
-        // Slimmer + more stacked clusters → a small tapered side cola, not a
-        // two-lobed peanut.
-        const baseW = axis * 0.3 * S.clusterFat;
+        // Chunky stacked clusters → a fat little side cola, not a slim slug.
+        const baseW = axis * 0.38 * S.clusterFat;
         const nC = Math.max(3, Math.round(S.bracts * 0.85 * (0.6 + 0.5 * f)));
         nd.site = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1 });
         nd.budRot = nd.side * 0.1;
@@ -789,7 +790,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // on co-cola tops, which read as a clean single cola.
       if (P.budDev > 0 && topK < 0 && f > Math.max(S.flowerFrom, 0.38)) {
         const axis = A * (0.035 + 0.055 * f) * S.clusterLen * (0.5 + 0.5 * P.budDev);
-        const baseW = axis * 0.3 * S.clusterFat;
+        const baseW = axis * 0.37 * S.clusterFat;
         const nC = Math.max(2, Math.round(S.bracts * 0.6 * f));
         nd.nodeBud = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 0.9, lush: 0.7 });
         nd.weight += 0.25 * S.clusterFat;
@@ -805,7 +806,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
           let blSite: FlowerSite | null = null;
           if (P.budDev > 0 && f > S.flowerFrom * 0.8) {
             const axis = A * 0.045 * S.clusterLen * (0.5 + 0.5 * P.budDev);
-            const baseW = axis * 0.3 * S.clusterFat;
+            const baseW = axis * 0.37 * S.clusterFat;
             blSite = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: 3, bracts: Math.max(5, Math.round(S.bracts * 0.7)), fatMul: 0.85, lush: 0.55 });
             nd.weight += 0.2 * S.clusterFat;
           }
@@ -840,7 +841,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // Slim the cola: width is a small fraction of its length (spear taper), not
       // half of it. Chunky strains stay chunkier via clusterFat; spiral sativas
       // are slimmest.
-      const baseW = axis * (S.pattern === "spiral" ? 0.2 : 0.27) * S.clusterFat * (0.92 + 0.12 * P.ripe);
+      const baseW = axis * (S.pattern === "spiral" ? 0.24 : 0.35) * S.clusterFat * (0.92 + 0.12 * P.ripe);
       // Pack more, smaller clusters up the spine so the cola reads as one dense
       // textured column rather than a handful of big teardrops.
       const nC = Math.round(S.bracts * (S.pattern === "spiral" ? 2.1 : 1.5));

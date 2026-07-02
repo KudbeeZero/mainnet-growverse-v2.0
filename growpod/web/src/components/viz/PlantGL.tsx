@@ -95,21 +95,21 @@ function makeColaCoreGeom(): THREE.BufferGeometry {
 
 /** Low-poly ribbed teardrop calyx (cheap version of BudGL's calyx). */
 function makeCalyxGeom(): THREE.BufferGeometry {
-  // A cheap elongated octahedron (8 tris) — a faceted bipyramid that, stacked
-  // and overlapped by the thousand, reads as pointed swollen bud-scales (a
-  // pinecone-like chunky cola) while keeping the whole plant inside the tri
-  // budget. Flat shading so each facet catches the studio light.
-  const geo = new THREE.OctahedronGeometry(1, 0);
-  // Round the equator a touch so it's a plump scale, not a sharp spike.
+  // A rounded icosphere (20 tris) — a plump swollen bud-scale. Stacked and
+  // overlapped by the thousand these read as a chunky, densely-packed calyx
+  // cola, while staying cheap enough to keep the whole plant near the tri
+  // budget. Slightly pinched to a soft point on top for a calyx-y silhouette.
+  const geo = new THREE.IcosahedronGeometry(1, 0);
   const pos = geo.attributes.position;
   const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
-    if (Math.abs(v.y) < 0.9) {
-      v.x *= 1.15;
-      v.z *= 1.15;
-      pos.setXYZ(i, v.x, v.y, v.z);
+    if (v.y > 0.3) {
+      v.x *= 0.72;
+      v.z *= 0.72;
+      pos.setXYZ(i, v.x, v.y * 1.12, v.z);
     }
+    pos.setXYZ(i, pos.getX(i), pos.getY(i), pos.getZ(i));
   }
   geo.computeVertexNormals();
   return geo;
@@ -125,7 +125,7 @@ function makePistilGeom(): THREE.BufferGeometry {
     pts.push(new THREE.Vector3(bend, t, 0));
   }
   const curve = new THREE.CatmullRomCurve3(pts);
-  const tubular = 6, radial = 3;
+  const tubular = 4, radial = 3;
   const geo = new THREE.TubeGeometry(curve, tubular, 0.13, radial, false);
   const pos = geo.attributes.position;
   const c = new THREE.Vector3();

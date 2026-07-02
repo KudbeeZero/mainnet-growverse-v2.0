@@ -157,7 +157,7 @@ function buildOneCola(
    *  a smaller calyx cap and the mobile frost/pistil/sugar budgets. */
   satellite: boolean,
 ): Pick<ColaPlacement, "cola" | "frost" | "pistils" | "sugar"> {
-  const cap = satellite ? Math.round(lod.calyxCap * 0.74) : lod.calyxCap;
+  const cap = satellite ? Math.round(lod.calyxCap * 0.6) : lod.calyxCap;
   const cola = chunkifyCola(buildCola(dna, seed, { budDev: 1, maxInstances: cap }), seed);
   const frost =
     lod.frost > 0
