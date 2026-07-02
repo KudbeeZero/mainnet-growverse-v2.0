@@ -30,6 +30,9 @@ const AUTHORED: Record<string, BudColor> = {
   gelato: { anthocyanin: 0.6, calyxHue: 128, calyxSat: 56, pistilMagenta: 0.2, accentHue: 292, accentFrac: 0.5 },
   // Creamy purple dessert — high anthocyanin, frosty; strong purple accents.
   "wedding-cake": { anthocyanin: 0.5, calyxHue: 122, calyxSat: 50, pistilMagenta: 0.1, accentHue: 288, accentFrac: 0.42 },
+  // Blue-teal sage under silvery frost; warm golden pistils (owner harvest
+  // reference, 2026-07-02). The "blue" is cool desaturated teal, NOT anthocyanin.
+  "blue-dream": { anthocyanin: 0, calyxHue: 158, calyxSat: 32, pistilMagenta: 0 },
 };
 
 /**
@@ -72,6 +75,10 @@ const SILHOUETTES: Record<string, Silhouette> = {
   "white-fire-og": { nodeDensity: 1.1, vertStack: 1.06, branchletFrac: 0.58, lowerSpread: 1.08, upperShorten: 0.32, colaScale: 1.08, nodeLeaf: 1.05, branchStrength: 1.05, budWeightMul: 0.95, apicalDominance: 0.72 },
   gelato: { nodeDensity: 1.18, vertStack: 1.04, branchletFrac: 0.62, lowerSpread: 1.14, upperShorten: 0.3, colaScale: 1.1, nodeLeaf: 1.1, branchStrength: 0.95, budWeightMul: 1.05, apicalDominance: 0.55 },
   "wedding-cake": { nodeDensity: 1.28, vertStack: 1.0, branchletFrac: 0.7, lowerSpread: 1.2, upperShorten: 0.26, colaScale: 1.16, nodeLeaf: 1.14, branchStrength: 0.9, budWeightMul: 1.15, apicalDominance: 0.5 },
+  // Blue Dream — tall OPEN sativa spear (owner harvest reference, 2026-07-02):
+  // one towering main cola + a ring of long secondary colas, airy internodes,
+  // big fan leaves, sturdy upright branches (buds held high, minimal droop).
+  "blue-dream": { nodeDensity: 0.96, vertStack: 1.24, branchletFrac: 0.52, lowerSpread: 1.3, upperShorten: 0.4, colaScale: 1.24, nodeLeaf: 1.18, branchStrength: 1.12, budWeightMul: 0.9, apicalDominance: 0.78 },
 };
 
 /**
