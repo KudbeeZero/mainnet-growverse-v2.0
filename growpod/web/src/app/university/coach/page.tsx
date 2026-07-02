@@ -13,7 +13,7 @@ function CoachInner() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="GROWPOD UNIVERSITY · COACH"
+        eyebrow="HERMES UNIVERSITY · COACH"
         title="Master Grower"
         subtitle="Your free, grounded grow coach — it cites the catalog, the strain encyclopedia, and your live plant state, and never guesses."
         action={

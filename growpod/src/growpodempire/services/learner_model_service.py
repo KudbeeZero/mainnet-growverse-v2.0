@@ -131,7 +131,14 @@ class LearnerModelService:
         teaches (``skills_for_course``) and contribute that course's best_score to
         each of its skills; a skill taught by multiple completed courses takes the
         MAX best_score across them. Deterministic: same attempt rows -> same map,
-        with sorted keys so the stored map is byte-identical run to run."""
+        with sorted keys so the stored map is byte-identical run to run.
+
+        A COMPLETED course also credits its skills at ``MASTERY_THRESHOLD`` even
+        without an exam: most courses have no assessment bank yet, and completion
+        already gates on study time + the live-grow practical. An exam best_score
+        can only raise that floor (MAX), never lower it."""
+        from ..ai.roadmap_mock import MASTERY_THRESHOLD
+        from ..db.models import CourseEnrollment
         from .skills import skills_for_course
 
         attempts = (
@@ -147,6 +154,20 @@ class LearnerModelService:
             cur = best_by_course.get(a.course_key)
             if cur is None or score > cur:
                 best_by_course[a.course_key] = score
+
+        # Completed courses seed their skills at the mastery threshold (floor).
+        completed = (
+            self.session.query(CourseEnrollment)
+            .filter(
+                CourseEnrollment.player_id == player_id,
+                CourseEnrollment.status == "completed",
+            )
+            .all()
+        )
+        for enr in completed:
+            cur = best_by_course.get(enr.course_key)
+            if cur is None or MASTERY_THRESHOLD > cur:
+                best_by_course[enr.course_key] = MASTERY_THRESHOLD
 
         # Fan each course's best score out to the skills it teaches; a skill taught
         # by multiple completed courses takes the max.

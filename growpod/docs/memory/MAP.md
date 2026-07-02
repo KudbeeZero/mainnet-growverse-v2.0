@@ -63,6 +63,7 @@ repo-relative (under `src/growpodempire/` unless noted); every ✅ here is check
 | `design/07-university-phase-2.md` | extends `06` — `services/university_service.py` · `services/lecturer_service.py` · `ai/provider.py` · `simulation/engine.py` (lab teaching-mode) · `web/src/app/university/` + `web/src/components/ui/`; long-form courses, labs, exams, narrated audio (greenfield) | ⬜ research/spec (UNI-001 v2) |
 | `design/08-immersive-classroom.md` | greenfield — 3D Lecture Hall + 4-tier Plant Anatomy Explorer over the existing `web/src/lib/chamber/bud3d/` generators + the pure `simulation/` engine (R3F renderer, server-authoritative) | ⬜ research/spec (immersive-university) |
 | `design/09-master-grower-bot.md` | extends `04`/advisor — `services/advisor_service.py` · `ai/provider.py`; RAG-over-corpus Master Grower bot + monetization (sell guidance, decoupled from the GROW ledger) | ⬜ research/spec (immersive-university) |
+| `design/10-hermes-university.md` | wiring truth + identity for **HERMES University** — `services/learner_model_service.py` · `services/admissions_service.py`/`roadmap_service.py` · `ai/elevenlabs_narrator.py` · `api/audio_prewarm.py` · `data/curriculum.yaml` · `data/skills.yaml` · `data/assessments/` · `web/src/app/university/` | ✅ audited 2026-07-02; produce-once audio + mastery fix live |
 
 **What the sim engine actually reads today** (`simulation/engine.py`): water, nutrient (single
 scalar), temperature, humidity, pH, **light (PPFD)**, **derived leaf VPD**, pest & disease levels;

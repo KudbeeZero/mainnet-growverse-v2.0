@@ -1450,22 +1450,18 @@ def university_lecture(player_id, course_key):
             report = lecturer.teach(player_id, course_key, level=level, plant_id=plant_id)
             payload = {"provider": lecturer.provider.name(), **report.model_dump()}
 
-        # Optionally generate / serve cached TTS audio (no-op if key not set).
-        from ..config import get_settings
-        from ..ai.elevenlabs_narrator import generate_narration
-        from ..services.university_service import load_curriculum
-        dept = (load_curriculum().get("courses", {}).get(course_key) or {}).get("department")
-        audio_path = generate_narration(payload, department=dept,
-                                        api_key=get_settings().elevenlabs_api_key)
-        if audio_path:
-            # The cache filename is "{voice_id}_{content_hash}.mp3"; pass the
-            # content hash through so serve_narration returns THIS lecture's
-            # audio exactly, not the most-recent file sharing the dept voice.
-            import os as _os
-            content_hash = _os.path.basename(audio_path).rsplit(".", 1)[0].split("_")[-1]
-            payload["audio_url"] = (
-                f"/api/game/narration/{course_key}/{level}?h={content_hash}"
-            )
+            # PRODUCE-ONCE audio: lecture playback uses the course's canonical
+            # narration (static curriculum text, DB/GCS-cached, prewarmed) — one
+            # MP3 per course, generated once and saved. We deliberately do NOT
+            # narrate the per-delivery AI lecture text: that varied by level /
+            # variant / plant context, bypassed the durable cache, and re-billed
+            # ElevenLabs on every deploy (2026-07-02 wiring audit, breaks 2+3).
+            from ..config import get_settings
+            from ..ai.elevenlabs_narrator import is_course_audio_cached
+            from ..services.university_service import load_curriculum
+            course = load_curriculum().get("courses", {}).get(course_key) or {}
+            if get_settings().elevenlabs_api_key or is_course_audio_cached(course, session=s):
+                payload["audio_url"] = f"/api/game/university/courses/{course_key}/audio"
 
         return jsonify(payload)
     except GameError as e:

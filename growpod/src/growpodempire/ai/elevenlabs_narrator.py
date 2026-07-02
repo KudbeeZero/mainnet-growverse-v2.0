@@ -30,7 +30,7 @@ falls back to text-only mode with no audio_url.
 Voice personas (one per faculty; default is Adam for unknown departments):
   - Professor Flora   (Cultivation & Horticulture)  — Rachel  EXAVITQu4vr4xnSDxMaL
   - Vera Lindqvist   (Plant Genetics)               — Antoni  ErXwobaYiN019PkySvjV
-  - Dr. Sage Harlow  (Soil & Nutrient Science)      — Bella   EXAVITQu4vr4xnSDxMaL (alias)
+  - Dr. Sage Harlow  (Soil & Nutrient Science)      — Charlotte XB0fDUnXU5powFXDhCwa
   - Dr. Mira Okafor  (Integrated Pest Management)   — Elli    MF3mGyEYCl7XYWbV9V6O
   - Dr. Chem Torres  (Cannabis Chemistry)           — Domi    AZnzlk1XvdvUeBnXmlld
   - Dr. Petra Nance  (Post-Harvest & Processing)    — Josh    TxGEqnHWrfWFTfGW9XjX

@@ -192,20 +192,17 @@ def test_course_audio_prewarm_timeout_logs_and_falls_through(client, monkeypatch
 # ---------------------------------------------------------------------------
 
 def test_lecture_includes_audio_url_when_narration_present(client, monkeypatch):
-    """When generate_narration returns a (cached) audio path, the lecture
-    payload advertises the narration URL (route line ~1135)."""
+    """PRODUCE-ONCE: when the course's canonical audio is available (cached, or
+    a key is set so /audio can produce it once), the lecture payload points at
+    the stable per-course audio endpoint — never a per-delivery narration."""
     pid, key = _new_player(client, "lecturelistener")
     hdr = {"X-API-Key": key}
 
     from growpodempire.ai import elevenlabs_narrator
 
-    # Our own narrator returns a truthy path -> audio_url branch is taken. The
-    # cache filename is "{voice_id}_{content_hash}.mp3"; the route threads that
-    # content hash into the URL as ?h= so serve_narration can return exactly this
-    # lecture's audio rather than any file sharing the department voice.
     monkeypatch.setattr(
-        elevenlabs_narrator, "generate_narration",
-        lambda payload, department=None, api_key=None: "/tmp/VOICEID_0123456789abcdef.mp3",
+        elevenlabs_narrator, "is_course_audio_cached",
+        lambda course, session=None: True,
     )
 
     r = client.get(
@@ -214,19 +211,19 @@ def test_lecture_includes_audio_url_when_narration_present(client, monkeypatch):
     )
     assert r.status_code == 200
     body = r.get_json()
-    assert body.get("audio_url") == "/api/game/narration/cult-101/beginner?h=0123456789abcdef"
+    assert body.get("audio_url") == "/api/game/university/courses/cult-101/audio"
 
 
 def test_lecture_without_narration_has_no_audio_url(client, monkeypatch):
-    """No narration path -> the audio_url branch is skipped (the falsy arm)."""
+    """No key and no cached course audio -> no audio_url advertised."""
     pid, key = _new_player(client, "lecturenoaudio")
     hdr = {"X-API-Key": key}
 
     from growpodempire.ai import elevenlabs_narrator
 
     monkeypatch.setattr(
-        elevenlabs_narrator, "generate_narration",
-        lambda payload, department=None, api_key=None: None,
+        elevenlabs_narrator, "is_course_audio_cached",
+        lambda course, session=None: False,
     )
 
     r = client.get(

@@ -1,12 +1,40 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-06-14** (REC-004 full repository memory sweep).
+once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do sweep).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
 > PRs / branches / directives + the launch critical path + department status live in
 > `docs/memory/CANONICAL_STATE.md`.
+
+## 🏛️ HERMES University + hardening (ACTIVE track — owner directive 2026-07-02)
+> The university keeps its systems (no overhaul) but becomes **HERMES University for cannabis** — an
+> online school with produced-once lessons. Plus the security-review follow-ups (PR #104) and the
+> grow-room procedural-visual track (photoreal-in-pod reverted; see DECISIONS.md 2026-07-02).
+- 🏛️ ✅ **Difficulty selector removed** (2026-07-02) — the Beginner/Intermediate/Advanced picker at the
+  bottom of the course page is gone; every student attends one canonical delivery per course
+  (`web/src/app/university/courses/[key]/page.tsx`). Backend `level` param stays tolerant (defaults).
+- 🏛️ ✅ **Online-school catalog restyle** (2026-07-02) — HERMES branding on all university eyebrows,
+  degree-progress strip, department "School of …" sections, credits on course cards
+  (`web/src/app/university/page.tsx`). No data-model changes.
+- 🏛️ 🔨 **University wiring audit** — end-to-end trace (curriculum → skills → learner model → agents →
+  exams → web). Owner suspects mis-wiring; findings + fixes land in the HERMES memory doc.
+- 🏛️ 🔨 **Produce-once lesson audio (ElevenLabs)** — lectures must be produced once and saved, never
+  re-billed per delivery. Today `/lecture` can mint a fresh AI lecture *and* fresh TTS per attend
+  (content-hash keyed); the produced-once path exists only on `/university/courses/<key>/audio`.
+  Unify on produce-once; `ELEVENLABS_API_KEY` stays host-secret-only (never in chat/repo).
+- 🏛️ ⬜ **HERMES memory layer** — `docs/memory/design/HERMES_UNIVERSITY.md`: identity, layer map,
+  wiring truths, lesson-production pipeline, open work (this session starts it).
+- 🔴 ⬜ **Security follow-ups from PR #104** (before public launch): settlement **deposit** redesign
+  (player-signed + indexer-verified inbound transfer) + **withdraw idempotency key** (treasury; owner
+  gate); web CSP nonce (drop `'unsafe-inline'`) + move the player key off `localStorage`; TS api-server
+  CORS allowlist; client-supplied `blockHash` / time-seeded `storyEngine` RNG hardening; add the
+  missing `snapshot.yml` backup workflow (or correct SECURITY.md); enforce CODEOWNERS on protected
+  surfaces; replace post-merge `drizzle-kit push` with generated migrations; delete the stale nested
+  `growpod/artifacts/api-server` copy; dev-bypass explicit opt-in for previews.
+- 🎨 ⬜ **Per-strain procedural fidelity pass** — `GrowChamber`/`BudGL` morphology + bud shape/color
+  coverage across all 29 strains (the follow-up track from the 2026-07-02 revert ADR).
 
 ## 🚀 New-Player / Launch-Readiness (ACTIVE track — onboarding → MVP launch)
 > Player-facing, additive work on existing rails toward a launchable MVP — **no economy / chain /

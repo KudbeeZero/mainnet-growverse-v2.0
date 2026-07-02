@@ -152,6 +152,35 @@ def test_recompute_mastery_takes_max_best_score_across_a_courses_exams(session):
     assert m == {"cultivation-fundamentals": 0.95}
 
 
+def test_completed_course_seeds_mastery_without_an_exam(session):
+    # 2026-07-02 wiring fix: 14 of 15 courses have no assessment bank, so
+    # completion itself must credit the course's skills at the mastery
+    # threshold (0.7); an exam best_score can only RAISE it (max), never lower.
+    from growpodempire.db.models import CourseEnrollment
+    from growpodempire.ai.roadmap_mock import MASTERY_THRESHOLD
+
+    p = _player(session)
+    svc = LearnerModelService(session, clock=FrozenClock(BASE))
+    session.add(CourseEnrollment(
+        player_id=p.id, course_key="nut-101", status="completed",
+        started_at=BASE, completed_at=BASE,
+    ))
+    # A worse-than-threshold exam on another course must not be dragged up.
+    _attempt(session, p.id, "cult-101", "midterm", 0.5, passed=False)
+    # A better-than-threshold exam on a completed course keeps the max.
+    session.add(CourseEnrollment(
+        player_id=p.id, course_key="bio-101", status="completed",
+        started_at=BASE, completed_at=BASE,
+    ))
+    _attempt(session, p.id, "bio-101", "mastery", 0.95)
+    session.flush()
+
+    m = dict(svc.recompute_mastery(p.id).mastery_by_skill)
+    assert m["soil-nutrient-science"] == MASTERY_THRESHOLD  # completion floor
+    assert m["cultivation-fundamentals"] == 0.5             # exam only, no completion
+    assert m["plant-biology"] == 0.95                       # max(floor, exam)
+
+
 # ===== ledger-free ===========================================================
 
 def test_apply_and_recompute_are_ledger_free(session):
