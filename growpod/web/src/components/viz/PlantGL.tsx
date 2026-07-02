@@ -98,7 +98,7 @@ function lerpArr(arr: number[], t: number): number {
   return arr[i] + (arr[i + 1] - arr[i]) * frac;
 }
 
-function WoodyParts({ skeleton }: { skeleton: PlantSkeleton }) {
+function WoodyParts({ skeleton, morph }: { skeleton: PlantSkeleton; morph: Morphology }) {
   const merged = useMemo(() => {
     const geos: THREE.BufferGeometry[] = [];
 
@@ -128,10 +128,13 @@ function WoodyParts({ skeleton }: { skeleton: PlantSkeleton }) {
     return merged;
   }, [skeleton]);
 
-  const mat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: 0x3d5c2a, roughness: 0.85, metalness: 0.0 }),
-    [],
-  );
+  // Strain-driven woody colour (was a fixed hex regardless of strain) — mirrors
+  // the 2D chamberCore convention (hue-10, ~32% sat, ~30% lit) so the Tier-1
+  // gameplay stem and the Tier-2 Lab model read as the same plant family.
+  const mat = useMemo(() => {
+    const [r, g, b] = hslToRgb({ hue: morph.hue - 10, sat: 32, lit: 22 });
+    return new THREE.MeshStandardMaterial({ color: new THREE.Color(r, g, b), roughness: 0.85, metalness: 0.0 });
+  }, [morph.hue]);
 
   if (!merged) return null;
   return <mesh geometry={merged} material={mat} />;
@@ -655,8 +658,10 @@ function FloraPistils({ flora }: { flora: AggregatedFlora }) {
 function FloraSugarLeaves({ flora }: { flora: AggregatedFlora }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geom = useSugarLeafGeometry();
+  // A touch more matte than before — flower scatters light rather than
+  // reflecting it; low roughness read slightly plasticky on a leaf surface.
   const mat = useMemo(
-    () => new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.05, side: THREE.DoubleSide, emissive: new THREE.Color(0.03, 0.05, 0.03) }),
+    () => new THREE.MeshStandardMaterial({ roughness: 0.58, metalness: 0.03, side: THREE.DoubleSide, emissive: new THREE.Color(0.03, 0.05, 0.03) }),
     [],
   );
 
@@ -831,7 +836,7 @@ export function PlantGL({
 
   const content = (
     <>
-      {vis.woody && <WoodyParts skeleton={skeleton} />}
+      {vis.woody && <WoodyParts skeleton={skeleton} morph={morph} />}
       {vis.fanLeaves && <FanLeafLayer skeleton={skeleton} morph={morph} />}
       {vis.budCore && <FloraBudCore sites={sites} dna={dna} dev={dev} refColaSize={skeleton.refColaSize} purple={purple} />}
       {vis.calyxes && <FloraCalyxes flora={flora} purple={purple} />}

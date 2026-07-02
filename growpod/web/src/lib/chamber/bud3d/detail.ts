@@ -117,8 +117,11 @@ export interface PistilOpts {
  * magenta tint for purple phenos. */
 export function pistilColor(ripe: number, brown: number, magenta = 0): [number, number, number] {
   const r0 = 1.0, g0 = 1.0, b0 = 0.96;        // white
-  const r1 = 0.86, g1 = 0.58, b1 = 0.34;       // amber
-  const t = clamp01(ripe);
+  const r1 = 0.95, g1 = 0.46, b1 = 0.1;        // vivid orange (was a muted tan)
+  // Non-linear ramp: real pistils colour up fast once they start turning, not a
+  // slow even fade — reaching a visibly orange accent by mid-development instead
+  // of staying pale cream until the plant is nearly done.
+  const t = Math.pow(clamp01(ripe), 0.55);
   let r = lerp(r0, r1, t), g = lerp(g0, g1, t), b = lerp(b0, b1, t);
   const br = clamp01(brown);
   r = lerp(r, 0.42, br); g = lerp(g, 0.26, br); b = lerp(b, 0.16, br);
