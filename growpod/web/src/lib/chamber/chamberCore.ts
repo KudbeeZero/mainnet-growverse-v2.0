@@ -276,8 +276,9 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const centerBias = 1 - Math.abs(yf - (pat === "spiral" ? 0.45 : 0.5)) * 1.2;
       // MANY small calyxes per cluster (not a few big teardrops): a dense stack
       // reads as one textured bud, so the cola no longer looks like grapes. Rings
-      // are tight (rad step 0.3) so pods overlap into a continuous mass.
-      const nPods = opt.bracts + 6;
+      // are tight (rad step 0.3) so pods overlap into a continuous mass. Wider
+      // sites carry MORE pods (real big colas add calyxes, not bigger ones).
+      const nPods = opt.bracts + 6 + Math.round(baseW * 0.18);
       const pods = [];
       for (let j = 0; j < nPods; j++) {
         const ring = j < 3 ? 0 : j < 8 ? 1 : j < 15 ? 2 : 3;
@@ -342,7 +343,9 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const cx = cl.lateral * (0.4 + 0.6 * d) * 0.65 + cyc * 0.5;
       const cy = -cl.along * site.axisLen + (jig ? Math.cos(tt * 26 + cl.ph) * jig * 0.5 : 0);
       const cw = site.baseW * cl.fat * cl.tipTaper * (0.55 + 0.45 * d);
-      const podW = Math.max(1.1, cw * 0.16);
+      // Sublinear pod size: a wide cola keeps near-constant calyx grain (more
+      // pods, via nPods above) instead of ballooning each pod into a grape.
+      const podW = Math.max(1.1, Math.pow(cw, 0.85) * 0.2);
       geo.push({ cx, cy, cw, podW, d });
     }
 
