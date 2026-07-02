@@ -47,6 +47,34 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   deterministic from authored strain DNA. Lands standalone at `/dev/plant3d` (studio-gray
   preview) for owner review; pod wiring AFTER approval. Supersedes the 2026-06-25 ADR note
   that the whole plant "intentionally stays 2D" (owner directive). Build in flight.
+- 🕹️ ⬜ **Arcade layer on the plant sim (owner spec 2026-07-02)** — six skill-based, NON-GAMBLING,
+  educational mini-games layered over the photorealistic plant core, affecting COSMETIC visuals +
+  separate arcade scores only (never sim truth/economy/genetics — server stays authoritative):
+  **Trichome Rush** (collect trichome targets → Resin Combo → frost visuals), **Lightwave Rhythm**
+  (timing zones on light pulses → photosynthesis score), **Terpene Combo** (collect terpene orbs —
+  myrcene/limonene/pinene/caryophyllene/linalool/humulene → plant aura/profile), **Cola Builder**
+  (assemble stem/nodes/bracts/sugar leaves/pistils/trichomes → structure score), **Pest Invader**
+  (defend vs stylized pests), **Mutation Events** (earned cosmetic traits: Blue Frost, Golden
+  Pistils, Diamond Trichomes, Dense Cola Stack, Terpene Aura). Optional Algorand proof receipts
+  for completed challenges (existing client SIMULATE layer is the start). Builds ON the existing
+  arcade foundation (`web/src/lib/arcade/`, PR #100) + the PlantGL 3D asset. Recon report on the
+  control panel layout + arcade inventory in flight (2026-07-02); design doc next; build after
+  owner approves the design.
+- 🕹️ ⬜ **Arcade layer on the 3D plant sim (owner spec 2026-07-02)** — fast, replayable,
+  skill-based, NON-GAMBLING, educational mini-games layered OVER the scientific sim (core sim
+  stays server-authoritative; arcade touches COSMETIC visuals + separate arcade scores ONLY —
+  never health/economy/genetics truth). Six games: **Trichome Rush** (collect trichome targets
+  → Resin Combo → frost visuals), **Lightwave Rhythm** (timing zones on moving light pulses →
+  photosynthesis score), **Terpene Combo** (collect myrcene/limonene/pinene/caryophyllene/
+  linalool/humulene orbs → plant aura/profile), **Cola Builder** (assemble stem/nodes/bracts/
+  sugar leaves/pistils/trichomes → structure score; hooks the new plant3d 7-layer asset),
+  **Pest Invader** (defend vs stylized pest/stress icons), **Mutation Events** (earned COSMETIC
+  unlocks: Blue Frost, Golden Pistils, Diamond Trichomes, Dense Cola Stack, Terpene Aura).
+  Updates local plant visuals + generates challenge scores; OPTIONAL Algorand proof receipts
+  for completed challenges (reuses the PR #100 client SIMULATE layer). Builds on the existing
+  arcade foundation (`web/src/lib/arcade/` boostEngine/timeRewind) — extend, don't duplicate.
+  Prereq: recon report (control-panel layout + arcade inventory) → design doc → owner approval
+  → build. Depends on the plant3d asset for Cola Builder + cosmetic mutation overrides.
 - 🎨 ⬜ **Per-strain procedural fidelity pass** — `GrowChamber`/`BudGL` morphology + bud shape/color
   coverage across all 29 strains (the follow-up track from the 2026-07-02 revert ADR).
 
