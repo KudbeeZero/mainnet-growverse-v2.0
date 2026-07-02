@@ -344,8 +344,15 @@ function buildAggregatedFlora(
     const worldScale = site.scale * refColaSize;
     if (worldScale < 0.01) continue;
 
-    const maxInst = Math.max(12, Math.round((isMobile ? 120 : 380) * site.budgetMul));
-    const cola = buildCola(dna, seed + si * 7, { budDev: dev.budDev, maxInstances: maxInst });
+    // Density scales with the cola's on-screen size (area ∝ scale²), so a big main
+    // cola gets proportionally more calyxes and stays densely clad instead of going
+    // sleek/bare. Referenced to a ~0.5-scale side cola (≈1×); capped for perf.
+    const densityMul = Math.min(9, Math.max(0.5, (site.scale / 0.5) * (site.scale / 0.5)));
+    const maxInst = Math.min(
+      isMobile ? 340 : 900,
+      Math.max(24, Math.round((isMobile ? 110 : 260) * densityMul)),
+    );
+    const cola = buildCola(dna, seed + si * 7, { budDev: dev.budDev, maxInstances: maxInst, densityMul });
 
     for (const c of cola) {
       agg.calyxes.push({ ...c, worldPos: site.pos, worldScale });

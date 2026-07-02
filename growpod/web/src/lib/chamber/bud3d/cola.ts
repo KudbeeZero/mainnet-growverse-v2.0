@@ -82,6 +82,14 @@ export interface BuildColaOpts {
   budDev: number;
   /** Hard cap on instance count (perf / mobile budget). */
   maxInstances?: number;
+  /**
+   * Calyx-count multiplier (default 1). A cola rendered LARGER needs more calyxes
+   * to stay densely clad at the same visual density — a fat main cola with the
+   * base count reads as a sparse, sleek bullet with the bare body showing through.
+   * The whole-plant renderer scales this by each cola's on-screen size so the big
+   * apical cola is the densest, most-formed bud, not the emptiest.
+   */
+  densityMul?: number;
 }
 
 /**
@@ -92,6 +100,9 @@ export interface BuildColaOpts {
 export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaInstance[] {
   const dev = Math.min(1, Math.max(0, opts.budDev));
   const cap = opts.maxInstances ?? 380;
+  // sqrt() so applying it to BOTH the ring count and the per-ring count multiplies
+  // the total calyxes by ~densityMul (area scales as the product of the two).
+  const densRoot = Math.sqrt(Math.max(0.25, opts.densityMul ?? 1));
   const rnd = mulberry32((seed >>> 0) || 1);
 
   const H = 1.0; // unit cola height
@@ -104,7 +115,7 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
   // Accretion: fewer rings early, filling toward the genetic `rows` as it
   // develops; many dense rings so calyxes pack into a solid cola and fully clad
   // the body (a sparse cluster reads as studs on an egg — owner's note).
-  const rings = Math.max(5, Math.round(dna.rows * (0.65 + 0.75 * dev)));
+  const rings = Math.max(5, Math.round(dna.rows * (0.65 + 0.75 * dev) * densRoot));
   const out: ColaInstance[] = [];
   let spiral = 0;
 
@@ -112,7 +123,7 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
     const t = rings > 1 ? i / (rings - 1) : 0;
     const wc = widthCurve(t);
     const ringR = Rmax * wc;
-    const perRing = Math.max(1, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * wc) * 2.3));
+    const perRing = Math.max(1, Math.round((dna.calyxPerRowMin + (dna.calyxPerRowMax - dna.calyxPerRowMin) * wc) * 2.3 * densRoot));
     for (let j = 0; j < perRing && out.length < cap; j++) {
       spiral += GOLDEN_ANGLE;
       // Sit the calyxes out near the body surface and overlap them so they clad
