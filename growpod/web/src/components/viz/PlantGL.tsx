@@ -16,17 +16,17 @@
 // deliberately low-poly (whole plant = thousands of instances) to hold the tri
 // budget. Must be loaded via dynamic({ ssr:false }).
 
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { buildPlantAssembly, fatWidthCurve, type LODLevel, type PlantAssembly } from "@/lib/plant3d/assembly";
+import { TrichomeLayer } from "@/components/viz/TrichomeLayer";
 import { buildFanLeafOutlines } from "@/lib/plant3d/leaves";
 import type { Vec3 } from "@/lib/plant3d/skeleton";
 import { hslToRgb } from "@/lib/chamber/bud3d/cola";
 import { pickPaletteColor, type BudDNA } from "@/lib/chamber/budDna";
 import type { Silhouette } from "@/lib/chamber/morphology";
-import type { FrostMat } from "@/lib/chamber/bud3d/detail";
 
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -93,25 +93,45 @@ function makeColaCoreGeom(): THREE.BufferGeometry {
   return geo;
 }
 
-/** Low-poly ribbed teardrop calyx (cheap version of BudGL's calyx). */
+/** Detail level of the calyx icosphere (0 = 20 tris, 1 = 80 tris). Kept low for
+ * the whole-plant tri budget; SMOOTH sphere normals (below) do the heavy lifting
+ * on killing the crystalline facet look, so a cheap sphere still reads organic. */
+const CALYX_DETAIL = 0;
+
+/** A PLUMP, rounded, organic calyx — a swollen teardrop/kidney sac, NOT a faceted
+ * shard. Built from an icosphere, deformed to bulge at the equator and round to a
+ * soft point up top, then given SMOOTH radial normals (never computeVertexNormals,
+ * which flat-shades the non-indexed icosphere into visible crystal facets). Stacked
+ * and overlapped by the thousand these read as bulbous packed sacs. */
 function makeCalyxGeom(): THREE.BufferGeometry {
-  // A rounded icosphere (20 tris) — a plump swollen bud-scale. Stacked and
-  // overlapped by the thousand these read as a chunky, densely-packed calyx
-  // cola, while staying cheap enough to keep the whole plant near the tri
-  // budget. Slightly pinched to a soft point on top for a calyx-y silhouette.
-  const geo = new THREE.IcosahedronGeometry(1, 0);
+  const geo = new THREE.IcosahedronGeometry(1, CALYX_DETAIL);
   const pos = geo.attributes.position;
+  const nrm = geo.attributes.normal;
   const v = new THREE.Vector3();
+  const n = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
-    if (v.y > 0.3) {
-      v.x *= 0.72;
-      v.z *= 0.72;
-      pos.setXYZ(i, v.x, v.y * 1.12, v.z);
+    // Smooth sphere normal captured BEFORE the deform — organic, no facets.
+    n.copy(v).normalize();
+    const y = v.y; // -1..1
+    // Bulge the equator (fat sac), tuck the very bottom, round the top to a soft
+    // point (teardrop). All smooth — no creases.
+    const equator = 1 + 0.12 * Math.cos(y * Math.PI * 0.5);
+    v.x *= equator;
+    v.z *= equator;
+    if (y > 0) {
+      const taper = 1 - 0.34 * y * y; // narrow gently toward the tip
+      v.x *= taper;
+      v.z *= taper;
+      v.y = y * 1.16; // a touch elongated = teardrop, not a ball
+    } else {
+      v.y = y * 0.94; // slightly tucked base
     }
-    pos.setXYZ(i, pos.getX(i), pos.getY(i), pos.getZ(i));
+    pos.setXYZ(i, v.x, v.y, v.z);
+    nrm.setXYZ(i, n.x, n.y, n.z);
   }
-  geo.computeVertexNormals();
+  pos.needsUpdate = true;
+  nrm.needsUpdate = true;
   return geo;
 }
 
@@ -178,13 +198,6 @@ function makeFanLeafGeom(leaflets: number, seed: number): THREE.BufferGeometry {
   merged.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   merged.computeVertexNormals();
   return merged;
-}
-
-/** Frost head colour by maturity (mirrors BudGL.frostColor). */
-function frostColor(mat: FrostMat): THREE.Color {
-  if (mat === 0) return new THREE.Color(224 / 255, 242 / 255, 255 / 255);
-  if (mat === 1) return new THREE.Color(248 / 255, 250 / 255, 244 / 255);
-  return new THREE.Color(228 / 255, 188 / 255, 110 / 255);
 }
 
 // ---- per-cola transform --------------------------------------------------
@@ -321,49 +334,6 @@ function Calyxes({ assembly }: { assembly: PlantAssembly }) {
   return <instancedMesh key={total} ref={ref} args={[geom, mat, total]} />;
 }
 
-function Frost({ assembly }: { assembly: PlantAssembly }) {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  const geom = useMemo(() => new THREE.OctahedronGeometry(1, 0), []);
-  const mat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        roughness: 0.18,
-        metalness: 0.1,
-        emissive: new THREE.Color(0.05, 0.07, 0.08),
-        transparent: true,
-        opacity: 0.9,
-      }),
-    [],
-  );
-  const total = useMemo(() => assembly.colas.reduce((n, c) => n + c.frost.length, 0), [assembly]);
-  useLayoutEffect(() => {
-    const mesh = ref.current;
-    if (!mesh || total === 0) return;
-    const d = new THREE.Object3D();
-    const qWorld = new THREE.Quaternion();
-    const lp = new THREE.Vector3();
-    let idx = 0;
-    for (const c of assembly.colas) {
-      qWorld.copy(colaQuat(c.axis));
-      const origin = new THREE.Vector3(c.origin[0], c.origin[1], c.origin[2]);
-      for (const g of c.frost) {
-        lp.set(g.pos[0] * c.width, g.pos[1] * c.height, g.pos[2] * c.width);
-        lp.applyQuaternion(qWorld).add(origin);
-        d.position.copy(lp);
-        d.rotation.set(0, 0, 0);
-        d.scale.setScalar(g.r * c.width * 2.8);
-        d.updateMatrix();
-        mesh.setMatrixAt(idx, d.matrix);
-        mesh.setColorAt(idx, frostColor(g.mat));
-        idx++;
-      }
-    }
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [assembly, total]);
-  return total ? <instancedMesh key={`f${total}`} ref={ref} args={[geom, mat, total]} /> : null;
-}
-
 function Pistils({ assembly }: { assembly: PlantAssembly }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geom = useMemo(makePistilGeom, []);
@@ -496,6 +466,18 @@ function FanLeaves({ assembly, seed }: { assembly: PlantAssembly; seed: number }
   return <instancedMesh key={leaves.length} ref={ref} args={[geom, mat, leaves.length]} />;
 }
 
+/** Dev-studio only: publish the last-frame rendered triangle count so the tri
+ * budget stays visible while tuning (read by the studio HUD / screenshot loop). */
+function TriProbe() {
+  const gl = useThree((s) => s.gl);
+  useFrame(() => {
+    if (typeof window !== "undefined") {
+      (window as unknown as { __triCount?: number }).__triCount = gl.info.render.triangles;
+    }
+  });
+  return null;
+}
+
 function PlantScene({
   dna,
   sil,
@@ -543,7 +525,7 @@ function PlantScene({
         <Calyxes assembly={assembly} />
         <SugarLeaves assembly={assembly} />
         <Pistils assembly={assembly} />
-        <Frost assembly={assembly} />
+        <TrichomeLayer assembly={assembly} lod={lod} />
       </group>
       <ContactShadows
         position={[0, yOffset, 0]}
@@ -591,6 +573,7 @@ export function PlantGL({
         <directionalLight position={[-4, 2, 2]} intensity={0.5} color="#eaf4ff" />
         <directionalLight position={[0, 3, -5]} intensity={0.7} color="#ffffff" />
         <PlantScene dna={dna} sil={sil} seed={seed} lod={lod} spin={spin} />
+        <TriProbe />
         <OrbitControls
           enablePan={false}
           target={[0, cameraTight ? 1.45 : 0.35, 0]}

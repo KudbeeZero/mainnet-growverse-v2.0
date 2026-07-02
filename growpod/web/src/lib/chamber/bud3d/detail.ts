@@ -28,6 +28,12 @@ export interface FrostInstance {
   /** Head radius in unit space. */
   r: number;
   mat: FrostMat;
+  /** Outward surface normal (unit) at this gland — lets the 3D path stand a
+   * capitate stalk+gland UP along the calyx surface. The 2D BudGL ignores it. */
+  nrm: [number, number, number];
+  /** Stable 0..1 roll per gland (sparkle/scale/tilt jitter for the 3D trichome
+   * layer + the future Trichome-Rush minigame). BudGL ignores it. */
+  spark: number;
 }
 
 export interface FrostOpts {
@@ -38,6 +44,11 @@ export interface FrostOpts {
   ripe: number;
   amberBias?: number;
   isMobile?: boolean;
+  /** Override the per-device gland budget (the 3D whole-plant path cakes the cola
+   * far denser than the 2D macro bud). Default: TRICHOME_BUDGET[device]. */
+  budget?: number;
+  /** Extra multiplier on glands-per-calyx (heavier caking for the 3D coat). Default 1. */
+  perScale?: number;
 }
 
 /**
@@ -49,7 +60,8 @@ export interface FrostOpts {
  */
 export function buildFrost(cola: ColaInstance[], opts: FrostOpts): FrostInstance[] {
   const rnd = mulberry32(((opts.seed >>> 0) ^ 0x9e3779b9) || 7);
-  const budget = opts.isMobile ? TRICHOME_BUDGET.mobile : TRICHOME_BUDGET.desktop;
+  const budget = opts.budget ?? (opts.isMobile ? TRICHOME_BUDGET.mobile : TRICHOME_BUDGET.desktop);
+  const perScale = opts.perScale ?? 1;
   const density = clamp01(opts.density);
   const mix = maturityMix(clamp01(opts.ripe), opts.amberBias ?? 0);
   const out: FrostInstance[] = [];
@@ -60,7 +72,7 @@ export function buildFrost(cola: ColaInstance[], opts: FrostOpts): FrostInstance
     // gland count by the calyx's height in the cola (y≈0 base .. 1 apex).
     const heightFrac = clamp01(c.pos[1]);
     // Many glands per calyx so a frosty bud reads caked in resin, not lightly dusted.
-    const per = Math.round((4 + 12 * density) * (0.55 + 0.85 * heightFrac));
+    const per = Math.round((4 + 12 * density) * (0.55 + 0.85 * heightFrac) * perScale);
     for (let k = 0; k < per && out.length < budget; k++) {
       // A point on the calyx ellipsoid surface (uniform-ish direction).
       const u = rnd() * Math.PI * 2;
@@ -73,12 +85,21 @@ export function buildFrost(cola: ColaInstance[], opts: FrostOpts): FrostInstance
         c.pos[1] + ny * c.scale[1] * 0.58,
         c.pos[2] + nz * c.scale[2] * 0.58,
       ];
+      // Ellipsoid surface normal (∝ n / scale²), biased slightly up so glands
+      // splay outward-and-up off the calyx like real capitate-stalked trichomes.
+      let gnx = nx / (c.scale[0] * c.scale[0]);
+      let gny = ny / (c.scale[1] * c.scale[1]) + 0.35;
+      let gnz = nz / (c.scale[2] * c.scale[2]);
+      const gl = Math.hypot(gnx, gny, gnz) || 1;
+      gnx /= gl; gny /= gl; gnz /= gl;
       const m = maturityFor(rnd(), mix);
       out.push({
         // Bigger gland heads so the frost actually reads at phone-screen scale.
         r: (0.007 + 0.011 * rnd()) * (0.8 + 0.45 * density),
         pos,
         mat: m === "clear" ? 0 : m === "cloudy" ? 1 : 2,
+        nrm: [gnx, gny, gnz],
+        spark: rnd(),
       });
     }
   }
