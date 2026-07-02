@@ -574,8 +574,8 @@ export function PlantGL({
   cameraTight?: boolean;
 }) {
   const spin = !reducedMotion;
-  const dist = cameraTight ? 2.3 : 7.9;
-  const camY = cameraTight ? 1.5 : 0.2;
+  const dist = cameraTight ? 2.3 : 9.6;
+  const camY = cameraTight ? 1.5 : 0.3;
   return (
     <div className="absolute inset-0">
       <Canvas

@@ -27,7 +27,7 @@ if (clean) {
       const cs = getComputedStyle(el);
       if (cs.position === "fixed") {
         const r = el.getBoundingClientRect();
-        if (r.width < 160 && r.height < 160) el.style.display = "none";
+        if (r.width < 500 && r.height < 500) el.style.display = "none";
       }
     });
   });

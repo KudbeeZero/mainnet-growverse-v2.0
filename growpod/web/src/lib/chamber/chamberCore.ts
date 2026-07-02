@@ -411,7 +411,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const cxs = mass.map(
         (m, i) => (mass[Math.max(0, i - 1)].cx + 2 * m.cx + mass[Math.min(n - 1, i + 1)].cx) / 4,
       );
-      const tipY = mass[0].cy - Math.min(hw[0] * 1.7, hw[n - 1] * 1.1); // spear point (capped so it can't spike)
+      const tipY = mass[0].cy - Math.min(hw[0] * 1.2, hw[n - 1] * 0.85); // rounded-pointed apex (short cap so it never spikes into a cone)
       const botY = mass[n - 1].cy + hw[n - 1] * 1.05; // rounded base below the last
       // Outline vertices, clockwise: tip → right edge down → base → left edge up.
       const pts: Array<[number, number]> = [[cxs[0], tipY]];
@@ -437,6 +437,19 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.quadraticCurveTo(p[0], p[1], (p[0] + q[0]) / 2, (p[1] + q[1]) / 2);
       }
       ctx!.closePath();
+      ctx!.fill();
+      // Round 4: rounded-column form shading. Re-fill the SAME silhouette with a
+      // horizontal dark→clear→dark gradient so the left/right flanks fall into
+      // shadow — the cola reads as a 3D cylinder of stacked calyx, not a flat
+      // frosted cutout. Cheap (reuses the current path) and deterministic.
+      const midX = cxs[Math.floor(n / 2)];
+      const flankW = maxHw * 1.25;
+      const fg = ctx!.createLinearGradient(midX - flankW, 0, midX + flankW, 0);
+      fg.addColorStop(0, "rgba(0,0,0,0.30)");
+      fg.addColorStop(0.42, "rgba(0,0,0,0)");
+      fg.addColorStop(0.58, "rgba(0,0,0,0)");
+      fg.addColorStop(1, "rgba(0,0,0,0.30)");
+      ctx!.fillStyle = fg;
       ctx!.fill();
     }
 
