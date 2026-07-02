@@ -40,3 +40,7 @@ yarn-error.log*
 
 # canonical stage PNGs (regenerable build artifacts: `npm run gen:stages`)
 /canonical-stages
+
+# Agent scratch helpers (screenshot/count probes) — never committed
+_*.mjs
+_*.mts
