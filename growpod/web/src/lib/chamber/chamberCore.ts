@@ -125,6 +125,24 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
   let W = 0;
   let H = 0;
 
+  // ---- fan-leaf tone ----
+  // Base foliage colour is the strain morphology; in flower it deepens (mature
+  // fans darken) and, for strains whose bud identity is cool/desaturated teal
+  // (e.g. Blue Dream, calyxHue ≳ 140), the fans shift toward a deep blue-green
+  // to match the reference. Green strains (calyxHue ≈ 100–128) are unchanged.
+  // Recomputed once per draw from the live bud colour + development.
+  const leafTone = { hue: S.hue, sat: S.sat, litBias: 0, arch: 0 };
+  function refreshLeafTone() {
+    const bc = live.current.budColor;
+    const mature = clamp(live.current.dev.budDev, 0, 1);
+    const teal = clamp(((bc?.calyxHue ?? S.hue) - 130) / 40, 0, 1);
+    leafTone.hue = S.hue + teal * 44;
+    leafTone.sat = S.sat + teal * 8;
+    leafTone.litBias = -mature * 6 - teal * 6;
+    // Mature fans arch over; deeper for the flowering canopy.
+    leafTone.arch = 0.1 + mature * 0.16;
+  }
+
   // ---- leaflet outline (pure shape) ----
   const LEAF_OUT: Array<[number, number]> = (() => {
     const pts: Array<[number, number]> = [];
@@ -137,14 +155,18 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     }
     return pts;
   })();
-  function leafletPath(L: number, Wd: number) {
+  // `curl` bows the blade downward (tip pulled back toward the base plane) so a
+  // fan leaf arches over instead of standing as a flat spike — real mature fan
+  // leaves droop under their own weight. 0 = straight blade.
+  function leafletPath(L: number, Wd: number, curl = 0) {
+    const bow = (t: number) => curl * L * t * t; // droop grows toward the tip
     ctx!.beginPath();
     ctx!.moveTo(0, 0);
-    for (const [hw, t] of LEAF_OUT) ctx!.lineTo(hw * Wd, -t * L);
-    ctx!.lineTo(0, -L);
+    for (const [hw, t] of LEAF_OUT) ctx!.lineTo(hw * Wd, -t * L + bow(t));
+    ctx!.lineTo(0, -L + bow(1));
     for (let i = LEAF_OUT.length - 1; i >= 0; i--) {
       const [hw, t] = LEAF_OUT[i];
-      ctx!.lineTo(-hw * Wd, -t * L);
+      ctx!.lineTo(-hw * Wd, -t * L + bow(t));
     }
     ctx!.closePath();
   }
@@ -179,7 +201,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     ctx!.save();
     ctx!.translate(x, y);
     ctx!.rotate(rot);
-    if (w > 2.4) {
+    if (w > 4.2) {
       // Big calyx (macro / cola): a soft volumetric gradient for depth — matte,
       // not glossy. Real flower scatters light (dusty/frosted), so the bright
       // stop is gentle and there is NO white specular highlight (that read as wet
@@ -249,16 +271,19 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       }
       const tipTaper = 1 - 0.55 * smooth(clamp((yf - 0.68) / 0.32, 0, 1));
       const centerBias = 1 - Math.abs(yf - (pat === "spiral" ? 0.45 : 0.5)) * 1.2;
-      const nPods = opt.bracts + 2;
+      // MANY small calyxes per cluster (not a few big teardrops): a dense stack
+      // reads as one textured bud, so the cola no longer looks like grapes. Rings
+      // are tight (rad step 0.3) so pods overlap into a continuous mass.
+      const nPods = opt.bracts + 6;
       const pods = [];
       for (let j = 0; j < nPods; j++) {
-        const ring = j < 3 ? 0 : j < 7 ? 1 : 2;
+        const ring = j < 3 ? 0 : j < 8 ? 1 : j < 15 ? 2 : 3;
         const a = (j * 2.399) % TAU;
-        const rad = ring * 0.42 + rnd() * 0.12;
+        const rad = ring * 0.3 + rnd() * 0.1;
         pods.push({
           ring, a, rad,
-          k: ring / 2 + rnd() * 0.3,
-          sz: (ring === 0 ? 1.0 : ring === 1 ? 0.85 : 0.7) * (0.85 + rnd() * 0.3),
+          k: ring / 3 + rnd() * 0.28,
+          sz: (ring === 0 ? 0.78 : ring === 1 ? 0.68 : ring === 2 ? 0.58 : 0.5) * (0.82 + rnd() * 0.3),
           dl: (rnd() - 0.5) * 12, dh: (rnd() - 0.5) * 8, blushK: rnd(),
         });
       }
@@ -311,7 +336,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const cx = cl.lateral * (0.4 + 0.6 * d) + cyc * 0.5;
       const cy = -cl.along * site.axisLen + (jig ? Math.cos(tt * 26 + cl.ph) * jig * 0.5 : 0);
       const cw = site.baseW * cl.fat * cl.tipTaper * (0.55 + 0.45 * d);
-      const podW = Math.max(1.2, cw * 0.2);
+      const podW = Math.max(1.1, cw * 0.16);
       geo.push({ cx, cy, cw, podW, d });
     }
 
@@ -332,15 +357,15 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         const up = i > 0 ? Math.abs(m.cy - mass[i - 1].cy) : Infinity;
         const dn = i < mass.length - 1 ? Math.abs(mass[i + 1].cy - m.cy) : Infinity;
         const gap = Math.min(up, dn);
-        const rw = Math.max(m.podW * 1.15, m.cw * 0.5) * (0.62 + 0.38 * m.d);
-        // Reach ~70% of the way to the nearest neighbour so adjacent blobs fuse
+        const rw = Math.max(m.podW * 1.25, m.cw * 0.56) * (0.66 + 0.34 * m.d);
+        // Reach most of the way to the nearest neighbour so adjacent blobs fuse
         // into one continuous silhouette (no gaps between sites = no grapes).
-        const rh = Math.min(rw * 2.3, Math.max(rw * 1.12, (isFinite(gap) ? gap : rw) * 0.72));
+        const rh = Math.min(rw * 2.5, Math.max(rw * 1.2, (isFinite(gap) ? gap : rw) * 0.82));
         top = Math.min(top, m.cy - rh);
         bot = Math.max(bot, m.cy + rh);
         return { cx: m.cx, cy: m.cy, rw, rh };
       });
-      const massLit = 35 + bc.anthocyanin * 2;
+      const massLit = 37 + bc.anthocyanin * 2;
       const mg = ctx!.createLinearGradient(0, top, 0, bot);
       mg.addColorStop(0, `hsl(${bc.calyxHue + 4}, ${bc.calyxSat}%, ${massLit + 7}%)`);
       mg.addColorStop(1, `hsl(${bc.calyxHue}, ${Math.min(88, bc.calyxSat + 8)}%, ${Math.max(12, massLit - 13)}%)`);
@@ -672,17 +697,20 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // still reads as the main cola. Total flower mass is conserved by the
         // leaderShare/secondaryShares split.
         const coShare = tops.secondaryShares[topK] / tops.leaderShare; // ≤1 vs leader
-        const axis = stemH * 0.13 * S.clusterLen * SK.colaScale * (0.5 + 0.5 * P.budDev) * lerp(0.72, 1.06, coShare) * (1 + P.ripe * 0.18);
-        const baseW = axis * (S.pattern === "spiral" ? 0.3 : 0.46) * S.clusterFat * (0.95 + 0.18 * P.ripe);
-        const nC = Math.max(3, Math.round(S.bracts * (S.pattern === "spiral" ? 1.5 : 1.05)));
+        let axis = stemH * 0.10 * S.clusterLen * SK.colaScale * (0.5 + 0.5 * P.budDev) * lerp(0.72, 1.06, coShare) * (1 + P.ripe * 0.14);
+        axis = Math.min(axis, stemH * 0.28);
+        const baseW = axis * (S.pattern === "spiral" ? 0.2 : 0.27) * S.clusterFat * (0.92 + 0.12 * P.ripe);
+        const nC = Math.max(3, Math.round(S.bracts * (S.pattern === "spiral" ? 1.9 : 1.35)));
         nd.site = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1.05 });
         nd.budRot = nd.side * 0.06;
         nd.weight = lerp(0.95, 1.7, f) * S.clusterFat; // a top cola is heavy
       } else if (P.budDev > 0 && f > S.flowerFrom) {
         const sizeUp = lerp(0.55, 1.15, f);
-        const axis = A * (0.05 + 0.09 * f) * S.clusterLen * sizeUp * (0.5 + 0.5 * P.budDev);
-        const baseW = axis * 0.42 * S.clusterFat;
-        const nC = Math.max(2, Math.round(S.bracts * 0.55 * (0.6 + 0.5 * f)));
+        const axis = A * (0.055 + 0.10 * f) * S.clusterLen * sizeUp * (0.5 + 0.5 * P.budDev);
+        // Slimmer + more stacked clusters → a small tapered side cola, not a
+        // two-lobed peanut.
+        const baseW = axis * 0.3 * S.clusterFat;
+        const nC = Math.max(3, Math.round(S.bracts * 0.85 * (0.6 + 0.5 * f)));
         nd.site = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1 });
         nd.budRot = nd.side * 0.1;
         nd.weight = lerp(0.5, 1.1, f) * S.clusterFat; // higher / fatter buds weigh more
@@ -691,9 +719,9 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // upper/mid nodes only, where light reaches and flower sites set. Skipped
       // on co-cola tops, which read as a clean single cola.
       if (P.budDev > 0 && topK < 0 && f > Math.max(S.flowerFrom, 0.38)) {
-        const axis = A * (0.035 + 0.05 * f) * S.clusterLen * (0.5 + 0.5 * P.budDev);
-        const baseW = axis * 0.4 * S.clusterFat;
-        const nC = Math.max(1, Math.round(S.bracts * 0.4 * f));
+        const axis = A * (0.035 + 0.055 * f) * S.clusterLen * (0.5 + 0.5 * P.budDev);
+        const baseW = axis * 0.3 * S.clusterFat;
+        const nC = Math.max(2, Math.round(S.bracts * 0.6 * f));
         nd.nodeBud = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 0.9, lush: 0.7 });
         nd.weight += 0.25 * S.clusterFat;
       }
@@ -707,9 +735,9 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
           const along = 0.48 + rnd() * 0.34;
           let blSite: FlowerSite | null = null;
           if (P.budDev > 0 && f > S.flowerFrom * 0.8) {
-            const axis = A * 0.04 * S.clusterLen * (0.5 + 0.5 * P.budDev);
-            const baseW = axis * 0.4 * S.clusterFat;
-            blSite = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: 1, bracts: Math.max(5, Math.round(S.bracts * 0.7)), fatMul: 0.85, lush: 0.55 });
+            const axis = A * 0.045 * S.clusterLen * (0.5 + 0.5 * P.budDev);
+            const baseW = axis * 0.3 * S.clusterFat;
+            blSite = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: 3, bracts: Math.max(5, Math.round(S.bracts * 0.7)), fatMul: 0.85, lush: 0.55 });
             nd.weight += 0.2 * S.clusterFat;
           }
           nd.branchlets.push({
@@ -727,14 +755,26 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     if (P.budDev > 0) {
       // Top cola gains mass through flowering and swells further in late flower
       // (ripeness) — the apex should be the visual climax, not a tidy spike.
-      const lateMass = 1 + P.ripe * 0.2;
+      const lateMass = 1 + P.ripe * 0.14;
       // Engines 1&2: when the canopy shares its mass across several tops the
       // leader cola shrinks toward its share (but never below ~0.62×, so it still
       // reads as THE main cola). leaderShare = 1 for single-cola strains → no change.
       const leaderMul = lerp(0.62, 1, tops.leaderShare);
-      const axis = stemH * (0.15 + 0.18 * P.budDev) * S.clusterLen * SK.colaScale * lateMass * leaderMul;
-      const baseW = axis * (S.pattern === "spiral" ? 0.3 : 0.46) * S.clusterFat * (0.95 + 0.18 * P.ripe);
-      const nC = Math.round(S.bracts * (S.pattern === "spiral" ? 1.7 : 1.15));
+      // Cola LENGTH as a fraction of stem height. The previous coefficients
+      // compounded (clusterLen·colaScale·lateMass ≈ 1.8×) into a ~0.6·stemH
+      // balloon; a harvest cola should read as a SLIM spear ~25–30% of plant
+      // height. Keep the strain-differentiating multipliers but scale the base
+      // down, then hard-cap the length so no strain balloons past ~a third of
+      // the stem (owner harvest reference, 2026-07-02).
+      let axis = stemH * (0.055 + 0.10 * P.budDev) * S.clusterLen * SK.colaScale * lateMass * leaderMul;
+      axis = Math.min(axis, stemH * 0.34);
+      // Slim the cola: width is a small fraction of its length (spear taper), not
+      // half of it. Chunky strains stay chunkier via clusterFat; spiral sativas
+      // are slimmest.
+      const baseW = axis * (S.pattern === "spiral" ? 0.2 : 0.27) * S.clusterFat * (0.92 + 0.12 * P.ripe);
+      // Pack more, smaller clusters up the spine so the cola reads as one dense
+      // textured column rather than a handful of big teardrops.
+      const nC = Math.round(S.bracts * (S.pattern === "spiral" ? 2.1 : 1.5));
       cola = {
         site: buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1.1 }),
         x: spine[24].x, y: spine[24].y + axis * 0.06,
@@ -887,7 +927,9 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     // Clamp to the FAN_A/FAN_M table length: a future per-strain leaflet count
     // above 9 would otherwise index past the arrays → undefined → NaN geometry.
     const leaflets = Math.min(n, FAN_A.length);
-    const lit = S.lit + topBoost * 6 + litAdj;
+    const hue = leafTone.hue, sat = leafTone.sat;
+    const lit = S.lit + leafTone.litBias + topBoost * 6 + litAdj;
+    const arch = leafTone.arch;
     const yawed = yaw < 0.999;
     if (yawed) {
       ctx!.save();
@@ -896,10 +938,13 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     for (let i = 0; i < leaflets; i++) {
       const L = size * FAN_M[i], Wd = L * 0.32 * S.leafW;
       const a = FAN_A[i] + (claw ? Math.sign(FAN_A[i] || 1) * claw * (0.2 + Math.abs(FAN_A[i]) * 0.5) : 0);
+      // Outer leaflets arch over harder than the central spike, so the whole fan
+      // cups downward/outward (natural relaxed leaf) rather than splaying flat.
+      const curl = arch * (0.5 + Math.abs(FAN_A[i]) * 0.7);
       ctx!.save();
       ctx!.rotate(a);
-      const col = `hsl(${S.hue}, ${S.sat}%, ${lit}%)`;
-      ctx!.strokeStyle = `hsl(${S.hue}, ${S.sat * 0.7}%, ${lit * 0.8}%)`;
+      const col = `hsl(${hue}, ${sat}%, ${lit}%)`;
+      ctx!.strokeStyle = `hsl(${hue}, ${sat * 0.7}%, ${lit * 0.8}%)`;
       ctx!.lineWidth = 1;
       ctx!.beginPath();
       ctx!.moveTo(0, 0);
@@ -907,7 +952,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.stroke();
       ctx!.translate(0, -size * 0.12);
       ctx!.fillStyle = col;
-      leafletPath(L, Wd);
+      leafletPath(L, Wd, curl);
       ctx!.fill();
       ctx!.strokeStyle = "rgba(0,0,0,0.20)";
       ctx!.lineWidth = 0.6;
@@ -915,7 +960,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.strokeStyle = "rgba(255,255,255,0.05)";
       ctx!.beginPath();
       ctx!.moveTo(0, 0);
-      ctx!.lineTo(0, -L * 0.96);
+      ctx!.lineTo(0, -L * 0.96 + curl * L);
       ctx!.stroke();
       ctx!.restore();
     }
@@ -1164,6 +1209,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
 
   function drawPlant(tt: number) {
     const p = plant!;
+    refreshLeafTone();
     // Recompute climate live so dragging FAN/temp affects sway + windburn now
     // (without rebuilding the plant geometry).
     const CL = climateModel(live.current.climate);
