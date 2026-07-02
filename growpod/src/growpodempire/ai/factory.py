@@ -96,16 +96,17 @@ def get_master_grower_provider(settings=None) -> MasterGrowerProvider:
     """The FREE Master Grower bot's provider.
 
     Returns the deterministic offline mock when the mock is forced or no
-    Anthropic key is configured (so CI never needs a key). The real
-    `ClaudeMasterGrower` is a later sub-deliverable; until it lands, even a
-    key-configured environment returns the mock.
+    Anthropic key is configured (so CI never needs a key); with a key, the
+    real Claude-backed provider on the cheap MASTER_GROWER_MODEL.
     """
     settings = settings or get_settings()
     if settings.use_mock_ai or not settings.anthropic_api_key:
         return MockMasterGrower()
-    # Real Claude-backed Master Grower is a later sub-deliverable; until then the
-    # deterministic mock is the only implementation, so always return it.
-    return MockMasterGrower()
+    from .master_grower_claude import ClaudeMasterGrower
+
+    return ClaudeMasterGrower(
+        api_key=settings.anthropic_api_key, model=settings.master_grower_model
+    )
 
 
 _master_grower: Optional[MasterGrowerProvider] = None

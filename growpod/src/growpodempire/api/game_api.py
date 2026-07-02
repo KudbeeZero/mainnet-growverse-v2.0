@@ -1359,15 +1359,23 @@ def university_master_grower_ask(player_id):
     (cited) or refused (legal/medical, pay-to-win). Returns a MasterGrowerReport.
     """
     from ..services.master_grower_service import MasterGrowerService
+    from ..ai.provider import AdvisorError
 
     body = request.get_json(silent=True) or {}
     question = (body.get("question") or "").strip()
     if not question:
         return _error("`question` is required")
     plant_id = body.get("plant_id") or None
-    with session_scope() as s:
-        report = MasterGrowerService(s).ask(question, player_id=player_id, plant_id=plant_id)
-    return jsonify(report.model_dump())
+    try:
+        with session_scope() as s:
+            report = MasterGrowerService(s).ask(
+                question, player_id=player_id, plant_id=plant_id
+            )
+        return jsonify(report.model_dump())
+    except AdvisorError as e:
+        # Real-provider backend failure (mock never raises) — mirror the
+        # lecture route's 503 rather than a generic 500.
+        return _error(f"Master Grower unavailable: {e}", 503)
 
 
 @game_bp.get("/university/admissions/quiz")
