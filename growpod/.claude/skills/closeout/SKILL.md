@@ -21,7 +21,11 @@ Run and confirm — do not hand off on red:
 - If this work changed an **invariant**, update Layer 0/1 (`CLAUDE.md` /
   `docs/memory/ARCHITECTURE.md`) in **this** PR so memory never lies.
 - Record the *why* in `docs/memory/DECISIONS.md` (append-only) if a decision was made.
-- Reconcile `docs/memory/BACKLOG.md` (mark items done/doing) — and never leave a false ✅.
+- **Reconcile `docs/memory/BACKLOG.md` — MANDATORY, not optional** (owner directive
+  2026-07-02): mark items done/doing, add any new work this chat surfaced, and bump the
+  `Last reconciled: **YYYY-MM-DD**` date. Never leave a false ✅. This is enforced —
+  `make check-memory` (and CI) FAILS when the backlog falls >14 days behind the HEAD
+  commit date, so skipping this step blocks the very gates in step 1.
 - If a working day closed, write a Layer-4 standup `docs/memory/standups/YYYY-MM-DD-lut-report.md`.
 
 ## 3. Ask the handoff questions

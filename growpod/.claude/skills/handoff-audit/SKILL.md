@@ -14,6 +14,10 @@ audit reports and the owner approves on CONCERNS/FAIL.
   the verification split, and the **OPEN RISKS (carried)** ledger.
 - Read Layer 0–1: `CLAUDE.md`, `docs/memory/ARCHITECTURE.md`. Skim `docs/memory/BACKLOG.md`
   for the current priority and `docs/memory/MAP.md` for the code↔doc index.
+- **Backlog freshness check** (owner directive 2026-07-02): if `BACKLOG.md`'s
+  `Last reconciled` date predates work you can see merged on `main` (or is >14 days behind
+  HEAD — `make check-memory` enforces this), the previous session skipped its closeout duty:
+  report it as a finding and reconcile the backlog as part of this session's work.
 
 ## 2. Confirm the previous PR's CI is green
 - Identify the open PR from the baton. Using the GitHub MCP tools (load via ToolSearch:
