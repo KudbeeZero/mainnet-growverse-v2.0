@@ -55,7 +55,7 @@ const SAT_FROST_FRAC = 0.12;
 const SAT_PISTIL_FRAC = 0.4;
 
 export const LOD: Record<LODLevel, LODMul> = {
-  close: { calyxCap: 350, frost: 1.0, pistil: 1.0, sugar: 1.0, frostBudget: 1500, frostPer: 1.0, pistilBudget: 180 },
+  close: { calyxCap: 350, frost: 1.0, pistil: 1.0, sugar: 1.0, frostBudget: 1600, frostPer: 1.0, pistilBudget: 180 },
   mid: { calyxCap: 180, frost: 0.5, pistil: 0.6, sugar: 0.6, frostBudget: 500, frostPer: 0.7, pistilBudget: 90 },
   far: { calyxCap: 70, frost: 0.0, pistil: 0.0, sugar: 0.25, frostBudget: 0, frostPer: 0, pistilBudget: 0 },
 };

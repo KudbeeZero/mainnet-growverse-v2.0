@@ -352,6 +352,12 @@ function Calyxes({ assembly, frost }: { assembly: PlantAssembly; frost: number }
         const hf = Math.min(1, Math.max(0, ins.pos[1]));
         const amt = Math.min(0.72, frost * (0.2 + 0.62 * hf));
         col.setRGB(ins.color[0], ins.color[1], ins.color[2]).lerp(FROST_TINT, amt);
+        // Deterministic per-calyx tonal jitter (±9%) so neighbouring sacs read as
+        // distinct swollen calyxes (self-shadowed crevices) rather than one fused
+        // gummy mass — a cheap stand-in for ambient occlusion between calyxes.
+        const hsh = Math.sin(ins.pos[0] * 91.17 + ins.pos[1] * 47.33 + ins.pos[2] * 61.7) * 43758.5453;
+        const jit = 0.91 + 0.18 * (hsh - Math.floor(hsh));
+        col.multiplyScalar(jit);
         mesh.setColorAt(idx, col);
         idx++;
       }
