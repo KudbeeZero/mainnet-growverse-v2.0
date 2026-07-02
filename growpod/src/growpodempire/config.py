@@ -137,6 +137,12 @@ class Settings:
         # deterministic mock advisor is used, so the app and tests need no key.
         self.anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
         self.advisor_model: str = os.environ.get("ADVISOR_MODEL", "claude-opus-4-8")
+        # The FREE Master Grower bot runs on a small, cheap model by default —
+        # it's free for players, so unit cost must stay near zero. Overridable
+        # per-env for quality experiments.
+        self.master_grower_model: str = os.environ.get(
+            "MASTER_GROWER_MODEL", "claude-haiku-4-5-20251001"
+        )
         self.use_mock_ai: bool = (
             os.environ.get("USE_MOCK_AI", "false").lower() == "true"
         )

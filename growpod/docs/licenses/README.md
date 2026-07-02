@@ -1,3 +1,5 @@
+> **NOTE (2026-07-02):** the `web/public/pod/*` per-stage stills listed below were REMOVED from the app (photoreal-in-pod plan dropped — see DECISIONS.md 2026-07-02). Their license records are kept for provenance; `web/public/media/` and `web/public/buds/` remain in use.
+
 # Asset licensing — photoreal Grow-Pod visuals
 
 This folder records the **rights** under which GrowVerse ships its photoreal plant

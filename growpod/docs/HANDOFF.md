@@ -4,107 +4,61 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-06-18 · **By:** audit/baton-repair chat — retro-audit of the latest merged PR.
-**Active branch:** `claude/growverse-audit-baton-yqd63o` (this chat; **one draft PR**, doc-only).
-**`main` is at `231c00b`** (= the PR #22 merge) and **CI-green** (push run `231c00b` ✅).
+**Last rewritten:** 2026-07-02 · **By:** the security-review → HERMES → prod-restore session.
+**Active branch:** `claude/code-review-security-vijkhs` (restarts from `origin/main` after each merge).
+**`main`:** PR #105 merge + the docs/master-grower follow-up PR — CI green.
+**Production:** `growverse-api` on Fly is LIVE on current code (verified 2026-07-02: bio-101 +
+factions flag present, `/health` OK, lecture audio cache-hit). Deploys are AUTOMATIC on merge
+(`.github/workflows/deploy-api.yml` at the repo root). growverse.dev (Vercel) deploys `web/`
+from `main`.
 
-> **Owner rule now in force: ONE active PR at a time.** No stacked PRs, no parallel feature PRs,
-> no multi-PR chains unless the owner explicitly approves an exception. If another unit is
-> discovered, **queue it below — do not open it.**
-
----
-
-## This chat (2026-06-18) — retro-audit + baton repair (doc-only)
-
-A read-only audit of the **most recently merged PR** plus a repair of this stale baton. No product,
-engine, economy, token, wallet, minting, db, simulation, strain, morphology, chamber, CI, or
-player-facing behavior changed — **three markdown files only**.
-
-**Audited: PR #22 — "docs: Database Systems + Process Coach audit (read-only)"** — `merged:true`,
-merged 2026-06-18T22:39:06Z, merge commit `231c00b` = current HEAD of `main`.
-
-| Claim (PR/handoff) | Repo evidence | Label |
-|---|---|---|
-| #22 changed exactly one additive markdown file, no behavior | `git show 231c00b --stat` → 1 file, **+290** (`docs/DATABASE_SYSTEMS_AUDIT.md`) | **Verified** |
-| Branch `claude/website-content-audit-*` is a pre-pivot rename, not a website task | PR #22 body documents the pivot to a DB audit | **Verified** |
-| #22 was gated by CI before merge | `get_check_runs #22` → **0 checks**; only validated *after* merge by the `main` push run | **Not verified → merged blind** |
-| #22's headline "top process risk": *`ci.yml` is nested under `growpod/`, Actions never runs* | **False on current main** — root `.github/workflows/ci.yml` exists (no `growpod/.github/`), and CI is green on `main` pushes + PR #14. Cause of #22's 0 checks was a **stale, un-rebased branch**, not nesting. | **Scope mismatch (doc vs evidence)** → erratum added to the doc |
-| Prior baton: PR #14 is an "open PR" / active branch | PR #14 `merged:true` 22:22Z (`2ed4c9b`) | **Memory conflict (stale)** |
-| Prior baton: RISK #8 web safety net "pending the first CI run" | PR #14 PR run + `main` pushes ran the web `typecheck·lint·build·test·e2e` job **green** | **Verified → closeable** |
-| Prior baton "prior baton" block cites PRs **#42/#47/#59/#63** | This repo's PRs only reach **#23**; those numbers do not exist here | **No evidence (phantom) → removed** |
-
-**Tests/checks this pass:** read-only git + GitHub Actions API evidence (above) and `make check-memory`
-to keep doc-link integrity green. No source touched, so lint/test are behavior-unaffected.
+> **Owner rule in force: ONE active PR at a time.** Queue further units here, don't open them.
 
 ---
 
-## Merged on `main` (real, verified) — recent PR ledger
+## What shipped 2026-07-02 (PRs #104, #105 + follow-up)
 
-| PR | Title | Merged | Note |
-|----|-------|--------|------|
-| **#22** | docs: Database Systems + Process Coach audit | 22:39Z (`231c00b`, HEAD) | doc-only; **0 pre-merge CI** (see audit) |
-| #23 | docs: Global Evidence + Memory Layer charter | 22:31Z (`56f0033`) | doc-only; 0 pre-merge CI (stale branch) |
-| #14 | Testing-prep: green build + test-env + skip-login | 22:22Z (`2ed4c9b`) | big (54 files); **CI green** on its PR run (`f3d1d99` ✅) |
-| #17 | backup/local-changes merge | — (`cc32548`) | — |
-| #16 | "Ask Grok" GitHub Action | — (`5ea3307`) | adds repo-root `.github/workflows/grok.yml` |
+1. **Security hardening** — waitlist PII/enumeration/DoS fixes, deposit fail-closed off-mock,
+   401-only session death, root fly.toml `APP_ENV=production`, non-root Docker.
+2. **Grow room reverted to the procedural plant** — photoreal stills deleted (ADR 2026-07-02).
+3. **HERMES University** — mastery now credits completed courses (was dead for 14/15 courses);
+   produce-once lecture audio (ElevenLabs billed once per course; verified live: cache-hit);
+   difficulty picker removed; online-school catalog; codex doc `design/10-hermes-university.md`.
+4. **Prod outage + restore** — the untested rate-limit boot guard 502'd the first auto-deploy
+   (no Redis); fixed via acknowledged `RATELIMIT_ALLOW_MEMORY` + 3 guard tests (see
+   `docs/memory/INCIDENTS.md`).
+5. **Process enforcement** — backlog staleness gate in check-memory; INCIDENTS twice-rule
+   ledger; `docs/memory/DOCS_INDEX.md` docs tracking layer + stale-doc corrections
+   (DEPLOY_FLY, SECURITY.md backups, MASTER_BIBLE banner, licenses/buds notes).
+6. **Real Claude Master Grower** — `ai/master_grower_claude.py` on `MASTER_GROWER_MODEL`
+   (default Haiku 4.5, cheap); factory returns it with a key, mock in CI unchanged.
+   Advisor/auto-care and the Professor lecturer already had real Claude providers.
 
-**CI reality:** the backend + web gates live at the **repo root** `.github/workflows/ci.yml` and **do
-run** — `main` push runs `231c00b` / `56f0033` / `2ed4c9b` are all ✅, and PR #14's PR run was ✅.
-**Process gap:** #22 and #23 merged with **zero pre-merge checks** because their branches predated
-#14's root-CI landing and were not rebased, so the `pull_request` trigger never fired. **Rebase every
-PR onto post-#14 `main` before merge** so CI gates it pre-merge, not just after.
+## NEXT ACTION (single)
 
----
+**AI-stack rollout on the small budget (~$13):** owner sets `ANTHROPIC_API_KEY` in Fly secrets
+**plus** `ADVISOR_MODEL=claude-haiku-4-5-20251001` (advisor/lecturer default is Opus — too
+expensive for the budget; the Master Grower already defaults to Haiku). Then verify:
+`/master-grower/ask` returns `provider: claude:claude-haiku-...`, one lecture generates and
+caches, spend shows a few cents. Config/env only — no code expected. Off-limits: economy
+values, treasury paths.
 
-## NEXT ACTION (single-lane)
+## Verification split
 
-**Owner reviews this doc-only audit/baton PR.** Nothing else is started this lane. After it is
-reviewed/merged, the owner picks the **one** next PR. Per the new rule, any newly discovered unit is
-**queued here, not opened.**
+- **Agent-verified (test-backed):** backend 1111 passed / 6 skipped; web 417 + typecheck/lint/
+  build; check-memory green; live API probed (health / flags / catalog / audio-cache).
+- **Device-verify (owner):** growverse.dev in a browser — grow room shows the procedural
+  plant; HERMES catalog renders school sections; lecture audio plays. Optional one-tap:
+  GitHub → Settings → "Automatically delete head branches" (INCIDENTS.md branch entry).
 
-**Queued (not started — owner picks one next):**
-- **Process P0 (from #22's audit, still valid):** make the repo-root backend CI job a **required**
-  status check on branch protection, and add a PR-template/checklist reminder to **rebase onto `main`
-  before merge** (prevents future 0-check merges). CI-config/process only.
-- **DB follow-ups (from #22, owner-gated):** model↔migration drift guard (tests bypass migrations via
-  `create_all`); FK single-column indexes on hot `player_id`/`strain_id`/`pod_id` lookups (touches a
-  protected migration surface — needs owner OK); concurrency test-matrix expansion (test-only).
-- **RISK #4/7 hardening** (real on-chain value) — owner-gated, pre-launch only (see ledger below).
+## OPEN RISKS (carried)
 
-**Off-limits this lane:** no economy / chain / breeding / minting / simulation / strain / morphology /
-chamber / player-facing change; no new feature unit; no second PR; no merge.
-
----
-
-## OPEN RISKS (carried ledger) — re-verify against current code before acting
-
-> Only **RISK #8 (web CI)** was independently re-verified this pass. The rest are **carried from prior
-> batons and NOT re-audited here** — treat their status as unproven until checked with `file:line` +
-> a gate run. Phantom PR-number citations from the old baton (#47/#59/#63 — not in this repo) were removed.
-
-| # | Sev | Risk | Evidence anchor | Status (this pass) |
-|---|-----|------|-----------------|--------------------|
-| 8 | HIGH | **Safety net.** Backend HTTP boundary + web vitest/Playwright wired into CI. | `.github/workflows/ci.yml`, `web/package.json` | ✅ **Web CI verified green** (PR #14 run + `main` pushes ran the web `typecheck·lint·build·test·e2e` job). Treasury-cap + chain-failure-rollback UI tests still absent → keep open at lower sev. |
-| 4/7 | HIGH | **Chain settlement not real** — deposit trusts no on-chain proof; no txid-replay/reconciliation/address validation. Real value stays gated OFF. | `services/settlement_service.py`, `db/models.py` | **Carried, not re-verified.** Pre-launch gate. |
-| 3 | HIGH | Idempotency on mutations — no general `Idempotency-Key` header (duplicate → 409). | `api/game_api.py` | **Carried, not re-verified.** |
-| 9 | MED | **Sim dormancy semantics** — large catch-up gaps can delay an earned harvest / skip lethal decay; needs a knob guard. | `simulation/engine.py` | **Carried, not re-verified.** |
-| 11 | LOW | Rate-limiter `memory://` per-worker (set Redis for multi-worker); `get_level` public oracle. | fleet-sweep audit | **Carried, not re-verified.** |
-
----
-
-## Verification split (this chat)
-
-**Agent-verifiable (proven this pass):** the audit table above — diff stat, PR merge state, CI check
-counts, and `main`/PR Actions run conclusions, all from git + the GitHub API. `make check-memory` kept
-green for the doc edits.
-
-**Owner / not-this-pass:** the full DB-audit content in `DATABASE_SYSTEMS_AUDIT.md` (money-path
-constraints, single-head migrations, FK-index list, RISK #4/7) is preserved as historical evidence and
-was **not** independently re-audited here — only its stale CI headline was corrected via an erratum.
-
----
-
-> History note: earlier batons described a large multi-PR program (testing-prep, simulation test clock,
-> feature-flag reconciliation) under PR numbers that **do not exist in this repository** (it tops out at
-> #23). Those references were removed as unverifiable. The durable facts are the merged-PR ledger and the
-> carried-risks ledger above; trust the code over any prose.
+- **Rate limits are per-worker in-memory in prod** (`RATELIMIT_ALLOW_MEMORY=true` in
+  `fly.toml`) until Redis is attached (`fly redis create` → `RATELIMIT_STORAGE_URI` secret →
+  delete the override line). INCIDENTS.md tracks it (🟡).
+- **Settlement deposit disabled off-mock** (fail-closed) pending the player-signed,
+  indexer-verified redesign; withdraw lacks an idempotency key. Treasury — owner gate.
+- **5 no-op feature flags + web never reads `/flags`** (false kill switches) — BACKLOG REC-005.
+- **No automated DB backups** (SECURITY.md corrected; snapshot workflow still to build).
+- **Docs hygiene tail** (BUILDLOG, frozen "Live" ledgers, DEV_BUILD_LOG, 00–09 snapshots) —
+  `docs/memory/DOCS_INDEX.md` stale ledger + BACKLOG item.

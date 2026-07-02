@@ -41,8 +41,10 @@ from the environment / host secret store and must never be committed. See
 
 ## Backups
 
-A daily snapshot of the database plus the balance/strain lookup tables is taken
-for rollback and audit (`scripts/snapshot.py`, scheduled via
-`.github/workflows/snapshot.yml`). Set a `DATABASE_URL` repository secret to
-snapshot the production database; snapshots are uploaded as workflow artifacts
-(30-day retention).
+**Not yet automated** (corrected 2026-07-02 — this section previously claimed a
+scheduled `.github/workflows/snapshot.yml`, which never existed). The snapshot
+tool is `src/growpodempire/scripts/snapshot.py`, runnable by hand; scheduling it
+is tracked in `docs/memory/BACKLOG.md` (security follow-ups). When automated,
+snapshots must go to private object storage with scoped credentials — NOT
+GitHub workflow artifacts, which would expose player data to anyone with repo
+read access.
