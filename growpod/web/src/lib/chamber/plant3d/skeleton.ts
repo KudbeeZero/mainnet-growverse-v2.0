@@ -357,7 +357,11 @@ export function buildPlantSkeleton(opts: BuildPlantOpts): PlantSkeleton {
     };
   }
 
-  const refColaSize = stemH * 0.12 * S.clusterLen;
+  // Reference cola size drives every bud's world scale. Tuned so the apical cola
+  // reads as a fat, dominant flower (~15-20% of plant height at full flower) and
+  // side colas cluster into a visible column — not the scattered specks a smaller
+  // factor produced.
+  const refColaSize = stemH * 0.38 * S.clusterLen;
 
   return {
     stem,

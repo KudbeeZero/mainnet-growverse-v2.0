@@ -20,7 +20,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { buildPlantSkeleton, type PlantSkeleton, type ColaPlacement, type Vec3 } from "@/lib/chamber/plant3d/skeleton";
 import { buildFanLeaf } from "@/lib/chamber/plant3d/fanLeaf";
-import { buildCola, hslToRgb, type ColaInstance } from "@/lib/chamber/bud3d/cola";
+import { buildCola, colaSilhouette, hslToRgb, type ColaInstance } from "@/lib/chamber/bud3d/cola";
 import { buildFrost, buildPistils, buildSugarLeaves, type FrostInstance, type PistilInstance, type SugarLeafInstance, type FrostMat } from "@/lib/chamber/bud3d/detail";
 import { morphologyFor, type DevParams, type Morphology, type Silhouette } from "@/lib/chamber/morphology";
 import { budDnaFor, pickPaletteColor, type BudDNA } from "@/lib/chamber/budDna";
@@ -144,6 +144,101 @@ function mergeBufferGeometries(geos: THREE.BufferGeometry[]): THREE.BufferGeomet
   merged.setAttribute("normal", new THREE.BufferAttribute(norm, 3));
   merged.setIndex(new THREE.BufferAttribute(indices, 1));
   return merged;
+}
+
+// Color-aware merge (position + normal + color) into one draw call.
+function mergeColoredGeometries(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  let totalVerts = 0, totalIdx = 0;
+  for (const g of geos) {
+    totalVerts += g.attributes.position.count;
+    totalIdx += g.index ? g.index.count : 0;
+  }
+  const pos = new Float32Array(totalVerts * 3);
+  const norm = new Float32Array(totalVerts * 3);
+  const col = new Float32Array(totalVerts * 3);
+  const indices = new Uint32Array(totalIdx);
+  let vOff = 0, iOff = 0, baseV = 0;
+  for (const g of geos) {
+    const p = g.attributes.position;
+    const n = g.attributes.normal;
+    const c = g.attributes.color;
+    for (let i = 0; i < p.count; i++) {
+      pos[(vOff + i) * 3] = p.getX(i);
+      pos[(vOff + i) * 3 + 1] = p.getY(i);
+      pos[(vOff + i) * 3 + 2] = p.getZ(i);
+      if (n) { norm[(vOff + i) * 3] = n.getX(i); norm[(vOff + i) * 3 + 1] = n.getY(i); norm[(vOff + i) * 3 + 2] = n.getZ(i); }
+      if (c) { col[(vOff + i) * 3] = c.getX(i); col[(vOff + i) * 3 + 1] = c.getY(i); col[(vOff + i) * 3 + 2] = c.getZ(i); }
+    }
+    if (g.index) {
+      for (let i = 0; i < g.index.count; i++) indices[iOff + i] = g.index.getX(i) + baseV;
+      iOff += g.index.count;
+    }
+    baseV += p.count;
+    vOff += p.count;
+  }
+  const merged = new THREE.BufferGeometry();
+  merged.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  merged.setAttribute("normal", new THREE.BufferAttribute(norm, 3));
+  merged.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  merged.setIndex(new THREE.BufferAttribute(indices, 1));
+  return merged;
+}
+
+// --- Bud cores (the solid teardrop body behind each cola's calyxes) ----------
+// Without this the calyxes read as loose floating dots with the background
+// showing through the seams — the bud vanishes at whole-plant zoom. The core is
+// the same lathed silhouette BudGL uses, pulled inside the calyx shell, merged
+// across every bud site into one vertex-coloured draw call.
+
+function FloraBudCore({
+  sites, dna, dev, refColaSize, purple,
+}: { sites: ColaPlacement[]; dna: BudDNA; dev: DevParams; refColaSize: number; purple: number }) {
+  const geom = useMemo(() => {
+    const { profile, H } = colaSilhouette(dna);
+    const pts = profile.map(([r, y]) => new THREE.Vector2(r * 0.66, y));
+
+    // Deep understructure colour → muted crown (mirrors BudGL.BudCore).
+    const [br, bg, bb] = hslToRgb(pickPaletteColor(dna.palette, 0.5));
+    let baseR = br * 0.4, baseG = bg * 0.46, baseB = bb * 0.4;
+    const pp = Math.min(1, Math.max(0, purple)) * 0.5;
+    if (pp > 0) { baseR += (0.22 - baseR) * pp; baseG += (0.1 - baseG) * pp; baseB += (0.28 - baseB) * pp; }
+    const fr = 0.42, fg = 0.52, fb = 0.4;
+    const lift = 0.3 + 0.3 * Math.min(1, Math.max(0, dev.trich));
+    const devScale = 0.18 + 0.82 * Math.min(1, Math.max(0, dev.budDev));
+
+    const geos: THREE.BufferGeometry[] = [];
+    for (const site of sites) {
+      const worldScale = site.scale * refColaSize * devScale;
+      if (worldScale < 0.012) continue;
+      const geo = new THREE.LatheGeometry(pts, 18);
+      const gp = geo.attributes.position;
+      const colors = new Float32Array(gp.count * 3);
+      for (let i = 0; i < gp.count; i++) {
+        const t = Math.min(1, Math.max(0, gp.getY(i) / H));
+        const k = t * t * lift;
+        colors[i * 3] = baseR + (fr - baseR) * k;
+        colors[i * 3 + 1] = baseG + (fg - baseG) * k;
+        colors[i * 3 + 2] = baseB + (fb - baseB) * k;
+      }
+      geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geo.computeVertexNormals();
+      geo.scale(worldScale, worldScale, worldScale);
+      geo.translate(site.pos[0], site.pos[1], site.pos[2]);
+      geos.push(geo);
+    }
+    if (geos.length === 0) return null;
+    const merged = mergeColoredGeometries(geos);
+    geos.forEach(g => g.dispose());
+    return merged;
+  }, [sites, dna, dev, refColaSize, purple]);
+
+  const mat = useMemo(
+    () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.0 }),
+    [],
+  );
+
+  if (!geom) return null;
+  return <mesh geometry={geom} material={mat} />;
 }
 
 // --- Fan leaves (instanced) --------------------------------------------------
@@ -603,10 +698,12 @@ export function PlantGL({
 
   const dna = useMemo(() => budDnaFor(strain ?? "", bc), [strain, bc]);
 
-  const flora = useMemo(() => {
-    const sites = collectBudSites(skeleton);
-    return buildAggregatedFlora(sites, dna, seed, dev, skeleton.refColaSize, isMobile);
-  }, [skeleton, dna, seed, dev, isMobile]);
+  const sites = useMemo(() => collectBudSites(skeleton), [skeleton]);
+
+  const flora = useMemo(
+    () => buildAggregatedFlora(sites, dna, seed, dev, skeleton.refColaSize, isMobile),
+    [sites, dna, seed, dev, skeleton.refColaSize, isMobile],
+  );
 
   // Camera position: pull back enough to frame the plant.
   const camY = skeleton.height * 0.45;
@@ -618,6 +715,7 @@ export function PlantGL({
     <>
       <WoodyParts skeleton={skeleton} />
       <FanLeafLayer skeleton={skeleton} morph={morph} />
+      <FloraBudCore sites={sites} dna={dna} dev={dev} refColaSize={skeleton.refColaSize} purple={purple} />
       <FloraCalyxes flora={flora} purple={purple} />
       <FloraSugarLeaves flora={flora} />
       <FloraPistils flora={flora} />
