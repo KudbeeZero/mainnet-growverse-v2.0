@@ -20,7 +20,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { buildPlantAssembly, type LODLevel, type PlantAssembly, type ColaPlacement } from "@/lib/plant3d/assembly";
+import { buildPlantAssembly, fatWidthCurve, type LODLevel, type PlantAssembly } from "@/lib/plant3d/assembly";
 import { buildFanLeafOutlines } from "@/lib/plant3d/leaves";
 import type { Vec3 } from "@/lib/plant3d/skeleton";
 import { hslToRgb } from "@/lib/chamber/bud3d/cola";
@@ -64,24 +64,53 @@ function taperedTube(pts: Vec3[], radii: number[], radial = 6): THREE.BufferGeom
  * (mirrors BudGL's BudCore). Instanced per cola, scaled by width/height. */
 function makeColaCoreGeom(): THREE.BufferGeometry {
   const pts: THREE.Vector2[] = [new THREE.Vector2(0.0001, 0)];
-  const N = 12;
+  const N = 18;
   for (let i = 0; i <= N; i++) {
     const t = i / N;
-    const w = Math.sin(Math.PI * (0.12 + 0.82 * t));
-    pts.push(new THREE.Vector2(Math.max(0.0001, 0.42 * w * 0.52), t));
+    // Fat-through-the-middle profile (matches the reshaped calyx envelope), so
+    // where the body peeks between calyxes it reads as a chunky bud, not a cone.
+    // Pinch the top 14% to a point so the bare tip is calyx-only (no pale stub).
+    const tipPinch = t > 0.86 ? (1 - t) / 0.14 : 1;
+    pts.push(new THREE.Vector2(Math.max(0.0001, 0.42 * fatWidthCurve(t) * 0.6 * tipPinch), t));
   }
   pts.push(new THREE.Vector2(0.0001, 1));
-  const geo = new THREE.LatheGeometry(pts, 10);
+  const geo = new THREE.LatheGeometry(pts, 14);
+  // Angular + vertical lobing so even the body silhouette is bumpy/irregular.
+  const pos = geo.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const r = Math.hypot(v.x, v.z);
+    if (r > 1e-4) {
+      const theta = Math.atan2(v.z, v.x);
+      const f = 1 + 0.16 * Math.cos(5 * theta + v.y * 6.5) + 0.09 * Math.cos(3 * theta - v.y * 4.2);
+      v.x *= f;
+      v.z *= f;
+      pos.setXYZ(i, v.x, v.y, v.z);
+    }
+  }
   geo.computeVertexNormals();
   return geo;
 }
 
 /** Low-poly ribbed teardrop calyx (cheap version of BudGL's calyx). */
 function makeCalyxGeom(): THREE.BufferGeometry {
-  const profile = [
-    [0.0, -0.5], [0.3, -0.36], [0.48, -0.12], [0.4, 0.14], [0.22, 0.34], [0.0, 0.5],
-  ].map(([x, y]) => new THREE.Vector2(x, y));
-  const geo = new THREE.LatheGeometry(profile, 5);
+  // A cheap elongated octahedron (8 tris) — a faceted bipyramid that, stacked
+  // and overlapped by the thousand, reads as pointed swollen bud-scales (a
+  // pinecone-like chunky cola) while keeping the whole plant inside the tri
+  // budget. Flat shading so each facet catches the studio light.
+  const geo = new THREE.OctahedronGeometry(1, 0);
+  // Round the equator a touch so it's a plump scale, not a sharp spike.
+  const pos = geo.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    if (Math.abs(v.y) < 0.9) {
+      v.x *= 1.15;
+      v.z *= 1.15;
+      pos.setXYZ(i, v.x, v.y, v.z);
+    }
+  }
   geo.computeVertexNormals();
   return geo;
 }
@@ -278,7 +307,7 @@ function Calyxes({ assembly }: { assembly: PlantAssembly }) {
         q.multiply(rz);
         d.position.copy(lp);
         d.quaternion.copy(q);
-        const s = c.width * 1.5;
+        const s = c.width * 1.65;
         d.scale.set(ins.scale[0] * s, ins.scale[1] * s * 1.15, ins.scale[2] * s);
         d.updateMatrix();
         mesh.setMatrixAt(idx, d.matrix);
@@ -322,7 +351,7 @@ function Frost({ assembly }: { assembly: PlantAssembly }) {
         lp.applyQuaternion(qWorld).add(origin);
         d.position.copy(lp);
         d.rotation.set(0, 0, 0);
-        d.scale.setScalar(g.r * c.width * 2.3);
+        d.scale.setScalar(g.r * c.width * 2.8);
         d.updateMatrix();
         mesh.setMatrixAt(idx, d.matrix);
         mesh.setColorAt(idx, frostColor(g.mat));

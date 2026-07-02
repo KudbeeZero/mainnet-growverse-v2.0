@@ -278,16 +278,20 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // reads as one textured bud, so the cola no longer looks like grapes. Rings
       // are tight (rad step 0.3) so pods overlap into a continuous mass. Wider
       // sites carry MORE pods (real big colas add calyxes, not bigger ones).
-      const nPods = opt.bracts + 6 + Math.round(baseW * 0.18);
+      // Round 4: denser pack — MORE, smaller pods across MORE rings so the fat
+      // lobed body reads packed to the edges (not a hollow envelope with a few
+      // central calyxes). Rings reach further (rad step 0.27) to fill the widened
+      // silhouette; the outer rings are the lobe surface.
+      const nPods = opt.bracts + 11 + Math.round(baseW * 0.3);
       const pods = [];
       for (let j = 0; j < nPods; j++) {
-        const ring = j < 3 ? 0 : j < 8 ? 1 : j < 15 ? 2 : 3;
+        const ring = j < 4 ? 0 : j < 11 ? 1 : j < 20 ? 2 : j < 31 ? 3 : 4;
         const a = (j * 2.399) % TAU;
-        const rad = ring * 0.3 + rnd() * 0.1;
+        const rad = ring * 0.27 + rnd() * 0.1;
         pods.push({
           ring, a, rad,
-          k: ring / 3 + rnd() * 0.28,
-          sz: (ring === 0 ? 0.78 : ring === 1 ? 0.68 : ring === 2 ? 0.58 : 0.5) * (0.82 + rnd() * 0.3),
+          k: ring / 4 + rnd() * 0.24,
+          sz: (ring === 0 ? 0.76 : ring === 1 ? 0.66 : ring === 2 ? 0.57 : ring === 3 ? 0.5 : 0.44) * (0.82 + rnd() * 0.3),
           dl: (rnd() - 0.5) * 12, dh: (rnd() - 0.5) * 8, blushK: rnd(),
         });
       }
@@ -331,7 +335,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
 
     // Per-cluster placement, computed once so the continuous bud-mass
     // silhouette and the calyx texture that rides on it stay in lock-step.
-    const geo: Array<{ cx: number; cy: number; cw: number; podW: number; d: number } | null> = [];
+    const geo: Array<{ cx: number; cy: number; cw: number; podW: number; d: number; lp: number } | null> = [];
     for (let i = 0; i < site.clusters.length; i++) {
       const cl = site.clusters[i];
       const d = clusterDev(cl, P.budDev);
@@ -346,7 +350,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // Sublinear pod size: a wide cola keeps near-constant calyx grain (more
       // pods, via nPods above) instead of ballooning each pod into a grape.
       const podW = Math.max(1.1, Math.pow(cw, 0.85) * 0.2);
-      geo.push({ cx, cy, cw, podW, d });
+      geo.push({ cx, cy, cw, podW, d, lp: cl.ph });
     }
 
     // ---- De-grape: continuous bud-mass silhouette (ported from PR #25) ----
@@ -369,9 +373,38 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // still lives in the calyx texture — only the envelope is calmed.
       const raw = mass.map((m) => Math.max(m.podW * 1.25, m.cw * 0.56) * (0.66 + 0.34 * m.d));
       const hw = raw.map((r, i) => (raw[Math.max(0, i - 1)] + 2 * r + raw[Math.min(n - 1, i + 1)]) / 4);
-      // Clean spear taper: width may only shrink toward the tip (a wide bulge
-      // above a waist is what made the old outline read as stacked lobes).
-      for (let i = n - 2; i >= 0; i--) hw[i] = Math.min(hw[i], hw[i + 1]);
+      // ---- Round 4: fat-mid taper envelope ----
+      // A monotonic tip-ward shrink made a long smooth CONE (the "turd"). Real
+      // colas stay FAT through the middle (~80% of max width) and only taper in
+      // the last ~third toward a rounded-pointed tip, rounding gently at the
+      // base too. Build that profile explicitly and pull the smoothed widths
+      // toward it, so the cola is chunky through the body instead of coning off.
+      const maxHw = Math.max(...hw);
+      const tipFrac = 0.34; // only the top third tapers
+      const envFat = (u: number) => {
+        // u: 0 = tip, 1 = base
+        if (u < tipFrac) return lerp(0.24, 1, smooth(u / tipFrac)); // rounded point
+        // fat body, with a slight round-in over the last 15% at the base
+        return 1 - 0.14 * smooth(clamp((u - 0.85) / 0.15, 0, 1));
+      };
+      for (let i = 0; i < n; i++) {
+        const u = n === 1 ? 0.5 : i / (n - 1);
+        const profile = maxHw * envFat(u);
+        hw[i] = lerp(hw[i], profile, 0.72);
+      }
+      // ---- Round 4: controlled lobing ----
+      // A perfectly smooth envelope reads as a "turd". Real colas have a
+      // KNOBBY-but-cohesive outline — stacked calyx clusters bulge out every
+      // few rows. Add seeded per-cluster bumps (small amplitude, two octaves)
+      // so the edge undulates like stacked clusters instead of a smooth sausage.
+      // The bump is signed so lobes push OUT and notches pull IN, giving the
+      // depth between lobes seen in the macro reference.
+      const lobe = hw.map((h, i) => {
+        const ph = mass[i].lp;
+        const bump = Math.sin(ph * 3.3 + i * 1.9) * 0.62 + Math.sin(ph * 1.7 + i * 0.8) * 0.38;
+        return h * (1 + 0.3 * bump);
+      });
+      for (let i = 0; i < n; i++) hw[i] = lobe[i];
       // Centreline: 3-tap smoothed so the envelope leans gently instead of
       // zigzagging cluster-to-cluster (the anchors themselves are already
       // damped toward the axis above, keeping texture and mass in lock-step).
@@ -385,10 +418,14 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       for (let i = 0; i < n; i++) pts.push([cxs[i] + hw[i], mass[i].cy]);
       pts.push([cxs[n - 1], botY]);
       for (let i = n - 1; i >= 0; i--) pts.push([cxs[i] - hw[i], mass[i].cy]);
-      const massLit = 37 + bc.anthocyanin * 2;
+      // Round 4: a DARKER, richer base mass so the bud never reads as a
+      // translucent teal envelope. Where the calyx pods don't fully cover, the
+      // gap now reads as shadowed depth between clusters (the reference cola is
+      // dark in the seams), not empty space.
+      const massLit = 30 + bc.anthocyanin * 2;
       const mg = ctx!.createLinearGradient(0, tipY, 0, botY);
-      mg.addColorStop(0, `hsl(${bc.calyxHue + 4}, ${bc.calyxSat}%, ${massLit + 7}%)`);
-      mg.addColorStop(1, `hsl(${bc.calyxHue}, ${Math.min(88, bc.calyxSat + 8)}%, ${Math.max(12, massLit - 13)}%)`);
+      mg.addColorStop(0, `hsl(${bc.calyxHue + 4}, ${bc.calyxSat}%, ${massLit + 6}%)`);
+      mg.addColorStop(1, `hsl(${bc.calyxHue}, ${Math.min(90, bc.calyxSat + 10)}%, ${Math.max(9, massLit - 14)}%)`);
       ctx!.fillStyle = mg;
       // Closed midpoint-quadratic spline: each vertex is a control point, so the
       // outline is C1-smooth all the way round; the extended tip vertex keeps a
@@ -437,8 +474,8 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       for (const p of cl.pods) {
         if (p.k > reveal) continue;
         const g = 0.5 + 0.5 * d;
-        const px = cx + Math.cos(p.a) * p.rad * cw * 0.55;
-        const py = cy + Math.sin(p.a) * p.rad * cw * 0.35 + p.ring * podH * 0.18;
+        const px = cx + Math.cos(p.a) * p.rad * cw * 0.62;
+        const py = cy + Math.sin(p.a) * p.rad * cw * 0.42 + p.ring * podH * 0.16;
         // Some calyxes can render in an accent hue (e.g. purple accents on a
         // green bud) — chosen deterministically per pod via its blushK roll.
         const accent = bc.accentFrac != null && bc.accentHue != null && p.blushK < bc.accentFrac;
@@ -731,7 +768,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         const coShare = tops.secondaryShares[topK] / tops.leaderShare; // ≤1 vs leader
         let axis = stemH * 0.10 * S.clusterLen * SK.colaScale * (0.5 + 0.5 * P.budDev) * lerp(0.72, 1.06, coShare) * (1 + P.ripe * 0.14);
         axis = Math.min(axis, stemH * 0.28);
-        const baseW = axis * (S.pattern === "spiral" ? 0.2 : 0.27) * S.clusterFat * (0.92 + 0.12 * P.ripe);
+        const baseW = axis * (S.pattern === "spiral" ? 0.24 : 0.35) * S.clusterFat * (0.92 + 0.12 * P.ripe);
         const nC = Math.max(3, Math.round(S.bracts * (S.pattern === "spiral" ? 1.9 : 1.35)));
         nd.site = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1.05 });
         nd.budRot = nd.side * 0.06;

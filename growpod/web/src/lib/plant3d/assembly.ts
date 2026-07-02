@@ -13,6 +13,7 @@
 //
 // Deterministic: every cola derives its own seed from the plant seed + its index.
 
+import { mulberry32 } from "../chamber/morphology";
 import { buildCola, type ColaInstance } from "../chamber/bud3d/cola";
 import {
   buildFrost,
@@ -48,6 +49,65 @@ export const LOD: Record<LODLevel, LODMul> = {
 };
 
 /** One cola placed in the world: unit-space instances + a world transform. */
+function clamp01(v: number): number {
+  return Math.min(1, Math.max(0, v));
+}
+
+/** The ORIGINAL bud3d width curve (how buildCola distributed the calyxes). */
+function origWidthCurve(t: number): number {
+  return Math.sin(Math.PI * (0.12 + 0.82 * t));
+}
+
+/**
+ * A CHUNKY cola profile: stays fat (~0.8–1.0 of max) through the middle until
+ * the last third, then rounds off to a modest tip — NOT a smooth needle taper.
+ * This is the owner's "no turds" rule: colas are fat-bodied with a rounded cap.
+ */
+export function fatWidthCurve(t: number): number {
+  if (t < 0.7) {
+    // Fat through the body: ~0.82 at the base, bulging to ~1.0 mid, staying wide.
+    return 0.82 + 0.18 * Math.sin(Math.PI * (0.3 + 0.5 * (t / 0.7)));
+  }
+  // Rounded cap over the last third (quarter-ellipse), never a sharp point.
+  const u = (t - 0.7) / 0.3;
+  return 0.92 * Math.sqrt(Math.max(0, 1 - u * u)) + 0.06;
+}
+
+/**
+ * Reshape buildCola's calyxes into a chunky, lobed, densely-packed cola:
+ *   • radially remap each calyx from the smooth taper onto `fatWidthCurve`, so
+ *     the body stays fat until the last third (kills the tapered-cone look);
+ *   • add angular + vertical LOBING so the silhouette is irregular/bumpy
+ *     (visible stacked calyx clusters), not a smooth surface of revolution;
+ *   • swell the calyxes so they overlap into chunky lobes.
+ * Pure + deterministic (seeded). Details (frost/pistils/sugar) are built AFTER
+ * this so they track the reshaped calyxes.
+ */
+export function chunkifyCola(cola: ColaInstance[], seed: number): ColaInstance[] {
+  const rnd = mulberry32(((seed >>> 0) ^ 0x51ed270b) || 17);
+  const phase = rnd() * Math.PI * 2;
+  const phase2 = rnd() * Math.PI * 2;
+  return cola.map((ins) => {
+    const [x, y, z] = ins.pos;
+    const t = clamp01(y);
+    const theta = Math.atan2(z, x);
+    const ow = Math.max(0.1, origWidthCurve(t));
+    const fw = fatWidthCurve(t);
+    // Irregular lobes around and up the cola — the stacked-cluster bumpiness.
+    const lobe =
+      1 + 0.2 * Math.cos(5 * theta + t * 6.5 + phase) + 0.11 * Math.cos(3 * theta - t * 4.2 + phase2);
+    let ratio = (fw / ow) * lobe * (0.94 + rnd() * 0.14);
+    ratio = Math.min(3.0, Math.max(0.4, ratio));
+    const swell = 1.28 + 0.3 * fw;
+    return {
+      pos: [x * ratio, y, z * ratio],
+      scale: [ins.scale[0] * swell, ins.scale[1] * swell, ins.scale[2] * swell],
+      rot: ins.rot,
+      color: ins.color,
+    };
+  });
+}
+
 export interface ColaPlacement {
   id: number;
   /** Base of the cola in world space. */
@@ -97,8 +157,8 @@ function buildOneCola(
    *  a smaller calyx cap and the mobile frost/pistil/sugar budgets. */
   satellite: boolean,
 ): Pick<ColaPlacement, "cola" | "frost" | "pistils" | "sugar"> {
-  const cap = satellite ? Math.round(lod.calyxCap * 0.72) : lod.calyxCap;
-  const cola = buildCola(dna, seed, { budDev: 1, maxInstances: cap });
+  const cap = satellite ? Math.round(lod.calyxCap * 0.74) : lod.calyxCap;
+  const cola = chunkifyCola(buildCola(dna, seed, { budDev: 1, maxInstances: cap }), seed);
   const frost =
     lod.frost > 0
       ? buildFrost(cola, {
