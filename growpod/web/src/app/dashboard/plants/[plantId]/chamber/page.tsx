@@ -52,6 +52,13 @@ const BudGL = dynamic(
   { ssr: false, loading: () => null },
 );
 
+// Whole-plant 3D renderer — full plant with 7-layer construction (stem, branches,
+// calyxes, sugar leaves, pistils, trichomes, fan leaves).
+const PlantGL = dynamic(
+  () => import("@/components/viz/PlantGL").then((m) => m.PlantGL),
+  { ssr: false, loading: () => null },
+);
+
 // Arcade Mode HUD — lazy so it's tree-shaken from every non-chamber route.
 const ArcadeHUD = dynamic(
   () => import("@/components/arcade/ArcadeHUD").then((m) => m.ArcadeHUD),
@@ -424,13 +431,21 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             aria-hidden
           />
         )}
-        {bud3d && view === "macro" ? (
+        {view === "plant3d" && hasWebGL() ? (
+          <PlantGL
+            strain={strain?.slug ?? strain?.name}
+            indicaRatio={indicaRatio}
+            seed={seedForPlant(plantId)}
+            day={day}
+            stage={renderStage}
+            dev={dev}
+            budColor={budColor}
+            reducedMotion={reducedMotion}
+          />
+        ) : bud3d && view === "macro" ? (
           <BudGL
             dna={budDna}
             seed={seedForPlant(plantId)}
-            // Scalars come from `budScalars`: the live look (server trichome truth +
-            // client dev), folded with the Arcade boost offset, or replaced by the
-            // rewind override while scrubbing backward.
             budDev={budScalars.budDev}
             ripe={budScalars.ripe}
             brown={budScalars.brown}
@@ -669,7 +684,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         {tab === "view" && (
           <div className="space-y-2">
             <div className="flex gap-1.5">
-              {(["chamber", "macro"] as const).map((v) => (
+              {(["chamber", "plant3d", "macro"] as const).map((v) => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
@@ -678,7 +693,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
                     view === v ? "border-[#3a6a86] bg-[#16364c] text-[#eaf7ff]" : "border-[#1c3447] bg-[#0d1d2b] text-[#7fa9bf]"
                   }`}
                 >
-                  {v === "chamber" ? "Chamber" : "Bud Macro"}
+                  {v === "chamber" ? "Chamber" : v === "plant3d" ? "Plant 3D" : "Bud Macro"}
                 </button>
               ))}
             </div>

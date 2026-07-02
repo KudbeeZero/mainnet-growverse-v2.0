@@ -43,7 +43,7 @@ import {
 } from "./budPhysics";
 import type { ConditionFlag, GrowthStage } from "../types";
 
-export type ChamberView = "chamber" | "macro";
+export type ChamberView = "chamber" | "macro" | "plant3d";
 
 export interface LiveState {
   climate: ClimateInput;

@@ -37,6 +37,11 @@ const GrowChamber = dynamic(
   { ssr: false, loading: () => null },
 );
 
+const PlantGL = dynamic(
+  () => import("@/components/viz/PlantGL").then((m) => m.PlantGL),
+  { ssr: false, loading: () => null },
+);
+
 const STAGES: GrowthStage[] = [
   "seed",
   "germination",
@@ -47,7 +52,7 @@ const STAGES: GrowthStage[] = [
   "harvest",
 ];
 
-const VIEWS: ChamberView[] = ["chamber", "macro"];
+const VIEWS: ChamberView[] = ["chamber", "plant3d", "macro"];
 
 const SEVERITIES: Severity[] = ["mild", "moderate", "severe"];
 
@@ -202,20 +207,30 @@ export function PlantReviewPanel() {
     <div className="flex min-h-screen flex-col bg-[#050b12] text-[#cfeeff] lg:flex-row">
       {/* LEFT — live chamber */}
       <div className="relative min-h-[50vh] flex-1 lg:min-h-screen">
-        <GrowChamber
-          key={chamberKey}
-          seed={seed}
-          day={day}
-          stage={stage}
-          morphology={morph}
-          silhouette={silhouette}
-          dev={dev}
-          budColor={budColor}
-          budDna={budDna}
-          climate={climate}
-          conditionFlags={conditionFlags}
-          view={view}
-        />
+        {view === "plant3d" ? (
+          <PlantGL
+            indicaRatio={ratio}
+            seed={seed}
+            day={day}
+            stage={stage}
+            dev={dev}
+          />
+        ) : (
+          <GrowChamber
+            key={chamberKey}
+            seed={seed}
+            day={day}
+            stage={stage}
+            morphology={morph}
+            silhouette={silhouette}
+            dev={dev}
+            budColor={budColor}
+            budDna={budDna}
+            climate={climate}
+            conditionFlags={conditionFlags}
+            view={view}
+          />
+        )}
         <div className="pointer-events-none absolute left-3 top-3 rounded-lg border border-cyan-400/40 bg-[#08141e]/70 px-2.5 py-1.5 font-mono text-[11px] tracking-wide backdrop-blur">
           PLANT VISUAL REVIEW · dev only · {stage} · day {day} · {view}
         </div>
