@@ -362,8 +362,16 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // still lives in the calyx texture — only the envelope is calmed.
       const raw = mass.map((m) => Math.max(m.podW * 1.25, m.cw * 0.56) * (0.66 + 0.34 * m.d));
       const hw = raw.map((r, i) => (raw[Math.max(0, i - 1)] + 2 * r + raw[Math.min(n - 1, i + 1)]) / 4);
-      const cxs = mass.map((m, i) => (mass[Math.max(0, i - 1)].cx + 2 * m.cx + mass[Math.min(n - 1, i + 1)].cx) / 4);
-      const tipY = mass[0].cy - hw[0] * 1.7; // spear point above the top cluster
+      // Clean spear taper: width may only shrink toward the tip (a wide bulge
+      // above a waist is what made the old outline read as stacked lobes).
+      for (let i = n - 2; i >= 0; i--) hw[i] = Math.min(hw[i], hw[i + 1]);
+      // Centreline: smooth then damp the lateral swing — the spiral jitter
+      // belongs to the calyx texture, not the envelope, which should stand as
+      // one gently-leaning spear.
+      const cxs = mass.map(
+        (m, i) => ((mass[Math.max(0, i - 1)].cx + 2 * m.cx + mass[Math.min(n - 1, i + 1)].cx) / 4) * 0.55,
+      );
+      const tipY = mass[0].cy - Math.min(hw[0] * 1.7, hw[n - 1] * 1.1); // spear point (capped so it can't spike)
       const botY = mass[n - 1].cy + hw[n - 1] * 1.05; // rounded base below the last
       // Outline vertices, clockwise: tip → right edge down → base → left edge up.
       const pts: Array<[number, number]> = [[cxs[0], tipY]];
