@@ -47,10 +47,12 @@ class ClaudeLecturerProvider(LecturerProvider):
 
     def lecture(self, context: dict) -> LectureReport:
         try:
-            response = self._client.messages.parse(
+            from .anthropic_compat import parse_preferring_thinking
+
+            response = parse_preferring_thinking(
+                self._client.messages,
                 model=self._model,
                 max_tokens=8000,
-                thinking={"type": "adaptive"},
                 system=_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": json.dumps(context, default=str)}],
                 output_format=LectureReport,
