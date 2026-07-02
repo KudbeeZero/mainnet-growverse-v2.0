@@ -35,6 +35,11 @@ core loop**: grow → care → harvest → cure → sell/breed/stabilize → min
   `docs/memory/INCIDENTS.md`; apply recorded fixes instead of re-deriving them. Any problem
   hit a second time gets a root-cause fix recorded there — never a second workaround.
 
+- **3D quality is min-gated.** Every 3D asset iteration loop scores itself with
+  `docs/memory/3D_QUALITY_RUBRIC.md` (overall = the WEAKEST axis, hard caps on faceted/sparse/
+  wrong-colour looks). An 8 means high-end realtime realism, not "good enough for a game." A loop
+  reporting a score must show the per-axis breakdown + min-gating.
+
 ## Run it
 ```bash
 make setup                   # one-time: venv + deps + editable install

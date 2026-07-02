@@ -41,6 +41,7 @@ flowchart TD
 | 3 | `docs/memory/BACKLOG.md` | Prioritized work — now / medium / low | High |
 | 3 | `docs/memory/INCIDENTS.md` | Recurring-problems ledger — the "twice rule": check before debugging, root-cause fix on second occurrence | Append-mostly |
 | 3 | `docs/memory/DOCS_INDEX.md` | Docs tracking layer — every repo .md with role/status; living docs must stay true (fix-in-same-PR) | Append-mostly |
+| — | `docs/memory/3D_QUALITY_RUBRIC.md` | Binding 3D-asset quality standard — min-gated axes + hard caps so 8/10 means high-end realism, not "good for a game" | Low |
 | 4 | `docs/memory/standups/` | Dated LUT round-table reports | Daily |
 
 Read **top-down** (Layer 0 is short + stable; each layer down is more detailed + volatile). Write
