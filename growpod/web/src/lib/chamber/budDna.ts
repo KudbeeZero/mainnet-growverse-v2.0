@@ -42,6 +42,12 @@ const C = {
   purple: { hue: 282, sat: 56, lit: 42 },
   magenta: { hue: 312, sat: 62, lit: 47 },
   deepPurple: { hue: 270, sat: 54, lit: 30 },
+  // Blue Dream family — the cool blue-teal calyx tones under silvery frost
+  // (owner harvest reference, 2026-07-02). No anthocyanin purple: the "blue"
+  // is a desaturated teal-sage green reading pale under heavy trichomes.
+  sageTeal: { hue: 155, sat: 30, lit: 44 },
+  frostBlue: { hue: 185, sat: 22, lit: 55 },
+  deepTeal: { hue: 168, sat: 34, lit: 30 },
 } as const;
 
 function pal(parts: Array<[keyof typeof C, number]>): PaletteColor[] {
@@ -102,6 +108,14 @@ const AUTHORED: Record<string, BudDNA> = {
     budHeight: 160, maxBudWidth: 86, rows: 17, calyxPerRowMin: 3, calyxPerRowMax: 7,
     calyxSizeMin: 7, calyxSizeMax: 15, overlap: 0.7, pistilChance: 0.33,
     sugarLeafChance: 0.12, trichomeDensity: 0.85, palette: pal([["green", 1.5], ["lime", 1], ["purple", 3], ["magenta", 2], ["deepPurple", 1]]),
+  },
+  // Blue Dream — the flagship sativa spear (owner harvest reference,
+  // 2026-07-02): the LONGEST, tapered cola in the catalog, pale blue-teal
+  // calyxes under silvery frost, golden pistils threaded throughout.
+  "blue-dream": {
+    budHeight: 185, maxBudWidth: 72, rows: 20, calyxPerRowMin: 3, calyxPerRowMax: 6,
+    calyxSizeMin: 6, calyxSizeMax: 13, overlap: 0.66, pistilChance: 0.38,
+    sugarLeafChance: 0.14, trichomeDensity: 0.92, palette: pal([["sageTeal", 3], ["frostBlue", 2], ["deepTeal", 1.5], ["green", 1]]),
   },
   // Creamy purple dessert — high anthocyanin, tightest packing, heavy frost.
   "wedding-cake": {

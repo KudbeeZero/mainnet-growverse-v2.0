@@ -90,3 +90,22 @@ describe("Launch Strain Integration Pack — authored visuals + identity", () =>
     expect(weddingCake.accentHue).toBeGreaterThan(255);
   });
 });
+
+describe("blue dream pilot (owner harvest reference, 2026-07-02)", () => {
+  it("authors the tall open sativa spear", () => {
+    const bd = silhouetteFor("Blue Dream", 0.35);
+    expect(bd.vertStack).toBeGreaterThan(1.2);        // tallest stack
+    expect(bd.apicalDominance).toBeGreaterThan(0.7);  // one towering main cola
+    expect(bd.nodeDensity).toBeLessThan(1);           // airy, open internodes
+    expect(bd.branchStrength).toBeGreaterThan(1);     // buds held upright
+    expect(bd.budWeightMul).toBeLessThan(1);          // minimal droop
+  });
+
+  it("authors the blue-teal frost identity, not purple", () => {
+    const c = budColorForStrain("Blue Dream", 110, 0.5);
+    expect(c.anthocyanin).toBe(0);                    // no purple
+    expect(c.calyxHue).toBeGreaterThan(140);          // cool teal side of green
+    expect(c.calyxSat).toBeLessThan(40);              // desaturated (frost-pale)
+    expect(c.pistilMagenta).toBe(0);                  // golden-orange pistils
+  });
+});

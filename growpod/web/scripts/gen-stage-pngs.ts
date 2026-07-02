@@ -42,6 +42,7 @@ const STRAINS = [
   { name: "White Fire OG", indica: 0.55 },
   { name: "Gelato", indica: 0.55 },
   { name: "Wedding Cake", indica: 0.6 },
+  { name: "Blue Dream", indica: 0.4 },
 ];
 
 // Nominal-day scale matches devParams thresholds (buds 34→66, ripe 40→62, etc.),
