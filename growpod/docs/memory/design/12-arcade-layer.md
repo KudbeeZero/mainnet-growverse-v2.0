@@ -53,7 +53,8 @@ layers absolute children; precedent: the chamber route mounts `ArcadeHUD` + `Nut
 
 ## C. Per-mini-game hook map (cosmetic channel = the 5 bud scalars + BudDNA)
 
-1. **Trichome Rush** → `BudDNA.trichomeDensity` + `trich` scalar + `buildFrost()`
+1. **Trichome Rush → ✅ SHIPPED 2026-07-02** (`web/src/lib/arcade/trichomeRush.ts` + `web/src/components/arcade/TrichomeRush.tsx`; ArcadeHUD launcher; `arcade` feature flag; `ARCADE_SCORE` growEvents type). Score→frost-reward is emitted via a `growpod:trichome-rush-result` CustomEvent — NOT YET wired into chamberCore/BudGL/PlantGL live rendering (follow-up integration, not a gap in this shipment). Original hook plan below for reference.
+   → `BudDNA.trichomeDensity` + `trich` scalar + `buildFrost()`
    (`chamber/bud3d/detail.ts`); seed difficulty from real `plant.trichomes` telemetry. Resin
    Combo = bounded cosmetic `trich`/`highlightBoost` offset (boostOffset pattern). **Build first**
    (smallest surface, proves score→receipt→cosmetic loop).

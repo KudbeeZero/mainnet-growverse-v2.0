@@ -86,21 +86,7 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   arcade foundation (`web/src/lib/arcade/`, PR #100) + the PlantGL 3D asset. Recon report on the
   control panel layout + arcade inventory in flight (2026-07-02); design doc next; build after
   owner approves the design.
-- 🕹️ ⬜ **Arcade layer on the 3D plant sim (owner spec 2026-07-02)** — fast, replayable,
-  skill-based, NON-GAMBLING, educational mini-games layered OVER the scientific sim (core sim
-  stays server-authoritative; arcade touches COSMETIC visuals + separate arcade scores ONLY —
-  never health/economy/genetics truth). Six games: **Trichome Rush** (collect trichome targets
-  → Resin Combo → frost visuals), **Lightwave Rhythm** (timing zones on moving light pulses →
-  photosynthesis score), **Terpene Combo** (collect myrcene/limonene/pinene/caryophyllene/
-  linalool/humulene orbs → plant aura/profile), **Cola Builder** (assemble stem/nodes/bracts/
-  sugar leaves/pistils/trichomes → structure score; hooks the new plant3d 7-layer asset),
-  **Pest Invader** (defend vs stylized pest/stress icons), **Mutation Events** (earned COSMETIC
-  unlocks: Blue Frost, Golden Pistils, Diamond Trichomes, Dense Cola Stack, Terpene Aura).
-  Updates local plant visuals + generates challenge scores; OPTIONAL Algorand proof receipts
-  for completed challenges (reuses the PR #100 client SIMULATE layer). Builds on the existing
-  arcade foundation (`web/src/lib/arcade/` boostEngine/timeRewind) — extend, don't duplicate.
-  Recon done + design doc `docs/memory/design/12-arcade-layer.md` (control-panel map + per-game hook map + guardrails + build order). Next: owner approval
-  → build. Depends on the plant3d asset for Cola Builder + cosmetic mutation overrides.
+- 🕹️ 🔨 **Arcade layer on the 3D plant sim (owner spec 2026-07-02)** — ✅ **Trichome Rush shipped** (first of 6): 45s timed session, deterministic target spawn, Resin Combo scoring, bounded cosmetic frost-boost reward (never economy — verified no api.plants.boost/growthBoost calls), optional Algorand ARCADE_SCORE receipt, `arcade` feature flag added. 29 new tests, live-gameplay screenshot verified. Remaining 5 games (Lightwave Rhythm, Terpene Combo, Cola Builder, Pest Invader, Mutation Events) not started — same build order as design/12.
 - 🎨 ⬜ **Per-strain procedural fidelity pass** — `GrowChamber`/`BudGL` morphology + bud shape/color
   coverage across all 29 strains (the follow-up track from the 2026-07-02 revert ADR).
 
