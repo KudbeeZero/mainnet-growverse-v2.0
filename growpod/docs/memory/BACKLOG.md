@@ -39,6 +39,15 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   Grower; P3 `search_global_knowledge` retrieval tool (the teacher gets smarter from every
   player); P4 `global_insights` rollups + class-stats surface. Spec:
   `docs/memory/design/11-global-learning-memory.md`.
+- 🖥️ 🔨 **Command Center: side-rail consolidation + device-aware mobile (owner directive
+  2026-07-02)** — Desktop: Grow Console (`components/plant/GrowConsole.tsx`) and its sibling
+  read-only panels (StageInfoCard, NextActionHint, TimeControls) move out of the center column
+  into the right/left rails as CollapsiblePanels, so the chamber viewport's center stack shrinks
+  to carousel → chamber → scrubber → care deck only. Mobile: real device-aware breakpoints
+  (small-phone vs standard/large-phone, via viewport-width matchMedia — NOT user-agent
+  sniffing) extending the existing `env(safe-area-inset-*)`/MobileTabBar conventions; rail
+  content lands in a labeled bottom accordion after the core grow/care flow, not squeezed
+  inline. Verified with live Playwright screenshots at desktop + 2 mobile widths.
 - 🎨 🔨 **3D whole-plant asset (PlantGL) — owner spec 2026-07-02, pilot Blue Dream** — layered
   R3F mesh system per the owner's 7-layer brief + 3 reference images: stem spline w/ nodes,
   curved branch skeleton, instanced serrated fan leaves, colas from clustered calyx meshes
