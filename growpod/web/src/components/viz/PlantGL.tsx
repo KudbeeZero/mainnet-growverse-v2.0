@@ -28,6 +28,37 @@ import { silhouetteFor, budColorForStrain } from "@/lib/chamber/strainVisuals";
 
 const UP = new THREE.Vector3(0, 1, 0);
 
+// Which layers of the 7-layer model to draw. Everything on by default; the dev
+// review board flips these so each layer can be inspected in isolation.
+export interface PlantLayerVisibility {
+  woody: boolean;
+  fanLeaves: boolean;
+  budCore: boolean;
+  calyxes: boolean;
+  sugarLeaves: boolean;
+  pistils: boolean;
+  frost: boolean;
+  /** Debug: stem + branch centrelines as line segments. */
+  skeleton: boolean;
+  /** Debug: markers at every node + bud site. */
+  nodes: boolean;
+}
+
+export const ALL_LAYERS: PlantLayerVisibility = {
+  woody: true, fanLeaves: true, budCore: true, calyxes: true,
+  sugarLeaves: true, pistils: true, frost: true, skeleton: false, nodes: false,
+};
+
+// Live density multipliers (1 = authored default) for inspection/tuning.
+export interface PlantDensity {
+  cola: number;
+  pistil: number;
+  frost: number;
+  leaf: number;
+}
+
+export const DEFAULT_DENSITY: PlantDensity = { cola: 1, pistil: 1, frost: 1, leaf: 1 };
+
 // --- Woody parts (stem + branches) ------------------------------------------
 
 function pathToTube(points: Vec3[], radii: number[], segments = 6): THREE.BufferGeometry | null {
@@ -336,6 +367,7 @@ function buildAggregatedFlora(
   dev: DevParams,
   refColaSize: number,
   isMobile: boolean,
+  density: PlantDensity,
 ): AggregatedFlora {
   const agg: AggregatedFlora = { calyxes: [], frost: [], pistils: [], sugarLeaves: [] };
 
@@ -346,10 +378,14 @@ function buildAggregatedFlora(
 
     // Density scales with the cola's on-screen size (area ∝ scale²), so a big main
     // cola gets proportionally more calyxes and stays densely clad instead of going
-    // sleek/bare. Referenced to a ~0.5-scale side cola (≈1×); capped for perf.
-    const densityMul = Math.min(9, Math.max(0.5, (site.scale / 0.5) * (site.scale / 0.5)));
+    // sleek/bare. Referenced to a ~0.5-scale side cola (≈1×); capped for perf. The
+    // cola-density knob (review board) multiplies this for live inspection.
+    const densityMul = Math.min(
+      12,
+      Math.max(0.4, (site.scale / 0.5) * (site.scale / 0.5) * density.cola),
+    );
     const maxInst = Math.min(
-      isMobile ? 340 : 900,
+      isMobile ? 340 : 1000,
       Math.max(24, Math.round((isMobile ? 110 : 260) * densityMul)),
     );
     const cola = buildCola(dna, seed + si * 7, { budDev: dev.budDev, maxInstances: maxInst, densityMul });
@@ -358,10 +394,10 @@ function buildAggregatedFlora(
       agg.calyxes.push({ ...c, worldPos: site.pos, worldScale });
     }
 
-    if (dev.trich > 0) {
+    if (dev.trich > 0 && density.frost > 0) {
       const frost = buildFrost(cola, {
         seed: seed + si * 11,
-        density: dna.trichomeDensity * dev.trich * site.budgetMul,
+        density: dna.trichomeDensity * dev.trich * site.budgetMul * density.frost,
         ripe: dev.ripe,
         isMobile,
       });
@@ -370,20 +406,22 @@ function buildAggregatedFlora(
       }
     }
 
-    const pistils = buildPistils(cola, {
-      seed: seed + si * 13,
-      chance: dna.pistilChance * Math.max(0.3, site.budgetMul),
-      ripe: dev.ripe,
-      brown: dev.brown,
-      isMobile,
-    });
-    for (const p of pistils) {
-      agg.pistils.push({ ...p, worldPos: site.pos, worldScale });
+    if (density.pistil > 0) {
+      const pistils = buildPistils(cola, {
+        seed: seed + si * 13,
+        chance: dna.pistilChance * Math.max(0.3, site.budgetMul) * density.pistil,
+        ripe: dev.ripe,
+        brown: dev.brown,
+        isMobile,
+      });
+      for (const p of pistils) {
+        agg.pistils.push({ ...p, worldPos: site.pos, worldScale });
+      }
     }
 
     const sugar = buildSugarLeaves(cola, {
       seed: seed + si * 17,
-      amount: 0.8 * Math.max(0.3, site.budgetMul) * Math.max(0.4, dev.budDev),
+      amount: 0.8 * Math.max(0.3, site.budgetMul) * Math.max(0.4, dev.budDev) * density.leaf,
       frost: dev.trich,
       isMobile,
     });
@@ -649,6 +687,67 @@ function FloraSugarLeaves({ flora }: { flora: AggregatedFlora }) {
   return <instancedMesh key={`sl${flora.sugarLeaves.length}`} ref={ref} args={[geom, mat, flora.sugarLeaves.length]} />;
 }
 
+// --- Debug helpers (skeleton centrelines + node markers) ---------------------
+
+function SkeletonLines({ skeleton }: { skeleton: PlantSkeleton }) {
+  const geom = useMemo(() => {
+    const pts: number[] = [];
+    const pushPath = (path: Vec3[]) => {
+      for (let i = 1; i < path.length; i++) {
+        pts.push(path[i - 1][0], path[i - 1][1], path[i - 1][2], path[i][0], path[i][1], path[i][2]);
+      }
+    };
+    pushPath(skeleton.stem.map(s => s.pos));
+    for (const node of skeleton.nodes) {
+      pushPath(node.branch.points);
+      for (const bl of node.branchlets) pushPath(bl.path.points);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pts), 3));
+    return g;
+  }, [skeleton]);
+  const mat = useMemo(() => new THREE.LineBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.9 }), []);
+  return <lineSegments geometry={geom} material={mat} renderOrder={999} />;
+}
+
+function NodeMarkers({ skeleton }: { skeleton: PlantSkeleton }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const points = useMemo(() => {
+    const out: Array<{ pos: Vec3; kind: 0 | 1 }> = [];
+    for (const node of skeleton.nodes) out.push({ pos: node.pos, kind: 0 });
+    for (const node of skeleton.nodes) {
+      if (node.budSite) out.push({ pos: node.budSite.pos, kind: 1 });
+      for (const bl of node.branchlets) if (bl.budSite) out.push({ pos: bl.budSite.pos, kind: 1 });
+    }
+    if (skeleton.topCola) out.push({ pos: skeleton.topCola.pos, kind: 1 });
+    return out;
+  }, [skeleton]);
+  const geom = useMemo(() => new THREE.SphereGeometry(1, 8, 6), []);
+  // Per-instance colour via setColorAt multiplies the material's base white; the
+  // geometry has no vertex-colour attribute, so vertexColors must stay OFF here
+  // (enabling it renders every marker black).
+  const mat = useMemo(() => new THREE.MeshBasicMaterial({ color: 0xffffff }), []);
+  const r = skeleton.height * 0.012;
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const d = new THREE.Object3D();
+    const col = new THREE.Color();
+    points.forEach((p, i) => {
+      d.position.set(p.pos[0], p.pos[1], p.pos[2]);
+      d.scale.setScalar(p.kind === 1 ? r * 1.8 : r);
+      d.updateMatrix();
+      mesh.setMatrixAt(i, d.matrix);
+      // node = amber, bud site = magenta
+      mesh.setColorAt(i, p.kind === 1 ? col.setRGB(1, 0.2, 0.7) : col.setRGB(1, 0.75, 0.1));
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, [points, r]);
+  if (points.length === 0) return null;
+  return <instancedMesh key={points.length} ref={ref} args={[geom, mat, points.length]} renderOrder={999} />;
+}
+
 // Slow auto-rotate for the whole plant.
 function AutoRotate({ children }: { children: React.ReactNode }) {
   const ref = useRef<THREE.Group>(null);
@@ -677,6 +776,10 @@ export interface PlantGLProps {
   budColor?: { anthocyanin: number; calyxHue: number; calyxSat: number; pistilMagenta: number };
   /** Reduce motion (no spin). */
   reducedMotion?: boolean;
+  /** Per-layer visibility (dev inspection). Defaults to all-on. */
+  layers?: Partial<PlantLayerVisibility>;
+  /** Live density multipliers (dev inspection). Defaults to 1×. */
+  density?: Partial<PlantDensity>;
 }
 
 export function PlantGL({
@@ -688,8 +791,13 @@ export function PlantGL({
   dev,
   budColor,
   reducedMotion = false,
+  layers,
+  density,
 }: PlantGLProps) {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
+  const vis = useMemo<PlantLayerVisibility>(() => ({ ...ALL_LAYERS, ...layers }), [layers]);
+  const dens = useMemo<PlantDensity>(() => ({ ...DEFAULT_DENSITY, ...density }), [density]);
 
   const morph = useMemo(() => morphologyFor(indicaRatio), [indicaRatio]);
   const sil = useMemo(() => silhouetteFor(strain, indicaRatio), [strain, indicaRatio]);
@@ -708,8 +816,8 @@ export function PlantGL({
   const sites = useMemo(() => collectBudSites(skeleton), [skeleton]);
 
   const flora = useMemo(
-    () => buildAggregatedFlora(sites, dna, seed, dev, skeleton.refColaSize, isMobile),
-    [sites, dna, seed, dev, skeleton.refColaSize, isMobile],
+    () => buildAggregatedFlora(sites, dna, seed, dev, skeleton.refColaSize, isMobile, dens),
+    [sites, dna, seed, dev, skeleton.refColaSize, isMobile, dens],
   );
 
   // Camera position: pull back enough to frame the plant.
@@ -720,13 +828,15 @@ export function PlantGL({
 
   const content = (
     <>
-      <WoodyParts skeleton={skeleton} />
-      <FanLeafLayer skeleton={skeleton} morph={morph} />
-      <FloraBudCore sites={sites} dna={dna} dev={dev} refColaSize={skeleton.refColaSize} purple={purple} />
-      <FloraCalyxes flora={flora} purple={purple} />
-      <FloraSugarLeaves flora={flora} />
-      <FloraPistils flora={flora} />
-      <FloraFrost flora={flora} purple={purple} />
+      {vis.woody && <WoodyParts skeleton={skeleton} />}
+      {vis.fanLeaves && <FanLeafLayer skeleton={skeleton} morph={morph} />}
+      {vis.budCore && <FloraBudCore sites={sites} dna={dna} dev={dev} refColaSize={skeleton.refColaSize} purple={purple} />}
+      {vis.calyxes && <FloraCalyxes flora={flora} purple={purple} />}
+      {vis.sugarLeaves && <FloraSugarLeaves flora={flora} />}
+      {vis.pistils && <FloraPistils flora={flora} />}
+      {vis.frost && <FloraFrost flora={flora} purple={purple} />}
+      {vis.skeleton && <SkeletonLines skeleton={skeleton} />}
+      {vis.nodes && <NodeMarkers skeleton={skeleton} />}
     </>
   );
 
