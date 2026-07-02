@@ -146,7 +146,7 @@ function makePistilGeom(): THREE.BufferGeometry {
   }
   const curve = new THREE.CatmullRomCurve3(pts);
   const tubular = 3, radial = 3;
-  const geo = new THREE.TubeGeometry(curve, tubular, 0.13, radial, false);
+  const geo = new THREE.TubeGeometry(curve, tubular, 0.17, radial, false);
   const pos = geo.attributes.position;
   const c = new THREE.Vector3();
   const v = new THREE.Vector3();
@@ -356,10 +356,17 @@ function Calyxes({ assembly, frost }: { assembly: PlantAssembly; frost: number }
   return <instancedMesh key={total} ref={ref} args={[geom, mat, total]} />;
 }
 
+/** Vivid burnt-orange the amber pistils lerp toward in the 3D path (the ripe
+ * Blue Dream stigma read against silver frost). */
+const PISTIL_ORANGE = new THREE.Color(0.95, 0.42, 0.09);
+
 function Pistils({ assembly }: { assembly: PlantAssembly }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geom = useMemo(makePistilGeom, []);
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0.0 }), []);
+  const mat = useMemo(
+    () => new THREE.MeshStandardMaterial({ roughness: 0.55, metalness: 0.0, emissive: new THREE.Color(0.06, 0.02, 0.0) }),
+    [],
+  );
   const total = useMemo(() => assembly.colas.reduce((n, c) => n + c.pistils.length, 0), [assembly]);
   useLayoutEffect(() => {
     const mesh = ref.current;
@@ -384,10 +391,15 @@ function Pistils({ assembly }: { assembly: PlantAssembly }) {
         q.multiply(roll);
         d.position.copy(lp);
         d.quaternion.copy(q);
-        d.scale.setScalar(p.len * c.width * 1.8);
+        // Longer strands so the hairs clearly weave OUT past the calyxes.
+        d.scale.setScalar(p.len * c.width * 2.5);
         d.updateMatrix();
         mesh.setMatrixAt(idx, d.matrix);
-        mesh.setColorAt(idx, col.setRGB(p.color[0], p.color[1], p.color[2]));
+        // Push the amber toward vivid burnt-orange in the 3D path (the shared
+        // pistilColor stays tan for the 2D bud) so the hairs read unmistakably
+        // orange against the silver frost, like the reference.
+        col.setRGB(p.color[0], p.color[1], p.color[2]).lerp(PISTIL_ORANGE, 0.5);
+        mesh.setColorAt(idx, col);
         idx++;
       }
     }
