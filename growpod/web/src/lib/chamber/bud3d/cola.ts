@@ -181,20 +181,23 @@ export function buildCola(dna: BudDNA, seed: number, opts: BuildColaOpts): ColaI
   if (densRoot > 1.15 && dev > 0.35 && out.length < cap) {
     const subCount = Math.min(7, Math.floor((densRoot - 1.15) * 2.1 * (0.5 + 0.5 * dev)));
     for (let s = 0; s < subCount && out.length < cap; s++) {
-      // Attach point: lower-to-mid on the main axis, on its surface.
-      const fBase = 0.18 + rnd() * 0.5;
+      // Attach point: on the fat mid-body of the main axis, set INSIDE the surface
+      // so the sub-cola fuses into the main cola instead of floating off it.
+      const fBase = 0.25 + rnd() * 0.45;
       spiral += GOLDEN_ANGLE;
       const az0 = spiral;
-      const attachR = Rmax * widthCurve(fBase) * 0.85;
+      const attachR = Rmax * widthCurve(fBase) * 0.62;
       const cx = Math.cos(az0) * attachR;
       const cz = Math.sin(az0) * attachR;
       const cy = fBase * H;
 
-      // The sub-cola is a short phytomer stack leaning outward as it rises.
+      // The sub-cola is a short phytomer stack that grows mostly UP with only a
+      // slight outward lean, so it hugs the main cola as a fused lump (not a
+      // satellite on a stalk).
       const subLen = (0.13 + 0.12 * rnd()) * H * (0.6 + 0.4 * dev);
       const subRmax = Rmax * (0.32 + 0.14 * rnd());
       const subNodes = 3 + Math.floor(rnd() * 3);
-      const lean = 0.4; // outward lean fraction vs. upward growth
+      const lean = 0.26; // outward lean fraction vs. upward growth
       let subSpiral = az0 * 1.7;
 
       for (let k = 0; k < subNodes && out.length < cap; k++) {
