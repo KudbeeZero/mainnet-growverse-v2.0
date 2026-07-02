@@ -14,7 +14,8 @@ export type FeatureName =
   | "chain"
   | "cup"
   | "university"
-  | "contracts";
+  | "contracts"
+  | "arcade";
 
 /** A flag is enabled only by the exact string "true" (not "TRUE"/"1"/"yes"). */
 function on(value: string | undefined): boolean {
@@ -38,6 +39,7 @@ export type FeatureEnv = {
   NEXT_PUBLIC_ENABLE_CUP?: string;
   NEXT_PUBLIC_ENABLE_UNIVERSITY?: string;
   NEXT_PUBLIC_ENABLE_CONTRACTS?: string;
+  NEXT_PUBLIC_ENABLE_ARCADE?: string;
 };
 
 /** Pure mapper from NEXT_PUBLIC_ENABLE_* env strings to the flag record. */
@@ -48,6 +50,7 @@ export function computeFeatures(env: FeatureEnv): Record<FeatureName, boolean> {
     cup:         on(env.NEXT_PUBLIC_ENABLE_CUP),
     university:  on(env.NEXT_PUBLIC_ENABLE_UNIVERSITY),
     contracts:   on(env.NEXT_PUBLIC_ENABLE_CONTRACTS),
+    arcade:      on(env.NEXT_PUBLIC_ENABLE_ARCADE),
   };
 }
 
@@ -71,6 +74,11 @@ export const FEATURES: Record<FeatureName, boolean> = {
   cup:         enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_CUP),
   university:  enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_UNIVERSITY),
   contracts:   enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_CONTRACTS),
+  // Arcade mini-games layer (boost/rewind HUD + Trichome Rush etc.) — default
+  // ON like the rest of this map (the existing boost/rewind arcade surface
+  // shipped with no flag at all); set NEXT_PUBLIC_ENABLE_ARCADE=false to kill
+  // the whole layer per-environment.
+  arcade:      enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_ARCADE),
 };
 
 /** True if a named feature is enabled in this build. */
