@@ -282,10 +282,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // lobed body reads packed to the edges (not a hollow envelope with a few
       // central calyxes). Rings reach further (rad step 0.27) to fill the widened
       // silhouette; the outer rings are the lobe surface.
-      const nPods = opt.bracts + 11 + Math.round(baseW * 0.3);
+      const nPods = opt.bracts + 14 + Math.round(baseW * 0.42);
       const pods = [];
       for (let j = 0; j < nPods; j++) {
-        const ring = j < 4 ? 0 : j < 11 ? 1 : j < 20 ? 2 : j < 31 ? 3 : 4;
+        const ring = j < 4 ? 0 : j < 11 ? 1 : j < 20 ? 2 : j < 32 ? 3 : 4;
         const a = (j * 2.399) % TAU;
         const rad = ring * 0.27 + rnd() * 0.1;
         pods.push({
