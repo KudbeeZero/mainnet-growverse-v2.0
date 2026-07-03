@@ -25,7 +25,17 @@ export function Footer() {
         {BUILD_TIME_CT && (
           <>
             <span className="mx-2">·</span>
-            <span className="font-mono text-gray-600" title="Build time (US Central)">
+            {/* suppressHydrationWarning: BUILD_TIME_CT is formatted via
+                Date#toLocaleString on BOTH server and client, and Node's ICU vs
+                the browser's differ on the narrow-no-break-space before AM/PM —
+                a benign text-only mismatch that was firing React #418 on every
+                page (the footer is in the app shell). Same value, different
+                whitespace; suppress the one span rather than re-architect it. */}
+            <span
+              className="font-mono text-gray-600"
+              title="Build time (US Central)"
+              suppressHydrationWarning
+            >
               {BUILD_TIME_CT}
             </span>
           </>

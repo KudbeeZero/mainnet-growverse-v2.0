@@ -22,13 +22,15 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   retryable `ErrorState`; shared e2e fixture gained a minimal transcript (keyed on the exact
   `/players/p1/university` path, not a bare `/university` that'd shadow siblings). Happy path
   unchanged (smoke green). `web/src/app/university/page.tsx`.
-- 🟠 ⬜ **Global React #418 hydration mismatch (observed 2026-07-03 PM, NOT yet fixed)** — the
-  same exception sweep showed a non-fatal "Minified React error #418" (server/client text
-  mismatch) firing on EVERY route, including passing ones (React recovers by re-rendering client-
-  side). Almost certainly a non-deterministic SSR value (a `new Date()`/`Date.now()` rendered at
-  request time then differing on the client — the footer build-timestamp is the prime suspect).
-  Non-fatal + pre-existing, so left for a focused pass: find the SSR-time value, make it stable
-  (render client-only or pass a fixed build stamp). Cosmetic-perf, not a blocker.
+- 🟠 ✅ **Global React #418 hydration mismatch fixed (2026-07-03 PM)** — the exception sweep
+  showed a "Minified React error #418" (server/client text mismatch) firing on EVERY route
+  (React recovers by re-rendering client-side, so non-fatal but real). Root cause: the app-shell
+  `Footer` formats its build timestamp with `Date#toLocaleString("en-US", {timeZone: …})` at
+  module eval on BOTH server and client, and Node's ICU vs the browser's differ on the
+  narrow-no-break-space before AM/PM — same value, different whitespace. Fixed with
+  `suppressHydrationWarning` on that one span (`web/src/components/layout/Footer.tsx`); the fix
+  was VERIFIED empirically (re-ran the sweep: react418 count 1→0 on /dashboard, /store, /cup),
+  not just assumed. Full gate green.
 - 🎮 ✅ **Store panelized + seasonal "undefined" drop fixed (2026-07-03 PM, owner: "redo the
   store... some sort of panel or tile type of look")** — all 7 store shelves now sit in a
   consistent elevated panel (`STORE_PANEL`, `store/page.tsx`) so the page reads as distinct
