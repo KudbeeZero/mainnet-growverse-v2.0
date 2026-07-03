@@ -133,6 +133,72 @@ test.describe("mobile — landscape lock + swipe HUD", () => {
   });
 });
 
+test.describe("tablet — landscape lock threshold + orientation thrash", () => {
+  // BACKLOG.md's GameShell entry flagged these as missing coverage: a real
+  // tablet-in-landscape viewport (confirm `isHandheld`'s `<=1024` max-dimension
+  // threshold doesn't wrongly gate it) and rapid orientation flips (confirm the
+  // gate doesn't get stuck or double-mount the shell). Not re-litigating the
+  // portrait-tablet-should-gate decision (settled) — this only exercises the
+  // landscape side of that same threshold, plus thrash stability.
+  test.use({ hasTouch: true, isMobile: true });
+
+  test("PROOF: a common small-tablet viewport (768x1024 portrait / 1024x768 landscape) gates only in portrait", async ({ page }) => {
+    // iPad-classic-sized viewport: max dimension 1024 — right at `isHandheld`'s
+    // own `<= 1024` boundary, so this is the sharpest real-device check of it.
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await setup(page);
+    await page.goto("/dashboard/plants/plant1/chamber");
+    await expect(page.getByRole("alertdialog", { name: /rotate your device/i })).toBeVisible();
+
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(page.getByTestId("game-shell-root")).toBeVisible();
+    await expect(page.getByTestId("edge-tab-left")).toBeVisible();
+
+    // Full touch interaction still works at this size, not just static render.
+    await page.evaluate(() => {
+      const root = document.querySelector('[data-testid="game-shell-root"]')!;
+      function fire(type: string, x: number, y: number) {
+        root.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: "touch", clientX: x, clientY: y, bubbles: true, cancelable: true }));
+      }
+      fire("pointerdown", 4, 300);
+      fire("pointermove", 60, 300);
+      fire("pointerup", 60, 300);
+    });
+    await expect(page.getByTestId("actions-panel")).toBeVisible();
+  });
+
+  test("PROOF: rapid portrait/landscape thrashing settles cleanly with no stuck gate or duplicate shell", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setup(page);
+    await page.goto("/dashboard/plants/plant1/chamber");
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+
+    const sizes: [number, number][] = [
+      [844, 390],
+      [390, 844],
+      [844, 390],
+      [390, 844],
+      [926, 428],
+    ];
+    for (const [w, h] of sizes) {
+      await page.setViewportSize({ width: w, height: h });
+    }
+    // Ends on a landscape size — gate must be gone, exactly one shell mounted
+    // (a stuck/duplicate mount from thrashing would fail the `toHaveCount(1)`).
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    await expect(page.getByTestId("game-shell-root")).toHaveCount(1);
+    await expect(page.getByTestId("edge-tab-left")).toHaveCount(1);
+    await expect(page.getByTestId("edge-tab-right")).toHaveCount(1);
+
+    // And back to portrait — the gate must still correctly re-engage, not be
+    // wedged "open" from the thrash.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole("alertdialog", { name: /rotate your device/i })).toBeVisible();
+    await expect(page.getByTestId("game-shell-root")).toHaveCount(0);
+  });
+});
+
 test.describe("desktop — docked panels, no orientation gate", () => {
   test("PROOF: a portrait-shaped DESKTOP window is never gated (isHandheld requires touch)", async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 1400 }); // tall, but a mouse-driven desktop context

@@ -109,10 +109,13 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
 - 🟡 ⬜ **GameShell desktop panels: S/M/L width presets, not free drag-resize** — flagged by the
   code-quality review pass on the HUD redesign (2026-07-03). The mockup's "drag to resize" callout
   was implemented as a 3-preset click-to-cycle instead (documented inline as a deliberate
-  simplification, not a bug) — logging it here so it doesn't silently become permanent. Also
-  no e2e coverage yet for the resize cycle itself, a tablet-in-landscape viewport (confirm
-  `isHandheld`'s `≤1024` threshold doesn't wrongly gate a real tablet), or rapid orientation
-  thrashing. Owner call: ship the presets as final, or pick this up as a follow-on.
+  simplification, not a bug) — logging it here so it doesn't silently become permanent. Owner
+  call: ship the presets as final, or pick this up as a follow-on. Still no e2e coverage for the
+  resize cycle itself — the tablet-in-landscape and rapid-orientation-thrash gaps flagged
+  alongside this were closed by the mobile HUD polish pass (2026-07-03 PM): `hud-shell-shot.spec.ts`
+  now covers a 768x1024/1024x768 (portrait/landscape) tablet-sized viewport at `isHandheld`'s own
+  `≤1024` boundary, plus a rapid portrait↔landscape thrash sequence confirming the gate re-engages
+  cleanly with no stuck state or duplicate shell mount.
 - 🎮 ✅ **Route-wide white-screen crash hunt + permanent regression net (2026-07-03 PM)** — a
   client-side-exception sweep across ALL 30 routes × plant states found the same bug class
   repeatedly: pages guarded only `!data` (presence), so a truthy-but-malformed API response (an
