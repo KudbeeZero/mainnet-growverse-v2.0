@@ -102,6 +102,13 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   const [viewBud, setViewBud] = useState(false);
   const canViewBud = hasWebGL();
 
+  // Mobile-only: the scientist panels (DNA/Traits/Morphology, Environment
+  // sliders, Grow Console) stay collapsed by default so the plant hero + care
+  // loop lead the scroll — desktop keeps them as always-visible side rails
+  // (see the `xl:` overrides below). Collapsed state is per-mount, not
+  // persisted — it's a declutter toggle, not a settings choice.
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   // Keep the selection valid as the pod's plants change (harvest, switch pod).
   useEffect(() => {
     if (!activeId || !ring.some((p) => p.id === activeId)) {
@@ -226,14 +233,20 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
 
       {/* main 3-rail grid (collapses to a single scrolling column below xl).
           Rails widen on larger screens so the layout fills a desktop monitor
-          instead of sitting in a narrow centered column. */}
+          instead of sitting in a narrow centered column. On mobile, every
+          direct child of the center column carries an `order-N xl:order-none`
+          pair: the CSS `order` reflows the VISUAL stack for phones (plant
+          hero first, scientist detail last) while resetting to plain source
+          order at `xl` — desktop's approved layout is untouched. */}
       <div className="grid gap-3 xl:grid-cols-[320px_1fr_340px] 2xl:grid-cols-[380px_1fr_420px] 2xl:gap-4">
         {/* center: carousel + chamber + time controls (first in DOM → leads on mobile) */}
         <div className="flex min-h-0 flex-col gap-2 xl:col-start-2 xl:row-start-1">
-          <PlantCarousel plants={carousel} activeId={activeId} onSelect={setActiveId} />
+          <div className="order-3 xl:order-none">
+            <PlantCarousel plants={carousel} activeId={activeId} onSelect={setActiveId} />
+          </div>
 
           {openSlots > 0 && (
-            <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/50 px-3 py-2">
+            <div className="order-4 flex flex-wrap items-center justify-center gap-2 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/50 px-3 py-2 xl:order-none">
               <span className="instrument-label text-[9px]">
                 + PLANT A SEED · {openSlots} slot{openSlots > 1 ? "s" : ""} open
               </span>
@@ -241,7 +254,10 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             </div>
           )}
 
-          <div className="relative min-h-[300px] flex-1 overflow-hidden rounded-2xl border border-cyan-400/15 xl:min-h-[42vh]">
+          {/* Plant hero — first thing on mobile (order-1) and noticeably
+              larger there (55vh) so it reads as the game, not a buried
+              thumbnail; desktop keeps its original position/size. */}
+          <div className="relative order-1 min-h-[55vh] flex-1 overflow-hidden rounded-2xl border border-cyan-400/15 xl:order-none xl:min-h-[42vh]">
             {isLoading || !plant || !render ? (
               <LoadingBlock label="Loading plant…" />
             ) : (
@@ -341,59 +357,108 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             )}
           </div>
 
-          <TimeControls forecast={plant?.forecast} />
+          {/* Compact core-status chips right under the hero on mobile (desktop
+              keeps its own copy in the header band — see the `hidden xl:block`
+              pair above, unchanged). */}
+          {plant && (
+            <div className="order-2 xl:hidden">
+              <HeroStatChips forecast={plant.forecast} rarity={strain?.rarity} />
+            </div>
+          )}
+
+          <div className="order-5 xl:order-none">
+            <TimeControls forecast={plant?.forecast} />
+          </div>
 
           {/* Client-only growth preview — scrub forward/back through the whole
               lifecycle. Works with no backend (unlike server ACCELERATE TIME). */}
           {plant && render && (
-            <GrowthScrubber
-              day={day}
-              maxDay={maxPreviewDay(flMid)}
-              stageLabel={renderStage}
-              previewing={preview.previewing}
-              readyFromDay={harvestMarks.readyFromDay}
-              harvestDay={harvestMarks.harvestDay}
-              onScrub={setPreviewDay}
-              onReset={() => setPreviewDay(null)}
-            />
+            <div className="order-6 xl:order-none">
+              <GrowthScrubber
+                day={day}
+                maxDay={maxPreviewDay(flMid)}
+                stageLabel={renderStage}
+                previewing={preview.previewing}
+                readyFromDay={harvestMarks.readyFromDay}
+                harvestDay={harvestMarks.harvestDay}
+                onScrub={setPreviewDay}
+                onReset={() => setPreviewDay(null)}
+              />
+            </div>
           )}
 
           {/* Right under the slider: where this stage is at + what's happening,
               then the most-reached-for tools (do-next hint, levels, care bar). */}
           {plant && (
-            <StageInfoCard
-              stage={renderStage}
-              progressPct={plant.forecast?.stage_progress_pct ?? null}
-              previewing={preview.previewing}
-            />
+            <div className="order-7 xl:order-none">
+              <StageInfoCard
+                stage={renderStage}
+                progressPct={plant.forecast?.stage_progress_pct ?? null}
+                previewing={preview.previewing}
+              />
+            </div>
           )}
-          {plant && <NextActionHint plant={plant} />}
-          {plant && <CareDeck plant={plant} />}
+          {plant && (
+            <div className="order-8 xl:order-none">
+              <NextActionHint plant={plant} />
+            </div>
+          )}
+          {plant && (
+            <div className="order-9 xl:order-none">
+              <CareDeck plant={plant} />
+            </div>
+          )}
 
           {/* The full care loop closes HERE (owner: "anybody should be able to
               play the ENTIRE game from the main game page"): Today's Plan +
               Plant Insights + the Harvest CTA — the same tested dock panels the
               chamber used to carry (ChamberDock), imported, not forked. */}
-          {plant && <ChamberPanel plant={plant} strain={strain} />}
-          {plant && !ended && plant.forecast && <PlantProgressStrip forecast={plant.forecast} />}
-          {plant && !ended && <EncouragementFooter health={health} />}
-
-          {/* On mobile the stat chips sit in a clean row under the time strip
-              (on desktop they live in the header band) — never over the plant. */}
           {plant && (
-            <div className="xl:hidden">
-              <HeroStatChips forecast={plant.forecast} rarity={strain?.rarity} />
+            <div className="order-10 xl:order-none">
+              <ChamberPanel plant={plant} strain={strain} />
             </div>
           )}
+          {plant && !ended && plant.forecast && (
+            <div className="order-11 xl:order-none">
+              <PlantProgressStrip forecast={plant.forecast} />
+            </div>
+          )}
+          {plant && !ended && (
+            <div className="order-11 xl:order-none">
+              <EncouragementFooter health={health} />
+            </div>
+          )}
+
+          {/* Mobile-only: everything below is scientist/report detail (DNA,
+              traits, morphology, environment sliders, grow console) — real
+              content, not deleted, just collapsed by default so it doesn't
+              force-stack into the default scroll (owner: plant + care loop
+              lead, not a report page). Desktop never sees this toggle — the
+              rails below are always-visible side columns there. */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            aria-expanded={showAdvanced}
+            className="order-12 flex min-h-[44px] items-center justify-between rounded-xl border border-cyan-400/15 bg-[#0b1b27]/50 px-3 py-2 text-xs font-semibold text-cyan-200/80 xl:hidden"
+          >
+            <span>⚙ Advanced · Scientist view</span>
+            <span className="text-cyan-300">{showAdvanced ? "▲ Hide" : "▼ Show"}</span>
+          </button>
         </div>
 
-        {/* left rail */}
-        <div className="min-h-0 xl:col-start-1 xl:row-start-1">
+        {/* left rail: Plant DNA / Traits / Morphology — always visible on
+            desktop; behind the mobile "Advanced" toggle above. */}
+        <div
+          className={`${showAdvanced ? "block" : "hidden"} min-h-0 xl:block xl:col-start-1 xl:row-start-1`}
+        >
           <PlantDnaRail strain={strain} plantId={activeId} stage={renderStage} />
         </div>
 
-        {/* right rail: environment controls + read-only grow console */}
-        <div className="flex min-h-0 flex-col gap-3 xl:col-start-3 xl:row-start-1">
+        {/* right rail: environment controls + read-only grow console — same
+            mobile-collapse treatment as the left rail. */}
+        <div
+          className={`${showAdvanced ? "flex" : "hidden"} min-h-0 flex-col gap-3 xl:flex xl:col-start-3 xl:row-start-1`}
+        >
           {plant && (
             <EnvironmentRail
               climate={climate}
