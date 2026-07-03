@@ -53,3 +53,11 @@ Thumbs.db
 # Tooling caches
 .cache/
 .local/
+
+# Video-generation skill tooling (npx skills add) — vendored third-party
+# packages, not project source. Custom project subagents still live at
+# growpod/.claude/agents/ and ARE tracked.
+/.agents/
+/.claude/skills/
+/skills-lock.json
+/videos/
