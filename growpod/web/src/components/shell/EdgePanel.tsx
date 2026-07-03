@@ -102,7 +102,7 @@ export function EdgePanel({
         aria-label={`${open ? "Collapse" : "Expand"} ${label}`}
         onClick={() => (open ? onClose() : onOpen())}
         onMouseEnter={onTabPointerEnter}
-        className={`absolute top-1/2 z-30 flex h-16 w-6 -translate-y-1/2 flex-col items-center justify-center gap-1 border border-white/15 bg-[#08141e]/80 backdrop-blur-md transition-opacity ${edgeCls} ${tabRounded} ${
+        className={`absolute top-1/2 z-30 flex h-16 w-8 -translate-y-1/2 flex-col items-center justify-center gap-1 border border-white/15 bg-[#08141e]/80 backdrop-blur-md transition-opacity ${edgeCls} ${tabRounded} ${
           open ? "pointer-events-none opacity-0" : "opacity-90 hover:opacity-100"
         }`}
         style={{ boxShadow: `0 0 10px rgba(${accent},0.25)` }}
@@ -123,7 +123,15 @@ export function EdgePanel({
       <div
         ref={panelRef}
         data-testid={`edge-panel-${side}`}
-        className={`absolute inset-y-0 z-40 flex flex-col border-white/10 bg-[#050d15]/92 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-out ${panelEdgeCls} ${
+        // /92 opacity let the persistent bottom dock's own tile labels
+        // (which sits underneath the panel, full-height) ghost-bleed through
+        // right where the panel's own last one or two rows render, reading as
+        // a confusing double-exposure of ACTION NAME text (e.g. "WATER" from
+        // the dock showing through behind this panel's own "BOOST" row) — most
+        // visible in the compact ~350-430px-tall landscape range this panel
+        // always spans. /97 keeps the glassmorphic see-through-ness (still not
+        // fully opaque) while making that bleed-through imperceptible.
+        className={`absolute inset-y-0 z-40 flex flex-col border-white/10 bg-[#050d15]/97 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-out ${panelEdgeCls} ${
           open
             ? "translate-x-0"
             : side === "left"
@@ -140,21 +148,38 @@ export function EdgePanel({
           </h2>
           <div className="flex items-center gap-1">
             {/* Desktop resize preset cycle (S/M/L) — a fixed-preset stand-in for
-                free drag-resize; see GameShell.tsx for the tradeoff note. */}
+                free drag-resize; see GameShell.tsx for the tradeoff note. The
+                "⤡" glyph + a width-in-px tooltip is a small affordance nudge
+                (not a functional drag handle) so the control reads as "this
+                resizes the panel" rather than an unlabeled size toggle. */}
             <button
               type="button"
               onClick={onCycleWidth}
-              title="Resize panel"
+              title={`Panel width: ${widthPx}px — click to cycle S / M / L`}
               aria-label="Cycle panel width"
-              className="hidden rounded-md border border-white/15 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white/60 hover:border-white/30 hover:text-white sm:inline-block"
+              // min-h/min-w-9 (36px) instead of the old text-hugging px-1.5 py-0.5
+              // box (~19x19px, well under a comfortable touch target) — this
+              // control is reachable on touch landscape widths (the `sm:`
+              // breakpoint is a viewport-width gate, not touch/mouse-specific),
+              // so it needs a real tap target, not just a mouse-hover nicety.
+              className="hidden min-h-9 min-w-9 items-center justify-center gap-1 rounded-md border border-white/15 px-1.5 font-mono text-[9px] font-bold text-white/60 hover:border-white/30 hover:text-white sm:inline-flex"
             >
+              <span aria-hidden className="text-[8px] leading-none opacity-70">
+                ⤡
+              </span>
               {["S", "M", "L"][widthIndex]}
             </button>
             <button
               type="button"
               onClick={onClose}
               aria-label={`Close ${label}`}
-              className="rounded-md border border-white/15 px-2 py-0.5 text-[11px] font-bold text-white/70 hover:border-white/30 hover:text-white"
+              // Same touch-target fix as the resize button above: the old
+              // px-2 py-0.5 box measured ~27x22px at real landscape widths —
+              // under the ~44px ergonomic floor. min-h/min-w-9 (36px) is the
+              // largest bump that still fits this panel's compact header row
+              // without eating into the (already scroll-constrained) body at
+              // short landscape heights.
+              className="flex min-h-9 min-w-9 items-center justify-center rounded-md border border-white/15 text-[11px] font-bold text-white/70 hover:border-white/30 hover:text-white"
             >
               ✕
             </button>
