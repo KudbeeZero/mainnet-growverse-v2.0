@@ -358,29 +358,30 @@ export function BoostsInline() {
   const boostExpiresAt = useBoostStore((s) => s.boostExpiresAt);
   const getMultiplier = useBoostStore((s) => s.getMultiplier);
   const applyBoost = useBoostStore((s) => s.applyBoost);
-  // 1s tick keeps the countdown honest while a boost runs.
+  const cooldownUntil = useBoostStore((s) => s.cooldownUntil);
+  const now = Date.now();
+  const anyCooldown = BOOST_TYPES.some((t) => (cooldownUntil[t] ?? 0) > now);
+  // 1s tick keeps the countdown AND the chip cooldowns honest while either runs.
   const [, setTick] = useState(0);
   useEffect(() => {
-    if (!activeBoost) return;
+    if (!activeBoost && !anyCooldown) return;
     const id = window.setInterval(() => setTick((t) => t + 1), 1000);
     return () => window.clearInterval(id);
-  }, [activeBoost]);
+  }, [activeBoost, anyCooldown]);
 
-  const now = Date.now();
   const remaining = activeBoost && boostExpiresAt > now ? boostExpiresAt - now : 0;
   const total = activeBoost ? BOOST_CONFIG[activeBoost].durationMs : 1;
   const mult = getMultiplier();
   const active = remaining > 0 && activeBoost;
 
   // Quick Boosts row (mockup): tap a chip to apply that boost directly —
-  // mirrors ArcadeHUD's onBoostTap (same store call + plant reaction), minus
-  // the per-type cooldown UI. Cooldowns in this game are tracked only in
-  // ArcadeHUD's local state (a useRef, not the shared boostEngine store), so
-  // there's nothing here to read a cooldown from; these chips are honest
-  // simple apply-taps. `applyBoost` itself still won't let a weaker boost
-  // override a stronger active one (see boostEngine.applyBoost).
+  // mirrors ArcadeHUD's onBoostTap (same store call + plant reaction). The
+  // per-type cooldown now lives in the shared boostEngine store, so these
+  // chips show the SAME lockouts as ArcadeHUD's tray and only fire the plant
+  // reaction when the boost actually applied (applyBoost also still rejects
+  // a weaker boost while a stronger one is active).
   const onQuickBoost = (type: (typeof BOOST_TYPES)[number]) => {
-    applyBoost(type);
+    if (!applyBoost(type)) return;
     dispatchCareReaction("boost");
   };
 
@@ -424,20 +425,33 @@ export function BoostsInline() {
         {BOOST_TYPES.map((type) => {
           const cfg = BOOST_CONFIG[type];
           const isActive = activeBoost === type && !!active;
+          const cdLeft = Math.max(0, (cooldownUntil[type] ?? 0) - now);
+          const onCooldown = cdLeft > 0;
           return (
             <button
               key={type}
               onClick={() => onQuickBoost(type)}
-              title={`${cfg.label} · ${cfg.multiplier}× for ${Math.round(cfg.durationMs / 1000)}s`}
-              aria-label={`Quick-apply ${cfg.label}, ${cfg.multiplier} times multiplier`}
+              disabled={onCooldown}
+              title={
+                onCooldown
+                  ? `${cfg.label} · ready in ${Math.ceil(cdLeft / 1000)}s`
+                  : `${cfg.label} · ${cfg.multiplier}× for ${Math.round(cfg.durationMs / 1000)}s`
+              }
+              aria-label={
+                onCooldown
+                  ? `${cfg.label} on cooldown, ready in ${Math.ceil(cdLeft / 1000)} seconds`
+                  : `Quick-apply ${cfg.label}, ${cfg.multiplier} times multiplier`
+              }
               className={`flex min-h-[36px] flex-1 items-center justify-center gap-1 rounded-lg border font-mono text-[11px] font-bold transition-colors ${
-                isActive
-                  ? "border-grow-400/60 bg-grow-500/15 text-grow-200"
-                  : "border-white/10 bg-white/[0.04] text-cyan-100 hover:border-amber-300/40 hover:bg-amber-300/10"
+                onCooldown
+                  ? "cursor-not-allowed border-[#1c3447] bg-[#0a1722] text-cyan-200/40"
+                  : isActive
+                    ? "border-grow-400/60 bg-grow-500/15 text-grow-200"
+                    : "border-white/10 bg-white/[0.04] text-cyan-100 hover:border-amber-300/40 hover:bg-amber-300/10"
               }`}
             >
-              <span className="text-sm leading-none">{BOOST_ICONS[type]}</span>
-              <span>{cfg.multiplier}×</span>
+              <span className={`text-sm leading-none ${onCooldown ? "opacity-50" : ""}`}>{BOOST_ICONS[type]}</span>
+              <span>{onCooldown ? `${Math.ceil(cdLeft / 1000)}s` : `${cfg.multiplier}×`}</span>
             </button>
           );
         })}

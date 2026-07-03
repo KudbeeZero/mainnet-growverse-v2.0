@@ -79,12 +79,21 @@ interface BoostState {
   /** ms epoch when the current boost expires (0 when none). */
   boostExpiresAt: number;
   boostHistory: BoostHistoryEntry[];
+  /** Per-type cooldown lockout: ms epoch until which the type can't re-apply.
+   *  Lives in the store (not any one component's ref) so every boost surface —
+   *  ArcadeHUD's tray AND ChamberDock's quick chips — shares one honest clock. */
+  cooldownUntil: Partial<Record<BoostType, number>>;
   /** Apply a boost. Same type extends duration; a stronger type replaces a weaker
-   *  active one; a weaker type is ignored while a stronger one is still running. */
-  applyBoost: (type: BoostType) => void;
+   *  active one; a weaker type is ignored while a stronger one is still running;
+   *  a type on cooldown is rejected. Returns true when the boost actually applied
+   *  (so callers only play feedback for real applies). A successful apply starts
+   *  the type's cooldown; a rejected one does not. */
+  applyBoost: (type: BoostType) => boolean;
   clearBoost: () => void;
   /** Effective multiplier right now (1 when none / expired). */
   getMultiplier: () => number;
+  /** Remaining cooldown for a type in ms (0 when ready). */
+  getCooldownRemaining: (type: BoostType) => number;
 }
 
 function now(): number {
@@ -96,11 +105,15 @@ export const useBoostStore = create<BoostState>((set, get) => ({
   boostMultiplier: 1,
   boostExpiresAt: 0,
   boostHistory: [],
+  cooldownUntil: {},
 
   applyBoost: (type) => {
     const cfg = BOOST_CONFIG[type];
     const t = now();
     const s = get();
+    // On cooldown → rejected. Previously each surface kept its own cooldown ref
+    // (ArcadeHUD) or none at all (quick chips), so the lockout is enforced here.
+    if ((s.cooldownUntil[type] ?? 0) > t) return false;
     const stillActive = s.activeBoost && s.boostExpiresAt > t;
 
     let nextType: BoostType;
@@ -113,8 +126,9 @@ export const useBoostStore = create<BoostState>((set, get) => ({
       nextMul = cfg.multiplier;
       nextExpiry = s.boostExpiresAt + cfg.durationMs;
     } else if (stillActive && cfg.multiplier <= s.boostMultiplier) {
-      // A weaker (or equal) different type can't override a stronger active boost.
-      return;
+      // A weaker (or equal) different type can't override a stronger active
+      // boost. No cooldown is started — the tap did nothing.
+      return false;
     } else {
       // No active boost, or the new type is stronger → replace.
       nextType = type;
@@ -126,6 +140,7 @@ export const useBoostStore = create<BoostState>((set, get) => ({
       activeBoost: nextType,
       boostMultiplier: nextMul,
       boostExpiresAt: nextExpiry,
+      cooldownUntil: { ...s.cooldownUntil, [type]: t + cfg.cooldownMs },
       // Cap history so it can't grow unbounded in a long session.
       boostHistory: [...s.boostHistory, { type, multiplier: cfg.multiplier, at: t }].slice(-50),
     });
@@ -135,8 +150,11 @@ export const useBoostStore = create<BoostState>((set, get) => ({
       const detail: BoostApplyDetail = { type, multiplier: cfg.multiplier, duration: cfg.durationMs };
       window.dispatchEvent(new CustomEvent<BoostApplyDetail>(BOOST_APPLIED_EVENT, { detail }));
     }
+    return true;
   },
 
+  // Cooldowns survive clearBoost on purpose: clearing the active boost is not a
+  // way to dodge a type's lockout.
   clearBoost: () => set({ activeBoost: null, boostMultiplier: 1, boostExpiresAt: 0 }),
 
   getMultiplier: () => {
@@ -144,6 +162,8 @@ export const useBoostStore = create<BoostState>((set, get) => ({
     if (!s.activeBoost || s.boostExpiresAt <= now()) return 1;
     return s.boostMultiplier;
   },
+
+  getCooldownRemaining: (type) => Math.max(0, (get().cooldownUntil[type] ?? 0) - now()),
 }));
 
 /** Non-hook accessor for the current multiplier (for rAF loops outside React). */
