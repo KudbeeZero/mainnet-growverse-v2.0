@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (design punch list items 1–3: HUD strip, inline boosts, insight chips).
+once they appear here. Last reconciled: **2026-07-03** (design polish pass: plant fullness/color, mood chip, quick-boost chips, progress strip, encouragement footer).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -76,10 +76,15 @@ once they appear here. Last reconciled: **2026-07-03** (design punch list items 
   in-scene quick tray via `OPEN_BOOST_TRAY_EVENT`, tray's collapsed pill removed); (3) Plant
   Insights as a scannable 4-chip grid (Top cola / Health / Aroma / Trichomes with honest
   "Not scanned"/"Not yet" fallbacks). Verified mobile 390×844 + desktop, care-loop e2e green.
-- 🎮 ⬜ **Design punch list — remaining (owner annotated mockup, 2026-07-03)** — (4) footer
-  encouragement bar ("Your actions make a difference" + health dial); (5) care-streak /
-  resin-score / plant-progress stat strip; (6) ambient in-scene care glyphs (floating ✂️/💧/❤️
-  accents).
+- 🎮 ✅ **Design punch list items 4–5 (honest subset) shipped (2026-07-03)** — (4) footer
+  encouragement bar (`EncouragementFooter`: real health dial + state-honest copy); (5)
+  plant-progress stat strip (`PlantProgressStrip`: server forecast only — stage day, stage %,
+  days-to-harvest). Shipped: plant fullness/color pass (chamberCore: denser canopy,
+  purple-pink bud accents, dominant top cola), mood chip (health/flag-derived pill on the
+  stage), quick-boost chips (one-tap per-type row in `BoostsInline`) 2026-07-03.
+- 🎮 ⬜ **Design punch list — remaining** — care-streak / resin-score stats (later: needs
+  backend tracking; no server field exists, and we never invent numbers); (6) ambient
+  in-scene care glyphs (floating ✂️/💧/❤️ accents).
 - 🎮 ⬜ **Bud/flower polish notes (owner, future polish — NOT blockers)** — stronger main top
   cola; cleaner bud silhouette; less noisy pistils; tighter bract clusters; better embedded
   sugar leaves; subtle trichome sparkle/frost; buds readable at phone size. 2D chamber-engine
