@@ -64,7 +64,11 @@ interface Cluster {
   // `seam`: the grouped calyx-seam root angle this hair emerges from
   // (reference "Pistil Hair Breakdown" items 1-2 — grouped origin points,
   // never floating); several hairs per cluster share the same seam.
-  hairs: Array<{ a: number; seam: number; len: number; bend: number; ball: number; k: number }>;
+  // `curl`: secondary tip-hook offset layered on top of `bend`'s mid-length
+  // arch so the filament reads as an organic S/curl rather than a single arc
+  // (item 4). `mat`: per-hair maturity roll driving the pale-cream→orange
+  // colour spread so one bud shows a MIX of young and ripe strands (item 8).
+  hairs: Array<{ a: number; seam: number; len: number; bend: number; curl: number; ball: number; k: number; mat: number }>;
   tris: Array<{ a: number; len: number; headR: number; k: number; mat: number }>;
   ph: number;
   leaf: boolean;
@@ -281,18 +285,24 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.restore();
     }
   }
-  // Pistil colour: white → cream/amber with ripeness+browning, then blended
-  // toward magenta/pink for anthocyanin phenotypes (mag 0..1).
+  // Pistil colour (reference "Pistil Hair Breakdown" item 8 — pale/cream when
+  // young, shifting to orange-pink as maturity progresses). `w` is now a
+  // PER-HAIR maturity (0 = fresh cream stigma, 1 = ripe orange) rather than a
+  // single per-cluster ripeness, so a mature cola renders a MIX of pale and
+  // orange strands. Endpoints tuned toward a warmer orange target (was a
+  // muddier amber): young 248/242/222 cream → ripe 235/118/44 orange. `brown`
+  // deepens over-ripe strands; `mag` blends toward orange-pink for the rare
+  // strains that express pistilMagenta (independent of anthocyanin).
   function pistilFiber(w: number, brown: number, mag: number) {
-    let r = lerp(244, 226, w), g = lerp(238, 138, w), b = lerp(220, 58, w);
-    r = lerp(r, 152, brown); g = lerp(g, 88, brown); b = lerp(b, 48, brown);
-    r = lerp(r, 232, mag); g = lerp(g, 74, mag); b = lerp(b, 150, mag);
+    let r = lerp(248, 235, w), g = lerp(242, 118, w), b = lerp(222, 44, w);
+    r = lerp(r, 150, brown); g = lerp(g, 86, brown); b = lerp(b, 46, brown);
+    r = lerp(r, 234, mag); g = lerp(g, 82, mag); b = lerp(b, 150, mag);
     return `rgb(${r | 0},${g | 0},${b | 0})`;
   }
   function pistilBall(w: number, brown: number, mag: number) {
-    let r = lerp(250, 246, w), g = lerp(244, 170, w), b = lerp(230, 86, w);
-    r = lerp(r, 188, brown); g = lerp(g, 116, brown); b = lerp(b, 60, brown);
-    r = lerp(r, 244, mag); g = lerp(g, 120, mag); b = lerp(b, 178, mag);
+    let r = lerp(252, 248, w), g = lerp(246, 156, w), b = lerp(232, 74, w);
+    r = lerp(r, 186, brown); g = lerp(g, 114, brown); b = lerp(b, 58, brown);
+    r = lerp(r, 246, mag); g = lerp(g, 124, mag); b = lerp(b, 178, mag);
     return `rgb(${r | 0},${g | 0},${b | 0})`;
   }
   // Hue/sat blend for the base→tip purple gradient (see drawFlowerSite's
@@ -411,19 +421,45 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // cluster (never an independent floating root — items 1/2/9) and
       // density scales with tier position — more hairs near the tip/active
       // upper sites, fewer near the base (item 7).
-      const tierDensity = 0.55 + 0.85 * Math.pow(clamp(yf, 0, 1), 0.8);
-      const nSeams = Math.max(1, Math.round(1 + 2 * yf + rnd() * 0.6));
+      // Round 8 ("Pistil Hair Breakdown" macro re-read): the prior round read
+      // as too few / too straight / too uniform vs. the macro photo (abundant
+      // curling orange filaments). Four pushes toward the reference:
+      //  • Density (item 7): more seams + more hairs, steeper tip weighting so
+      //    the active upper bud sites carry a proper tuft while the base stays
+      //    sparse — grouped from seams, so it reads as fans not confetti.
+      //  • Length (item 6): explicit short/medium/long tiers, not one band.
+      //  • Curve (item 4): each hair carries a `curl` (tip hook) layered on
+      //    `bend` (mid-length arch) in the draw block — an organic S, not an arc.
+      //  • Colour (item 8): a per-hair `mat` maturity roll, tip-weighted, so a
+      //    ripe cola shows pale-cream young strands mixed with orange ripe ones.
+      const tierDensity = 0.5 + 1.35 * Math.pow(clamp(yf, 0, 1), 0.85);
+      const nSeams = Math.max(1, Math.round(1 + 2.6 * yf + rnd() * 0.7));
       const seams: number[] = [];
       for (let s = 0; s < nSeams; s++) seams.push(rnd() * TAU);
-      const nH = Math.max(1, Math.round((pat === "spiral" ? 2 : 3) * lush * 0.6 * tierDensity));
+      const nH = Math.max(1, Math.round((pat === "spiral" ? 3 : 4) * lush * 0.72 * tierDensity));
       for (let j = 0; j < nH; j++) {
         const seam = seams[j % seams.length];
         // Directional fan: mostly upward, biased slightly toward the seam's
         // own outward direction, with slight per-hair randomness (item 5).
-        const dir = seam * 0.3 + -Math.PI / 2 * 0.7 + (rnd() - 0.5) * 0.95;
-        // Round 5: smaller tip balls (0.9+0.4 → 0.65+0.3) so each pistil reads
-        // as a fine amber thread, not a bead.
-        hairs.push({ a: dir, seam, len: 0.5 + rnd() * 0.45, bend: (rnd() - 0.5) * 1.3, ball: 0.55 + rnd() * 0.25, k: rnd() * 0.85 });
+        const dir = seam * 0.3 + -Math.PI / 2 * 0.7 + (rnd() - 0.5) * 1.05;
+        // Length variation (item 6): short / medium / long tiers so the tuft
+        // has a natural ragged silhouette instead of one uniform length.
+        const lr = rnd();
+        const len = lr < 0.42 ? 0.34 + rnd() * 0.22 : lr < 0.8 ? 0.58 + rnd() * 0.3 : 0.92 + rnd() * 0.42;
+        // Per-hair maturity (item 8): tip clusters trend riper/oranger, base
+        // paler, plus a wide random term so pale and orange strands coexist.
+        const mat = clamp(0.34 * yf + rnd() * 0.92, 0, 1);
+        hairs.push({
+          a: dir,
+          seam,
+          len,
+          bend: (rnd() - 0.5) * 1.5,
+          curl: (rnd() - 0.5) * 1.15,
+          // Round 5: small tip balls so each pistil reads as a fine thread.
+          ball: 0.5 + rnd() * 0.22,
+          k: rnd() * 0.85,
+          mat,
+        });
       }
       // Trichome "frost" — a few CLUSTERED highlight blobs per cluster instead of
       // a dense field of individual stalk+gland glyphs (owner: "clustered frost
@@ -744,14 +780,22 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       }
       if (drawn === 0) continue;
 
-      const fiberCol = pistilFiber(P.ripe, P.brown, bc.pistilMagenta);
-      const ballCol = pistilBall(P.ripe, P.brown, bc.pistilMagenta);
       // Round 7 (structure-first, "Pistil Hair Breakdown" reference): the
       // root now sits ON the bract-ring surface at the hair's grouped SEAM
       // point (never an independent floating radius — items 1/2/9), and the
       // filament is a filled TAPERED wedge (thicker at the root, fine at the
       // tip — item 3) instead of a constant-width stroke, which at chamber
       // scale read as a rigid uniform spike rather than a delicate hair.
+      // Round 8: the wedge was a single quadratic arc (one bend) — the macro
+      // shows filaments that arch AND hook. The centreline is now sampled as a
+      // curved polyline carrying `bend` (a mid-length sin arch) plus `curl` (a
+      // t^1.9 tip hook), and the tapered ribbon is built by offsetting each
+      // sample along its LOCAL normal — so the curl reads cleanly and the width
+      // still tapers to a fine tip (item 3/4). Colour is resolved PER HAIR from
+      // its own maturity so the tuft is a pale→orange mix, not one flat tone
+      // (item 8); tip stigma bead stays small so each hair reads as a thread.
+      const bw0 = Math.max(0.85, cw * 0.02); // root half-width
+      const STEPS = 7;
       for (const h of cl.hairs) {
         if (h.k > d) continue;
         const stretch = clamp((d - h.k * 0.5) / 0.6, 0.35, 1);
@@ -759,20 +803,43 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         const seamR = 0.6 + 0.22 * Math.sin(h.seam * 3.1);
         const x0 = cx + Math.cos(h.seam) * seamR * cw * 0.5, y0 = cy + Math.sin(h.seam) * seamR * cw * 0.32 - podH * 0.22;
         const x1 = x0 + Math.cos(h.a) * L, y1 = y0 + Math.sin(h.a) * L;
-        const mx = (x0 + x1) / 2 + h.bend * (1.6 + P.ripe * 2.2), my = (y0 + y1) / 2 - 2;
         const dx = x1 - x0, dy = y1 - y0, dlen = Math.max(0.001, Math.hypot(dx, dy));
-        const bw0 = Math.max(0.9, cw * 0.021); // root half-width
-        const perpX = (-dy / dlen) * bw0, perpY = (dx / dlen) * bw0;
-        ctx!.fillStyle = fiberCol;
+        const nX = -dy / dlen, nY = dx / dlen; // chord normal (unit)
+        const bendAmp = h.bend * (1.5 + P.ripe * 2.0); // mid-length arch
+        const curlAmp = h.curl * (2.2 + P.ripe * 3.4); // tip hook, ripens stronger
+        // Sample the curved centreline once (root → tip).
+        const pts: Array<[number, number]> = [];
+        for (let s = 0; s <= STEPS; s++) {
+          const t = s / STEPS;
+          const off = bendAmp * Math.sin(Math.PI * t) + curlAmp * Math.pow(t, 1.9);
+          pts.push([x0 + dx * t + nX * off, y0 + dy * t + nY * off]);
+        }
+        // Build a tapered ribbon: offset each sample by its LOCAL normal so the
+        // width follows the curl, shrinking from bw0 at the root to ~0 at tip.
+        const left: Array<[number, number]> = [], right: Array<[number, number]> = [];
+        for (let s = 0; s <= STEPS; s++) {
+          const a = pts[Math.max(0, s - 1)], b = pts[Math.min(STEPS, s + 1)];
+          const tx = b[0] - a[0], ty = b[1] - a[1], tl = Math.max(0.001, Math.hypot(tx, ty));
+          const lnX = -ty / tl, lnY = tx / tl;
+          const hw = bw0 * Math.pow(1 - s / STEPS, 0.85);
+          left.push([pts[s][0] + lnX * hw, pts[s][1] + lnY * hw]);
+          right.push([pts[s][0] - lnX * hw, pts[s][1] - lnY * hw]);
+        }
+        // Per-hair maturity → pale-cream (young) ⇢ orange (ripe). Floor keeps a
+        // few strands pale even on a ripe cola; mag rides pistilMagenta only.
+        const hairMat = clamp(P.ripe * (0.15 + 0.95 * h.mat), 0, 1);
+        const magH = bc.pistilMagenta * (0.4 + 0.6 * h.mat);
+        ctx!.fillStyle = pistilFiber(hairMat, P.brown, magH);
         ctx!.beginPath();
-        ctx!.moveTo(x0 - perpX, y0 - perpY);
-        ctx!.quadraticCurveTo(mx - perpX * 0.35, my - perpY * 0.35, x1, y1);
-        ctx!.quadraticCurveTo(mx + perpX * 0.35, my + perpY * 0.35, x0 + perpX, y0 + perpY);
+        ctx!.moveTo(left[0][0], left[0][1]);
+        for (let s = 1; s <= STEPS; s++) ctx!.lineTo(left[s][0], left[s][1]);
+        for (let s = STEPS; s >= 0; s--) ctx!.lineTo(right[s][0], right[s][1]);
         ctx!.closePath();
         ctx!.fill();
-        ctx!.fillStyle = ballCol;
+        const tip = pts[STEPS];
+        ctx!.fillStyle = pistilBall(hairMat, P.brown, magH);
         ctx!.beginPath();
-        ctx!.arc(x1, y1, h.ball * Math.max(0.6, cw * 0.014), 0, TAU);
+        ctx!.arc(tip[0], tip[1], h.ball * Math.max(0.5, cw * 0.012), 0, TAU);
         ctx!.fill();
       }
       // Trichome frost (Engine 7, simplified for chamber scale) — a few CLUSTERED
