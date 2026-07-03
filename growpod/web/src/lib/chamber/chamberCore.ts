@@ -2568,7 +2568,30 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       drawFan(p.A * 0.08 * (1 - 0.35 * p.P.budDev), Math.min(S.leafletMax, 5 + Math.floor(day / 18)), 1, claw, 0, 1, seed + day * 0.3);
       ctx!.restore();
       drawBudCollar(p.cola.site, 2); // the top cola gets the strongest node collar
-      drawFlowerSite(p.cola.site, p.P, cjig, tt, 1.0); // top cola — full frost
+      // Plant rework pass 7 (owner blueprint: "clear MAIN cola", "1 top cola —
+      // the HERO", "silhouette lacks hierarchy"). A warm apical hero-bloom behind
+      // the crown so the top cola reads as the clear dominant apex, not just the
+      // tallest of a row. Additive light ("lighter"), gated on flower dev so it
+      // only blooms as the crown matures. Draw-path only.
+      {
+        const hb = clamp(live.current.dev.budDev, 0, 1);
+        if (hb > 0.05) {
+          const r = p.cola.site.baseW * 3.2;
+          const cy = -p.cola.site.axisLen * 0.5;
+          const bloom = ctx!.createRadialGradient(0, cy, 0, 0, cy, r);
+          bloom.addColorStop(0, `hsla(${S.hue + 14}, 62%, 66%, ${0.16 * hb})`);
+          bloom.addColorStop(0.6, `hsla(${S.hue + 6}, 56%, 56%, ${0.08 * hb})`);
+          bloom.addColorStop(1, "hsla(0,0%,100%,0)");
+          ctx!.save();
+          ctx!.globalCompositeOperation = "lighter";
+          ctx!.fillStyle = bloom;
+          ctx!.beginPath();
+          ctx!.ellipse(0, cy, r * 0.8, r, 0, 0, TAU);
+          ctx!.fill();
+          ctx!.restore();
+        }
+      }
+      drawFlowerSite(p.cola.site, p.P, cjig, tt, 1.05); // top cola — full frost + hero
       ctx!.restore();
     } else {
       ctx!.save();
