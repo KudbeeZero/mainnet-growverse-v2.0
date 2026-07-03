@@ -717,12 +717,14 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   admissions department/track recommendation (persist + surface; HERMES open-work #2),
   `Player.last_active_at` (exactly what WO-2 "welcome-back delta" needs), `/contracts` page
   (whole built surface with no nav entry — one `navLinks.ts` line).
-- 🟠 ⬜ **Retire: superseded/dead web code** — `components/intro/` (4 files; superseded by FTUE),
-  `components/pod/PodCard.tsx` + `EnvironmentForm`/`WeatherRoller` (superseded by Command Center),
-  `command/CommandTopBar.tsx`/`CommandFooter.tsx` (+ stranded `hooks/useLiveClock.ts`, cosmetics
-  exports), `lib/timeControls.ts`, backend `serve_narration` route (superseded by produce-once
-  audio). Owner-taste call: `onboarding/VideoHero.tsx` + `public/media/*` (revive on landing or
-  retire).
+- 🟠 🔨 **Retire: superseded/dead web code** — ✅ **web cluster retired (2026-07-03 PM)**:
+  removed `components/intro/` (4 files; superseded by FTUE), `components/pod/PodCard.tsx` +
+  `EnvironmentForm`/`WeatherRoller` (superseded by Command Center), `command/CommandTopBar.tsx`/
+  `CommandFooter.tsx` + stranded `hooks/useLiveClock.ts`, and `lib/timeControls.ts` (+ its test)
+  — 12 files, each verified unreferenced (no external imports, no barrel re-exports, no test/e2e
+  refs) before deletion; full gate green after (tsc/lint/build/vitest 475/e2e 52). ⬜ Remaining:
+  backend `serve_narration` route (superseded by produce-once audio). Owner-taste call:
+  `onboarding/VideoHero.tsx` + `public/media/*` (revive on landing or retire).
 - 🟡 ⬜ **Retire: stale infra** — `growpod/artifacts/*` nested duplicates (confirmed stale vs root),
   `scripts/build-production.sh` + `start-production.sh` (describe a deploy that doesn't exist),
   `scripts/src/hello.ts` scaffolds, `attached_assets/` dumps, empty `growpod/lib/db` schema stub.
