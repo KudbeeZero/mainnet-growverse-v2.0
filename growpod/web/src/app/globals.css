@@ -571,7 +571,27 @@ body {
   animation: gpe-grain 0.55s steps(3) infinite;
 }
 
+/* Boost squash-stretch-bounce (owner: "the plant shrinks a teeny bit and then
+   pops it gets bigger and then it kinda bounces back"). Anticipation dip →
+   overshoot pop → recoil → settle, scaled from the pot base. The one canonical
+   "juice" motion for a positive plant event — see the arcade animation rules in
+   docs/memory/design/12-arcade-animation-system.md. */
+@keyframes gpe-plant-bounce {
+  0%   { transform: scale(1, 1); }
+  14%  { transform: scale(0.95, 0.92); }  /* anticipation — squash down */
+  40%  { transform: scale(1.06, 1.11); }  /* pop — stretch up + out */
+  62%  { transform: scale(0.985, 0.965); } /* recoil */
+  82%  { transform: scale(1.015, 1.02); } /* small overshoot */
+  100% { transform: scale(1, 1); }
+}
+.gpe-plant-bounce {
+  animation: gpe-plant-bounce 720ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transform-origin: 50% 88%; /* the pot base — it grows up from the ground */
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .gpe-plant-bounce,
   .gpe-agent-pop,
   .gpe-think-dot,
   .gpe-scan-ring,

@@ -11,6 +11,7 @@ import { ErrorState } from "@/components/ui/States";
 import { ChamberActionBar, BoostsInline } from "@/components/plant/ChamberDock";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { BoostAmbientLayer } from "@/components/plant/BoostAmbientLayer";
+import { usePlantBounce } from "@/hooks/usePlantBounce";
 import { useGrowthBoost, useCleanupPlant } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap, usePods } from "@/hooks/queries";
@@ -159,7 +160,12 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   // forward + revive it; on success we flash the ⚡ electric surge over the stage.
   const [boostFlash, setBoostFlash] = useState(false);
   const flashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The plant lives in this stage; the bounce hook auto-fires the squash-stretch
+  // on every arcade boost and returns a trigger the ⚡ growth-boost reuses.
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const bouncePlant = usePlantBounce(stageRef);
   const growthBoost = useGrowthBoost(plantId, () => {
+    bouncePlant(); // owner arcade juice: the plant squashes then pops on boost
     if (reducedMotion) return;
     setBoostFlash(true);
     if (flashRef.current) clearTimeout(flashRef.current);
@@ -179,8 +185,8 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     if (flashRef.current) clearTimeout(flashRef.current);
   }, []);
   // Post-harvest "Save snapshot" — download the plant canvas as a PNG keepsake.
-  // Grabs the GrowChamber canvas from the stage; no server round-trip.
-  const stageRef = useRef<HTMLDivElement | null>(null);
+  // Grabs the GrowChamber canvas from the stage (stageRef declared above); no
+  // server round-trip.
   const saveSnapshot = () => {
     const canvas = stageRef.current?.querySelector("canvas");
     if (!canvas) return;
