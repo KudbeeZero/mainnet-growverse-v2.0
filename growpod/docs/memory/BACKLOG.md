@@ -781,9 +781,10 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   `docs/00–09` snapshots (marked 🧊 in DOCS_INDEX). DOCS_INDEX stale ledger table updated.
   ⬜ Remaining: HANDOFF staleness gate in `check_memory.py` (deferred — low urgency while HANDOFF
   is actively maintained).
-- 🟡 ⬜ **Simplify: unreachable AI-factory branches** — master-grower/admissions/roadmap "real
-  provider" arms always return the mock (classes don't exist); build the Claude providers or
-  simplify the guards. (HeyGen arm stays — owner-gated spend.)
+- 🟡 ✅ **Unreachable AI-factory branches (2026-07-03)** — built `ClaudeAdmissions`
+  (`admissions_claude.py`) and `ClaudeRoadmap` (`roadmap_claude.py`); both now activate when
+  `ANTHROPIC_API_KEY` is set and `USE_MOCK_AI` is false. MasterGrower was already done. HeyGen
+  arm stays intentionally mocked (owner-gated spend).
 
 ## 🚀 New-Player / Launch-Readiness (ACTIVE track — onboarding → MVP launch)
 > Player-facing, additive work on existing rails toward a launchable MVP — **no economy / chain /
