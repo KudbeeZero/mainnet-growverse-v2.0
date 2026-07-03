@@ -35,12 +35,11 @@ curl http://localhost:8000/readiness   # {"database":"ok","status":"ready"}
 
 ### Note on migrations
 
-`alembic upgrade head` currently fails with **"Multiple head revisions"** — the
-migration graph has two heads (`a7b8c9d0e1f2` and `c8d9e0f1a2b3`); the repo even
-ships `scripts/check_single_head.py` to guard against this. Local boot does not
-use Alembic: it creates the schema via `init_db()` (ORM `create_all`), which is
-what the `.replit` workflow and `seed.py main()` do. The fork should be resolved
-with a merge migration before relying on Alembic in production.
+The earlier two-head fork (`a7b8c9d0e1f2` / `c8d9e0f1a2b3`) has been resolved
+with a merge migration (`fd1100254612`); the graph now has a single head,
+guarded by `scripts/check_single_head.py` (`make check-migrations`). Local boot
+still does not use Alembic: it creates the schema via `init_db()` (ORM
+`create_all`), which is what the `.replit` workflow and `seed.py main()` do.
 
 ## Frontend (Next.js on :3000)
 
