@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (plant mockup round 2: denser canopy + purple-tipped colas; boost cooldowns lifted into the shared store).
+once they appear here. Last reconciled: **2026-07-03** (plant mockup round 3: lower cola mass, interior fill, finer calyx grain, deeper green).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -104,10 +104,25 @@ once they appear here. Last reconciled: **2026-07-03** (plant mockup round 2: de
   disabled+countdown states from the same clock as the HUD tray. 13 unit tests in
   `web/src/lib/arcade/__tests__/boostEngine.test.ts`; chip lockout verified live via
   Playwright (tap → disabled + countdown; other types stay enabled).
+- 🎮 ✅ **Plant mockup round 3 (2026-07-03, owner mockup image)** — targeted the round-2
+  verdict's four named gaps in `chamberCore` (template refined, then re-stamped): (1)
+  lower-third cola mass — side-cola floor 0.55→0.95 with a relaxed ramp, tip-site gate
+  ×0.65 so the lowest branch tips carry real colas, plumper branchlet/node buds, low-cola
+  cluster floor up; (2) interior fill — node buds start lower (0.24) and bigger, an inner
+  fan per branch base + a cross-stem fan per tier, skirt fans a notch bigger; (3) finer
+  calyx grain — more pods/cluster in a 4th ring, pod cap 5.2→4.2, taller pointier pods,
+  juicier saturated pod gradient; (4) deeper green — leafTone +7 sat / −3 lit, fused-mass
+  lit 37→33, pod base lit 38→35, deeper saturated shadow stops; plus tip-concentrated
+  purple (exp 2.1) so accents read as a continuous cap, not dots. Iterated 5
+  headless-render rounds vs the mockup; Blue Dream / G13 / White Rhino identities
+  spot-checked (distinct); veg + harvest sane. Honest remaining gap: the mockup's colas
+  are still chunkier/rounder with painterly airbrushed shading (ours are flatter vector
+  gradients), its very bottom tier keeps bud mass where ours is mostly fan skirt, and its
+  interior is still a touch denser.
 - 🎮 ⬜ **Bud/flower polish notes (owner, future polish — NOT blockers)** — remaining after the
-  round-2 pass above: tighter bract clusters; better embedded sugar leaves; subtle trichome
-  sparkle at phone size (current frost is deliberately faint); lower-canopy cola mass toward
-  the mockup's zero-interior-space density. 2D chamber-engine tuning lane (chamberCore),
+  round-3 pass above: tighter bract clusters; better embedded sugar leaves; subtle trichome
+  sparkle at phone size (current frost is deliberately faint); painterly per-cola shading
+  toward the mockup's airbrushed depth. 2D chamber-engine tuning lane (chamberCore),
   distinct from the ❄️ frozen 3D lane below.
 - 🎮 ❄️ **Parked for later (owner-named, do not resume without explicit direction)**: photoreal
   bud viewer, full 3D cola inspection, trichome particle macro mode, scientific Lab breakdown,
