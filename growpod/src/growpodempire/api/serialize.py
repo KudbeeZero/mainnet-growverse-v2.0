@@ -112,6 +112,7 @@ def plant_dict(plant, metrics=None) -> dict:
         "player_id": plant.player_id,
         "pod_id": plant.pod_id,
         "strain_id": plant.strain_id,
+        "soil_key": plant.soil_key,
         "growth_stage": plant.growth_stage,
         "planted_at": _ts(plant.planted_at),
         "height": plant.height,

@@ -423,10 +423,19 @@ shop:
        description: "Full reset: waters, feeds, treats, and revitalizes a struggling plant"}
 
   # Grow-room gear (Phase 2). Durable equipment you buy & own (a GROW sink),
-  # tracked in `gear_inventory`. Lights are the one *functional* category: an
-  # equipped light writes its `ppfd` to the pod's `light_intensity`, which the
-  # simulation already turns into PPFD/DLI/light-stress. Fans and soils are
-  # owned/catalog for now (no sim hook yet) — see docs BACKLOG for the follow-up.
+  # tracked in `gear_inventory`. All three categories are now functional:
+  # - lights: an equipped light writes its `ppfd` to the pod's `light_intensity`.
+  # - fans: an equipped fan's `humidity_reduction_pct` lowers the *effective*
+  #   ambient humidity the sim uses (mold/mildew risk + VPD), matching real
+  #   ventilation — only an exhaust fan that removes air from the room gives a
+  #   large reduction; clip/oscillating fans just recirculate, so their effect
+  #   is smaller (see `engine._equipped_condition_effects`).
+  # - soils: chosen once at `plant_seed()` time (a growing-medium property, not
+  #   a swappable room fixture). `nutrient_decay_multiplier` and
+  #   `water_decay_multiplier` scale the plant's per-hour resource decay —
+  #   grounded in each medium's real nutrient buffering / drainage character.
+  # Both fan and light effects also scale down with `GearInventory.condition_pct`
+  # (see `gear_depreciation` below) — worn gear performs worse, not just fewer.
   # `image` is a filename under web/public/store/gear/.
   gear:
     lights:
@@ -454,36 +463,65 @@ shop:
       clip_fan:
         {name: "Clip-On Circulator", category: fan, cost: 60, image: "clip_fan.png",
          description: "Gentle airflow for a single plant — strengthens stems.",
-         specs: {cfm: 120, coverage: "1 plant", type: "clip"}}
+         specs: {cfm: 120, coverage: "1 plant", type: "clip", humidity_reduction_pct: 6}}
       oscillating_fan:
         {name: "Oscillating Tower Fan", category: fan, cost: 140, image: "oscillating_fan.png",
          description: "Sweeping breeze that keeps a small tent's air moving.",
-         specs: {cfm: 400, coverage: "small tent", type: "oscillating"}}
+         specs: {cfm: 400, coverage: "small tent", type: "oscillating", humidity_reduction_pct: 12}}
       inline_exhaust_6in:
         {name: "6\" Inline Exhaust + Carbon Filter", category: fan, cost: 260, image: "inline_exhaust_6in.png",
          description: "Pulls hot, humid, smelly air out — full-tent ventilation.",
-         specs: {cfm: 440, coverage: "full tent", type: "inline exhaust"}}
+         specs: {cfm: 440, coverage: "full tent", type: "inline exhaust", humidity_reduction_pct: 30}}
     soils:
       worm_castings:
         {name: "Worm Castings", category: soil, cost: 50, image: "worm_castings.png",
          description: "Living, microbe-rich castings — gentle slow-release nitrogen.",
-         specs: {npk: "1-0-0", base: "amendment", notes: "won't burn roots"}}
+         specs: {npk: "1-0-0", base: "amendment", notes: "won't burn roots",
+                 nutrient_decay_multiplier: 0.85, water_decay_multiplier: 1.0}}
       bat_guano:
         {name: "Bat Guano (high-P)", category: soil, cost: 70, image: "bat_guano.png",
          description: "Phosphorus-heavy bloom amendment for fat, dense flowers.",
-         specs: {npk: "3-10-1", base: "amendment", notes: "top-dress in flower"}}
+         specs: {npk: "3-10-1", base: "amendment", notes: "top-dress in flower",
+                 nutrient_decay_multiplier: 0.9, water_decay_multiplier: 1.0}}
       coco_coir:
         {name: "Coco Coir Brick", category: soil, cost: 40, image: "coco_coir.png",
          description: "Inert, airy coco substrate with excellent water retention.",
-         specs: {npk: "0-0-0", base: "substrate", notes: "needs feeding"}}
+         specs: {npk: "0-0-0", base: "substrate", notes: "needs feeding",
+                 nutrient_decay_multiplier: 1.3, water_decay_multiplier: 0.85}}
       super_soil:
         {name: "Super Soil (living)", category: soil, cost: 180, image: "super_soil.png",
          description: "Pre-amended living soil — plant and grow, no bottled nutrients.",
-         specs: {npk: "amended", base: "living soil", notes: "no-till friendly"}}
+         specs: {npk: "amended", base: "living soil", notes: "no-till friendly",
+                 nutrient_decay_multiplier: 0.6, water_decay_multiplier: 0.9}}
       perlite_mix:
         {name: "Perlite Aeration Mix", category: soil, cost: 30, image: "perlite_mix.png",
          description: "Lightweight aeration to keep roots oxygenated and draining.",
-         specs: {npk: "0-0-0", base: "amendment", notes: "blend into any mix"}}
+         specs: {npk: "0-0-0", base: "amendment", notes: "blend into any mix",
+                 nutrient_decay_multiplier: 1.0, water_decay_multiplier: 1.25}}
+
+  # Equipment condition & depreciation: durable gear (lights/fans) wears with
+  # use. Wear accrues once per completed harvest cycle for whatever gear is
+  # equipped to that plant's pod; effective output (PPFD / humidity reduction)
+  # scales down with `GearInventory.condition_pct`, so worn gear is a real
+  # performance tax rather than a cosmetic number. Gear never fully breaks
+  # (floor_pct is the minimum effective output). Servicing restores condition
+  # but each service's ceiling drops (mirrors real refurbished-equipment
+  # economics — never quite like new again), and worn gear can be resold for a
+  # condition-scaled fraction of its original price. Costs are launch-testing
+  # placeholders (see `seeds.base_cost` note above) — restore real prices
+  # before launch.
+  gear_depreciation:
+    wear_per_cycle_pct:
+      light: 4.0
+      fan: 6.0
+    floor_pct: 50.0
+    service:
+      cost_pct_of_price: 0.35
+      first_ceiling_pct: 95.0
+      ceiling_step_pct: 5.0
+      min_ceiling_pct: 70.0
+    resale:
+      price_pct_of_original: 0.55
 
 # Seasonal / limited content (Phase 2). A strain whose `season` is "all" is
 # always buyable; otherwise it must match `current_season` (or be unlocked via a

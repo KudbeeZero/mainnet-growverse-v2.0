@@ -86,6 +86,8 @@ class LedgerEntryType(str, Enum):
     TUITION = "tuition"                    # sink: GrowPod University course enrollment
     POD_CLEANUP = "pod_cleanup"            # sink: paid to clear a harvested/dead plant
     GROWTH_BOOST = "growth_boost"          # sink: paid to fast-forward + revive a plant
+    GEAR_SERVICE = "gear_service"          # sink: paid to restore worn gear's condition
+    GEAR_RESALE = "gear_resale"            # faucet: proceeds from reselling worn gear
 
 
 class ListingStatus(str, Enum):

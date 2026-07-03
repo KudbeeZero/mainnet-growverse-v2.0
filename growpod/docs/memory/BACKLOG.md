@@ -806,6 +806,24 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
 - 🔴 ⬜ **Web gating never reads `GET /api/game/flags`** — `web/src/lib/features.ts` is env-var-driven
   default-ON; the planned re-point (DECISIONS 2026-06-14 "Web Gating PR") never landed, so backend
   kill switches don't reach the web UI. Land the re-point.
+- 🟠 ✅ **Fans/soils were catalog-only, no sim hook (closed 2026-07-03)** — the
+  `shop.gear` fans/soils comment ("owned/catalog for now — see docs BACKLOG for the
+  follow-up") is resolved: fans now reduce *effective* humidity live in
+  `engine._equipped_condition_effects`/`_env_for` (mold/mildew + VPD all read it;
+  only a real exhaust fan gives a large reduction, matching real HVAC vs. simple
+  recirculation), soils attach to `Plant.soil_key` at `plant_seed()` and scale
+  nutrient/water decay per medium's real character (e.g. coco = high nutrient
+  decay + low water decay, matching "inert but retains moisture"; super soil =
+  low nutrient decay, matching "no bottled nutrients needed"). Also added
+  equipment depreciation: `GearInventory.condition_pct` wears per harvest cycle
+  for whatever light/fan is equipped (`GameService._wear_equipped_gear`), scaling
+  down effective PPFD/humidity-reduction; `service_gear`/`sell_gear` let players
+  restore (ceiling drops each time, floor 70%) or resell (condition-scaled) worn
+  gear. Migration `8f227521c0ab`. Tests: `test_soil.py`, `test_ventilation.py`,
+  `test_gear_depreciation.py` (20 new tests, all green). Service/resale costs are
+  launch-testing placeholders in `shop.gear_depreciation` — restore real values
+  pre-launch alongside the existing seed-cost item. ⬜ Remaining: no store/pod UI
+  yet for equip-fan, soil picker, condition display, or service/sell buttons.
 - 🟠 ⬜ **Wire in: finished backends one UI hop from paying off** — `POST .../plants/<id>/apply`
   (consumables; store sells them but has no "use item"), `GET /strains/<id>/effects` (effects panel),
   admissions department/track recommendation (persist + surface; HERMES open-work #2),

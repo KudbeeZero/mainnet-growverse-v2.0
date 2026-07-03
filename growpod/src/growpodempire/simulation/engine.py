@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from ..enums import GrowthStage
-from ..db.models import Plant, GrowPod, PlantEvent
+from ..db.models import Plant, GrowPod, PlantEvent, GearInventory
 from . import reactions, horticulture
 from .conditions import PlantCondition
 from .engines.base import EngineContext
@@ -174,15 +174,35 @@ def _growth_cm_per_hour(stage: GrowthStage, sim: Dict, health: float) -> float:
     return rate / 24.0 * (health / 100.0)
 
 
-def _env_for(plant: Plant, pod: Optional[GrowPod], sim: Dict) -> Dict:
+def _env_for(
+    plant: Plant,
+    pod: Optional[GrowPod],
+    sim: Dict,
+    light_override: Optional[float] = None,
+    fan_reduction_pct: float = 0.0,
+) -> Dict:
+    """Resolve a plant's environment. `light_override` and `fan_reduction_pct`
+    let the caller fold in condition-scaled equipped-gear effects (see
+    `_equipped_condition_effects`) without this function needing DB access.
+    A fan's reduction is applied to *effective* humidity — the same number
+    then flows into disease/mildew risk, VPD, and the humidity stress band, so
+    a real exhaust fan genuinely lowers every humidity-driven risk, exactly as
+    it would in an actual grow room."""
     defaults = sim.get("environment", {}).get("defaults", {})
     light_default = defaults.get("light_intensity", 600)
     if pod is not None and pod.temperature is not None:
+        humidity = pod.humidity
+        if humidity is not None and fan_reduction_pct:
+            floor = sim.get("environment", {}).get("humidity_floor", 20.0)
+            humidity = max(floor, humidity * (1.0 - fan_reduction_pct / 100.0))
+        light = pod.light_intensity if pod.light_intensity is not None else light_default
+        if light_override is not None:
+            light = light_override
         return {
             "temperature": pod.temperature,
-            "humidity": pod.humidity,
+            "humidity": humidity,
             "ph_level": pod.ph_level if pod.ph_level is not None else defaults.get("ph_level", 6.5),
-            "light": pod.light_intensity if pod.light_intensity is not None else light_default,
+            "light": light,
         }
     return {
         "temperature": defaults.get("temperature", 24),
@@ -195,6 +215,41 @@ def _env_for(plant: Plant, pod: Optional[GrowPod], sim: Dict) -> Dict:
 def environment_for(plant: Plant, pod: Optional[GrowPod], sim: Dict) -> Dict:
     """Public view of a plant's current environment (temp/humidity/pH/light)."""
     return _env_for(plant, pod, sim)
+
+
+def _equipped_condition_effects(session, pod: Optional[GrowPod], cfg) -> Dict[str, float]:
+    """Reads whatever light/fan is equipped to `pod` and returns their
+    condition-scaled effect: the light's effective PPFD (overriding the pod's
+    installed `light_intensity`) and the fan's effective humidity-reduction
+    percent. Worn gear (`condition_pct` < 100) delivers proportionally less of
+    its catalog spec — real depreciation, not a cosmetic number."""
+    out: Dict[str, float] = {}
+    if pod is None:
+        return out
+    rows = session.query(GearInventory).filter(GearInventory.equipped_pod_id == pod.id).all()
+    for row in rows:
+        item = cfg.shop_gear.get(row.gear_key)
+        if not item:
+            continue
+        specs = item.get("specs", {})
+        wear = max(0.0, min(1.0, (row.condition_pct or 0.0) / 100.0))
+        if row.category == "light":
+            base_ppfd = float(specs.get("ppfd", pod.light_intensity or 0.0))
+            out["light_override"] = base_ppfd * wear
+        elif row.category == "fan":
+            out["fan_reduction_pct"] = float(specs.get("humidity_reduction_pct", 0.0)) * wear
+    return out
+
+
+def _soil_effects(plant: Plant, cfg) -> Dict[str, float]:
+    """The plant's chosen growing medium's decay multipliers (1.0 for both if
+    no soil was chosen — identical to pre-soil-system behavior)."""
+    if not plant.soil_key:
+        return {}
+    item = cfg.shop_gear.get(plant.soil_key)
+    if not item:
+        return {}
+    return item.get("specs", {})
 
 
 def _health_target(plant: Plant, env: Dict, sim: Dict) -> float:
@@ -256,15 +311,23 @@ def _step(
     rng: random.Random,
     t: datetime,
     auto: Optional[Dict] = None,
+    soil: Optional[Dict] = None,
 ) -> List[dict]:
     """Advance the plant by one simulated hour. Returns stage/death events."""
     events: List[dict] = []
     decay = sim.get("resource_decay", {})
+    soil = soil or {}
 
-    # 1. Resources dry out / deplete.
-    plant.water_level = max(0.0, plant.water_level - decay.get("water_per_hour", 1.5))
+    # 1. Resources dry out / deplete. A chosen growing medium scales both
+    # rates (e.g. inert/fast-draining coco needs more frequent feeding+watering
+    # than a dense, pre-loaded living soil) — see balance.yaml `shop.gear.soils`.
+    water_mult = float(soil.get("water_decay_multiplier", 1.0))
+    nutrient_mult = float(soil.get("nutrient_decay_multiplier", 1.0))
+    plant.water_level = max(
+        0.0, plant.water_level - decay.get("water_per_hour", 1.5) * water_mult
+    )
     plant.nutrient_level = max(
-        0.0, plant.nutrient_level - decay.get("nutrient_per_hour", 1.0)
+        0.0, plant.nutrient_level - decay.get("nutrient_per_hour", 1.0) * nutrient_mult
     )
 
     # 1b. Pod automation tops resources back up when they run low.
@@ -346,7 +409,13 @@ def catch_up(session, plant: Plant, now: datetime, cfg) -> List[PlantEvent]:
         return emitted
 
     pod = session.get(GrowPod, plant.pod_id)
-    env = _env_for(plant, pod, sim)
+    gear_fx = _equipped_condition_effects(session, pod, cfg)
+    env = _env_for(
+        plant, pod, sim,
+        light_override=gear_fx.get("light_override"),
+        fan_reduction_pct=gear_fx.get("fan_reduction_pct", 0.0),
+    )
+    soil = _soil_effects(plant, cfg)
     auto = {
         "water": bool(pod and pod.auto_water),
         "feed": bool(pod and pod.auto_feed),
@@ -364,7 +433,7 @@ def catch_up(session, plant: Plant, now: datetime, cfg) -> List[PlantEvent]:
         rng = _rng_for(plant.id, t)
         # Thin orchestrator: run the engine pipeline for this hour. (Today that is
         # the single LegacyStepEngine, so behavior is identical to calling _step.)
-        ctx = EngineContext(plant=plant, env=env, sim=sim, rng=rng, t=t, auto=auto)
+        ctx = EngineContext(plant=plant, env=env, sim=sim, rng=rng, t=t, auto=auto, soil=soil)
         step_events: List[dict] = []
         for engine in _pipeline():
             step_events.extend(engine.update(ctx))

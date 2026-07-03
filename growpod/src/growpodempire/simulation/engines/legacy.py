@@ -22,4 +22,4 @@ class LegacyStepEngine(BasePlantEngine):
     name = "legacy_step"
 
     def update(self, ctx: EngineContext) -> List[dict]:
-        return _step(ctx.plant, ctx.env, ctx.sim, ctx.rng, ctx.t, ctx.auto)
+        return _step(ctx.plant, ctx.env, ctx.sim, ctx.rng, ctx.t, ctx.auto, ctx.soil)

@@ -482,7 +482,7 @@ def plant_seed(player_id):
     try:
         with session_scope() as s:
             plant = GameService(s).plant_seed(
-                player_id, data["seed_id"], data["pod_id"]
+                player_id, data["seed_id"], data["pod_id"], soil_key=data.get("soil_key")
             )
             payload = S.plant_dict(plant)
         return jsonify(payload), 201
@@ -2224,6 +2224,50 @@ def equip_light(player_id, pod_id):
             pod = GameService(s).equip_light(player_id, pod_id, gear_key)
             payload = S.pod_dict(pod)
         return jsonify(payload)
+    except (GameError, InsufficientFundsError) as e:
+        return _error(str(e))
+
+
+@game_bp.post("/players/<player_id>/pods/<pod_id>/equip-fan")
+@require_player
+def equip_fan(player_id, pod_id):
+    data = request.get_json(force=True, silent=True) or {}
+    gear_key = data.get("gear_key")
+    if not gear_key:
+        return _error("gear_key is required")
+    try:
+        with session_scope() as s:
+            pod = GameService(s).equip_fan(player_id, pod_id, gear_key)
+            payload = S.pod_dict(pod)
+        return jsonify(payload)
+    except (GameError, InsufficientFundsError) as e:
+        return _error(str(e))
+
+
+@game_bp.post("/players/<player_id>/store/gear/<gear_key>/service")
+@require_player
+def service_gear(player_id, gear_key):
+    try:
+        with session_scope() as s:
+            svc = GameService(s)
+            svc.service_gear(player_id, gear_key)
+            items = svc.list_gear(player_id)
+        return jsonify(items)
+    except (GameError, InsufficientFundsError) as e:
+        return _error(str(e))
+
+
+@game_bp.post("/players/<player_id>/store/gear/<gear_key>/sell")
+@require_player
+def sell_gear(player_id, gear_key):
+    data = request.get_json(force=True, silent=True) or {}
+    qty = bounded_int(data.get("quantity", 1), "quantity", default=1, low=1, high=99)
+    try:
+        with session_scope() as s:
+            svc = GameService(s)
+            proceeds = svc.sell_gear(player_id, gear_key, qty)
+            items = svc.list_gear(player_id)
+        return jsonify({"proceeds": proceeds, "gear": items})
     except (GameError, InsufficientFundsError) as e:
         return _error(str(e))
 

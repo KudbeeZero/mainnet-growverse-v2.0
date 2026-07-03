@@ -23,7 +23,10 @@ class EngineContext:
     ``plant`` is the persisted ORM row (still the source of truth); ``env`` is the
     resolved pod environment; ``sim`` is the ``simulation`` block of balance.yaml;
     ``rng`` is the per-plant-hour seeded RNG (so the hour is reproducible); ``t``
-    is the timestamp of this step; ``auto`` carries pod automation flags.
+    is the timestamp of this step; ``auto`` carries pod automation flags;
+    ``soil`` carries the plant's chosen growing-medium decay multipliers (see
+    ``engine._soil_effects``), empty/None meaning the pre-soil-system default
+    of no adjustment.
     """
 
     plant: Any
@@ -32,6 +35,7 @@ class EngineContext:
     rng: random.Random
     t: datetime
     auto: Optional[Dict] = None
+    soil: Optional[Dict] = None
 
 
 class BasePlantEngine(ABC):

@@ -266,10 +266,17 @@ class ConsumableInventory(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 class GearInventory(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """A stack of durable grow-room gear (light/fan/soil) owned by a player.
 
-    Catalog defs live in balance.yaml (`shop.gear`). Lights are the one
-    functional category: when equipped, `equipped_pod_id` points at the pod and
-    the light's PPFD is written to that pod's `light_intensity` (the sim reads
-    it). Fans/soils are owned-only for now."""
+    Catalog defs live in balance.yaml (`shop.gear`). Lights and fans are
+    equippable: when equipped, `equipped_pod_id` points at the pod, and the
+    sim reads their condition-scaled effect (PPFD / humidity reduction) each
+    tick (see `simulation.engine._equipped_condition_effects`). Soils attach
+    to a `Plant` at `plant_seed()` time instead (see `Plant.soil_key`) since a
+    growing medium is a per-plant choice, not a room fixture.
+
+    `condition_pct` models real equipment depreciation: it wears down per
+    completed harvest cycle (`shop.gear_depreciation.wear_per_cycle_pct`),
+    degrading effective output, and can be serviced back up but never to a
+    full 100 (see `gear_depreciation.service`)."""
 
     __tablename__ = "gear_inventory"
 
@@ -277,8 +284,14 @@ class GearInventory(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     gear_key: Mapped[str] = mapped_column(String(48), nullable=False)
     category: Mapped[str] = mapped_column(String(16), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    # Set only for an equipped light (the pod it currently powers).
+    # Set only for an equipped light or fan (the pod it currently serves).
     equipped_pod_id: Mapped[Optional[str]] = mapped_column(ForeignKey("grow_pods.id"))
+
+    # Depreciation: condition degrades with use, floors above 0, and each
+    # service's achievable ceiling drops (never fully "like new" again).
+    condition_pct: Mapped[float] = mapped_column(Float, default=100.0, nullable=False)
+    grow_cycles_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    times_serviced: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     __table_args__ = (
         Index("ix_gear_player_key", "player_id", "gear_key", unique=True),
@@ -314,6 +327,10 @@ class Plant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     pod_id: Mapped[str] = mapped_column(ForeignKey("grow_pods.id"), nullable=False)
     strain_id: Mapped[str] = mapped_column(ForeignKey("strains.id"), nullable=False)
     seed_id: Mapped[Optional[str]] = mapped_column(ForeignKey("seed_inventory.id"))
+    # Growing medium chosen at plant_seed() time (a `shop.gear` soil key, e.g.
+    # "coco_coir"); immutable for the plant's life, unlike equippable room gear.
+    # Null means the legacy/default medium (all decay multipliers are 1.0).
+    soil_key: Mapped[Optional[str]] = mapped_column(String(48))
 
     # Immutable per-plant genetics, copied from the seed/strain at plant time.
     genome: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)

@@ -501,8 +501,9 @@ class GameService:
 
     # ----- Store: grow-room gear (lights/fans/soils) ----------------------
     def list_gear(self, player_id: str) -> List[dict]:
-        """Catalog of buyable gear merged with the player's owned counts and,
-        for lights, which pod each is equipped to."""
+        """Catalog of buyable gear merged with the player's owned counts,
+        which pod each equippable item is equipped to, and (for lights/fans)
+        its current condition and what that's worth serviced or resold."""
         self.get_player(player_id)
         owned = {
             r.gear_key: r
@@ -510,21 +511,119 @@ class GameService:
                 GearInventory.player_id == player_id
             )
         }
+        dep = self.cfg.gear_depreciation
         out = []
         for key, item in self.cfg.shop_gear.items():
             stack = owned.get(key)
-            out.append({
+            category = item.get("category", "gear")
+            entry = {
                 "key": key,
                 "name": item.get("name", key),
-                "category": item.get("category", "gear"),
+                "category": category,
                 "cost": float(item.get("cost", 0)),
                 "description": item.get("description", ""),
                 "image": item.get("image"),
                 "specs": item.get("specs", {}),
                 "owned": stack.quantity if stack else 0,
                 "equipped_pod_id": stack.equipped_pod_id if stack else None,
-            })
+            }
+            if stack and category in ("light", "fan"):
+                condition = stack.condition_pct
+                entry["condition_pct"] = condition
+                entry["times_serviced"] = stack.times_serviced
+                entry["service_cost"] = self._gear_service_cost(item, dep)
+                entry["service_ceiling_pct"] = self._gear_service_ceiling(stack, dep)
+                entry["resale_value"] = self._gear_resale_value(item, condition, dep)
+            out.append(entry)
         return out
+
+    def _gear_service_cost(self, item: dict, dep: dict) -> float:
+        return round(float(item.get("cost", 0)) * float(dep.get("service", {}).get("cost_pct_of_price", 0.35)), 2)
+
+    def _gear_service_ceiling(self, stack: GearInventory, dep: dict) -> float:
+        svc = dep.get("service", {})
+        ceiling = float(svc.get("first_ceiling_pct", 95.0)) - stack.times_serviced * float(
+            svc.get("ceiling_step_pct", 5.0)
+        )
+        return max(float(svc.get("min_ceiling_pct", 70.0)), ceiling)
+
+    def _gear_resale_value(self, item: dict, condition_pct: float, dep: dict) -> float:
+        pct_original = float(dep.get("resale", {}).get("price_pct_of_original", 0.55))
+        return round(
+            float(item.get("cost", 0)) * pct_original * max(0.0, condition_pct) / 100.0, 2
+        )
+
+    def service_gear(self, player_id: str, gear_key: str) -> GearInventory:
+        """Pay to restore a worn light/fan's condition. Each service's
+        achievable ceiling is lower than the last — equipment never quite
+        gets back to new, mirroring real refurbished-gear economics."""
+        item = self.cfg.shop_gear.get(gear_key)
+        if item is None or item.get("category") not in ("light", "fan"):
+            raise GameError(f"Unknown serviceable gear '{gear_key}'")
+        stack = (
+            self.session.query(GearInventory)
+            .filter(GearInventory.player_id == player_id, GearInventory.gear_key == gear_key)
+            .one_or_none()
+        )
+        if stack is None or stack.quantity < 1:
+            raise GameError("You don't own this gear")
+
+        dep = self.cfg.gear_depreciation
+        ceiling = self._gear_service_ceiling(stack, dep)
+        if stack.condition_pct >= ceiling:
+            raise GameError(f"Servicing won't help — condition is already at or above {ceiling:.0f}%")
+
+        cost = to_money(Decimal(str(self._gear_service_cost(item, dep))))
+        post(
+            self.session, player_id, -cost, LedgerEntryType.GEAR_SERVICE,
+            ref_type="gear", ref_id=gear_key,
+        )
+        stack.condition_pct = ceiling
+        stack.times_serviced += 1
+        return stack
+
+    def sell_gear(self, player_id: str, gear_key: str, quantity: int = 1) -> float:
+        """Resell owned (unequipped) light/fan gear for a condition-scaled
+        fraction of its original price — a real depreciated-equipment trade-in."""
+        if quantity < 1:
+            raise GameError("quantity must be >= 1")
+        item = self.cfg.shop_gear.get(gear_key)
+        if item is None or item.get("category") not in ("light", "fan"):
+            raise GameError(f"Unknown sellable gear '{gear_key}'")
+        stack = (
+            self.session.query(GearInventory)
+            .filter(GearInventory.player_id == player_id, GearInventory.gear_key == gear_key)
+            .one_or_none()
+        )
+        if stack is None or stack.quantity < quantity:
+            raise GameError("Not enough of this gear owned")
+        if stack.equipped_pod_id is not None and stack.quantity <= quantity:
+            raise GameError("Unequip this gear from its pod before selling your last one")
+
+        unit_value = self._gear_resale_value(item, stack.condition_pct, self.cfg.gear_depreciation)
+        proceeds = to_money(Decimal(str(unit_value)) * quantity)
+        post(
+            self.session, player_id, proceeds, LedgerEntryType.GEAR_RESALE,
+            ref_type="gear", ref_id=gear_key,
+        )
+        stack.quantity -= quantity
+        return float(proceeds)
+
+    def _wear_equipped_gear(self, pod_id: str) -> None:
+        """Apply one harvest-cycle's wear to whatever light/fan is equipped
+        to this pod. Called once per harvest — real equipment degrades with
+        use, not with the passage of calendar time."""
+        dep = self.cfg.gear_depreciation
+        wear_rates = dep.get("wear_per_cycle_pct", {})
+        floor = float(dep.get("floor_pct", 50.0))
+        for stack in self.session.query(GearInventory).filter(
+            GearInventory.equipped_pod_id == pod_id
+        ):
+            wear = float(wear_rates.get(stack.category, 0.0))
+            if wear <= 0:
+                continue
+            stack.condition_pct = max(floor, stack.condition_pct - wear)
+            stack.grow_cycles_used += 1
 
     def buy_gear(self, player_id: str, gear_key: str, quantity: int = 1) -> GearInventory:
         if quantity < 1:
@@ -557,15 +656,16 @@ class GameService:
         stack.quantity += quantity
         return stack
 
-    def equip_light(self, player_id: str, pod_id: str, gear_key: str) -> GrowPod:
-        """Equip an owned light to a pod: writes the light's PPFD to the pod's
-        `light_intensity` (the sim reads it as the light level). Only lights are
-        functional; fans/soils are owned-only for now."""
+    def _equip_gear(
+        self, player_id: str, pod_id: str, gear_key: str, category: str
+    ) -> tuple[GrowPod, GearInventory]:
+        """Shared equip/swap logic for a pod-scoped gear category: only one
+        item of `category` may be equipped to a pod at a time."""
         item = self.cfg.shop_gear.get(gear_key)
         if item is None:
             raise GameError(f"Unknown gear '{gear_key}'")
-        if item.get("category") != "light":
-            raise GameError("Only lights can be equipped to a pod")
+        if item.get("category") != category:
+            raise GameError(f"Only {category}s can be equipped this way")
 
         stack = (
             self.session.query(GearInventory)
@@ -576,26 +676,41 @@ class GameService:
             .one_or_none()
         )
         if stack is None or stack.quantity < 1:
-            raise GameError("You don't own this light")
+            raise GameError(f"You don't own this {category}")
 
         pod = self.session.get(GrowPod, pod_id)
         if pod is None or pod.player_id != player_id:
             raise GameError("Pod not found")
 
-        ppfd = float(item.get("specs", {}).get("ppfd", 0))
-        pod.light_intensity = ppfd
-        # A pod runs one light at a time: clear any other light equipped here.
-        # Sessions run autoflush=False, so flush pending equip changes first or
-        # the filter below won't see a light equipped earlier in this txn.
+        # A pod runs one item per category at a time: clear any other
+        # equipped here. Sessions run autoflush=False, so flush the pending
+        # equip change first or the filter below won't see it.
         self.session.flush()
         for other in self.session.query(GearInventory).filter(
             GearInventory.player_id == player_id,
-            GearInventory.category == "light",
+            GearInventory.category == category,
             GearInventory.equipped_pod_id == pod_id,
         ):
             if other.gear_key != gear_key:
                 other.equipped_pod_id = None
         stack.equipped_pod_id = pod_id
+        return pod, stack
+
+    def equip_light(self, player_id: str, pod_id: str, gear_key: str) -> GrowPod:
+        """Equip an owned light to a pod: writes the light's PPFD to the pod's
+        `light_intensity` (the sim reads it, scaled by the light's condition —
+        see `simulation.engine._equipped_condition_effects`)."""
+        pod, stack = self._equip_gear(player_id, pod_id, gear_key, "light")
+        item = self.cfg.shop_gear[gear_key]
+        pod.light_intensity = float(item.get("specs", {}).get("ppfd", 0))
+        return pod
+
+    def equip_fan(self, player_id: str, pod_id: str, gear_key: str) -> GrowPod:
+        """Equip an owned fan to a pod. Unlike a light, a fan writes nothing
+        onto the pod directly — the sim reads its condition-scaled
+        `humidity_reduction_pct` live each tick and folds it into the pod's
+        effective humidity (mold/mildew risk, VPD)."""
+        pod, _stack = self._equip_gear(player_id, pod_id, gear_key, "fan")
         return pod
 
     # ----- Pods & planting ------------------------------------------------
@@ -657,7 +772,9 @@ class GameService:
         pod.auto_water, pod.auto_feed = self._tier_automation(new_tier)
         return pod
 
-    def plant_seed(self, player_id: str, seed_id: str, pod_id: str) -> Plant:
+    def plant_seed(
+        self, player_id: str, seed_id: str, pod_id: str, soil_key: Optional[str] = None
+    ) -> Plant:
         stack = self.session.get(SeedInventory, seed_id)
         if stack is None or stack.player_id != player_id:
             raise GameError("Seed not found in player's inventory")
@@ -680,6 +797,22 @@ class GameService:
         if planted >= pod.capacity:
             raise GameError("Pod is at full capacity")
 
+        if soil_key is not None:
+            soil_item = self.cfg.shop_gear.get(soil_key)
+            if soil_item is None or soil_item.get("category") != "soil":
+                raise GameError(f"Unknown soil '{soil_key}'")
+            soil_stack = (
+                self.session.query(GearInventory)
+                .filter(
+                    GearInventory.player_id == player_id,
+                    GearInventory.gear_key == soil_key,
+                )
+                .one_or_none()
+            )
+            if soil_stack is None or soil_stack.quantity < 1:
+                raise GameError("You don't own this soil")
+            soil_stack.quantity -= 1
+
         strain = self.get_strain(stack.strain_id)
         stack.quantity -= 1
 
@@ -688,6 +821,7 @@ class GameService:
             pod_id=pod_id,
             strain_id=strain.id,
             seed_id=seed_id,
+            soil_key=soil_key,
             genome=strain.genome,  # immutable per-plant copy
             growth_stage=GrowthStage.SEED.value,
         )
@@ -1096,6 +1230,7 @@ class GameService:
 
         plant.harvested = True
         plant.growth_stage = GrowthStage.HARVEST.value
+        self._wear_equipped_gear(plant.pod_id)
 
         harvest = Harvest(
             player_id=player_id,

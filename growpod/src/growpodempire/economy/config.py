@@ -98,6 +98,11 @@ class EconomyConfig:
         return flat
 
     @property
+    def gear_depreciation(self) -> Dict[str, Any]:
+        """Equipment wear/service/resale tuning (`shop.gear_depreciation`)."""
+        return self.raw.get("shop", {}).get("gear_depreciation", {})
+
+    @property
     def current_season(self) -> str:
         return self.raw.get("events", {}).get("current_season", "all")
 
