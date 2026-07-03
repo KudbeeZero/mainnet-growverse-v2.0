@@ -68,6 +68,6 @@ export function buildTodaysPlan(
 
 export const URGENCY_LABEL: Record<PlanUrgency, string> = {
   now: "Do Now",
-  soon: "Soon",
+  soon: "Recommended",
   upcoming: "Upcoming",
 };

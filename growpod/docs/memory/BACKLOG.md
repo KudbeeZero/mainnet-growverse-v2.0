@@ -68,6 +68,14 @@ once they appear here. Last reconciled: **2026-07-03** (chamber game-hub redesig
   trichome %, aroma, health, journal link). Boost reaction upgraded to a temporary aura ring.
   Treatments surface as Do-Now plan rows (bar keeps the mockup's six tiles). `CareButtons`
   stays as-is on the plant detail page. Verified mobile (390×844) + desktop via Playwright.
+- 🎮 ⬜ **Design-department punch list (owner annotated mockup, 2026-07-03)** — next chamber
+  polish round, in-place only: (1) compress the top stats into one tight horizontal HUD strip
+  (TO HARVEST · TEMP · HUM · CO₂) instead of stacked cards; (2) move Boosts to a compact INLINE
+  "BOOSTS · 1 active / Add Boost" section in the GROW sheet (mockup) — the stage pill was the
+  interim fix; (3) Plant Insights as a scannable 4-chip row (Top cola / Health / Terpene /
+  Trichome %); (4) footer encouragement bar ("Your actions make a difference" + health dial);
+  (5) care-streak / resin-score / plant-progress stat strip; (6) ambient in-scene care glyphs
+  (floating ✂️/💧/❤️ accents). Plan pills relabelled Soon→Recommended (done this pass).
 - 🎮 ⬜ **Bud/flower polish notes (owner, future polish — NOT blockers)** — stronger main top
   cola; cleaner bud silhouette; less noisy pistils; tighter bract clusters; better embedded
   sugar leaves; subtle trichome sparkle/frost; buds readable at phone size. 2D chamber-engine
