@@ -130,7 +130,13 @@ function Reaction({ kind, reduced }: { kind: ReactionKind; reduced: boolean }) {
           />
         </div>
       );
-    case "shimmer": // treatments/boost → soft zone-wide wash
+    case "aura": // boost → temporary glowing aura ringing the plant
+      return (
+        <div data-testid={`plant-reaction-${kind}`} className="absolute inset-0 flex items-center justify-center" style={tintVar}>
+          <span className="gpe-react-aura h-3/4 w-2/3 rounded-[45%]" />
+        </div>
+      );
+    case "shimmer": // treatments → soft zone-wide wash
     default:
       return (
         <div

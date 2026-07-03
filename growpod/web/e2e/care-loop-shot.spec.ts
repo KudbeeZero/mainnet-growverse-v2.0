@@ -93,19 +93,18 @@ test("PROOF: care buttons show states + tapping Water makes the plant react", as
   await setup(page);
   await page.goto("/dashboard/plants/plant1/chamber");
 
-  // All 7 care actions on the GROW tab (default tab).
-  for (const label of ["Water", "Feed", "Treat Pests", "Treat Disease", "Prune", "Train", "Boost"]) {
+  // The embedded action bar shows the six glassy tiles (mockup layout).
+  for (const label of ["WATER", "FEED", "PRUNE", "TRAIN", "BOOST"]) {
     await expect(page.getByRole("button", { name: new RegExp(label, "i") }).first()).toBeVisible();
   }
-  // No pests/disease on this plant → treatments are proactively disabled with a reason.
-  await expect(page.getByRole("button", { name: /Treat Pests/i })).toBeDisabled();
-  await expect(page.getByText(/No pests to treat right now/i)).toBeVisible();
-  // Inspect + Journal always reachable from the care cluster.
-  await expect(page.getByRole("link", { name: /Inspect/i })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Journal/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /INSPECT/i })).toBeVisible();
+  // Side panel: Today's Plan + Plant Insights + journal link.
+  await expect(page.getByText(/TODAY'S PLAN/i)).toBeVisible();
+  await expect(page.getByText(/PLANT INSIGHTS/i)).toBeVisible();
+  await expect(page.getByRole("link", { name: /journal/i })).toBeVisible();
 
   // Tap Water → the PLANT reacts: blue pulse in the root zone on the stage.
-  await page.getByRole("button", { name: /Water/i }).first().click();
+  await page.getByRole("button", { name: /WATER/i }).first().click();
   await expect(page.getByTestId("plant-reaction-water")).toBeVisible();
   await page.screenshot({ path: "e2e-output/care-loop-water-reaction.png", fullPage: true });
 });
@@ -113,7 +112,7 @@ test("PROOF: care buttons show states + tapping Water makes the plant react", as
 test("PROOF: harvest-ready plant shows an unmissable next action", async ({ page }) => {
   await setup(page, { growth_stage: "harvest" });
   await page.goto("/dashboard/plants/plant1/chamber");
-  // The "what to do next" banner resolves to harvest...
+  // Today's Plan resolves to harvest as the top Do-Now row...
   await expect(page.getByText(/Harvest now/i).first()).toBeVisible();
   // ...and the primary harvest button is right there.
   await expect(page.getByRole("button", { name: /Harvest & Sell/i })).toBeVisible();
@@ -122,7 +121,7 @@ test("PROOF: harvest-ready plant shows an unmissable next action", async ({ page
 test("PROOF: harvested plant shows the full next-action set", async ({ page }) => {
   await setup(page, { growth_stage: "harvest", harvested: true });
   await page.goto("/dashboard/plants/plant1/chamber");
-  await expect(page.getByText(/Harvest complete/i)).toBeVisible();
+  await expect(page.getByText(/Harvest complete!/i)).toBeVisible();
   await expect(page.getByRole("link", { name: /Grow another/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /Harvest review/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /Enter the Cup/i })).toBeVisible();

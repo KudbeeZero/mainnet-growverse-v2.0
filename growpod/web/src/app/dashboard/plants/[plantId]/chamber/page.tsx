@@ -7,8 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
-import { CareButtons } from "@/components/plant/CareButtons";
-import { PlantActionCTA } from "@/components/plant/PlantActionCTA";
+import { ChamberActionBar, ChamberPanel } from "@/components/plant/ChamberDock";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { useGrowthBoost } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
@@ -453,8 +452,8 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </div>
         )}
 
-        {/* health meter */}
-        <div className="pointer-events-none absolute inset-x-2.5 bottom-2 h-[5px] overflow-hidden rounded-full bg-[#11212e]">
+        {/* health meter — rides just above the embedded action bar */}
+        <div className="pointer-events-none absolute inset-x-2.5 bottom-[86px] h-[5px] overflow-hidden rounded-full bg-[#11212e]">
           <div
             className="h-full rounded-full transition-[width] duration-500"
             style={{
@@ -470,11 +469,18 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             the route/component stay intact so this is a one-line re-enable later. */}
         {(renderStage === "flowering" || renderStage === "late_flower" || renderStage === "harvest") && !ended && (
           <span
-            className="absolute bottom-8 left-1/2 -translate-x-1/2 flex cursor-not-allowed items-center gap-1.5 rounded-full border border-cyan-400/20 bg-[#08141e]/70 px-4 py-2 text-xs font-bold text-cyan-200/50 backdrop-blur"
+            className="absolute bottom-[92px] left-1/2 -translate-x-1/2 flex cursor-not-allowed items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/20 bg-[#08141e]/70 px-3 py-1 text-[10px] font-bold text-cyan-200/50 backdrop-blur"
             title="View Bud is coming soon"
           >
             🔬 View Bud · Coming soon
           </span>
+        )}
+
+        {/* embedded action bar — glassy tiles built into the chamber base */}
+        {!ended && (
+          <div className="absolute inset-x-2 bottom-2 z-10">
+            <ChamberActionBar plant={plant} />
+          </div>
         )}
 
         {ended && (
@@ -562,8 +568,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
 
         {tab === "grow" && (
           <div className="space-y-2">
-            {!ended && <PlantActionCTA plant={plant} pod={pod} compact />}
-            <CareButtons plant={plant} />
+            <ChamberPanel plant={plant} strain={strain} />
             {/* Purchasable growth boost — fast-forward + revive for in-game GROW.
                 Cost mirrors balance.yaml simulation.actions.growth_boost.cost.
                 Hidden at the harvest window: the server rejects it (nothing left

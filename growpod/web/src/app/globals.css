@@ -279,6 +279,48 @@ body {
 .gpe-react-sweep {
   animation: gpe-react-sweep 1.4s linear forwards;
 }
+@keyframes gpe-react-aura {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  25% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+.gpe-react-aura {
+  border: 3px solid var(--gpe-react-tint, rgba(253, 224, 71, 0.5));
+  box-shadow:
+    0 0 32px var(--gpe-react-tint, rgba(253, 224, 71, 0.5)),
+    inset 0 0 42px var(--gpe-react-tint, rgba(253, 224, 71, 0.5));
+  animation: gpe-react-aura 1.7s ease-out forwards;
+}
+/* Action-bar tile tap flash (ChamberActionBar). */
+@keyframes gpe-tile-tap {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  30% {
+    transform: scale(0.94);
+    filter: brightness(1.7);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+.gpe-tile-tap {
+  animation: gpe-tile-tap 0.55s ease-out;
+}
 
 /* ---- Celebration: harvest moment (sparkle ring + pop-in) ---- */
 @keyframes gpe-celebrate-ring {
@@ -514,6 +556,8 @@ body {
   .gpe-react-glint,
   .gpe-react-guide,
   .gpe-react-sweep,
+  .gpe-react-aura,
+  .gpe-tile-tap,
   .gpe-celebrate-ring,
   .gpe-celebrate-pop,
   .gpe-electric-flash,

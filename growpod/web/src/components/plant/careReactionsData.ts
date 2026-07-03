@@ -26,7 +26,7 @@ export type ReactionZone = "roots" | "stem" | "canopy" | "full";
 export interface CareReaction {
   zone: ReactionZone;
   /** Motion primitive the visual layer renders for this reaction. */
-  motion: "pulse" | "rise" | "sparkle" | "guide" | "sweep" | "shimmer";
+  motion: "pulse" | "rise" | "sparkle" | "guide" | "sweep" | "shimmer" | "aura";
   /** rgba() accent the animation is tinted with. */
   tint: string;
   /** Total play time (ms) — the layer unmounts the reaction after this. */
@@ -47,7 +47,7 @@ export const CARE_REACTIONS: Record<ReactionKind, CareReaction> = {
   // Sensible extensions in the same voice (not owner-specified, kept subtle):
   treatPests: { zone: "canopy", motion: "shimmer", tint: "rgba(251,146,60,0.4)", dur: 1400, label: "Pest treatment misting the canopy" },
   treatDisease: { zone: "canopy", motion: "shimmer", tint: "rgba(196,181,253,0.4)", dur: 1400, label: "Disease treatment misting the canopy" },
-  boost: { zone: "full", motion: "shimmer", tint: "rgba(253,224,71,0.35)", dur: 1200, label: "Boost energizing the plant" },
+  boost: { zone: "full", motion: "aura", tint: "rgba(253,224,71,0.5)", dur: 1800, label: "Boost aura around the plant" },
   harvest: { zone: "full", motion: "shimmer", tint: "rgba(118,192,36,0.4)", dur: 1600, label: "Harvesting" },
 };
 
