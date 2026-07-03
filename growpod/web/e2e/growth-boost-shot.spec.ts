@@ -76,7 +76,11 @@ async function setup(page: Page) {
 test("PROOF: growth boost button + electric surge", async ({ page }) => {
   await setup(page);
   await page.goto("/dashboard/plants/plant1/chamber");
-  // The "grow" tab is default — the purchasable boost button is visible.
+  // The purchasable boost button now lives inside the right "Insights &
+  // Management" edge overlay's "Arcade Boosts" section (GameShell HUD
+  // redesign) — hover the tab to reveal it, then open that section.
+  await page.getByTestId("edge-tab-right").hover();
+  await page.getByRole("button", { name: /Arcade Boosts/i }).click();
   const boost = page.getByTestId("growth-boost");
   await boost.waitFor({ timeout: 20_000 });
   await page.screenshot({ path: "e2e-output/growth-boost-button.png", fullPage: true });

@@ -72,7 +72,11 @@ async function setup(page: Page) {
 test("PROOF: chamber climate sliders have fine steps + ± nudge buttons", async ({ page }) => {
   await setup(page);
   await page.goto("/dashboard/plants/plant1/chamber");
-  await page.getByRole("button", { name: /CLIMATE/i }).click();
+  // The climate setpoints (EnvironmentRail, unchanged) now live inside the
+  // right "Insights & Management" edge overlay's "Environment" section
+  // (GameShell HUD redesign) — hover the tab, then expand that section.
+  await page.getByTestId("edge-tab-right").hover();
+  await page.getByRole("button", { name: /^Environment$/i }).click();
   await page.getByLabel("Increase pH").first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(800);
   await page.screenshot({ path: "e2e-output/sliders-climate.png", fullPage: true });

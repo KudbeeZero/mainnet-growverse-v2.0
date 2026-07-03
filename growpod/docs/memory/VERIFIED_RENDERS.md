@@ -43,6 +43,7 @@
 | VER-007 | 2026-07-03 | microscope audit | /lab/microscope, maturity slider at 100% (amber) | same, then drag the maturity slider | [golden](verification/golden/microscope-desktop-maturity100-2026-07-03.png) | shows the slider's visible effect today |
 | VER-006 | 2026-07-03 | microscope audit | /lab/microscope, mobile 390×844 | `CAPTURE_ROUTE=/lab/microscope CAPTURE_VIEWPORTS=390x844 npx playwright test capture` @ `b7806d0` | [golden](verification/golden/microscope-mobile-initial-2026-07-03.png) | recon evidence — mobile layout, pre-rework |
 | VER-002 | 2026-07-03 | core loop / PR #118+ | /dashboard care loop + chamber-arcade + harvested next-actions | `npx playwright test care-loop-shot` (any green SHA) → `e2e-output/care-loop-*.png` | regen-only | the standing core-loop proof; regenerated on every gate run |
+| VER-016 | 2026-07-03 | GameShell HUD redesign (owner mockups) | /dashboard/plants/plant1/chamber — mobile 390×844 portrait rotate-gate, 844×390 landscape compact HUD, swipe-opened Actions panel; desktop 1440×900 hover-opened Insights panel (Environment/Missions/Inventory/Progress) with the chamber canvas still fully centered | `npx playwright test hud-shell-shot` (any green SHA) → `e2e-output/hud-{mobile,desktop}-*.png` | regen-only | the standing GameShell proof (landscape lock + swipe/hover edge panels + persistent bottom dock); regenerated on every gate run alongside care-loop-shot |
 
 ## Chapter 3 — Canonical stage matrix (browserless)
 

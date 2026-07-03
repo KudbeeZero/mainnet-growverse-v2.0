@@ -607,6 +607,16 @@ body {
   will-change: transform;
 }
 
+/* Rotate-prompt icon on the landscape-lock gate — a gentle back-and-forth
+   90° rotation so the "turn your phone" ask reads instantly. */
+@keyframes gpe-rotate-hint {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-90deg); }
+}
+.gpe-rotate-icon {
+  animation: gpe-rotate-hint 1.8s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gpe-plant-bounce,
   .gpe-plant-trim,
@@ -640,6 +650,7 @@ body {
   .gpe-glow-ring-pulse,
   .gpe-glow-sparkle,
   .gpe-grain,
+  .gpe-rotate-icon,
   .animate-spin,
   .animate-twinkle,
   .animate-pulse-ring,

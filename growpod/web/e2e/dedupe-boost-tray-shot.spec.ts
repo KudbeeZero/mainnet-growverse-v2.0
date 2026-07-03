@@ -93,6 +93,12 @@ async function setup(page: Page, stateOver: Record<string, unknown> = {}) {
 }
 
 async function assertSingleBoostSurface(page: Page) {
+  // Boosts now live inside the right "Insights & Management" edge overlay
+  // under a collapsible "Arcade Boosts" section (GameShell HUD redesign) —
+  // hovering the tab expands it ("hover or click the edge tab to reveal HUD").
+  await page.getByTestId("edge-tab-right").hover();
+  await page.getByRole("button", { name: /Arcade Boosts/i }).click();
+
   // BoostsInline is present (the one boost surface).
   await expect(page.getByText(/^BOOSTS/i).first()).toBeVisible();
   // No leftover "Add Boost" button (used to expand the old ArcadeHUD tray).
@@ -109,6 +115,14 @@ async function assertSingleBoostSurface(page: Page) {
   await expect(chips).toHaveCount(4);
   // The REWIND control (ArcadeHUD, slimmed) still renders.
   await expect(page.getByRole("button", { name: /Time rewind/i })).toBeVisible();
+  // The growth-boost button lives in this same panel — check it here, while
+  // the panel's still open, rather than after closing it below.
+  await expect(page.getByTestId("growth-boost")).toBeVisible();
+  // Close the Insights & Management overlay before interacting with anything
+  // else on the stage — it's a full-height overlay and would otherwise
+  // intercept clicks meant for the floating REWIND button underneath it.
+  await page.getByRole("button", { name: /Close Insights & Management/i }).click();
+  await expect(page.getByTestId("insights-panel")).toHaveCount(0);
 }
 
 test.describe("mobile 390x844", () => {
@@ -123,11 +137,10 @@ test.describe("mobile 390x844", () => {
     await page.getByRole("button", { name: /Time rewind/i }).click();
     await expect(page.getByText(/Rewind ·.*snapshots/i)).toBeVisible();
 
-    // Nothing else regressed: care tiles + growth-boost button still present.
+    // Nothing else regressed: care tiles (the persistent bottom dock) still present.
     for (const label of ["WATER", "FEED", "PRUNE", "TRAIN"]) {
       await expect(page.getByRole("button", { name: new RegExp(label, "i") }).first()).toBeVisible();
     }
-    await expect(page.getByTestId("growth-boost")).toBeVisible();
 
     await page.screenshot({ path: "e2e-output/dedupe-mobile.png", fullPage: true });
   });
@@ -147,7 +160,6 @@ test.describe("desktop 1440x900", () => {
     for (const label of ["WATER", "FEED", "PRUNE", "TRAIN"]) {
       await expect(page.getByRole("button", { name: new RegExp(label, "i") }).first()).toBeVisible();
     }
-    await expect(page.getByTestId("growth-boost")).toBeVisible();
 
     await page.screenshot({ path: "e2e-output/dedupe-desktop.png", fullPage: true });
   });

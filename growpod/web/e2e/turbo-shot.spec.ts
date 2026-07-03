@@ -106,8 +106,12 @@ test("PROOF: dashboard command center shows a live harvest countdown; chamber ke
   await page.screenshot({ path: "e2e-output/turbo-dashboard-full.png", fullPage: true });
 
   // (b) Grow Chamber — the global ⚡ speed faucet was removed, but the paid
-  // "⚡ Boost Growth" button (a GROW sink, unrelated to the dev faucet) stays.
+  // "⚡ Boost Growth" button (a GROW sink, unrelated to the dev faucet) stays —
+  // now inside the right "Insights & Management" edge overlay's "Arcade
+  // Boosts" section (GameShell HUD redesign).
   await page.goto("/dashboard/plants/plant1/chamber");
+  await page.getByTestId("edge-tab-right").hover();
+  await page.getByRole("button", { name: /Arcade Boosts/i }).click();
   await page.getByRole("button", { name: /Boost Growth/i }).first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(1500);
   await page.screenshot({ path: "e2e-output/chamber-boost-growth.png", fullPage: true });

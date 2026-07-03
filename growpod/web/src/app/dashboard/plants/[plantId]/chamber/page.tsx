@@ -11,6 +11,11 @@ import { ErrorState } from "@/components/ui/States";
 import { ChamberActionBar, BoostsInline } from "@/components/plant/ChamberDock";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { BoostAmbientLayer } from "@/components/plant/BoostAmbientLayer";
+import { ActionsPanel } from "@/components/plant/ActionsPanel";
+import { InsightsPanel } from "@/components/plant/InsightsPanel";
+import { GameShell } from "@/components/shell/GameShell";
+import { OrientationGate } from "@/components/shell/OrientationGate";
+import { CollapsiblePanel } from "@/components/ui/CollapsiblePanel";
 import { usePlantBounce } from "@/hooks/usePlantBounce";
 import { useGrowthBoost, useCleanupPlant } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
@@ -87,18 +92,12 @@ const DEFAULT_CLIMATE: ChamberClimate = {
   ph_level: 6.5,
 };
 
-// Slider device ranges (wider than the optimal bands) + the no-penalty optimal
-// window from balance.yaml, shown as a hint. FAN is cosmetic (no backend field).
-// Fine steps for real "dial it in" precision (the backend stores floats). The
-// ± nudge buttons next to each slider step by exactly one of these.
-const SLIDERS = [
-  { key: "fan", label: "FAN", min: 0, max: 100, step: 1, unit: "%", optimal: [18, 78], local: true },
-  { key: "temperature", label: "TEMP", min: 10, max: 40, step: 0.1, unit: "°C", optimal: [20, 28] },
-  { key: "humidity", label: "HUMIDITY", min: 10, max: 95, step: 0.5, unit: "%", optimal: [40, 60] },
-  { key: "co2_level", label: "CO₂", min: 400, max: 1500, step: 5, unit: "", optimal: [800, 1500] },
-  { key: "light_intensity", label: "LIGHT", min: 0, max: 1000, step: 5, unit: "", optimal: [300, 900] },
-  { key: "ph_level", label: "pH", min: 4, max: 9, step: 0.05, unit: "", optimal: [6, 7] },
-] as const;
+// FAN is cosmetic (no backend field) and isn't part of `EnvironmentRail`'s
+// persisted setpoint schema, so it keeps its own small slider (± nudge steps
+// of 1) inside the Insights panel's Environment section; the five real
+// persisted setpoints (temp/humidity/co2/light/pH) now render through the
+// shared `EnvironmentRail` component instead of a bespoke slider list.
+const FAN_STEP = 1;
 
 const COMMIT_DEBOUNCE_MS = 700;
 
@@ -151,7 +150,6 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const { data: pods } = usePods();
 
   const reducedMotion = usePrefersReducedMotion();
-  const [tab, setTab] = useState<"arcade" | "climate" | "time">("arcade");
   const [climate, setClimate] = useState<ChamberClimate>(DEFAULT_CLIMATE);
   // Growth-preview scrubber: null = track the real (server) age; a number =
   // preview that day on the cycle. Preview never mutates server state.
@@ -416,7 +414,100 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     struggling: { icon: "🚨", label: "Struggling", cls: "border-red-400/40 bg-red-400/10 text-red-300" },
   } as const;
 
+  // FAN/airflow — cosmetic-only local slider (see FAN_STEP note above), rendered
+  // inside the Insights panel's Environment section alongside the persisted
+  // EnvironmentRail setpoints.
+  const fanControl = (
+    <div className="mt-2 space-y-1.5">
+      <div className="flex min-h-[38px] items-center gap-2.5 rounded-lg border border-[#1c3447] bg-[#0d1d2b] px-2.5 py-2">
+        <span className="w-[60px] flex-none font-mono text-[10px] tracking-[0.06em] text-[#7fa9bf]">
+          AIRFLOW <span className="text-[9px] text-[#3a6a86]">(fan)</span>
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={FAN_STEP}
+          value={climate.fan}
+          onChange={(e) => onSlide("fan", Number(e.target.value))}
+          disabled={ended}
+          aria-label="Airflow (fan)"
+          className="h-2 flex-1 cursor-pointer accent-cyan-400"
+        />
+        <NudgeBtn label="Decrease airflow" disabled={ended} onClick={() => onSlide("fan", nudge(climate.fan, -1, FAN_STEP, 0, 100))}>−</NudgeBtn>
+        <NudgeBtn label="Increase airflow" disabled={ended} onClick={() => onSlide("fan", nudge(climate.fan, 1, FAN_STEP, 0, 100))}>+</NudgeBtn>
+        <span className="w-[40px] flex-none text-right font-mono text-xs font-bold text-white">{climate.fan}%</span>
+      </div>
+      <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
+        {c.fanNote}
+        {c.co2Boost > 0.05 ? " · CO₂ boosting growth." : ""}
+        {sharedPod ? " · Affects all plants in this pod." : ""}
+        {setEnv.isPending ? " · saving…" : ""}
+      </p>
+    </div>
+  );
+
+  // Real, existing mechanics that don't map onto the mockup's five Insights
+  // sections (Arcade quick-boosts + the paid growth-boost, and the growth-day
+  // preview scrubber) — kept, not dropped, as extra collapsible sections below
+  // Progress so the redesign doesn't quietly remove working features.
+  const extraPanel = (
+    <>
+      <CollapsiblePanel title="Arcade Boosts" titleClassName="text-amber-200" defaultOpen={false} className="border border-[#1c3447] bg-[#0d1d2b]/80 !p-2.5">
+        {!ended && <BoostsInline />}
+        {!ended && plant.growth_stage !== "harvest" && (
+          <button
+            onClick={() => growthBoost.mutate()}
+            disabled={growthBoost.isPending}
+            data-testid="growth-boost"
+            className="mt-1.5 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/50 bg-gradient-to-r from-cyan-500/15 to-grow-500/15 px-3 text-xs font-bold tracking-[0.06em] text-cyan-100 transition-all hover:border-cyan-300 hover:from-cyan-500/25 hover:to-grow-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {growthBoost.isPending ? "Boosting…" : "⚡ Boost Growth · 60 🌿"}
+          </button>
+        )}
+        <p className="mt-1.5 px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
+          {strain
+            ? `${strain.name} · ${indicaRatio >= 0.66 ? "indica-dominant" : indicaRatio <= 0.34 ? "sativa-dominant" : "balanced hybrid"} — grown live from your plant's real state.`
+            : "Loading strain…"}
+        </p>
+      </CollapsiblePanel>
+
+      <CollapsiblePanel title="Preview Growth" titleClassName="text-grow-300" defaultOpen={false} className="border border-[#1c3447] bg-[#0d1d2b]/80 !p-2.5">
+        <div className="flex min-h-[38px] items-center gap-2.5 rounded-lg border border-[#1c3447] bg-[#0a1722] px-2.5 py-2">
+          <span className="w-[60px] flex-none font-mono text-[10px] tracking-[0.06em] text-[#7fa9bf]">GROW DAY</span>
+          <input
+            type="range"
+            min={0}
+            max={maxPreviewDay}
+            step={0.5}
+            value={Math.min(day, maxPreviewDay)}
+            onChange={(e) => setPreviewDay(Number(e.target.value))}
+            className="h-2 flex-1 cursor-pointer accent-grow-400"
+            aria-label="Preview growth day"
+          />
+          <span className="w-[40px] flex-none text-right font-mono text-[11px] font-bold text-white">d{Math.round(day)}</span>
+        </div>
+        <div className="mt-1.5 flex items-center justify-between gap-2 px-1">
+          <span className="text-[10px] leading-relaxed text-[#7fa9bf]">
+            {previewing
+              ? `Previewing ${titleCase(renderStage)} — not this plant's real age.`
+              : `Tracking live growth · ${titleCase(renderStage)}, day ${Math.round(day)}.`}
+          </span>
+          {previewing && (
+            <button
+              onClick={() => setPreviewDay(null)}
+              className="flex-none rounded-md border border-[#3a6a86] bg-[#16364c] px-2 py-1 text-[10px] font-bold text-[#eaf7ff]"
+            >
+              Back to live
+            </button>
+          )}
+        </div>
+      </CollapsiblePanel>
+    </>
+  );
+
   return (
+    <OrientationGate>
     <div className="fixed inset-0 z-30 flex flex-col bg-[#050b12] text-[#cfeeff]">
       {/* header — clears the status-bar / notch on top and the landscape side notch */}
       <header className="flex flex-none items-center gap-3 px-4 pb-1 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))]">
@@ -431,17 +522,19 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           GR<span className="text-grow-400">🌿</span>VERS
         </h1>
         <span className="hidden text-[9px] font-bold tracking-[0.26em] text-cyan-300 sm:inline">
-          GROW CHAMBER · ARCADE
+          GROW CHAMBER
         </span>
       </header>
 
-      {/* body — stacks portrait (stage over controls); splits to a stage + side
-          rail in landscape so the plant stays tall on short/foldable screens */}
-      <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
-      {/* stage */}
+      {/* GameShell owns the always-visible hero (the stage below) plus the
+          left/right edge overlay panels and the persistent bottom dock — see
+          docs/memory/design/mockups/growverse-{mobile,desktop}-hud-concept.png. */}
+      <div className="min-h-0 flex-1">
+      <GameShell
+        hero={
       <div
         ref={stageRef}
-        className="relative min-h-0 flex-1"
+        className="relative h-full min-h-0 w-full"
         style={rewindActive && !reducedMotion ? { filter: "hue-rotate(-20deg) saturate(0.85)" } : undefined}
       >
         {/* VHS scanline overlay during a rewind scrub. */}
@@ -539,12 +632,8 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </Link>
         )}
 
-        {/* embedded action bar — glassy tiles built into the chamber base */}
-        {!ended && (
-          <div className="absolute inset-x-2 bottom-2 z-10">
-            <ChamberActionBar plant={plant} />
-          </div>
-        )}
+        {/* the six care actions now live in GameShell's persistent bottom dock
+            (passed as `bottomDock` below) instead of an embedded bar here. */}
 
         {/* REWIND control + chain row — floating button anchored in the chamber
             scene, so it can only ever overlap the stage, never the plan/insights.
@@ -639,137 +728,35 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </div>
         )}
       </div>
-
-      {/* dashboard — bottom sheet in portrait, side rail in landscape */}
-      <div className="max-h-[48dvh] flex-none overflow-y-auto bg-gradient-to-b from-transparent to-[#0a1622] px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 landscape:h-full landscape:max-h-none landscape:w-[clamp(260px,38vw,360px)] landscape:border-l landscape:border-[#11212e] landscape:bg-gradient-to-l landscape:pr-[max(0.75rem,env(safe-area-inset-right))]">
-        <div className="mb-2 flex gap-1.5">
-          {(["arcade", "climate", "time"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              aria-pressed={tab === t}
-              className={`flex min-h-[44px] flex-1 items-center justify-center rounded-lg border px-1 text-xs font-bold tracking-[0.08em] transition-colors ${
-                tab === t ? "border-[#3a6a86] bg-[#16364c] text-[#eaf7ff]" : "border-[#1c3447] bg-[#0d1d2b] text-[#7fa9bf]"
-              }`}
-            >
-              {t.toUpperCase()}
-            </button>
-          ))}
-        </div>
-
-        {tab === "arcade" && (
-          <div className="space-y-2">
-            {/* ARCADE = boosts, growth boost, rewind (via the boost tray). The
-                dashboard-y panels (Today's Plan, Plant Insights, progress strip,
-                encouragement footer) moved to the main game page (Command
-                Center) — the chamber is the fun layer, never required play. */}
-            {!ended && <BoostsInline />}
-            {/* Purchasable growth boost — fast-forward + revive for in-game GROW.
-                Cost mirrors balance.yaml simulation.actions.growth_boost.cost.
-                Hidden at the harvest window: the server rejects it (nothing left
-                to fast-forward), so don't tempt a no-op spend — cut it down. */}
-            {!ended && plant.growth_stage !== "harvest" && (
-              <button
-                onClick={() => growthBoost.mutate()}
-                disabled={growthBoost.isPending}
-                data-testid="growth-boost"
-                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/50 bg-gradient-to-r from-cyan-500/15 to-grow-500/15 px-3 text-xs font-bold tracking-[0.06em] text-cyan-100 transition-all hover:border-cyan-300 hover:from-cyan-500/25 hover:to-grow-500/25 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {growthBoost.isPending ? "Boosting…" : "⚡ Boost Growth · 60 🌿"}
-              </button>
-            )}
-            <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
-              {strain
-                ? `${strain.name} · ${indicaRatio >= 0.66 ? "indica-dominant" : indicaRatio <= 0.34 ? "sativa-dominant" : "balanced hybrid"} — grown live from your plant's real state.`
-                : "Loading strain…"}
-            </p>
-          </div>
-        )}
-
-        {tab === "climate" && (
-          <div className="space-y-1.5">
-            {SLIDERS.map((s) => {
-              const val = climate[s.key as keyof ChamberClimate];
-              const outOfBand = val < s.optimal[0] || val > s.optimal[1];
-              return (
-                <div key={s.key} className="flex min-h-[44px] items-center gap-2.5 rounded-lg border border-[#1c3447] bg-[#0d1d2b] px-2.5 py-2">
-                  <span className="w-[66px] flex-none font-mono text-[11px] tracking-[0.06em] text-[#7fa9bf]">
-                    {s.label}
-                    {"local" in s && s.local && <span className="ml-1 text-[9px] text-[#3a6a86]">(local)</span>}
-                  </span>
-                  <input
-                    type="range"
-                    min={s.min}
-                    max={s.max}
-                    step={s.step}
-                    value={val}
-                    onChange={(e) => onSlide(s.key as keyof ChamberClimate, Number(e.target.value))}
-                    disabled={ended}
-                    aria-label={s.label}
-                    className="h-2 flex-1 cursor-pointer accent-cyan-400"
-                  />
-                  {/* ± micro-nudge: one exact step per tap for fine dial-in. */}
-                  <NudgeBtn label={`Decrease ${s.label}`} disabled={ended} onClick={() => onSlide(s.key as keyof ChamberClimate, nudge(val, -1, s.step, s.min, s.max))}>−</NudgeBtn>
-                  <NudgeBtn label={`Increase ${s.label}`} disabled={ended} onClick={() => onSlide(s.key as keyof ChamberClimate, nudge(val, 1, s.step, s.min, s.max))}>+</NudgeBtn>
-                  <span className={`w-[52px] flex-none text-right font-mono text-xs font-bold ${outOfBand ? "text-orange-300" : "text-white"}`}>
-                    {val}
-                    {s.unit && <span className="text-[10px] text-[#7fa9bf]">{s.unit}</span>}
-                  </span>
-                </div>
-              );
-            })}
-            <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
-              {c.fanNote}
-              {c.co2Boost > 0.05 ? " · CO₂ boosting growth." : ""}
-              {sharedPod ? " · Affects all plants in this pod." : ""}
-              {setEnv.isPending ? " · saving…" : ""}
-            </p>
-          </div>
-        )}
-
-        {tab === "time" && (
-          <div className="space-y-2">
-            <div className="flex min-h-[44px] items-center gap-2.5 rounded-lg border border-[#1c3447] bg-[#0d1d2b] px-2.5 py-2">
-              <span className="w-[66px] flex-none font-mono text-[11px] tracking-[0.06em] text-[#7fa9bf]">GROW DAY</span>
-              <input
-                type="range"
-                min={0}
-                max={maxPreviewDay}
-                step={0.5}
-                value={Math.min(day, maxPreviewDay)}
-                onChange={(e) => setPreviewDay(Number(e.target.value))}
-                className="h-2 flex-1 cursor-pointer accent-grow-400"
-                aria-label="Preview growth day"
-              />
-              <span className="w-[52px] flex-none text-right font-mono text-[11px] font-bold text-white">
-                d{Math.round(day)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-2 px-1">
-              <span className="text-[10px] leading-relaxed text-[#7fa9bf]">
-                {previewing
-                  ? `Previewing ${titleCase(renderStage)} — not this plant's real age.`
-                  : `Tracking live growth · ${titleCase(renderStage)}, day ${Math.round(day)}.`}
-              </span>
-              {previewing && (
-                <button
-                  onClick={() => setPreviewDay(null)}
-                  className="flex-none rounded-md border border-[#3a6a86] bg-[#16364c] px-2 py-1 text-[10px] font-bold text-[#eaf7ff]"
-                >
-                  Back to live
-                </button>
-              )}
-            </div>
-            <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
-              Scrub to watch this strain grow seed → harvest. Buds swell, pistils colour and
-              trichome frost builds in as it matures.
-            </p>
-          </div>
-        )}
+        }
+        left={{
+          label: "Actions & Controls",
+          icon: "🎮",
+          accent: "56,189,248",
+          content: <ActionsPanel plant={plant} />,
+        }}
+        right={{
+          label: "Insights & Management",
+          icon: "📊",
+          accent: "125,211,252",
+          content: (
+            <InsightsPanel
+              plant={plant}
+              strain={strain}
+              pod={pod}
+              climate={climate}
+              onSlideEnv={onSlide}
+              envDisabled={ended}
+              fanControl={fanControl}
+              extra={extraPanel}
+            />
+          ),
+        }}
+        bottomDock={!ended ? <ChamberActionBar plant={plant} /> : null}
+      />
       </div>
-      </div>
-
     </div>
+    </OrientationGate>
   );
 }
 

@@ -103,6 +103,7 @@ change*; this is *how to decide what's true and what to do next*.
 | 2 | `docs/memory/DECISIONS.md` | Why things are the way they are (ADR log) | Append-only |
 | 3 | `docs/memory/BACKLOG.md` | Prioritized work: now / medium / low | High |
 | 3 | `docs/memory/VERIFIED_RENDERS.md` | Screenshot archive ("chapter list"): golden renders + regen recipes — check it BEFORE building any screenshot rig; capture via the `capture-shots` skill | Append-mostly |
+| 3 | `docs/memory/UI_AUDIT_MAP.md` | Every route + interactive control, wiring-correctness status, nav diagram — the ongoing UI audit loop | Live (audit loop) |
 | 4 | `docs/memory/standups/` | Dated LUT round-table reports | Daily |
 
 See `docs/memory/MAP.md` for the master map (layer index + code↔doc index + moat build-state
