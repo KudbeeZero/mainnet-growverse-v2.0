@@ -13,6 +13,7 @@ import { previewDev, seedForPlant } from "@/lib/chamber/morphology";
 import { StatBars } from "@/components/plant/StatBars";
 import { ConditionBadges } from "@/components/plant/ConditionBadges";
 import { CareButtons } from "@/components/plant/CareButtons";
+import { ConsumablesPanel } from "@/components/plant/ConsumablesPanel";
 import { EventLog } from "@/components/plant/EventLog";
 import { PlantMetrics } from "@/components/plant/PlantMetrics";
 import { StageTimeline } from "@/components/plant/StageTimeline";
@@ -189,6 +190,9 @@ function PlantDetail({ plantId }: { plantId: string }) {
                 <h3 className="mb-2 text-sm font-semibold text-gray-300">Care</h3>
                 <CareButtons plant={plant} />
               </div>
+              {/* Owned consumables — "use item", the missing half of the store
+                  loop. Renders nothing when the player owns none. */}
+              <ConsumablesPanel plant={plant} />
             </>
           )}
           <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">

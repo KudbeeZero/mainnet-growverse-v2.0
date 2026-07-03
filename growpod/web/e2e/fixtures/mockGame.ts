@@ -108,6 +108,16 @@ export async function setup(
     // wins over "/strains" (which returns the LIST) and the strain-detail page
     // gets an object, not an array. Longest-needle-first sorting handles it.
     "/strains/str1": STRAIN,
+    // Owned-consumables catalog (GET /players/p1/shop) — one owned, one not, one
+    // stage-gated — so the "use item" panel has something to render + gate.
+    "/shop": [
+      { key: "cal_mag", name: "Cal-Mag", cost: 20, description: "Corrects deficiency", stage_req: null, owned: 2 },
+      { key: "bloom_boost", name: "Bloom Boost", cost: 40, description: "Fattens flowering buds", stage_req: "flowering", owned: 1 },
+      { key: "rooting_gel", name: "Rooting Gel", cost: 15, description: "Speeds early roots", stage_req: "seedling", owned: 0 },
+    ],
+    // Apply an owned consumable — echo the plant back (the real route returns the
+    // updated plant dict; the UI just refetches state after).
+    "/apply": plant(stateOver),
     ...extraOverrides,
   };
   await page.route("**/api/game/**", async (route) => {
