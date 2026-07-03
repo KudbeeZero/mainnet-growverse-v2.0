@@ -1136,9 +1136,17 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     // Round 2 (owner mockup): denser flowering canopy — the mockup plant carries
     // colas + fans at every tier with almost no empty space inside the outline,
     // so flowering packs more nodes (1.18 → 1.32) and the hard cap rises 18 → 20.
-    const flowerPack = flowering ? 1.42 : d > 14 ? 1.1 : 1;
+    // Round 8 (owner "10/10" hero render — airier candelabra): the round-2..7
+    // density push overshot — the live plant read as a solid fir-tree mass with
+    // colas crowding into one another, no dark air between them. The hero shows
+    // FEWER, more vertically-separated tiers so each cola reads as a distinct
+    // spear. Pack cut (1.42 → 1.16) and the hard cap lowered (20 → 16): fewer
+    // flowering tiers over the same stem height = a visible vertical gap between
+    // each cola. Foliage per node is untouched (fans still fill the interior),
+    // so the plant stays leaf-full/airy — not bare.
+    const flowerPack = flowering ? 1.16 : d > 14 ? 1.1 : 1;
     const nodeTarget = Math.floor((hN / S.internode) * SK.nodeDensity * SK.vertStack * flowerPack);
-    const maxNodes = Math.min(20, Math.max(d <= 10 ? 1 : 2, nodeTarget));
+    const maxNodes = Math.min(16, Math.max(d <= 10 ? 1 : 2, nodeTarget));
     const grow = smooth(clamp((d - 8) / 22, 0, 1));
     // Engine 3 — phyllotaxy: azimuths winding around the stem (decussate at the
     // base → 137.5° golden spiral toward the apex). Veg keeps a gentle spiral
@@ -1172,7 +1180,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // upper node), so their bud spikes overlapped it. Widen their lateral
       // reach too — not just their tilt (below) — so the top 2-3 colas read
       // as a clearly separated candelabra instead of one fused column.
-      const apexSplay = smooth(clamp((f - 0.58) / 0.3, 0, 1));
+      // Round 8 (hero render): the splay band starts lower (0.58 → 0.46) and is
+      // wider so more of the upper-half side branches — not just the top 2-3 —
+      // fan away from the spine, opening the crowded upper column into a
+      // separated candelabra.
+      const apexSplay = smooth(clamp((f - 0.46) / 0.36, 0, 1));
       // Round 5 (specialist code review, 2026-07-03): 1.8x was actively WIDENING
       // the f≈0.58-0.88 band — exactly the zone that should be narrowing toward
       // a cone apex — producing the "shoulders/flare" the mockup doesn't have.
@@ -1181,7 +1193,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // `apicalDominance` identity carries the candelabra look) visibly
       // separated, without flaring a single-leader cone's shoulders.
       // Lower branches splay wide (skirt); upper branches tuck in and shorten.
-      const spread = lerp(1, SK.lowerSpread, low) * lerp(1, 1.25, apexSplay);
+      // Round 8 (hero render): apex-splay reach widened (1.25 → 1.5) so the
+      // upper side colas are held clearly OUT from the leader — distinct
+      // separated spears with dark air between, not a fused vertical column.
+      const spread = lerp(1, SK.lowerSpread, low) * lerp(1, 1.5, apexSplay);
       const shorten = 1 - SK.upperShorten * f;
       // Engine 3/4: azimuth → signed-and-foreshortened horizontal projection
       // (lateral) + front/back depth. `side` keeps its legacy ±1 meaning for the
@@ -1199,14 +1214,22 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // Round 5 (specialist code review, 2026-07-03): the tilt term scales down
       // proportionally with the spread cut above (0.55 * 1.25/1.8 ≈ 0.17) so the
       // upper-middle stops flaring outward on both axes at once, not just one.
-      let tilt = (0.92 + rnd() * 0.3) * (1 - f * 0.22 + apexSplay * 0.17) * lerp(1, 1.12, low);
+      // Round 8 (hero render): more branch angle away from vertical, especially
+      // in the splay band (0.17 → 0.28) and low skirt (1.12 → 1.18) — a branch
+      // that reaches out sideways carries its cola away from the spine, which is
+      // what actually separates the spears (their attachment points AND their
+      // tips), instead of a column of near-parallel upright colas.
+      let tilt = (0.98 + rnd() * 0.3) * (1 - f * 0.2 + apexSplay * 0.28) * lerp(1, 1.18, low);
       // Round 2 (owner mockup): back to 0.27 — with the mid-branch fans and
       // extra branchlets filling the arcs, the wider reach buys the fuller
       // pine-tree silhouette without the "floating buds" regression.
       // Round 5 (specialist code review, 2026-07-03): taper steepened
       // (0.35 + 0.65*low) → (0.24 + 0.76*low) — branch length now falls off
       // faster toward the apex for a crisper, straighter cone silhouette.
-      let len = A * 0.27 * S.branchMul * (0.24 + 0.76 * low) * grow * shorten;
+      // Round 8 (hero render): longer branches (0.27 → 0.31 base) with a lifted
+      // apex floor (0.24 → 0.30) so even the upper branches reach out far enough
+      // to hold their cola clear of the leader — the "held further OUT" ask.
+      let len = A * 0.31 * S.branchMul * (0.3 + 0.7 * low) * grow * shorten;
       if (topK >= 0) {
         // A released top straightens toward vertical and extends up to race the
         // leader to the canopy — turning a side branch into a competing cola.
@@ -1264,7 +1287,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // *edge* of the canopy is always a clean cone regardless of any one
       // node's random tilt/spread roll.
       if (topK < 0) {
-        const maxReach = A * lerp(0.1, 0.5 * SK.lowerSpread, low);
+        // Round 8 (hero render): clamp opened up (0.1→0.14 apex, 0.5→0.62 base)
+        // so the longer/more-angled branches above aren't clipped back into the
+        // spine — the cone edge stays clean but sits wider, holding colas out.
+        const maxReach = A * lerp(0.14, 0.62 * SK.lowerSpread, low);
         if (Math.abs(nd.tipX) > maxReach) nd.tipX = Math.sign(nd.tipX) * maxReach;
       }
       if (P.budDev > 0 && topK >= 0) {
@@ -1336,7 +1362,12 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // 0.24) and run bigger, so the space between the stem and the branch-tip
       // colas carries bud mass at every tier (the mockup has near-zero empty
       // interior). The skirt fans are untouched — this fills, not drowns.
-      if (P.budDev > 0 && topK < 0 && f > Math.max(S.flowerFrom * 0.8, 0.24)) {
+      // Round 8 (hero render): the stem-hugging node bud is the "near-zero empty
+      // interior" filler from round 3 — exactly what packed the interior into a
+      // solid mass. Gate raised (0.24 → 0.5) so only the UPPER nodes carry one:
+      // the lower/mid interior opens to dark air + fan leaves, letting the
+      // branch-tip colas read as the distinct separated spears the hero shows.
+      if (P.budDev > 0 && topK < 0 && f > Math.max(S.flowerFrom * 0.8, 0.5)) {
         const axis = A * (0.058 + 0.08 * f) * S.clusterLen * (0.5 + 0.5 * P.budDev);
         const baseW = axis * 0.36 * S.clusterFat;
         const nC = Math.max(3, Math.round(S.bracts * 0.7 * (0.5 + 0.5 * f)));
