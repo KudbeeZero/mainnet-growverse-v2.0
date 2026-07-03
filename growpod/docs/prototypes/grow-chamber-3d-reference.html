@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>GROVERS · Grow Chamber</title>
+<style>
+  :root{
+    --bg:#04100d;
+    --panel:rgba(7,20,17,0.72);
+    --stroke:rgba(90,220,150,0.22);
+    --green:#39d98a;
+    --green-soft:#8bf0bd;
+    --text:#dbeee4;
+    --muted:#7f9a8e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;}
+  #app{position:fixed;inset:0;}
+  canvas{display:block;touch-action:none;}
+
+  /* Top-left brand chip */
+  #brand{position:fixed;top:14px;left:14px;z-index:5;display:flex;flex-direction:column;gap:6px;pointer-events:none;}
+  .chip{display:inline-flex;align-items:center;gap:8px;background:var(--panel);
+    border:1px solid var(--stroke);border-radius:12px;padding:8px 12px;backdrop-filter:blur(8px);
+    font-weight:700;letter-spacing:.14em;font-size:13px;}
+  .chip .leaf{color:var(--green);}
+  #status{font-size:12px;color:var(--muted);letter-spacing:.02em;padding-left:2px;}
+  #status b{color:var(--green-soft);font-weight:600;}
+
+  /* Bottom control bar */
+  #ui{position:fixed;left:0;right:0;bottom:0;z-index:5;
+    padding:14px 14px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top,rgba(3,12,10,0.92),rgba(3,12,10,0.0));}
+  #bar{max-width:760px;margin:0 auto;background:var(--panel);border:1px solid var(--stroke);
+    border-radius:18px;padding:12px 14px;backdrop-filter:blur(10px);}
+  .row{display:flex;align-items:center;gap:12px;}
+  .stagelabel{min-width:118px;font-size:12px;color:var(--muted);}
+  .stagelabel b{display:block;color:var(--green-soft);font-size:14px;font-weight:700;letter-spacing:.03em;}
+  input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:6px;border-radius:6px;
+    background:linear-gradient(90deg,#2b6a4c,#39d98a);outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+    background:#eafff4;border:3px solid var(--green);box-shadow:0 0 12px rgba(57,217,138,.7);cursor:pointer;}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#eafff4;
+    border:3px solid var(--green);box-shadow:0 0 12px rgba(57,217,138,.7);cursor:pointer;}
+  .btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  button{flex:1;min-width:110px;background:rgba(20,40,32,0.9);color:var(--text);
+    border:1px solid var(--stroke);border-radius:12px;padding:10px 12px;font-size:13px;font-weight:600;
+    letter-spacing:.02em;cursor:pointer;transition:.15s;}
+  button:hover{border-color:var(--green);color:#eafff4;}
+  button.on{background:rgba(57,217,138,0.16);border-color:var(--green);color:#eafff4;}
+  .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:8px;}
+
+  #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9;
+    background:#04100d;color:#ffb4b4;font-size:14px;padding:24px;text-align:center;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="brand">
+  <span class="chip">GR<span class="leaf">🌿</span>VERS</span>
+  <span id="status">Gelato · <b id="phase">Seed</b> · Day <b id="day">0</b></span>
+</div>
+
+<div id="ui">
+  <div id="bar">
+    <div class="row">
+      <div class="stagelabel">Growth<b id="stage">Seed</b></div>
+      <input id="growth" type="range" min="0" max="1000" value="0" />
+    </div>
+    <div class="btns">
+      <button id="play" class="on">⏸ Pause grow</button>
+      <button id="seed">🌱 From seed</button>
+      <button id="spin">↻ Auto-rotate</button>
+    </div>
+    <div class="hint">Drag to orbit · pinch / scroll to zoom · slide to scrub seed → harvest</div>
+  </div>
+</div>
+
+<div id="err">WebGL could not start on this device. Try a different browser.</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ============================================================================
+   GROVERS — GROW CHAMBER  (single-file build)
+   Procedural cannabis plant that grows seed -> harvest, built to the
+   GROVERSE "Top Cola Tip" and "Pistil Hair" breakdown guides:
+     spear silhouette · visible spine · layered bracts · sugar-leaf crown ·
+     fine curved pistils from seams · trichome frost on surfaces ·
+     pale->orange pistils · green->purple bracts as it ripens.
+   -------------------------------------------------------------------------
+   TUNING KNOBS live in CONFIG below — this is where you shape look/feel.
+   ============================================================================ */
+
+const CONFIG = {
+  // --- plant scale / structure ---
+  stemHeight:        6.0,
+  stemRadiusBottom:  0.10,
+  stemRadiusTop:     0.035,
+  nodeHeights:       [0.16, 0.28, 0.40, 0.52, 0.64, 0.76, 0.86], // fraction up stem
+  branchMaxLen:      1.65,
+  apexColaScale:     1.65,   // top cola is the dominant spear
+
+  // --- colors ---
+  col_stem:      0x6f9040,
+  col_fanLeaf:   0x3f8f3a,
+  col_sugarLeaf: 0x74c24a,
+  col_bractYoung:0x5d8a3a,  // bracts start green...
+  col_bractRipe: 0x8f36b4,  // ...shift to purple as they flower
+  col_bractGreen:0x69a63e,  // the ~30% that stay green (sugar-leaf feel)
+  col_pistilYoung:0xf1e6c2, // cream
+  col_pistilRipe: 0xdd6f2c, // orange/amber
+  col_ringLight: 0xe4f7ff,
+  col_rim:       0x39d98a,
+  col_spoke:     0x27c9bd,
+  col_mote:      0x6effc0,
+  col_glow:      0x2bff92,
+
+  // --- growth timeline (all driven by g in [0,1]) ---
+  gSeedEnd:      0.06,
+  gSproutEnd:    0.13,
+  gVegEnd:       0.55,   // stem + branches + fan leaves finish here
+  gFlowerStart:  0.55,   // colas begin
+  gRipeStart:    0.82,   // purple deepens, pistils brown, frost peaks
+
+  autoGrowSpeed: 0.055,  // growth units per second when playing
+};
+
+/* -------------------------------------------------------------------------- */
+/* small math helpers                                                         */
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp  = (a,b,t)=>a+(b-a)*t;
+function smooth(edge0,edge1,x){ const t=clamp((x-edge0)/(edge1-edge0),0,1); return t*t*(3-2*t); }
+const easeOut = t => 1-Math.pow(1-t,3);
+const UP = new THREE.Vector3(0,1,0);
+const _c1 = new THREE.Color(), _c2 = new THREE.Color();
+
+/* -------------------------------------------------------------------------- */
+/* renderer / scene / camera / controls                                       */
+let renderer, scene, camera, controls;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+} catch(e){ document.getElementById('err').style.display='flex'; throw e; }
+
+const app = document.getElementById('app');
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+app.appendChild(renderer.domElement);
+
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x04100d);
+scene.fog = new THREE.FogExp2(0x061512, 0.055);
+
+camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0.4, 3.6, 9.2);
+
+controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 3.1, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.minDistance = 4.2;
+controls.maxDistance = 16;
+controls.maxPolarAngle = Math.PI*0.52;   // don't dip under the floor
+controls.autoRotate = false;
+controls.autoRotateSpeed = 0.6;
+
+/* ==========================================================================
+   CHAMBER  (pod: ring light, light cone, glowing platform + radial spokes,
+   floating motes) — matches the reference pod, no fancy stage lights.
+   ========================================================================== */
+function buildChamber(){
+  const g = new THREE.Group();
+
+  // ambient + key + fills
+  scene.add(new THREE.AmbientLight(0x21403a, 0.55));
+  const key = new THREE.DirectionalLight(0xffffff, 1.15);
+  key.position.set(0.5, 9, 3.5); scene.add(key);
+  const fill = new THREE.DirectionalLight(0x9fd8ff, 0.35);
+  fill.position.set(-4, 4, 5); scene.add(fill);
+  // two soft green "energy" glows inside the canopy
+  const glowA = new THREE.PointLight(CONFIG.col_glow, 0.5, 8); glowA.position.set(-1.4,3.4,1.2); scene.add(glowA);
+  const glowB = new THREE.PointLight(CONFIG.col_glow, 0.45, 8); glowB.position.set(1.5,4.4,-0.8); scene.add(glowB);
+
+  // --- ring light (top) ---
+  const ringMat = new THREE.MeshBasicMaterial({ color:CONFIG.col_ringLight });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(2.05, 0.12, 16, 64), ringMat);
+  ring.rotation.x = Math.PI/2; ring.position.y = 7.7; g.add(ring);
+  const ring2 = new THREE.Mesh(new THREE.TorusGeometry(1.55, 0.05, 12, 64),
+                 new THREE.MeshBasicMaterial({ color:0xbfeaff, transparent:true, opacity:0.5 }));
+  ring2.rotation.x = Math.PI/2; ring2.position.y = 7.62; g.add(ring2);
+  const ringLight = new THREE.PointLight(0xdff4ff, 0.8, 14); ringLight.position.set(0,7.4,0); g.add(ringLight);
+
+  // --- soft volumetric light cone from ring down to plant ---
+  const cone = new THREE.Mesh(
+    new THREE.ConeGeometry(2.4, 8.0, 40, 1, true),
+    new THREE.MeshBasicMaterial({ color:0xbfeecd, transparent:true, opacity:0.045,
+      side:THREE.DoubleSide, depthWrite:false, blending:THREE.AdditiveBlending }));
+  cone.position.y = 3.7; g.add(cone);
+
+  // --- platform ---
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(2.6, 64),
+                 new THREE.MeshStandardMaterial({ color:0x0a1a16, roughness:0.85, metalness:0.1 }));
+  disc.rotation.x = -Math.PI/2; disc.position.y = 0.001; g.add(disc);
+
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.03, 10, 80),
+                new THREE.MeshBasicMaterial({ color:CONFIG.col_rim }));
+  rim.rotation.x = Math.PI/2; rim.position.y = 0.02; g.add(rim);
+  const rim2 = new THREE.Mesh(new THREE.TorusGeometry(2.05, 0.015, 8, 80),
+                new THREE.MeshBasicMaterial({ color:CONFIG.col_rim, transparent:true, opacity:0.5 }));
+  rim2.rotation.x = Math.PI/2; rim2.position.y = 0.02; g.add(rim2);
+
+  // radial spokes (the tick marks around the base in the reference)
+  const spokeMat = new THREE.MeshBasicMaterial({ color:CONFIG.col_spoke, transparent:true, opacity:0.6 });
+  const spokeGeo = new THREE.BoxGeometry(0.02, 0.01, 0.42);
+  for(let i=0;i<48;i++){
+    const a = (i/48)*Math.PI*2;
+    const s = new THREE.Mesh(spokeGeo, spokeMat);
+    const r = 2.22;
+    s.position.set(Math.cos(a)*r, 0.02, Math.sin(a)*r);
+    s.rotation.y = -a;
+    g.add(s);
+  }
+  // glowing soil pad where the stem meets the platform
+  const pad = new THREE.Mesh(new THREE.CircleGeometry(0.62, 40),
+                new THREE.MeshBasicMaterial({ color:0x1c6f3a, transparent:true, opacity:0.85 }));
+  pad.rotation.x = -Math.PI/2; pad.position.y = 0.03; g.add(pad);
+  const glowPad = new THREE.PointLight(CONFIG.col_rim, 0.4, 4); glowPad.position.set(0,0.3,0); g.add(glowPad);
+
+  // --- floating motes ---
+  const N = 260, mp = new Float32Array(N*3), mv = [];
+  for(let i=0;i<N;i++){
+    mp[i*3]   = (Math.random()-0.5)*7;
+    mp[i*3+1] = Math.random()*8;
+    mp[i*3+2] = (Math.random()-0.5)*7;
+    mv.push(0.15+Math.random()*0.4);
+  }
+  const mg = new THREE.BufferGeometry();
+  mg.setAttribute('position', new THREE.BufferAttribute(mp,3));
+  const motes = new THREE.Points(mg, new THREE.PointsMaterial({
+    color:CONFIG.col_mote, size:0.05, transparent:true, opacity:0.55,
+    depthWrite:false, blending:THREE.AdditiveBlending }));
+  g.add(motes);
+
+  scene.add(g);
+  return { motes, mv, mp, mg };
+}
+const chamber = buildChamber();
+
+/* ==========================================================================
+   PLANT
+   ========================================================================== */
+const plant = new THREE.Group();
+scene.add(plant);
+
+// shared materials (animated by growth)
+const matStem   = new THREE.MeshStandardMaterial({ color:CONFIG.col_stem, roughness:0.7, metalness:0.05 });
+const matFan    = new THREE.MeshStandardMaterial({ color:CONFIG.col_fanLeaf, roughness:0.6, side:THREE.DoubleSide, metalness:0.0 });
+const matSugar  = new THREE.MeshStandardMaterial({ color:CONFIG.col_sugarLeaf, roughness:0.55, side:THREE.DoubleSide });
+const matBract  = new THREE.MeshStandardMaterial({ color:CONFIG.col_bractYoung, roughness:0.5, metalness:0.05,
+                    emissive:new THREE.Color(CONFIG.col_bractRipe), emissiveIntensity:0.0 });
+const matBractG = new THREE.MeshStandardMaterial({ color:CONFIG.col_bractGreen, roughness:0.55, metalness:0.05 });
+const matPistil = new THREE.MeshStandardMaterial({ color:CONFIG.col_pistilYoung, roughness:0.6, side:THREE.DoubleSide });
+const matTri    = new THREE.PointsMaterial({ color:0xffffff, size:0.045, transparent:true, opacity:0.0,
+                    depthWrite:false, blending:THREE.AdditiveBlending });
+const matSeed   = new THREE.MeshStandardMaterial({ color:0x5b3a22, roughness:0.8, transparent:true, opacity:1 });
+
+// collectors driven by setGrowth()
+const stemParts   = [];   // {mesh,start,end}
+const leafParts   = [];   // {mesh,start,end,scale,fold,axis}
+const pistilParts = [];   // {mesh,start}
+const triClouds   = [];   // Points meshes (opacity via matTri)
+let   seedMesh, sproutGroup;
+
+// calyx (bract) geometry — plump body, pointed tip (lathe teardrop)
+const calyxProfile = [
+  [0.00,0.00],[0.30,0.10],[0.44,0.30],[0.42,0.52],[0.28,0.74],[0.11,0.90],[0.00,1.00]
+].map(p=>new THREE.Vector2(p[0],p[1]));
+const calyxGeo = new THREE.LatheGeometry(calyxProfile, 7);
+calyxGeo.computeVertexNormals();
+
+// calyx instances (two groups: purple-shifting + stay-green)
+const calyxP = [];  // {pos,quat,scale,start,end}
+const calyxG = [];
+
+/* ---- serrated leaf blade ------------------------------------------------- */
+function makeBlade(len, wid){
+  const shape = new THREE.Shape();
+  const n = 12;
+  const pts = [];
+  for(let i=0;i<=n;i++){
+    const t=i/n, y=len*t;
+    let w = wid*Math.pow(Math.sin(Math.PI*(t*0.92+0.05)),0.75);
+    const tooth = (i%2===0)?1.0:0.80;     // serration
+    pts.push([w*tooth, y]);
+  }
+  shape.moveTo(0,0);
+  for(let i=0;i<pts.length;i++) shape.lineTo(pts[i][0], pts[i][1]);
+  shape.lineTo(0, len*1.02);              // tip
+  for(let i=pts.length-1;i>=0;i--) shape.lineTo(-pts[i][0], pts[i][1]);
+  shape.lineTo(0,0);
+  const geo = new THREE.ShapeGeometry(shape);
+  geo.computeVertexNormals();
+  return geo;
+}
+// cache a few blade sizes
+const bladeCache = {};
+function blade(len,wid){ const k=len.toFixed(2)+'_'+wid.toFixed(2);
+  return bladeCache[k] || (bladeCache[k]=makeBlade(len,wid)); }
+
+// full palmate fan leaf (7 leaflets) as a Group
+function makeFanLeaf(scale){
+  const g = new THREE.Group();
+  const L = 1.0*scale;
+  const specs = [ [0,1.0],[26,0.82],[-26,0.82],[50,0.58],[-50,0.58],[72,0.34],[-72,0.34] ];
+  for(const [deg,f] of specs){
+    const m = new THREE.Mesh(blade(L*f, 0.16*L*f + 0.03), matFan);
+    m.rotation.z = deg*Math.PI/180;
+    m.rotation.y = (deg/72)*0.25;          // slight cupping in 3D
+    g.add(m);
+  }
+  return g;
+}
+// small sugar leaf (1 narrow blade)
+function makeSugarLeaf(scale){
+  return new THREE.Mesh(blade(0.34*scale, 0.05*scale+0.015), matSugar);
+}
+
+/* ---- pistil (thin curved hair) ------------------------------------------ */
+function makePistil(dir, curl, length){
+  // build in local space starting at origin so mesh-scale grows it outward
+  const d = dir.clone().normalize();
+  // a perpendicular for the curl
+  const perp = new THREE.Vector3().crossVectors(d, UP).normalize();
+  if(perp.lengthSq()<0.001) perp.set(1,0,0);
+  const p0 = new THREE.Vector3(0,0,0);
+  const p1 = d.clone().multiplyScalar(length*0.45).addScaledVector(perp, curl*0.05);
+  const p2 = d.clone().multiplyScalar(length*0.80).addScaledVector(perp, curl*0.14).addScaledVector(UP, 0.03);
+  const p3 = d.clone().multiplyScalar(length*1.0 ).addScaledVector(perp, curl*0.22).addScaledVector(UP, 0.05);
+  const curve = new THREE.CatmullRomCurve3([p0,p1,p2,p3]);
+  const geo = new THREE.TubeGeometry(curve, 8, 0.012, 5, false);
+  return new THREE.Mesh(geo, matPistil);
+}
+
+/* ---- one cola (bud) ------------------------------------------------------ */
+// origin & axis are in PLANT space. calyxes are pushed to the global instanced
+// arrays (transformed into plant space); pistils/sugar/frost live in a group.
+function addCola(origin, axis, scale, gStart){
+  const grp = new THREE.Group();
+  grp.position.copy(origin);
+  grp.quaternion.setFromUnitVectors(UP, axis.clone().normalize());
+  plant.add(grp);
+
+  // matrix that maps cola-local -> plant-local
+  const colaMat = new THREE.Matrix4().compose(
+    grp.position, grp.quaternion, new THREE.Vector3(1,1,1));
+
+  const colaH   = 1.15*scale;
+  const rings   = Math.max(4, Math.round(6*scale));
+  const baseR   = 0.24*scale;
+  const calyxBase = 0.17*scale;
+  const triPos  = [];
+  const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3();
+
+  for(let j=0;j<rings;j++){
+    const t = rings>1 ? j/(rings-1) : 0;
+    const h = colaH * t;
+    const radius = baseR*(1-0.85*t) + 0.01;
+    const count  = Math.max(3, Math.round(7*(1-0.55*t)));
+    const upBias = 0.4 + 2.0*t;                 // tip calyxes point up -> spear
+    const cScale = calyxBase*(1-0.30*t);
+    const cStart = gStart + t*0.14;
+    const cEnd   = cStart + 0.20;
+    const off    = j*0.7;                         // rotate each ring a touch
+    for(let k=0;k<count;k++){
+      const a = (k/count)*Math.PI*2 + off;
+      const localPos = new THREE.Vector3(Math.cos(a)*radius, h, Math.sin(a)*radius);
+      const dir = new THREE.Vector3(Math.cos(a), upBias, Math.sin(a)).normalize();
+      const localQuat = new THREE.Quaternion().setFromUnitVectors(UP, dir);
+      // -> plant space
+      _m.compose(localPos, localQuat, new THREE.Vector3(cScale,cScale,cScale));
+      _m.premultiply(colaMat);
+      _m.decompose(_p,_q,_s);
+      const rec = { pos:_p.clone(), quat:_q.clone(), scale:cScale, start:cStart, end:cEnd };
+      // ~70% shift purple, more purple toward the tip; rest stay green
+      (Math.random() < (0.55+0.35*t)) ? calyxP.push(rec) : calyxG.push(rec);
+      // frost points near this calyx (local to cola group)
+      for(let f=0; f<3; f++){
+        triPos.push(
+          localPos.x + (Math.random()-0.5)*cScale*1.4,
+          localPos.y + Math.random()*cScale*1.6,
+          localPos.z + (Math.random()-0.5)*cScale*1.4 );
+      }
+      // pistils on upper half, grouped from the seam
+      if(t>0.30 && Math.random()<0.5){
+        const np = 1 + (Math.random()<0.4?1:0);
+        for(let pi=0; pi<np; pi++){
+          const pd = dir.clone().addScaledVector(UP, 0.4).normalize();
+          const ps = makePistil(pd, (Math.random()<0.5?-1:1)*(0.7+Math.random()*0.6), 0.34*scale);
+          ps.position.copy(localPos).addScaledVector(dir, cScale*0.7);
+          ps.scale.setScalar(0.0001);
+          grp.add(ps);
+          pistilParts.push({ mesh:ps, start:cStart+0.06 });
+        }
+      }
+    }
+    // sugar-leaf crown: a few small leaves poking out between clusters
+    if(j%2===1 && t<0.9){
+      for(let s=0;s<2;s++){
+        const a = Math.random()*Math.PI*2;
+        const sl = makeSugarLeaf(scale*(1-0.4*t));
+        sl.position.set(Math.cos(a)*radius*0.9, h, Math.sin(a)*radius*0.9);
+        const dir = new THREE.Vector3(Math.cos(a), 0.6, Math.sin(a)).normalize();
+        sl.quaternion.setFromUnitVectors(UP, dir);
+        sl.scale.setScalar(0.0001);
+        grp.add(sl);
+        leafParts.push({ mesh:sl, start:cStart, end:cStart+0.14, scale:1, fold:0.5, axis:'x' });
+      }
+    }
+  }
+
+  // terminal spear tip — one dominant pointed calyx straight up
+  {
+    const tipPos = new THREE.Vector3(0, colaH*1.02, 0);
+    _m.compose(tipPos, new THREE.Quaternion(), new THREE.Vector3(calyxBase*0.9, calyxBase*1.6, calyxBase*0.9));
+    _m.premultiply(colaMat); _m.decompose(_p,_q,_s);
+    calyxP.push({ pos:_p.clone(), quat:_q.clone(), scale:1,
+      customScale:_s.clone(), start:gStart+0.12, end:gStart+0.30 });
+    triPos.push(tipPos.x, tipPos.y, tipPos.z);
+  }
+
+  // frost cloud for this cola
+  const tg = new THREE.BufferGeometry();
+  tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(triPos),3));
+  const tc = new THREE.Points(tg, matTri);
+  grp.add(tc);
+  triClouds.push(tc);
+}
+
+/* ---- stem + branch (grows from its base via scale.y) --------------------- */
+function addStem(){
+  const H = CONFIG.stemHeight;
+  const geo = new THREE.CylinderGeometry(CONFIG.stemRadiusTop, CONFIG.stemRadiusBottom, H, 10, 1);
+  geo.translate(0, H/2, 0);              // base at origin
+  const m = new THREE.Mesh(geo, matStem);
+  m.scale.y = 0.0001;
+  plant.add(m);
+  stemParts.push({ mesh:m, start:CONFIG.gSeedEnd, end:0.42 });
+}
+function addBranch(node, dir, len, gStart, gEnd){
+  const geo = new THREE.CylinderGeometry(0.014, 0.03, len, 6, 1);
+  geo.translate(0, len/2, 0);
+  const m = new THREE.Mesh(geo, matStem);
+  m.position.copy(node);
+  m.quaternion.setFromUnitVectors(UP, dir.clone().normalize());
+  m.scale.y = 0.0001;
+  plant.add(m);
+  stemParts.push({ mesh:m, start:gStart, end:gEnd });
+}
+
+/* ---- seed + sprout ------------------------------------------------------- */
+function addSeedAndSprout(){
+  seedMesh = new THREE.Mesh(new THREE.SphereGeometry(0.16,16,12), matSeed);
+  seedMesh.scale.set(1,0.7,1.2); seedMesh.position.y = 0.14; plant.add(seedMesh);
+
+  sproutGroup = new THREE.Group(); sproutGroup.position.y = 0.06; plant.add(sproutGroup);
+  for(const s of [-1,1]){
+    const cot = new THREE.Mesh(blade(0.30,0.10), matSugar);
+    cot.rotation.z = s*Math.PI*0.42;
+    cot.rotation.x = -0.2;
+    sproutGroup.add(cot);
+  }
+  sproutGroup.scale.setScalar(0.0001);
+  leafParts.push({ mesh:sproutGroup, start:CONFIG.gSeedEnd, end:CONFIG.gSproutEnd+0.02, scale:1, fold:0.7, axis:'x', sprout:true });
+}
+
+/* ---- build the whole plant ---------------------------------------------- */
+function buildPlant(){
+  addStem();
+  addSeedAndSprout();
+
+  const H = CONFIG.stemHeight;
+  const nodes = CONFIG.nodeHeights;
+  nodes.forEach((hf, idx)=>{
+    const nodeY = H*hf;
+    const node = new THREE.Vector3(0, nodeY, 0);
+    const azBase = idx*137.5*Math.PI/180;              // phyllotaxy spiral
+    const avDeg = lerp(58, 26, hf);                    // angle from vertical
+    const av = avDeg*Math.PI/180;
+    const len = CONFIG.branchMaxLen*(1-0.55*hf);
+    const bStart = 0.14 + hf*0.18;
+    const bEnd   = bStart + 0.16;
+
+    for(const side of [0, Math.PI]){                   // opposite pair
+      const az = azBase + side;
+      const dir = new THREE.Vector3(Math.sin(av)*Math.cos(az), Math.cos(av), Math.sin(av)*Math.sin(az));
+      addBranch(node, dir, len, bStart, bEnd);
+      const tip = node.clone().addScaledVector(dir, len);
+
+      if(hf < 0.46){
+        // lower canopy: fan leaf
+        const lf = makeFanLeaf(1.0 - hf*0.4);
+        lf.position.copy(tip);
+        const leafDir = dir.clone().addScaledVector(UP, 0.5).normalize();
+        lf.quaternion.setFromUnitVectors(UP, leafDir);
+        lf.scale.setScalar(0.0001);
+        plant.add(lf);
+        leafParts.push({ mesh:lf, start:bStart+0.03, end:bEnd+0.12, scale:1, fold:0.6, axis:'x' });
+        // small transitional popcorn cola on the 0.40 nodes
+        if(hf>0.34){
+          const colaAxis = dir.clone().addScaledVector(UP, 0.7).normalize();
+          addCola(tip.clone().addScaledVector(dir,0.05), colaAxis, 0.7, CONFIG.gFlowerStart+0.04);
+        }
+      } else {
+        // upper canopy: a cola + a couple sugar leaves at the base
+        const colaScale = lerp(1.05, 0.8, (hf-0.5)/0.4);
+        const colaAxis = dir.clone().addScaledVector(UP, 0.6).normalize();
+        addCola(tip, colaAxis, colaScale, CONFIG.gFlowerStart + hf*0.05);
+        const lf = makeFanLeaf(0.55);
+        lf.position.copy(node).addScaledVector(dir, len*0.4);
+        lf.quaternion.setFromUnitVectors(UP, dir.clone().addScaledVector(UP,0.4).normalize());
+        lf.scale.setScalar(0.0001);
+        plant.add(lf);
+        leafParts.push({ mesh:lf, start:bStart+0.05, end:bEnd+0.12, scale:1, fold:0.6, axis:'x' });
+      }
+    }
+  });
+
+  // APEX terminal cola — the dominant spear
+  addCola(new THREE.Vector3(0, H*0.97, 0), UP.clone(), CONFIG.apexColaScale, CONFIG.gFlowerStart + 0.02);
+
+  // build the two instanced calyx meshes now that counts are known
+  buildCalyxInstances();
+}
+
+let calyxMeshP, calyxMeshG;
+function buildCalyxInstances(){
+  calyxMeshP = new THREE.InstancedMesh(calyxGeo, matBract,  Math.max(1,calyxP.length));
+  calyxMeshG = new THREE.InstancedMesh(calyxGeo, matBractG, Math.max(1,calyxG.length));
+  calyxMeshP.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  calyxMeshG.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  plant.add(calyxMeshP); plant.add(calyxMeshG);
+}
+
+buildPlant();
+
+/* ==========================================================================
+   GROWTH  — everything below is derived purely from g (stateless & reversible)
+   ========================================================================== */
+const _dummy = new THREE.Object3D();
+
+function updateCalyxGroup(mesh, defs, g, floweringP){
+  if(!mesh) return;
+  const plump = 1 + 0.35*floweringP;
+  for(let i=0;i<defs.length;i++){
+    const d = defs[i];
+    const localP = clamp((g-d.start)/(d.end-d.start),0,1);
+    if(localP<=0){ _dummy.scale.setScalar(0.0001); }
+    else{
+      const a = easeOut(localP);
+      if(d.customScale){
+        _dummy.scale.set(d.customScale.x*a*plump, d.customScale.y*a*(0.9+0.1*floweringP), d.customScale.z*a*plump);
+      }else{
+        const s = d.scale*a;
+        _dummy.scale.set(s*plump, s*(0.9+0.1*localP), s*plump);
+      }
+    }
+    _dummy.position.copy(d.pos);
+    _dummy.quaternion.copy(d.quat);
+    _dummy.updateMatrix();
+    mesh.setMatrixAt(i, _dummy.matrix);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+}
+
+function setGrowth(g){
+  g = clamp(g,0,1);
+  const floweringP = smooth(CONFIG.gFlowerStart, 1.0, g);
+  const ripenP     = smooth(CONFIG.gRipeStart, 1.0, g);
+  const frostP     = smooth(0.62, 0.98, g);
+
+  // --- materials ---
+  matBract.color.copy(_c1.set(CONFIG.col_bractYoung)).lerp(_c2.set(CONFIG.col_bractRipe), floweringP);
+  matBract.emissiveIntensity = 0.10*floweringP;
+  matPistil.color.copy(_c1.set(CONFIG.col_pistilYoung)).lerp(_c2.set(CONFIG.col_pistilRipe), ripenP);
+  matTri.opacity = 0.85*frostP;
+  matTri.size = 0.03 + 0.03*frostP;
+
+  // --- stem + branches ---
+  for(const p of stemParts){
+    const lp = clamp((g-p.start)/(p.end-p.start),0,1);
+    p.mesh.scale.y = Math.max(0.0001, easeOut(lp));
+  }
+
+  // --- leaves (scale up + unfurl) ---
+  for(const p of leafParts){
+    if(p.q0===undefined) p.q0 = p.mesh.quaternion.clone();   // capture built orientation once
+    const lp = clamp((g-p.start)/(p.end-p.start),0,1);
+    const a = easeOut(lp);
+    p.mesh.scale.setScalar(Math.max(0.0001, a*(p.scale||1)));
+    p.mesh.quaternion.copy(p.q0);                            // restore outward orientation
+    if(p.fold) p.mesh.rotateX(lerp(-p.fold, 0, a));          // then hinge open from there
+    p.mesh.visible = lp>0.001;
+  }
+
+  // --- calyxes ---
+  updateCalyxGroup(calyxMeshP, calyxP, g, floweringP);
+  updateCalyxGroup(calyxMeshG, calyxG, g, floweringP);
+
+  // --- pistils (grow outward) ---
+  for(const p of pistilParts){
+    const lp = clamp((g-p.start)/0.16,0,1);
+    p.mesh.scale.setScalar(Math.max(0.0001, easeOut(lp)));
+    p.mesh.visible = lp>0.001;
+  }
+
+  // --- seed / sprout fade ---
+  const seedFade = 1 - smooth(CONFIG.gSeedEnd*0.6, CONFIG.gSproutEnd, g);
+  matSeed.opacity = seedFade;
+  seedMesh.visible = seedFade>0.02;
+
+  updateLabels(g);
+}
+
+/* ==========================================================================
+   UI
+   ========================================================================== */
+const elGrowth = document.getElementById('growth');
+const elPlay   = document.getElementById('play');
+const elSeed   = document.getElementById('seed');
+const elSpin   = document.getElementById('spin');
+const elStage  = document.getElementById('stage');
+const elPhase  = document.getElementById('phase');
+const elDay    = document.getElementById('day');
+
+let growth = 0.0;
+let playing = true;
+
+function phaseName(g){
+  if(g < CONFIG.gSeedEnd)     return 'Seed';
+  if(g < CONFIG.gSproutEnd)   return 'Sprout';
+  if(g < CONFIG.gVegEnd)      return 'Vegetative';
+  if(g < CONFIG.gRipeStart)   return 'Flowering';
+  return 'Ripe';
+}
+function updateLabels(g){
+  const ph = phaseName(g);
+  elStage.textContent = ph;
+  elPhase.textContent = ph;
+  elDay.textContent   = Math.round(g*100);
+}
+
+elGrowth.addEventListener('input', ()=>{
+  growth = parseInt(elGrowth.value,10)/1000;
+  playing = false; elPlay.classList.remove('on'); elPlay.textContent='▶ Play grow';
+  setGrowth(growth);
+});
+elPlay.addEventListener('click', ()=>{
+  playing = !playing;
+  elPlay.classList.toggle('on', playing);
+  elPlay.textContent = playing ? '⏸ Pause grow' : '▶ Play grow';
+  if(playing && growth>=1) growth = 0;   // replay if at the end
+});
+elSeed.addEventListener('click', ()=>{
+  growth = 0; playing = true;
+  elPlay.classList.add('on'); elPlay.textContent='⏸ Pause grow';
+  setGrowth(0);
+});
+elSpin.addEventListener('click', ()=>{
+  controls.autoRotate = !controls.autoRotate;
+  elSpin.classList.toggle('on', controls.autoRotate);
+});
+
+setGrowth(0);   // start at seed
+
+/* ==========================================================================
+   LOOP
+   ========================================================================== */
+const clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  if(playing){
+    growth += dt*CONFIG.autoGrowSpeed;
+    if(growth >= 1){ growth = 1; playing = false; elPlay.classList.remove('on'); elPlay.textContent='▶ Play grow'; }
+    elGrowth.value = Math.round(growth*1000);
+    setGrowth(growth);
+  }
+
+  // drifting motes
+  const mp = chamber.mp;
+  for(let i=0;i<chamber.mv.length;i++){
+    mp[i*3+1] += chamber.mv[i]*dt;
+    if(mp[i*3+1] > 8){ mp[i*3+1] = 0; mp[i*3] = (Math.random()-0.5)*7; mp[i*3+2] = (Math.random()-0.5)*7; }
+  }
+  chamber.mg.attributes.position.needsUpdate = true;
+
+  // gentle idle sway of the plant only (doesn't fight orbit)
+  const t = clock.elapsedTime;
+  plant.rotation.z = Math.sin(t*0.6)*0.006;
+  plant.rotation.x = Math.cos(t*0.45)*0.005;
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+/* resize */
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
