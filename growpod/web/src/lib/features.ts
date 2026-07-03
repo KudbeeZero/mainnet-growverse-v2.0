@@ -1,13 +1,22 @@
+"use client";
+
 /**
  * MVP feature flags (client mirror of the backend's FEATURE_* gates).
  *
- * ⚠️  TESTING MODE — `FEATURES` is forced ON so every screen is reachable.
- * Before launch: switch `FEATURES` to the env-driven `computeFeatures(...)` call
- * shown at the bottom so unfinished systems can be toggled off per-environment.
+ * The real kill-switch state lives server-side in `balance.yaml`'s
+ * `feature_flags:` block (env-overridable via `FEATURE_<NAME>`), served
+ * publicly at `GET /api/game/flags`. `useFeatureFlags()` (see below, backed by
+ * `useBackendFlags()` in `hooks/queries.ts`) reads that endpoint — turning a
+ * flag off on the backend actually hides the gated surface in the web client,
+ * not just the API. `FEATURES` (the env-driven, build-time map) is now only a
+ * same-request fallback for the instant before that fetch resolves (and for
+ * non-React call sites), not the source of truth.
  *
- * `computeFeatures` (the pure env→flags mapper) stays a live export regardless of
- * testing mode — it's the launch-time source of truth and is unit-tested.
+ * `computeFeatures` (the pure env→flags mapper) stays a live export — it backs
+ * both `FEATURES` and the fallback path, and is unit-tested.
  */
+
+import { useBackendFlags } from "@/hooks/queries";
 
 export type FeatureName =
   | "marketplace"
@@ -15,6 +24,17 @@ export type FeatureName =
   | "cup"
   | "university"
   | "contracts";
+
+/** Maps a client `FeatureName` to its backend `balance.yaml` flag key — names
+ *  don't all match 1:1 (e.g. the client's "cup" is the backend's
+ *  "cup_competitions"). */
+const BACKEND_FLAG_KEY: Record<FeatureName, string> = {
+  marketplace: "marketplace",
+  chain: "chain",
+  cup: "cup_competitions",
+  university: "university",
+  contracts: "contracts",
+};
 
 /** A flag is enabled only by the exact string "true" (not "TRUE"/"1"/"yes"). */
 function on(value: string | undefined): boolean {
@@ -52,18 +72,19 @@ export function computeFeatures(env: FeatureEnv): Record<FeatureName, boolean> {
 }
 
 /**
- * Resolved feature flags for THIS build.
+ * Env-driven fallback map, used only until the real backend flags load (or for
+ * non-React call sites that can't use the `useFeatureFlags` hook).
  *
  * Security: these were previously hardcoded `true` with no way to disable a
- * surface per environment. They are now env-driven via NEXT_PUBLIC_ENABLE_*, so
- * any feature can be turned OFF in a given deployment by setting its var to
- * "false" — a real per-env kill switch.
+ * surface per environment. They are env-driven via NEXT_PUBLIC_ENABLE_*, so any
+ * feature can still be turned OFF at build time by setting its var to "false".
  *
  * Default-ON / opt-out (`enabledUnlessDisabled`) is deliberate: it preserves the
- * features that are live in production today (so this hardening change can't
- * silently dark-launch the site) while still making every surface gateable. To
- * move to strict opt-in (default-OFF unless explicitly "true"), swap the resolver
- * for `computeFeatures({ ... })` once the deploy env sets the vars explicitly.
+ * features that are live in production today as the pre-fetch fallback (so this
+ * can't silently dark-launch the site before the flags request resolves) while
+ * still making every surface gateable. To move to strict opt-in (default-OFF
+ * unless explicitly "true"), swap the resolver for `computeFeatures({ ... })`
+ * once the deploy env sets the vars explicitly.
  */
 export const FEATURES: Record<FeatureName, boolean> = {
   marketplace: enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_MARKETPLACE),
@@ -73,9 +94,46 @@ export const FEATURES: Record<FeatureName, boolean> = {
   contracts:   enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_CONTRACTS),
 };
 
-/** True if a named feature is enabled in this build. */
+/** True if a named feature is enabled per the env-driven fallback map. Prefer
+ *  `useFeatureFlags()` inside React components — this reads build-time env
+ *  only, not the backend's live flag state. */
 export function isFeatureEnabled(name: FeatureName): boolean {
   return FEATURES[name];
+}
+
+/**
+ * Pure merge: overlays the backend's resolved flag map (from `GET
+ * /api/game/flags`, keyed by `BACKEND_FLAG_KEY`) onto the `fallback` map. A
+ * missing/undefined `backend` (request loading, errored, or offline) returns
+ * `fallback` unchanged, so a flaky network can't dark-launch every gated
+ * surface. Split out from `useFeatureFlags` so the merge logic is unit-testable
+ * without a QueryClient/React tree.
+ */
+export function mergeBackendFlags(
+  backend: Record<string, boolean> | undefined,
+  fallback: Record<FeatureName, boolean> = FEATURES,
+): Record<FeatureName, boolean> {
+  if (!backend) return fallback;
+
+  const resolved = { ...fallback };
+  for (const name of Object.keys(BACKEND_FLAG_KEY) as FeatureName[]) {
+    const backendKey = BACKEND_FLAG_KEY[name];
+    if (backendKey in backend) resolved[name] = backend[backendKey];
+  }
+  return resolved;
+}
+
+/**
+ * The live, backend-authoritative feature-flag map for use inside React
+ * components. Reads `GET /api/game/flags` (via `useBackendFlags`) and merges it
+ * over the env-driven `FEATURES` fallback with `mergeBackendFlags`.
+ *
+ * This is what actually connects a backend kill switch (`FEATURE_MARKETPLACE=false`,
+ * or flipping `feature_flags.marketplace` in `balance.yaml`) to the web UI.
+ */
+export function useFeatureFlags(): Record<FeatureName, boolean> {
+  const { data } = useBackendFlags();
+  return mergeBackendFlags(data?.flags);
 }
 
 /**

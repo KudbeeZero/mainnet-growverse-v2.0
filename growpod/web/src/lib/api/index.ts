@@ -21,6 +21,7 @@ import { waitlist } from "./waitlist";
 import { nft } from "./nft";
 import * as nftMarketplace from "./nft-marketplace";
 import { stakes } from "./nft-staking";
+import { flags } from "./flags";
 
 export const api = {
   players,
@@ -46,6 +47,7 @@ export const api = {
   nft,
   nftMarket: nftMarketplace.market,
   stakes,
+  flags,
 };
 
 export { ApiError } from "./client";

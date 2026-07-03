@@ -10,13 +10,14 @@ import { RequireAuth } from "@/components/layout/RequireAuth";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
-import { FEATURES } from "@/lib/features";
+import { useFeatureFlags } from "@/lib/features";
 import { AdmissionsIntake } from "@/components/university/AdmissionsIntake";
 import { RoadmapPanel } from "@/components/university/RoadmapPanel";
 import { MasteryPanel } from "@/components/university/MasteryPanel";
 import { RiskNudge } from "@/components/university/RiskNudge";
 
 function LearnerInner() {
+  const features = useFeatureFlags();
   const backLink = (
     <Link href="/university">
       <Button variant="secondary">← Catalog</Button>
@@ -32,7 +33,7 @@ function LearnerInner() {
         action={backLink}
       />
 
-      {!FEATURES.university ? (
+      {!features.university ? (
         <EmptyState
           icon="🎓"
           title="Not available yet"

@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session";
-import { NAV_LINKS, isActiveLink, navOnboardingId } from "./navLinks";
+import { useNavLinks, isActiveLink, navOnboardingId } from "./navLinks";
 import { PlayerBadge } from "./PlayerBadge";
 
 export function NavBar() {
   const pathname = usePathname();
   const { isAuthed } = useSession();
+  const { navLinks } = useNavLinks();
 
   return (
     <header className="sticky top-0 z-30 border-b border-ink-700 bg-ink-900/95 backdrop-blur">
@@ -24,7 +25,7 @@ export function NavBar() {
           {/* Desktop nav: the bottom tab bar (MobileTabBar) takes over below lg. */}
           {isAuthed && (
             <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
-              {NAV_LINKS.map((l) => {
+              {navLinks.map((l) => {
                 const active = isActiveLink(pathname, l.href);
                 return (
                   <Link

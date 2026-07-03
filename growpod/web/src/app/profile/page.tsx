@@ -22,7 +22,7 @@ import {
 } from "@/hooks/queries";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
-import { FEATURES } from "@/lib/features";
+import { useFeatureFlags } from "@/lib/features";
 import { queryKeys } from "@/lib/queryKeys";
 import { grow, dateTime, titleCase } from "@/lib/format";
 import type { Badge as BadgeType } from "@/lib/types";
@@ -244,6 +244,7 @@ function ProfileInner() {
   const wallet = useWallet();
   const level = useLevel();
   const ledger = useLedger();
+  const features = useFeatureFlags();
 
   const money = [
     queryKeys.wallet(playerId ?? ""),
@@ -334,7 +335,7 @@ function ProfileInner() {
               ))}
             </div>
           )}
-          {FEATURES.chain && (
+          {features.chain && (
             <div className="mt-4">
               <div className="instrument-label mb-1">ALGORAND WALLET</div>
               <ConnectWalletButton

@@ -7,6 +7,20 @@ import { queryKeys } from "@/lib/queryKeys";
 import { useSession } from "@/lib/session";
 import type { LeaderboardKind } from "@/lib/types";
 
+/** The backend's real, resolved feature-flag map (`GET /api/game/flags`) —
+ *  balance.yaml defaults with any FEATURE_<NAME> env override applied. Public
+ *  (no auth), so it's always enabled regardless of session state. Flags rarely
+ *  change mid-session, so a generous staleTime avoids refetching on every
+ *  focus/mount while still reflecting a redeploy on next page load. */
+export function useBackendFlags() {
+  return useQuery({
+    queryKey: queryKeys.flags(),
+    queryFn: () => api.flags.get(),
+    staleTime: 60_000,
+    retry: 1,
+  });
+}
+
 export function usePlayer() {
   const { playerId, isAuthed } = useSession();
   return useQuery({

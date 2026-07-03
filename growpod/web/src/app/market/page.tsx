@@ -17,12 +17,13 @@ import { useApiMutation } from "@/hooks/useApiMutation";
 import { useMarket, useContracts } from "@/hooks/queries";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
-import { FEATURES } from "@/lib/features";
+import { useFeatureFlags } from "@/lib/features";
 import { queryKeys } from "@/lib/queryKeys";
 import { grow, dateTime, titleCase } from "@/lib/format";
 
 function MarketInner() {
   const market = useMarket();
+  const features = useFeatureFlags();
   const [tab, setTab] = useState("fixed");
   const listings = market.data ?? [];
   const fixed = listings.filter((l) => !l.is_auction);
@@ -42,7 +43,7 @@ function MarketInner() {
         tabs={[
           { key: "fixed", label: "Fixed price", badge: fixed.length },
           { key: "auctions", label: "Auctions", badge: auctions.length },
-          ...(FEATURES.contracts ? [{ key: "contracts", label: "Contracts" }] : []),
+          ...(features.contracts ? [{ key: "contracts", label: "Contracts" }] : []),
         ]}
       />
 

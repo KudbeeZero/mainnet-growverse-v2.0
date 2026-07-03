@@ -50,4 +50,5 @@ export const queryKeys = {
   priceHistory: (assetId: number) => ["nft", "price-history", assetId] as const,
   stakingLocks: (playerId: string) => ["nft", "staking", "locks", playerId] as const,
   stakeLock: (lockId: string) => ["nft", "staking", "lock", lockId] as const,
+  flags: () => ["flags"] as const,
 };

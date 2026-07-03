@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Single source of truth for the app's primary navigation.
  *
@@ -14,7 +16,7 @@
  * Market/Cup/University) disappears from *both* the desktop nav and the mobile
  * tab bar in lock-step — never just one surface.
  */
-import { FEATURES, type FeatureName } from "@/lib/features";
+import { FEATURES, useFeatureFlags, type FeatureName } from "@/lib/features";
 
 export type NavLink = {
   href: string;
@@ -40,10 +42,30 @@ const ALL_NAV_LINKS: NavLink[] = [
   { href: "/admin/economy", label: "Economy", icon: "📈" },
 ];
 
-/** Nav links visible in this build — entries whose feature flag is OFF are dropped. */
+/** Nav links visible in this build per the env-driven fallback map — entries
+ *  whose feature flag is OFF are dropped. Used as the SSR-safe default and by
+ *  the structural unit tests; components should prefer `useNavLinks()` below,
+ *  which reflects the backend's live flag state. */
 export const NAV_LINKS: NavLink[] = ALL_NAV_LINKS.filter(
   (l) => !l.feature || FEATURES[l.feature],
 );
+
+/** Live nav links, filtered against the backend's real feature-flag state
+ *  (`useFeatureFlags()`) rather than the build-time env fallback. This is what
+ *  makes flipping a flag off on the backend actually hide the nav entry. */
+export function useNavLinks(): {
+  navLinks: NavLink[];
+  primaryLinks: NavLink[];
+  secondaryLinks: NavLink[];
+} {
+  const flags = useFeatureFlags();
+  const navLinks = ALL_NAV_LINKS.filter((l) => !l.feature || flags[l.feature]);
+  return {
+    navLinks,
+    primaryLinks: navLinks.filter((l) => l.primary),
+    secondaryLinks: navLinks.filter((l) => !l.primary),
+  };
+}
 
 /** True when `pathname` is on `href` or one of its sub-routes. */
 export function isActiveLink(pathname: string, href: string): boolean {

@@ -1,5 +1,10 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { computeFeatures, enabledUnlessDisabled, isDevBypassEnabled } from "@/lib/features";
+import {
+  computeFeatures,
+  enabledUnlessDisabled,
+  isDevBypassEnabled,
+  mergeBackendFlags,
+} from "@/lib/features";
 
 describe("computeFeatures", () => {
   it("defaults every non-MVP feature OFF when env is empty", () => {
@@ -45,6 +50,53 @@ describe("enabledUnlessDisabled (live FEATURES resolver)", () => {
     expect(enabledUnlessDisabled("FALSE")).toBe(true); // not exact → stays ON
     expect(enabledUnlessDisabled("0")).toBe(true);
     expect(enabledUnlessDisabled("true")).toBe(true);
+  });
+});
+
+describe("mergeBackendFlags (reconnects the web gate to the real backend flags)", () => {
+  const fallback = {
+    marketplace: true,
+    chain: true,
+    cup: true,
+    university: true,
+    contracts: true,
+  };
+
+  it("returns the fallback unchanged when the backend map is missing (loading/offline)", () => {
+    expect(mergeBackendFlags(undefined, fallback)).toEqual(fallback);
+  });
+
+  it("overlays a backend flag that is OFF, translating the client name to the backend key", () => {
+    // "cup" (client) maps to "cup_competitions" (backend/balance.yaml key).
+    const merged = mergeBackendFlags(
+      { marketplace: true, cup_competitions: false, university: true },
+      fallback,
+    );
+    expect(merged.cup).toBe(false);
+    // Untouched flags keep the fallback value.
+    expect(merged.marketplace).toBe(true);
+    expect(merged.chain).toBe(true);
+    expect(merged.contracts).toBe(true);
+  });
+
+  it("a backend map with every relevant key OFF disables every mapped flag", () => {
+    const merged = mergeBackendFlags(
+      {
+        marketplace: false,
+        chain: false,
+        cup_competitions: false,
+        university: false,
+        contracts: false,
+      },
+      fallback,
+    );
+    expect(merged).toEqual({
+      marketplace: false,
+      chain: false,
+      cup: false,
+      university: false,
+      contracts: false,
+    });
   });
 });
 
