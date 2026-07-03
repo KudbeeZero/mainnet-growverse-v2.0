@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos — in the parallel lane, supersedes round 5's color read; round 4 superseded, see below).
+once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 7 — layer-compositing/paint-order pass on `drawFlowerSite`, in the parallel lane alongside a sibling structure-first attempt on `design/cola-construction-structure`, supersedes round 6 as the newest color read while inheriting its purple-dominance fix; round 4 superseded, see below).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -212,6 +212,64 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   architecture ones, and are out of this round's scope. Round 5's architecture (single-leader
   `colaTops` count=1, taper) is untouched and confirmed intact by the same cross-strain spot-check
   above.
+- 🎮 ✅ **Plant mockup round 7 — top-cola construction v2, layer-compositing-first (2026-07-03,
+  branch `design/cola-construction-layers`, draft PR, NOT merged)** — branched from round 6
+  (`9f98c9e`, inheriting round 5's single-leader cone architecture + round 6's purple-dominance
+  fix unchanged) to test the hypothesis that the cola's remaining "floating blob / noisy dots"
+  read comes from paint order and missing spatial gating, not color or silhouette math, against
+  six new construction-guide reference images (top-cola 8-layer breakdown, pistil-hair breakdown,
+  apex breakdown, bract/calyx-scale breakdown, full-plant hero, close-up photo). A sibling agent
+  ran the same brief structure-first on `design/cola-construction-structure` in parallel — the two
+  are independent attempts, not sequential. Confirmed real paint-order bugs in `drawFlowerSite`
+  and fixed all four: (1) sugar leaves were drawn BEFORE the bract pods each cluster, so bracts
+  painted over them instead of leaves reading as poking through bract gaps — moved to draw AFTER
+  the pod loop; (2) pistil hairs rooted at an independent point computed from the cluster center,
+  never touching any actual bract — now rooted at the midpoint (seam) between two angularly-
+  adjacent already-drawn bracts, with a cluster-center fallback only when fewer than two bracts
+  have revealed yet; (3) trichome frost sampled a random angle/radius around the cluster center
+  with no check it landed on real geometry (exactly the bug reference #4 calls out) — now anchored
+  to an actual drawn bract's own tip point, ring-ranked so outer/tip-ward bracts are preferred,
+  thinning toward the base; (4) each pod was a flat single-hue fill, purple-vs-green chosen by a
+  binary per-pod coin flip (round 5/6's mechanism) — replaced with a continuous per-bract
+  base(muted-green)→tip(saturated-purple) two-tone gradient painted inside `drawPod` itself (a
+  cheap two-fill approximation of a linear gradient, since true canvas gradients are invisible at
+  the 2-6px bract scale and cost a new gradient object per bract per frame), driven by a
+  continuous strength (cola-position `tipW` × outer-ring bias × per-pod jitter) instead of the old
+  binary flip — the round 6 aggregate purple-dominant-near-the-tip read is preserved, now built
+  from real per-bract gradients instead of a coin-flip. Secondary fixes found necessary once the
+  above were in place and screenshot-checked: small pods had NO edge stroke at all (only the rare
+  `w>4.2` macro-scale branch did), so adjacent same-hue bracts had no visible boundary and fused
+  into the fused-mass backstop underneath — added a stroke to every pod; `podPath` widened/
+  softened over rounds 2-6 until it read round rather than pointed — narrowed the shoulders and
+  pulled the widest point toward the tip; the fused-mass backstop envelope (`cw` multiplier 0.62,
+  from round 6) was measurably wider than the bract layer's own radial placement (`cw*0.55`),
+  leaving a visible halo of flat backstop color around every cluster — backstop tightened to
+  `cw*0.44` and bract radial reach widened to `cw*0.6` to close most of the gap (not all — see
+  below) without touching the taper/silhouette math round 5 fixed. Added a faint per-bract
+  ridge/vein stroke (reference #4 item 4), previously absent. Verified with Playwright against a
+  local dev server (port 3011, sandboxed Chromium, mock `/api/game/**`) at 390×844 mobile,
+  1440×900 desktop, and a `deviceScaleFactor:3` cropped close-up of just the top cola (the
+  chamber capsule itself is CSS-capped at 480px wide regardless of viewport, so higher DPI was
+  needed for a real close-up read, not a bigger viewport) — 4+ look/compare/adjust rounds against
+  all six reference images. Strain-identity spot-check: G13, White Rhino, Blue Dream all still
+  render distinct green/teal, no purple leakage (only strains with an authored `accentHue` get
+  `tipHue`/`tipStrength` > 0; `strainVisuals.ts` untouched). Gates: `tsc --noEmit` clean, `next
+  lint` 0 errors, vitest 463/463 (no pinned values needed updating), `npm run build` clean, the
+  real `care-loop-shot.spec.ts` 4/4 green against a local dev server. **Honest self-score: 6/10
+  against the reference images** — the four named construction bugs (leaf-before-bract order,
+  unanchored pistils, ungated frost scatter, binary per-pod color flip) are genuinely fixed at the
+  mechanism level, which is what this round was scoped to fix, and the per-bract gradient + edge
+  strokes are visible and correct in the close-up crop. What's NOT fully reached: individual
+  bracts still read closer to small rounded dots than the references' crisp pointed diamonds at
+  chamber (whole-plant) render scale — a few px per bract is a hard ceiling for that at this
+  view's pixel budget, distinct from the macro/View-Bud detail view which is out of this round's
+  scope; the backstop-vs-bract gap is much smaller than round 6 but not zero — a thin halo of flat
+  backstop color is still visible around each cluster in the crop; pistil filaments are still a
+  constant line width (not base-thick/tip-thin tapered, reference #2 item 3), unaddressed this
+  round; sugar-leaf placement was reordered to paint after bracts but not re-targeted at literal
+  bract seams (only pistils got true seam-anchoring). Round 5's architecture (single-leader
+  `colaTops` count=1, taper) and round 6's purple-dominance fix are both untouched and confirmed
+  intact by the cross-strain spot-check above.
 - 🎮 ✅ **Game-hub restructure — ACTIVE LANE DEFINITION (2026-07-03, owner directive, verbatim
   intent)** — *"There are too many windows. Everything should be accessible from the main game
   page. Don't repeat all of the watering everywhere — have that in ONE spot. Anybody should be

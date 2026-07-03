@@ -180,12 +180,16 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     ctx!.closePath();
   }
 
-  // ---- bract pod (small teardrop) ----
+  // ---- bract pod (elongated, pointed teardrop/diamond — reference #4 item 1
+  // "pointed scales, not round berries"). v2: narrower shoulders (0.92→0.72)
+  // and the widest point pulled up toward the tip (0.3→0.16 down the bezier)
+  // so the pod reads as a pointed diamond at a glance instead of a round
+  // blob once it's only a few px on screen. ----
   function podPath(w: number, h: number) {
     ctx!.beginPath();
     ctx!.moveTo(0, h * 0.5);
-    ctx!.bezierCurveTo(-w * 0.92, h * 0.3, -w * 0.74, -h * 0.4, 0, -h * 0.6);
-    ctx!.bezierCurveTo(w * 0.74, -h * 0.4, w * 0.92, h * 0.3, 0, h * 0.5);
+    ctx!.bezierCurveTo(-w * 0.72, h * 0.16, -w * 0.62, -h * 0.42, 0, -h * 0.66);
+    ctx!.bezierCurveTo(w * 0.62, -h * 0.42, w * 0.72, h * 0.16, 0, h * 0.5);
     ctx!.closePath();
   }
   // Calyx body by sprite type: 0 teardrop · 1 oval · 2 pointed bract · 3 foxtail.
@@ -206,7 +210,18 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     }
     podPath(w, h); // teardrop (0) and foxtail (3, already elongated via h)
   }
-  function drawPod(x: number, y: number, rot: number, w: number, h: number, hue: number, sat: number, lit: number, capA: number) {
+  // v2 (top-cola construction, paint-order pass): drawPod now paints a single
+  // bract's FULL layer stack in the order reference #4 specifies for one
+  // scale — base fill → per-bract tip gradient → ridge/vein → surface
+  // highlight — instead of a flat hue. `tipHue`/`tipStrength` let the caller
+  // hand each bract its own base(muted/green)→tip(saturated purple) blend
+  // (reference #4 item 7 "Color Gradient") as an explicit paint call on THIS
+  // bract's own shape, rather than a cola-wide wash sitting underneath it.
+  function drawPod(
+    x: number, y: number, rot: number, w: number, h: number,
+    hue: number, sat: number, lit: number, capA: number,
+    tipHue: number | null = null, tipStrength = 0,
+  ) {
     ctx!.save();
     ctx!.translate(x, y);
     ctx!.rotate(rot);
@@ -232,7 +247,47 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.fillStyle = `hsl(${hue}, ${sat}%, ${lit}%)`;
       podPath(w, h);
       ctx!.fill();
+      // v2: EVERY bract gets a dark edge stroke, not just the big macro ones.
+      // Without it, adjacent same-family-hue bracts had no visible boundary
+      // and fused into one smooth patch — indistinguishable from the fused-
+      // mass backstop underneath. This one stroke is what makes the shingled
+      // overlap between neighbouring bracts actually read as separate scales.
+      ctx!.strokeStyle = "rgba(0,0,0,0.32)";
+      ctx!.lineWidth = Math.max(0.35, w * 0.06);
+      ctx!.stroke();
     }
+    // Per-bract tip gradient: a second, smaller fill of the SAME bract shape
+    // covering its upper (tip-ward) portion, painted in the accent hue. This
+    // is a cheap two-tone approximation of a true linear gradient — at the
+    // 2-6px scale these bracts render at, a real canvas gradient reads as a
+    // flat tint anyway and costs a new gradient object per bract per frame.
+    // `tipStrength` (0..1) sets both how far down the bract the tip color
+    // reaches and its opacity, so weak-strength bracts stay a muted green
+    // with just a purple kiss at the very point, and strong-strength bracts
+    // (near the cola apex) go saturated purple-magenta most of the way down —
+    // matching reference #4's per-bract base→tip gradient instruction.
+    // v2: reach capped at 0.74 (was 0.92) — even the strongest bracts keep a
+    // visible green base band, so the base→tip transition stays a GRADIENT
+    // readable within the bract instead of the whole bract going flat purple
+    // and disappearing into the (also-purple) fused-mass backstop behind it.
+    if (tipHue != null && tipStrength > 0.04) {
+      const reach = lerp(0.26, 0.74, tipStrength);
+      ctx!.save();
+      ctx!.translate(0, -h * (0.1 + reach * 0.26));
+      ctx!.scale(0.58 + reach * 0.3, 0.46 + reach * 0.38);
+      ctx!.fillStyle = `hsla(${tipHue}, ${Math.min(80, sat + 16)}%, ${Math.min(56, lit + 8)}%, ${Math.min(1, 0.55 + tipStrength * 0.45)})`;
+      podPath(w, h);
+      ctx!.fill();
+      ctx!.restore();
+    }
+    // Faint central ridge/vein tip-to-base (reference #4 item 4) — reads
+    // through both the base and tip-gradient fills as a subtle spine.
+    ctx!.strokeStyle = `hsla(${hue}, ${Math.max(0, sat - 12)}%, ${Math.max(6, lit - 20)}%, 0.32)`;
+    ctx!.lineWidth = Math.max(0.4, w * 0.055);
+    ctx!.beginPath();
+    ctx!.moveTo(0, h * 0.42);
+    ctx!.lineTo(0, -h * 0.55);
+    ctx!.stroke();
     // Inner cap — the lighter, younger calyx tip peeking out (kept subtle/matte).
     ctx!.translate(0, -h * 0.14);
     ctx!.scale(0.55, 0.48);
@@ -431,7 +486,18 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // itself (not branch spacing — that's a bigger whole-plant layout
       // change, out of scope for this round) plumps each cola without
       // touching the taper/single-leader architecture from round 5.
-      const raw = mass.map((m) => Math.max(m.podW * 1.4, m.cw * 0.62) * (0.66 + 0.34 * m.d));
+      // v2 (top-cola construction, paint-order pass): pulled BACK IN
+      // (0.62→0.5, 1.4→1.15) — this backstop is a shape/colour anchor for the
+      // silhouette while the bract layer above it reveals, not the surface
+      // itself (reference #4: "silhouette should come from the bracts' own
+      // shingled overlap, not a background fill shape"). At 0.62 it was
+      // consistently wider than the bract layer's own radial reach (see
+      // `p.rad * cw * 0.55` below, matched here by tightening this envelope
+      // instead of loosening that reach further — a wider bract spread would
+      // blow out the taper/silhouette this round was told to leave alone), so
+      // a visible ring of flat backstop colour showed around every cluster
+      // as a smooth halo the bracts never covered.
+      const raw = mass.map((m) => Math.max(m.podW * 1.1, m.cw * 0.44) * (0.66 + 0.34 * m.d));
       const hw = raw.map((r, i) => (raw[Math.max(0, i - 1)] + 2 * r + raw[Math.min(n - 1, i + 1)]) / 4);
       // Clean spear taper: width may only shrink toward the tip (a wide bulge
       // above a waist is what made the old outline read as stacked lobes).
@@ -501,6 +567,17 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.fill();
     }
 
+    // v2 (top-cola construction, paint-order-first pass): the loop below now
+    // enforces the back-to-front sequence from reference #3 WITHIN each
+    // cluster — bracts (bract base → mid ring) → sugar leaves (into the gaps
+    // the bracts just left) → pistils (rooted at a bract SEAM) → trichome
+    // frost (landed on an actual bract's own tip point). Previously sugar
+    // leaves painted BEFORE the bracts (so bracts covered them instead of the
+    // leaves reading as poking through the bract gaps), and pistils/frost
+    // were positioned from the cluster center independent of where any bract
+    // actually got drawn — the exact "floating strands" / "random scatter"
+    // bugs references #2 and #4 call out. Cluster draw order itself
+    // (site.clusters index 0→n, i.e. base→tip) is unchanged from round 5/6.
     for (let i = 0; i < site.clusters.length; i++) {
       const cl = site.clusters[i];
       const gi = geo[i];
@@ -516,6 +593,65 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const baseLit = 35 - (1 - cl.yf) * 5 + bc.anthocyanin * 3;
       const detailed = podW > 1.8;
 
+      // ---- Layer: bract base → mid bract ring (reference #3 steps 3-4) ----
+      // Pods are already emitted ring-ascending (buildFlowerSite sorts by
+      // `ring`, center-out), so drawing them in array order paints the inner
+      // (base) ring first and each successive outer ring on top of it — the
+      // outer/bigger bracts visually cover the inner bracts' base, which is
+      // the shingle relationship reference #4 calls for at cluster scale.
+      const reveal = clamp((d - 0.05) / 0.95, 0, 1);
+      let drawn = 0;
+      // Anchors for every bract actually painted this frame, so the pistil
+      // and frost layers below can root themselves to REAL geometry instead
+      // of an independent random point.
+      const drawnPods: Array<{ x: number; y: number; a: number; ring: number; tipX: number; tipY: number }> = [];
+      for (const p of cl.pods) {
+        if (p.k > reveal) continue;
+        const g = 0.5 + 0.5 * d;
+        // v2: radial reach 0.55→0.6 (x) / 0.35→0.38 (y) — bracts now spread a
+        // little further out to close the remaining gap to the (now tighter)
+        // backstop envelope above, so the bract layer itself carries the
+        // visible edge of the silhouette instead of leaving a bare margin.
+        const px = cx + Math.cos(p.a) * p.rad * cw * 0.6;
+        const py = cy + Math.sin(p.a) * p.rad * cw * 0.38 + p.ring * podH * 0.18;
+        // Round 2-6 history: this used to be a per-pod BINARY accent flip
+        // (whole pod green OR whole pod purple), tuned across rounds 2/3/5/6
+        // to get the right AGGREGATE purple-vs-green balance across the cola.
+        // v2: replaced with a CONTINUOUS per-bract strength fed into drawPod's
+        // own base(green)→tip(purple) gradient (reference #4 item 7) — each
+        // bract now carries its own gradient instead of being flatly one hue
+        // or the other, and the aggregate purple-dominant-near-the-tip read
+        // from round 6 is preserved via the same tip-weighted (tipW) curve,
+        // now joined by a ring bias (outer/tip-ward pods lean more purple
+        // than inner/base-ward pods within the SAME cluster).
+        const tipW = Math.pow(clamp((cl.yf - 0.02) / 0.98, 0, 1), 0.65);
+        const ringBoost = 0.55 + p.ring * 0.18;
+        const strengthRoll = clamp(1 - p.blushK, 0, 1);
+        const strength = accHue != null
+          ? clamp(accFrac * accGate * tipW * ringBoost * (0.5 + strengthRoll * 1.1), 0, 1)
+          : 0;
+        const baseHueP = calyxHue + p.dh + (p.blushK < P.blush ? 18 : 0);
+        const rotVal = Math.cos(p.a) * (0.32 + p.rad * 0.45);
+        const podw = podW * p.sz * g, podh = podH * p.sz * g;
+        drawPod(
+          px, py, rotVal, podw, podh,
+          baseHueP, calyxSat, baseLit + p.dl + (2 - p.ring) * 2, 0.42,
+          accHue, strength,
+        );
+        drawn++;
+        // Bract's own tip point in world space (podPath's tip sits at local
+        // y = -h*0.6, rotated by rotVal) — the valid landing spot for frost.
+        const tipH = podh * 0.6;
+        drawnPods.push({
+          x: px, y: py, a: p.a, ring: p.ring,
+          tipX: px + Math.sin(rotVal) * tipH, tipY: py - Math.cos(rotVal) * tipH,
+        });
+      }
+      if (drawn === 0) continue;
+
+      // ---- Layer: sugar leaf crown (reference #3 step 5) — painted AFTER
+      // the bracts so it reads as poking OUT of the gaps/seams between
+      // already-painted bracts, not buried underneath them. ----
       if (cl.leaf && d > 0.25 && detailed) {
         const ls = cw * (1.1 - d * 0.5);
         ctx!.save();
@@ -533,77 +669,36 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.restore();
       }
 
-      const reveal = clamp((d - 0.05) / 0.95, 0, 1);
-      let drawn = 0;
-      for (const p of cl.pods) {
-        if (p.k > reveal) continue;
-        const g = 0.5 + 0.5 * d;
-        const px = cx + Math.cos(p.a) * p.rad * cw * 0.55;
-        const py = cy + Math.sin(p.a) * p.rad * cw * 0.35 + p.ring * podH * 0.18;
-        // Some calyxes can render in an accent hue (e.g. purple accents on a
-        // green bud) — chosen deterministically per pod via its blushK roll.
-        // Round 2 (owner mockup): the accents are TIP-CONCENTRATED, not spread —
-        // a steep yf curve zeroes the share on the lower half of the cola and
-        // saturates it near the tip, so the bud reads "purple-tipped over green"
-        // instead of purple polka dots all over. Ripening (accGate) still fades
-        // the whole effect in through flower.
-        // Round 3 (owner mockup): steeper tip concentration (exp 1.4 → 2.1,
-        // gain 1.7 → 2.4) — near the tip most pods flip to the accent hue so
-        // the purple reads as a continuous cap, not dots sprinkled mid-bud.
-        // Round 5 (specialist code review, 2026-07-03): gain 2.4 → 1.4 — the
-        // fused-mass gradient cap (drawn above, unchanged) already carries the
-        // purple identity; per-pod accents on top of it at 2.4x read as violet
-        // confetti sprinkled over an already-purple tip. 1.4x keeps a handful of
-        // accent pods as texture without fighting the mass gradient for the
-        // "where's the purple" read.
-        // Round 6 (close-up + full-plant reference photos): round 5
-        // over-corrected — the references show the calyx PODS themselves
-        // (not just the mass gradient underneath) reading purple across
-        // nearly all of the cola, with green confined to a thin base band and
-        // to separate leaf blades (drawn above via cl.leaf, not these pods),
-        // not "sparse purple flecks on green". The pods sit ON TOP of the
-        // fused-mass gradient and cover most of its visible area, so
-        // pod-level accent density is what the eye actually reads as the
-        // dominant colour. Widened the tip-weighting curve a long way from
-        // round 5 (exponent 2.1 → 0.65, floor 0.25 → 0.02) so accent share
-        // ramps up starting almost immediately off the cola base instead of
-        // only the top quarter, and raised the gain (1.4 → 7.0) so it
-        // saturates to "almost always accent" past the first few percent of
-        // the cola — matching the references' dense, near-total purple
-        // diamond-segment stacking.
-        const tipW = Math.pow(clamp((cl.yf - 0.02) / 0.98, 0, 1), 0.65);
-        const accent = accHue != null && p.blushK < accFrac * accGate * tipW * 7.0;
-        const baseHueP = accent ? accHue : calyxHue;
-        // Accent calyxes are already a distinct hue — don't also apply the
-        // ripeness blush shift, which would push violet toward pink.
-        const hueP = baseHueP + p.dh + (!accent && p.blushK < P.blush ? 18 : 0);
-        // Accent pods render slightly deeper/dustier (mockup purple is a dark
-        // dusty violet, not bright magenta); pods splay outward from the cola
-        // axis (rotation follows their ring position) so the surface reads as
-        // layered bract scales rather than loose bubbles. Round 6: saturation
-        // bumped a touch further (+4 → +9) so accent pods read clearly as
-        // purple against the green base at a glance, still capped well short
-        // of neon.
-        drawPod(
-          px, py, Math.cos(p.a) * (0.32 + p.rad * 0.45), podW * p.sz * g, podH * p.sz * g,
-          hueP, accent ? Math.min(62, calyxSat + 9) : calyxSat,
-          baseLit + p.dl + (2 - p.ring) * 2 - (accent ? 2 : 0), 0.42,
-        );
-        drawn++;
-      }
-      if (drawn === 0) continue;
-
+      // ---- Layer: pistil emission zone (reference #3 step 6 / reference #2
+      // in full) — every hair roots at the SEAM (midpoint) between two
+      // angularly-adjacent already-drawn bracts, never a freestanding point
+      // computed off the cluster center. Falls back to the old cluster-
+      // relative point only when fewer than two bracts have revealed yet
+      // (very early bud dev, where there's no seam to anchor to). ----
       const fiberCol = pistilFiber(P.ripe, P.brown, bc.pistilMagenta);
       const ballCol = pistilBall(P.ripe, P.brown, bc.pistilMagenta);
-      // Sparse, BOLD pistil strokes — a few clearly-visible orange accents, not a
-      // fine hairy fuzz. Thicker line + bigger tip ball than before so each one
-      // reads as an intentional accent at real phone size.
       for (const h of cl.hairs) {
         if (h.k > d) continue;
         const stretch = clamp((d - h.k * 0.5) / 0.6, 0.35, 1);
         const L = cw * 0.24 * h.len * stretch;
-        const x0 = cx + Math.cos(h.a) * cw * 0.16, y0 = cy + Math.sin(h.a) * cw * 0.12 - podH * 0.2;
-        const x1 = x0 + Math.cos(h.a) * L, y1 = y0 + Math.sin(h.a) * L;
+        let x0: number, y0: number, dirA: number;
+        if (drawnPods.length >= 2) {
+          const idx = Math.floor(h.k * drawnPods.length) % drawnPods.length;
+          const A = drawnPods[idx], B = drawnPods[(idx + 1) % drawnPods.length];
+          x0 = (A.x + B.x) / 2;
+          y0 = (A.y + B.y) / 2 - podH * 0.08; // seam sits toward the outer/tip edge
+          dirA = Math.atan2(y0 - cy, x0 - cx);
+        } else {
+          x0 = cx + Math.cos(h.a) * cw * 0.16;
+          y0 = cy + Math.sin(h.a) * cw * 0.12 - podH * 0.2;
+          dirA = h.a;
+        }
+        // Keep the authored upward-fanning spread/randomness (h.a, centered
+        // on straight-up) but nudge it toward the seam's own outward
+        // direction so hairs still fan away from the bract mass they emerge
+        // from (reference #2 item 5 "Directional Spread").
+        const a2 = h.a * 0.7 + dirA * 0.3;
+        const x1 = x0 + Math.cos(a2) * L, y1 = y0 + Math.sin(a2) * L;
         ctx!.strokeStyle = fiberCol;
         ctx!.lineWidth = Math.max(0.9, cw * 0.017);
         ctx!.lineCap = "round";
@@ -617,23 +712,27 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.arc(x1, y1, h.ball * Math.max(0.8, cw * 0.017), 0, TAU);
         ctx!.fill();
       }
-      // Trichome frost (Engine 7, simplified for chamber scale) — a few CLUSTERED
-      // soft mint/blue-white glow blobs near the cluster's outer face, instead of
-      // dozens of individual stalk+gland glyphs. The fine per-gland detail (still
-      // driven by the same maturity model) lives in View Bud / Lab; at whole-plant
-      // size it only ever read as speckled noise ("moss/caterpillar" — owner).
-      // Round 5 (specialist code review, 2026-07-03): gate frost to the top
-      // third of each cola (cl.yf > 0.66) — the specialist noted frost blobs
-      // fired on every cluster top to bottom, but the mockup's frost is subtle
-      // and concentrated near the tips, not spread the full length of the bud.
-      if (P.trich > 0 && cl.yf > 0.66) {
+      // ---- Layer: trichome frost (reference #3 step 7 / reference #4 item
+      // 6) — painted LAST, and gated to land ON an actual already-drawn
+      // bract's own tip point instead of a random scatter across the
+      // cluster's bounding radius. Ranking candidate bracts by ring
+      // (descending) and biasing the pick toward the front of that ranking
+      // concentrates frost on the outer/tip-ward bracts and thins it toward
+      // the base, matching reference #4's "heaviest on tips, thinning toward
+      // base" instruction — at both the cola level (cl.yf > 0.66 gate, kept
+      // from round 5) and now the individual-bract level too. ----
+      if (P.trich > 0 && cl.yf > 0.66 && drawnPods.length > 0) {
         const purple = clamp(live.current.budColor?.anthocyanin ?? 0, 0, 1);
         const mix = maturityMix(clamp(P.ripe * 0.7 + P.brown * 0.6, 0, 1), purple * 0.4);
         const dens = P.trich * clamp(trichScale, 0, 1);
+        const ranked = [...drawnPods].sort((a, b) => b.ring - a.ring);
         for (const tr of cl.tris) {
           if (tr.k > dens) continue;
-          const rad = cw * (0.1 + 0.5 * tr.k);
-          const bx = cx + Math.cos(tr.a) * rad, by = cy + Math.sin(tr.a) * rad - podH * 0.14;
+          const idx = Math.floor((tr.a / TAU) * ranked.length * 0.7) % ranked.length;
+          const anchor = ranked[idx];
+          const reach = 0.85 + tr.len * 0.3; // land at/just past the bract's own tip
+          const bx = anchor.x + (anchor.tipX - anchor.x) * reach;
+          const by = anchor.y + (anchor.tipY - anchor.y) * reach;
           const m = maturityFor(tr.mat, mix);
           const sh = motionOK
             ? shimmer(tt, tr.a * 7.13, 0.6 + tr.len * 1.2, SHIMMER_MAX_AMP * 0.5)
