@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; mint metadata server-truth fix).
+once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; pistil hairs round 8 — natural curl (bend+tip-hook), short/med/long length tiers, tip-weighted density, per-hair pale-cream→orange maturity mix, against the owner's 9-point Pistil Hair Breakdown; mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -306,6 +306,37 @@ once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boos
   references' heavy tip frosting — a density/alpha tune, not touched here to stay inside this
   round's scope. A sibling agent is attempting the same brief with a layer-order-first approach on
   branch `design/cola-construction-layers` — see that PR for a second read on the same references.
+- 🎮 ✅ **Pistil hairs round 8 — "Pistil Hair Breakdown" macro re-read (2026-07-03, owner's
+  dedicated 9-point guide + "10/10" hero render)** — builds ON round 7's grouped seams (rule 1/2)
+  and tapered filaments (rule 3); scoped strictly to the pistil subsystem in `chamberCore.ts`
+  (`pistilFiber`/`pistilBall` colour helpers, the `hairs` build block in `buildFlowerSite`, the
+  hair draw block in `drawFlowerSite`, one new `Cluster.hairs` field pair `curl`/`mat`). Round 7
+  read as too few / too straight / too uniform vs. the macro's abundant curling orange filaments.
+  Four pushes: (4) **Natural curve** — the filament centreline was a single quadratic arc (one
+  bend); now sampled as a curved polyline carrying a mid-length sin arch (`bend`) PLUS a `t^1.9`
+  tip hook (`curl`), and the tapered ribbon is built by offsetting each sample along its LOCAL
+  normal so the curl reads cleanly and width still tapers root→fine tip (rule 3 preserved).
+  (5/6) **Spread + length** — wider per-hair angle jitter; explicit short/medium/long length
+  tiers instead of one band. (7) **Density** — more seams + hairs with steeper tip weighting
+  (`tierDensity` 0.55+0.85·yf^0.8 → 0.5+1.35·yf^0.85; `nH` ×0.6 → ×0.72, base 2/3 → 3/4) so the
+  active upper sites carry a proper tuft while the base stays sparse — grouped from seams, so it
+  reads as fans, not the "orange confetti" the owner flagged in earlier rounds. (8) **Colour
+  stage** — was one flat per-cluster ripeness; now each hair carries a tip-weighted `mat`
+  maturity roll and resolves its own colour, so a ripe cola shows a MIX of pale-cream young
+  strands and deeper orange ripe ones; ripe endpoint warmed toward orange (was muddier amber);
+  `pistilMagenta` still rides per-strain (respects `strainVisuals.ts` — untouched). Verified with
+  own playwright screenshots (temp dev script, deleted before commit) cropped 3× into top colas,
+  three maturity rounds: overripe day-117 (rust-brown, correct), peak flowering (coppery-orange
+  tuft), young flowering (pale cream — rule 8 early stage), on G13 (green bud) + Purple Diddy
+  Punch (orange pistils pop on purple, matching PDP's authored intent). Gates: `tsc --noEmit`
+  clean, `next lint` 0 new errors, vitest **472/472** (no pinned values changed), `npm run build`
+  clean, `care-loop-shot.spec.ts` 4/4 green (unmodified). **Honest self-score: 8/10** — rules
+  1-9 all addressed and visually confirmed (curl, taper, grouping, length variation, tip-weighted
+  density, pale→orange mix); remaining shortfalls: (a) filaments stay mostly WITHIN the bud
+  silhouette (rule 9 "over the surface" is met, but the macro's outermost sweeping hairs that
+  project past the outline as a soft halo are not reproduced — a deliberate call to avoid a
+  fuzzy/noisy whole-plant read at chamber scale); (b) on green buds the orange is a touch muted vs.
+  the hero's saturated orange (contrast-limited against green; brighter risks neon confetti).
 - 🎮 ✅ **Game-hub restructure — ACTIVE LANE DEFINITION (2026-07-03, owner directive, verbatim
   intent)** — *"There are too many windows. Everything should be accessible from the main game
   page. Don't repeat all of the watering everywhere — have that in ONE spot. Anybody should be
