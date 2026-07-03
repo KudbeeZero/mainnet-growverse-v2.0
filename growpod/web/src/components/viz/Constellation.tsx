@@ -80,6 +80,73 @@ function safeHex(color: string | undefined, fallback: string): string {
   return color && HEX6.test(color) ? color : fallback;
 }
 
+// ---- glow sprite cache -------------------------------------------------
+// Each particle used to rebuild a `createRadialGradient` EVERY FRAME (up to
+// ~340 of them for the leaf-mode landing backdrop) — a `drawImage` blit of a
+// pre-rendered sprite is a GPU texture copy instead, the same technique that
+// fixed the chamber plant's per-frame gradient cost. A particle's own
+// color/radius/lit state is static across its lifetime (only screen position
+// drifts frame to frame), so one sprite per (color, radius bucket, lit,
+// dpr) covers every particle of that kind for the whole animation.
+type AnyCanvas = OffscreenCanvas | HTMLCanvasElement;
+const glowSpriteCache = new Map<string, { cv: AnyCanvas; half: number } | null>();
+
+function makeCanvas(px: number): { cv: AnyCanvas; cx: CanvasRenderingContext2D } | null {
+  const n = Math.max(1, Math.ceil(px));
+  try {
+    if (typeof OffscreenCanvas !== "undefined") {
+      const cv = new OffscreenCanvas(n, n);
+      const cx = cv.getContext("2d") as unknown as CanvasRenderingContext2D | null;
+      return cx ? { cv, cx } : null;
+    }
+    if (typeof document !== "undefined") {
+      const cv = document.createElement("canvas");
+      cv.width = n;
+      cv.height = n;
+      const cx = cv.getContext("2d");
+      return cx ? { cv, cx } : null;
+    }
+  } catch {
+    /* headless / unsupported */
+  }
+  return null;
+}
+
+/** Canonical glow+core sprite for one (color, radius, lit) combo, at `dpr`. Returns
+ * null in a headless env — caller falls back to the direct-draw gradient path. */
+function getGlowSprite(color: string, r: number, lit: boolean, dpr: number): { cv: AnyCanvas; half: number } | null {
+  const rq = Math.round(r * 4) / 4; // quantize so nearby random radii share a sprite
+  const dq = Math.round(dpr * 4) / 4;
+  const key = `${color}~${rq}~${lit ? 1 : 0}~${dq}`;
+  let spr = glowSpriteCache.get(key);
+  if (spr === undefined) {
+    const glowR = rq * 4;
+    const half = glowR + 1; // 1px pad so the AA edge isn't clipped
+    const buf = makeCanvas(half * 2 * dq);
+    if (!buf) {
+      spr = null;
+    } else {
+      const { cv, cx } = buf;
+      cx.scale(dq, dq);
+      const g = cx.createRadialGradient(half, half, 0, half, half, glowR);
+      g.addColorStop(0, color);
+      g.addColorStop(0.4, color + "88");
+      g.addColorStop(1, "transparent");
+      cx.fillStyle = g;
+      cx.beginPath();
+      cx.arc(half, half, glowR, 0, TAU);
+      cx.fill();
+      cx.fillStyle = lit ? "#ffffff" : color;
+      cx.beginPath();
+      cx.arc(half, half, Math.max(0.8, rq * 0.6), 0, TAU);
+      cx.fill();
+      spr = { cv, half };
+    }
+    glowSpriteCache.set(key, spr);
+  }
+  return spr;
+}
+
 /** Generate points filling a 7-leaflet cannabis leaf in normalized [-1,1], y up. */
 function leafParticles(count: number, accentRaw: string): Particle[] {
   const accent = safeHex(accentRaw, "#76c024");
@@ -295,6 +362,16 @@ export function Constellation({
     let panX = 0;
     let panY = 0;
     let hovered: Particle | null = null;
+    // Particle dot/glow size, proportional to the viewport instead of a fixed
+    // pixel radius (the bug behind "particles look huge on mobile" — the leaf
+    // silhouette itself shrinks to fit a narrow screen via `base` below, but
+    // the old code drew every glow at the same absolute pixel size regardless,
+    // so on a phone-width viewport the dots read as oversized blobs relative
+    // to the shrunk leaf). REFERENCE_BASE is chosen so sizeScale ≈ 1 at a
+    // typical desktop viewport (the look that was already right) and scales
+    // down smoothly on narrower ones. Clamped so it never vanishes or blows up.
+    const REFERENCE_BASE = 380;
+    let sizeScale = 1;
 
     function resize() {
       w = wrap!.clientWidth || 600;
@@ -304,6 +381,8 @@ export function Constellation({
       canvas!.height = h * dpr;
       canvas!.style.width = `${w}px`;
       canvas!.style.height = `${h}px`;
+      const base = Math.min(w, h) * 0.42;
+      sizeScale = Math.max(0.38, Math.min(1.15, base / REFERENCE_BASE));
       // Setting canvas.width wipes the backing store. The animated path
       // repaints on the next RAF, but reduced-motion renders exactly one
       // static frame — and ResizeObserver.observe() always fires an initial
@@ -499,23 +578,33 @@ export function Constellation({
         ctx!.stroke();
       }
 
-      // particles
+      // particles — blit a cached glow+core sprite (GPU texture copy) instead
+      // of rebuilding a gradient for every particle every frame, scaled by
+      // `sizeScale` so dots stay proportional to the viewport instead of a
+      // fixed pixel size (see `resize()`).
       for (const p of particles) {
         const { sx, sy } = toScreen(p);
         const lit = p === hovered;
         const r = p.r * (p.hub ? 1.3 : 1) * (lit ? 1.5 : 1);
-        const glow = ctx!.createRadialGradient(sx, sy, 0, sx, sy, r * 4);
-        glow.addColorStop(0, p.color);
-        glow.addColorStop(0.4, p.color + "88");
-        glow.addColorStop(1, "transparent");
-        ctx!.fillStyle = glow;
-        ctx!.beginPath();
-        ctx!.arc(sx, sy, r * 4, 0, TAU);
-        ctx!.fill();
-        ctx!.fillStyle = p.hub || lit ? "#ffffff" : p.color;
-        ctx!.beginPath();
-        ctx!.arc(sx, sy, Math.max(0.8, r * 0.6), 0, TAU);
-        ctx!.fill();
+        const sprite = getGlowSprite(p.color, r, p.hub || lit, dpr);
+        if (sprite) {
+          const destHalf = sprite.half * sizeScale;
+          ctx!.drawImage(sprite.cv, sx - destHalf, sy - destHalf, destHalf * 2, destHalf * 2);
+        } else {
+          // Headless / unsupported canvas — direct-draw fallback.
+          const glow = ctx!.createRadialGradient(sx, sy, 0, sx, sy, r * 4 * sizeScale);
+          glow.addColorStop(0, p.color);
+          glow.addColorStop(0.4, p.color + "88");
+          glow.addColorStop(1, "transparent");
+          ctx!.fillStyle = glow;
+          ctx!.beginPath();
+          ctx!.arc(sx, sy, r * 4 * sizeScale, 0, TAU);
+          ctx!.fill();
+          ctx!.fillStyle = p.hub || lit ? "#ffffff" : p.color;
+          ctx!.beginPath();
+          ctx!.arc(sx, sy, Math.max(0.8, r * 0.6 * sizeScale), 0, TAU);
+          ctx!.fill();
+        }
       }
 
       // hovered label

@@ -61,7 +61,11 @@ export function CinematicBackdrop() {
     <div className="canvas-dark pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
       {/* particles */}
       <div className="absolute inset-0 opacity-50">
-        <Constellation mode="leaf" frameless lockView height={vh} leafCount={340} showCount={false} accent="#76c024" />
+        {/* Ambient decoration only — 340 was tuned for desktop and, combined
+            with the old fixed-pixel particle size, read as slow/oversized
+            blobs on mobile (both are now fixed in Constellation itself); this
+            count is also lighter so the frame cost drops on every device. */}
+        <Constellation mode="leaf" frameless lockView height={vh} leafCount={160} showCount={false} accent="#76c024" />
       </div>
 
       {/* color tints (opacity animated on scroll; static defaults for reduced-motion) */}

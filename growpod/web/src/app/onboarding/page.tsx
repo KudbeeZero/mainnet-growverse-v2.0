@@ -58,7 +58,7 @@ export default function OnboardingPage() {
           }
           visual={
             <div className="panel h-full w-full overflow-hidden p-2">
-              <Constellation mode="leaf" frameless lockView height={340} leafCount={300} showCount={false} accent="#76c024" />
+              <Constellation mode="leaf" frameless lockView height={340} leafCount={150} showCount={false} accent="#76c024" />
             </div>
           }
         />

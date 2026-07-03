@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (Lab microscope rework phase 1 — purple-hue fix via authored strainVisuals BudColor (calyxTint), live-plant deep-link ?plantId= seeded from server trichome telemetry (maturityFromTelemetry), chamber 🔬 Inspect-trichomes chip replacing the dead View-Bud placeholder, terpene-label collision skip + µm scale bar; visual-verification archive — `docs/memory/VERIFIED_RENDERS.md` chapter list + `verification/golden/` + shared e2e fixtures (`web/e2e/fixtures/mockGame.ts`) + parameterized `capture.spec.ts` + sandbox-Chromium auto-detect in `playwright.config.ts` + `capture-shots` skill, ending the per-session throwaway-rig ritual; plant round 8c — leaf + bract TEXTURE LAYERING (owner: "the layering in the texture"): `drawFan` leaflets now carry deterministic per-leaflet size/angle/tone jitter plus a light↔shadow facet gradient (was one flat hsl() fill repeated identically at every node — the "stamped decal" read); `drawPod` now gives every calyx bract a volumetric gradient (the old `w>4.2` gate meant almost none ever cleared it, since podW's own ceiling is 4.2) plus a new base "undercut" shadow so overlapping bracts read as a physically shingled stack instead of blending into the mass gradient; plant round 8b — airier, more-separated candelabra branch layout in chamberCore.ts's `buildPlant`, matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
+once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landing-particle perf/scale fix — GameService.cleanup_plant now ARCHIVES (not deletes) a harvested/dead plant so Harvest/CupEntry rows survive, and the missing UI got wired into all 3 screens (dashboard, plant detail, chamber); Constellation.tsx particle glow now scales with viewport + blits a cached sprite instead of a per-frame gradient, fixing both the mobile "huge blob" look and the slow frame rate; Lab microscope rework phase 1 — purple-hue fix via authored strainVisuals BudColor (calyxTint), live-plant deep-link ?plantId= seeded from server trichome telemetry (maturityFromTelemetry), chamber 🔬 Inspect-trichomes chip replacing the dead View-Bud placeholder, terpene-label collision skip + µm scale bar; visual-verification archive — `docs/memory/VERIFIED_RENDERS.md` chapter list + `verification/golden/` + shared e2e fixtures (`web/e2e/fixtures/mockGame.ts`) + parameterized `capture.spec.ts` + sandbox-Chromium auto-detect in `playwright.config.ts` + `capture-shots` skill, ending the per-session throwaway-rig ritual; plant round 8c — leaf + bract TEXTURE LAYERING (owner: "the layering in the texture"): `drawFan` leaflets now carry deterministic per-leaflet size/angle/tone jitter plus a light↔shadow facet gradient (was one flat hsl() fill repeated identically at every node — the "stamped decal" read); `drawPod` now gives every calyx bract a volumetric gradient (the old `w>4.2` gate meant almost none ever cleared it, since podW's own ceiling is 4.2) plus a new base "undercut" shadow so overlapping bracts read as a physically shingled stack instead of blending into the mass gradient; plant round 8b — airier, more-separated candelabra branch layout in chamberCore.ts's `buildPlant`, matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -270,6 +270,51 @@ once they appear here. Last reconciled: **2026-07-03** (Lab microscope rework ph
   the manifest rules: golden-promotion approval stays with the owner; commit budget stays
   curated. Design notes: recipes-not-pixels default, hybrid goldens (design-agent proposal,
   this session).
+- 🎮 ✅ **Pod-recycle fix: harvested/dead plants can finally be cleaned up
+  (2026-07-03, owner: "there's nothing else I can do... it should recycle... everything should be
+  reset to zero")** — the backend (`GameService.cleanup_plant`, `DELETE /players/:id/plants/:id`)
+  and the frontend mutation (`useCleanupPlant`) already existed, fully wired, completely unused —
+  no button anywhere called them. Two fixes:
+  1. **Backend correctness bug found + fixed while wiring this up**: `cleanup_plant` was hard-
+     deleting the `Plant` row AND its `Harvest` row on cleanup. `CupEntry.harvest_id` is a
+     non-nullable FK into `harvests` — cleaning up a pod after submitting that harvest to a
+     Cannabis Cup would either violate the FK or leave a dangling reference. New `plants.archived_at`
+     column (migration `d4e5f6a7b8c9`): cleanup now ARCHIVES (keeps the row, stamps `archived_at`)
+     instead of deleting; `list_plants` excludes archived rows so the pod still reads as empty, but
+     `Harvest`/`CupEntry` stay valid forever. Cost now reads from `balance.yaml`
+     `simulation.actions.pod_cleanup.cost` (25 GC) instead of a hardcoded default. 5 new backend
+     tests (archive-not-delete, harvest survives, double-cleanup rejected, balance.yaml cost,
+     list_plants excludes archived) — full suite 1117/1117 green.
+  2. **Frontend: the missing button, in all 3 places a player sees a terminal plant** —
+     `lib/plantAction.ts`'s `nextPlantAction` used to return `kind: "none"` for a harvested/dead
+     plant (a literal dead end with no button); now returns a new `"cleanup"` kind, wired through
+     `PlantActionCTA` to `useCleanupPlant`. (a) Main dashboard (`PodCommandCenter`): the live
+     CareDeck/Today's-Plan block — full water/nutrient bars + an active 6-tile care row — is now
+     gated `!ended` and replaced by the Clean & recycle CTA when the plant is done (was the exact
+     screenshot: 82%/83% bars still showing on a "Harvest complete!" plant). (b) Plant detail page:
+     Vitals/Care swapped for a plain summary + the (now-fixed) `PlantActionCTA`. (c) Chamber page:
+     "Grow another" was a plain `Link` back to `/dashboard` that never actually cleaned the pod
+     (the harvested plant just kept sitting there) — now a button that pays the cleanup fee first;
+     the "This plant has died" dead-end got the same fix. 3 new Playwright specs
+     (`pod-cleanup-shot.spec.ts`, matching the owner's exact bug-report screenshots) + 2 existing
+     specs updated for the Link→button change. Goldens VER-011/012 (before/after).
+- 🎮 ✅ **Landing-page particle perf + scale fix (2026-07-03, owner: "particles are huge and it
+  runs very slow... completely change that")** — `Constellation.tsx`'s leaf-mode ambient particle
+  cloud (the ~/onboarding hero backdrop) had two bugs, both root-caused before fixing: (1) each
+  particle's glow radius was a FIXED PIXEL SIZE regardless of viewport — the leaf silhouette itself
+  correctly shrinks to fit a narrow phone screen (`base = min(w,h)*0.42`), but the dots didn't
+  scale with it, so on mobile they overlapped into one solid fused blob (confirmed with a genuine
+  before/after screenshot comparison, VER-013 — the before shot shows the leaf's "O" completely
+  swallowed); (2) every one of up to 340 particles rebuilt a `createRadialGradient` from scratch
+  EVERY FRAME — the same per-frame-gradient cost the chamber plant round fixed with sprite caching,
+  applied here too. Fix: new `getGlowSprite()` cache (one offscreen glow+core sprite per
+  color/radius-bucket/lit/dpr, blitted via `drawImage`) plus a `sizeScale` factor
+  (`base / REFERENCE_BASE`, clamped) applied at blit time so dots stay proportional to the
+  viewport instead of a fixed size; ambient particle counts also cut (340→160 landing backdrop,
+  300→150 onboarding story-beat panel — GenBank's interactive graph mode is untouched). The
+  `constellationLifecycle.test.ts` "sacred hash" pinning `draw()`'s exact body was intentionally
+  updated in this commit per its own documented process (the file header says exactly when/how).
+  Gates: tsc/lint/build/vitest (478/478) all green.
 - 🎮 ✅ **Lab microscope rework phase 1 — real colors, real plant, real-microscope framing
   (2026-07-03, PR #137)** — first implementation slice of the 6-agent Lab-magnifier audit
   (recon×2 + design + architecture + gamification; report in the session scratchpad, evidence

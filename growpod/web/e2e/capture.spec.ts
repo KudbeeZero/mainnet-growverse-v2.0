@@ -26,6 +26,9 @@ import { setup } from "./fixtures/mockGame";
 //   CAPTURE_WAIT       settle time in ms before shooting (default 1800 — lets
 //                      the canvas plant finish its first paint)
 //   CAPTURE_CANVAS     "1" → also shoot the first <canvas> element alone
+//   CAPTURE_UNAUTH     "1" → skip the mock-API/auth seed entirely (for the
+//                      logged-out onboarding/landing routes, which redirect
+//                      an authed session straight to /dashboard)
 //
 // Skipped entirely unless CAPTURE_ROUTE is set, so it never runs (and never
 // costs time) in CI or a plain `npx playwright test` sweep.
@@ -34,6 +37,7 @@ const ROUTE = process.env.CAPTURE_ROUTE;
 const NAME = process.env.CAPTURE_NAME || "capture";
 const OUT = process.env.CAPTURE_OUT || "e2e-output/capture";
 const WAIT = Number(process.env.CAPTURE_WAIT || 1800);
+const UNAUTH = process.env.CAPTURE_UNAUTH === "1";
 const VIEWPORTS = (process.env.CAPTURE_VIEWPORTS || "1440x900,390x844")
   .split(",")
   .map((s) => s.trim().toLowerCase().split("x").map(Number) as [number, number]);
@@ -61,7 +65,7 @@ test.describe("capture", () => {
   for (const [w, h] of VIEWPORTS) {
     test(`shoot ${ROUTE} @ ${w}x${h}`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h });
-      await setup(page, parseState(process.env.CAPTURE_STATE));
+      if (!UNAUTH) await setup(page, parseState(process.env.CAPTURE_STATE));
       await page.goto(ROUTE!);
       await page.waitForTimeout(WAIT);
       await page.screenshot({ path: `${OUT}/${NAME}-${w}x${h}.png`, fullPage: true });
