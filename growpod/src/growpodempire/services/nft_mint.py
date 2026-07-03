@@ -11,9 +11,10 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from ..chain import metadata as md
 from ..chain.factory import shared_provider
 from ..chain.provider import ChainError
-from ..db.models import Harvest, NFTAsset
+from ..db.models import Harvest, NFTAsset, Player, Strain
 from .ipfs import IPFSService
 
 
@@ -68,7 +69,10 @@ class NFTMintService:
             # Log but don't fail — IPFS is best-effort for now
             print(f"IPFS upload failed for harvest {harvest_id}: {e}")
 
-        # Create ASA on Algorand
+        # Create ASA on Algorand. The metadata hash anchors the exact JSON
+        # document on-chain (ARC-3 style) regardless of whether the IPFS pin
+        # above succeeded, so the asset is always independently verifiable
+        # against `_build_harvest_metadata`'s output.
         try:
             provider = shared_provider()
             mint = provider.create_asset_tx(
@@ -77,7 +81,7 @@ class NFTMintService:
                 total=1,
                 decimals=0,
                 url=f"ipfs://{ipfs_hash}" if ipfs_hash else None,
-                metadata_hash=None,  # TODO: use IPFS hash as metadata_hash if available
+                metadata_hash=md.metadata_hash(metadata),
             )
         except ChainError as e:
             raise NFTMintError(f"Failed to mint on Algorand: {e}") from e
@@ -104,20 +108,32 @@ class NFTMintService:
         return nft_asset
 
     def _build_harvest_metadata(self, harvest: Harvest) -> dict:
-        """Build IPFS metadata JSON for a harvest NFT."""
+        """Build IPFS metadata JSON for a harvest NFT.
+
+        `Harvest` has no ORM `relationship()` for `strain_id`/`player_id` (only
+        the bare FK columns), so both are resolved with explicit lookups
+        rather than attribute access — `harvest.strain`/`harvest.player` don't
+        exist and raise `AttributeError` (this path was previously untested;
+        no code before this called `mint_harvest`, so the bug was latent).
+        """
+        strain = self.session.get(Strain, harvest.strain_id)
+        player = self.session.get(Player, harvest.player_id)
+        strain_name = strain.name if strain else "Unknown Strain"
+        grower_name = player.username if player else "Unknown Grower"
+
         return {
-            "name": f"{harvest.strain.name} #{harvest.rarity_snapshot}",
-            "description": f"A harvest of {harvest.strain.name}, quality {harvest.quality:.0f}/100",
+            "name": f"{strain_name} #{harvest.rarity_snapshot}",
+            "description": f"A harvest of {strain_name}, quality {harvest.quality:.0f}/100",
             "image": f"ipfs://QmPlaceholder",  # TODO: link to strain visual
             "attributes": [
                 {"trait_type": "Quality", "value": f"{harvest.quality:.1f}"},
                 {"trait_type": "Weight (g)", "value": f"{harvest.weight_g:.1f}"},
                 {"trait_type": "Rarity", "value": harvest.rarity_snapshot},
-                {"trait_type": "Strain", "value": harvest.strain.name},
+                {"trait_type": "Strain", "value": strain_name},
                 {"trait_type": "Terpenes", "value": ",".join(harvest.terpenes.keys()) if harvest.terpenes else ""},
             ],
             "proof_of_play": {
-                "grower": harvest.player.username,
+                "grower": grower_name,
                 "harvested_at": harvest.harvested_at.isoformat(),
                 "game_url": f"https://growv2.app/harvests/{harvest.id}",
             },
