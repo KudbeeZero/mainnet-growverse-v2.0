@@ -540,6 +540,50 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     return clamp(budDev * (0.4 + 0.9 * Math.max(0, cl.centerBias)), 0, 1) * (budDev > 0.02 ? 1 : 0);
   }
 
+  // Node attachment collar (owner blueprint 2026-07-03: "buds look pasted on;
+  // no clear attachment → attach every bud to a visible branch joint / node").
+  // Drawn in the flower-site's local space (base at origin, cola growing up -y)
+  // right BEFORE the cola, so each bud visibly sockets onto a tapered stem neck
+  // with a small calyx-green leaf collar at the junction instead of floating.
+  // Draw-path only — no build-time RNG, so pinned determinism tests are intact.
+  function drawBudCollar(site: FlowerSite, litAdj: number) {
+    const w = Math.max(3, site.baseW * 0.5); // socket half-width at the branch
+    const h = Math.max(6, site.baseW * 0.9); // neck height into the cola base
+    ctx!.save();
+    // Tapered stem "socket" the cola sits on — wide at the branch, narrowing up
+    // into the bud base so the join reads as continuous stem, not a seam.
+    const g = ctx!.createLinearGradient(0, h * 0.5, 0, -h);
+    g.addColorStop(0, `hsl(${S.hue - 8}, 36%, ${clamp(24 + litAdj, 14, 40)}%)`);
+    g.addColorStop(1, `hsl(${S.hue - 6}, 42%, ${clamp(33 + litAdj, 20, 48)}%)`);
+    ctx!.fillStyle = g;
+    ctx!.beginPath();
+    ctx!.moveTo(-w, h * 0.4);
+    ctx!.quadraticCurveTo(-w * 0.5, -h * 0.25, -w * 0.26, -h);
+    ctx!.lineTo(w * 0.26, -h);
+    ctx!.quadraticCurveTo(w * 0.5, -h * 0.25, w, h * 0.4);
+    ctx!.closePath();
+    ctx!.fill();
+    // Collar band — a small darker ellipse at the node junction (the "visible
+    // node joint + slight ring" of the target reference).
+    ctx!.strokeStyle = `hsl(${S.hue - 14}, 30%, ${clamp(18 + litAdj, 10, 32)}%)`;
+    ctx!.lineWidth = Math.max(1, w * 0.22);
+    ctx!.beginPath();
+    ctx!.ellipse(0, h * 0.06, w * 0.7, w * 0.26, 0, 0, Math.PI * 2);
+    ctx!.stroke();
+    // Two small sugar-leaf blades cupping the base up-and-out — the "small leaf
+    // collar / sugar leaf ring" that supports the bud and hides the seam.
+    ctx!.fillStyle = `hsl(${S.hue - 4}, 44%, ${clamp(30 + litAdj, 18, 46)}%)`;
+    for (const s of [-1, 1]) {
+      ctx!.beginPath();
+      ctx!.moveTo(s * w * 0.3, h * 0.1);
+      ctx!.quadraticCurveTo(s * w * 1.5, -h * 0.15, s * w * 1.7, -h * 0.75);
+      ctx!.quadraticCurveTo(s * w * 0.9, -h * 0.2, s * w * 0.15, h * 0.05);
+      ctx!.closePath();
+      ctx!.fill();
+    }
+    ctx!.restore();
+  }
+
   function drawFlowerSite(
     site: FlowerSite,
     P: DevParams,
@@ -2397,6 +2441,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
           // Small extra nod: the bud hangs a touch beyond the (already drooped) branch.
           ctx!.rotate(nd.side * 0.12 + nd.side * droopRot * 0.15);
           // branchlet buds sit lower/outer — thinner frost than their parent node
+          drawBudCollar(bl.site, nd.litAdj - 3);
           drawFlowerSite(bl.site, p.P, jig, tt, budSiteDensity(nd.f) * 0.7);
           ctx!.restore();
         }
@@ -2407,6 +2452,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.save();
         ctx!.translate(0, -2);
         ctx!.rotate(-nd.side * 0.12);
+        drawBudCollar(nd.nodeBud, nd.litAdj);
         drawFlowerSite(nd.nodeBud, p.P, jig, tt, budSiteDensity(nd.f) * 0.9);
         ctx!.restore();
       }
@@ -2415,6 +2461,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.save();
         ctx!.translate(endX * 0.85, endY * 0.85);
         ctx!.rotate(nd.budRot + nd.side * droopRot * 0.2); // bud nods a touch past the drooped branch
+        drawBudCollar(nd.site, nd.litAdj);
         drawFlowerSite(nd.site, p.P, jig, tt, budSiteDensity(nd.f));
         ctx!.restore();
       }
@@ -2437,6 +2484,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.translate(0, -p.cola.site.axisLen * 0.04);
       drawFan(p.A * 0.08 * (1 - 0.35 * p.P.budDev), Math.min(S.leafletMax, 5 + Math.floor(day / 18)), 1, claw, 0, 1, seed + day * 0.3);
       ctx!.restore();
+      drawBudCollar(p.cola.site, 2); // the top cola gets the strongest node collar
       drawFlowerSite(p.cola.site, p.P, cjig, tt, 1.0); // top cola — full frost
       ctx!.restore();
     } else {
