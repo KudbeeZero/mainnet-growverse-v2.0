@@ -467,13 +467,18 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         {/* rim/backlight pop (always on) + boost-reactive ring pulse/sparkles */}
         <BoostAmbientLayer />
         {/* Compact top HUD — strain + the four key stats in one strip (design
-            punch list item 1). Deeper detail stays on the CLIMATE tab. */}
-        <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center gap-1.5 overflow-x-auto">
+            punch list item 1). Deeper detail stays on the CLIMATE tab.
+            Mobile: wrap (no scroll — the strip is pointer-events-none, so an
+            overflow-x-auto could never actually be dragged, and the flex-1
+            spacer used to shove the CO₂ chip ~26px off the right edge of a
+            390px phone with no way to reach it). Desktop (sm+): restore the
+            single-line strain-left / stats-right layout via the spacer. */}
+        <div className="pointer-events-none absolute inset-x-2 top-2 flex flex-wrap items-center gap-1.5 sm:flex-nowrap sm:overflow-x-auto">
           <span className="flex-none rounded-lg border border-cyan-400/40 bg-[#08141e]/70 px-2 py-1 font-mono text-[10px] tracking-wide backdrop-blur">
             {strain?.name ?? "Plant"} · {titleCase(renderStage)} · Day {Math.round(day)}
             {previewing && <span className="text-grow-300"> · preview</span>}
           </span>
-          <span className="flex-1" />
+          <span className="hidden flex-1 sm:block" />
           <HudChip k="TO HARVEST" v={harvestDays ?? "—"} unit="d" />
           <HudChip k="TEMP" v={climate.temperature} unit="°C" alert={Math.abs(climate.temperature - 24) > 5} />
           <HudChip k="HUM" v={climate.humidity} unit="%" alert={Math.abs(climate.humidity - 50) > 15} />
