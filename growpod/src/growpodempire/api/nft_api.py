@@ -15,13 +15,12 @@ Handles:
 from flask import Blueprint, request, jsonify
 from decimal import Decimal
 
-from ..db import get_session
+from ..db import session_scope
 from ..db.models import Player, NFTAsset, NFTListing, StakingLock, Harvest
 from ..services.nft_mint import NFTMintService, NFTMintError
 from ..services.marketplace import MarketplaceService, MarketplaceError
 from ..services.staking import StakingService, StakingError
-from .auth import require_player, require_api_key
-from .errors import GameError, bad_request
+from .auth import require_player
 from .ratelimit import limiter
 
 nft_bp = Blueprint("nft", __name__, url_prefix="/api/nft")
@@ -42,7 +41,7 @@ def _error(message: str, status: int = 400):
 @require_player
 def get_collection(player_id: str):
     """Get player's owned NFTs and their current status."""
-    with get_session() as session:
+    with session_scope() as session:
         nfts = (
             session.query(NFTAsset)
             .filter_by(owner_address=(
@@ -79,9 +78,9 @@ def mint_harvest(player_id: str):
     data = request.get_json() or {}
     harvest_id = data.get("harvest_id")
     if not harvest_id:
-        return bad_request("harvest_id is required")
+        return _error("harvest_id is required")
 
-    with get_session() as session:
+    with session_scope() as session:
         player = session.query(Player).filter_by(id=player_id).first()
         if not player or not player.algorand_address:
             return _error("Wallet not connected", 403)
@@ -123,7 +122,7 @@ def get_listings():
     offset = int(request.args.get("offset", 0))
     sort_by = request.args.get("sort", "created_at")
 
-    with get_session() as session:
+    with session_scope() as session:
         service = MarketplaceService(session)
         listings, total = service.get_active_listings(limit, offset, sort_by)
 
@@ -148,7 +147,7 @@ def get_listings():
 @market_bp.get("/listings/<listing_id>")
 def get_listing_detail(listing_id: str):
     """Get details for a specific listing."""
-    with get_session() as session:
+    with session_scope() as session:
         listing = session.query(NFTListing).filter_by(id=listing_id).first()
         if not listing:
             return _error("Listing not found", 404)
@@ -179,16 +178,16 @@ def create_listing(player_id: str):
     price_str = data.get("price_ualgos")
 
     if not asset_id or not price_str:
-        return bad_request("asset_id and price_ualgos required")
+        return _error("asset_id and price_ualgos required")
 
     try:
         price = Decimal(price_str)
         if price <= 0:
-            return bad_request("price must be positive")
+            return _error("price must be positive")
     except:
-        return bad_request("price_ualgos must be a valid decimal")
+        return _error("price_ualgos must be a valid decimal")
 
-    with get_session() as session:
+    with session_scope() as session:
         player = session.query(Player).filter_by(id=player_id).first()
         if not player or not player.algorand_address:
             return _error("Wallet not connected", 403)
@@ -215,7 +214,7 @@ def create_listing(player_id: str):
 @limiter.limit("30 per hour")
 def cancel_listing(player_id: str, listing_id: str):
     """Cancel an active listing."""
-    with get_session() as session:
+    with session_scope() as session:
         player = session.query(Player).filter_by(id=player_id).first()
         if not player:
             return _error("Player not found", 404)
@@ -236,7 +235,7 @@ def execute_trade(player_id: str, listing_id: str):
 
     Returns pending trade awaiting on-chain confirmation.
     """
-    with get_session() as session:
+    with session_scope() as session:
         player = session.query(Player).filter_by(id=player_id).first()
         if not player or not player.algorand_address:
             return _error("Wallet not connected", 403)
@@ -261,9 +260,9 @@ def get_price_history(asset_id: str):
     try:
         asset_id_int = int(asset_id)
     except:
-        return bad_request("asset_id must be an integer")
+        return _error("asset_id must be an integer")
 
-    with get_session() as session:
+    with session_scope() as session:
         service = MarketplaceService(session)
         trades = service.get_price_history(asset_id_int)
 
@@ -295,9 +294,9 @@ def create_stake(player_id: str):
     harvest_id = data.get("harvest_id")
 
     if not asset_id or not harvest_id:
-        return bad_request("asset_id and harvest_id required")
+        return _error("asset_id and harvest_id required")
 
-    with get_session() as session:
+    with session_scope() as session:
         harvest = session.query(Harvest).filter_by(
             id=harvest_id, player_id=player_id
         ).first()
@@ -322,7 +321,7 @@ def create_stake(player_id: str):
 @require_player
 def get_stakes(player_id: str):
     """Get player's staking locks."""
-    with get_session() as session:
+    with session_scope() as session:
         service = StakingService(session)
         locks = service.get_player_locks(player_id)
 
@@ -348,7 +347,7 @@ def get_stakes(player_id: str):
 @require_player
 def get_stake_progress(player_id: str, lock_id: str):
     """Get progress for a specific stake."""
-    with get_session() as session:
+    with session_scope() as session:
         lock = session.query(StakingLock).filter_by(id=lock_id).first()
         if not lock or lock.player_id != player_id:
             return _error("Stake not found", 404)
@@ -363,7 +362,7 @@ def get_stake_progress(player_id: str, lock_id: str):
 @limiter.limit("20 per hour")
 def claim_stake_rewards(player_id: str, lock_id: str):
     """Claim rewards from a completed stake."""
-    with get_session() as session:
+    with session_scope() as session:
         try:
             service = StakingService(session)
             amount = service.claim_rewards(lock_id, player_id)

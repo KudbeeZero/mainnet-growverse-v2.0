@@ -17,7 +17,7 @@ from ..db.models import (
     Harvest,
     LedgerEntry,
 )
-from .ledger import LedgerService
+from ..economy.ledger import post
 
 
 class StakingError(Exception):
@@ -29,7 +29,6 @@ class StakingError(Exception):
 class StakingService:
     def __init__(self, session: Session):
         self.session = session
-        self.ledger = LedgerService(session)
 
     def create_lock(
         self,
@@ -153,7 +152,8 @@ class StakingService:
 
         # Award bonus GC to player's wallet
         if lock.rewards_amount and lock.rewards_amount > 0:
-            self.ledger.post(
+            post(
+                session=self.session,
                 player_id=player_id,
                 amount=lock.rewards_amount,
                 entry_type="staking_complete",
