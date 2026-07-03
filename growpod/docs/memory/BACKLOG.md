@@ -229,7 +229,6 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   architecture ones, and are out of this round's scope. Round 5's architecture (single-leader
   `colaTops` count=1, taper) is untouched and confirmed intact by the same cross-strain spot-check
   above.
-<<<<<<< HEAD
 - 🎮 ✅ **Chamber glow layer — Phase 2, in-canvas "arcade layer" (2026-07-03, PR pending)** — the
   in-canvas counterpart to Phase 1's DOM overlay, painted directly inside `drawChamberShell` in
   `web/src/lib/chamber/chamberCore.ts` (environment-only; the plant draw functions were untouched
@@ -248,7 +247,6 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   Verified with a standalone Playwright script (flowering Gelato fixture, mobile 390×844 + desktop
   1440×900, 2 look-compare-adjust rounds; script cleaned up). Gates: `tsc --noEmit` clean, `next
   lint` 0 new errors, vitest 472/472, `npm run build` clean, `care-loop-shot` 4/4 green.
-=======
 - 🧰 ✅ **Visual-verification archive — screenshots become durable, indexed memory (2026-07-03,
   owner: "save those images... reference them... pull from the chapter list")** — every visual
   round used to rebuild the same throwaway Playwright rig (hand-copying `setup()` from
@@ -409,7 +407,6 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   and the pistil/frost texture (a parallel specialist owns those in the same file); indica/sativa
   height-spread widening (indica ~½ sativa height) was left untouched — a `morphology.ts`
   archetype change, deferred as not needed for the spacing fix.
->>>>>>> origin/claude/plant-airy-candelabra
 - 🎮 ✅ **Chamber ambient glow layer — Phase 1, DOM/CSS only (2026-07-03, PR pending)** — new
   `web/src/components/plant/BoostAmbientLayer.tsx`, mounted as a sibling of `PlantReactionLayer`
   in the chamber stage (`chamber/page.tsx`). Zero `chamberCore.ts` edits — deliberately scoped
@@ -863,6 +860,10 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   with this session's code. *(Partly delivers the "docs-drift check" from the 2026-06-08 standup §4A.)*
   *(⚠️ Drift corrected 2026-06-10: `scripts/check_memory.py` was absent on disk; built for real
   + teeth-tested this session.)*
+  *(➕ Extended 2026-07-03: added check #6 — fails on an unresolved git merge-conflict marker
+  (`<<<<<<<` / bare `=======` / `>>>>>>>`) committed into a memory doc. BACKLOG.md had shipped
+  all three from a two-branch merge (chamber-glow-Phase-2 × airy-candelabra) with no gate catching
+  it; resolved by keeping both sides' ✅ entries — this is an append-mostly log. Teeth-tested.)*
 
 ## 🟠 Medium (next 1–2 weeks — quality & the next real capability)
 - 🟠 ✅ **CI coverage gate** (2026-06-08) — `pytest --cov` with a ratchet floor (`pyproject.toml`

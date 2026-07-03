@@ -15,6 +15,11 @@ starts to *lie*:
      (HEAD ages with the backlog); active repos must tick the backlog.
      (Owner directive 2026-07-02: the backlog is part of the workflow —
      it went unreconciled for 3 weeks of merged PRs once; never again.)
+  6. an **unresolved git merge-conflict marker** was committed into a memory
+     doc (`<<<<<<<`, a bare `=======` divider, or `>>>>>>>`). BACKLOG.md once
+     shipped all three from a two-branch merge and no gate caught it — the log
+     is append-mostly, so a collision resolves by keeping both sides' entries,
+     not by leaving the markers in. Never again.
 
 Paths in the memory docs are repo-relative by convention, but may be written
 relative to the code root (`src/growpodempire/`) or the memory root
@@ -56,6 +61,10 @@ KNOWN_EXT = {
 DONE = "✅"  # ✅
 LINK_RE = re.compile(r"\]\(([^)]+)\)")
 TOKEN_RE = re.compile(r"`([^`]+)`")
+# Git conflict markers, matched precisely so prose never trips them: the
+# openers/closers carry git's exact 7-char run + a trailing space, and the
+# divider is a line of *exactly* seven '=' (a setext-style rule would differ).
+CONFLICT_RE = re.compile(r"^(<{7} |={7}$|>{7} )")
 
 
 def _is_path_like(tok: str) -> bool:
@@ -166,6 +175,13 @@ def main() -> int:
             continue
         rel = md.relative_to(REPO)
         for n, line in enumerate(md.read_text(encoding="utf-8").splitlines(), 1):
+            # 6. no unresolved git merge-conflict marker survived a commit
+            if CONFLICT_RE.match(line):
+                errors.append(
+                    f"{rel}:{n}: unresolved git conflict marker -> {line[:12]!r} "
+                    "(resolve the merge; keep both sides' entries in this "
+                    "append-mostly log, don't leave the markers)"
+                )
             # 3. markdown links resolve (relative to the file's own dir)
             for target in LINK_RE.findall(line):
                 t = target.split("#", 1)[0].strip()
