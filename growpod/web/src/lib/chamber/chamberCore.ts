@@ -318,14 +318,23 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // noisy"). Round 2 (owner mockup): fewer + shorter still — the mockup's
       // pistils are quiet amber accents peeking from the calyx layers, and at
       // the old count they dominated the bud as orange confetti.
-      const nH = Math.max(1, Math.round((pat === "spiral" ? 2 : 3) * lush));
+      // Round 5 (specialist code review, 2026-07-03): cut ~40% further (×0.6) —
+      // the specialist read the render as "orange speckle, not sparse amber
+      // accent"; the mockup shows a handful of hairs per cola, not a haze.
+      const nH = Math.max(1, Math.round((pat === "spiral" ? 2 : 3) * lush * 0.6));
       for (let j = 0; j < nH; j++)
-        hairs.push({ a: -Math.PI / 2 + (rnd() - 0.5) * 2.2, len: 0.5 + rnd() * 0.45, bend: (rnd() - 0.5) * 1.3, ball: 0.9 + rnd() * 0.4, k: rnd() * 0.85 });
+        // Round 5: smaller tip balls (0.9+0.4 → 0.65+0.3) so each pistil reads
+        // as a fine amber thread, not a bead.
+        hairs.push({ a: -Math.PI / 2 + (rnd() - 0.5) * 2.2, len: 0.5 + rnd() * 0.45, bend: (rnd() - 0.5) * 1.3, ball: 0.65 + rnd() * 0.3, k: rnd() * 0.85 });
       // Trichome "frost" — a few CLUSTERED highlight blobs per cluster instead of
       // a dense field of individual stalk+gland glyphs (owner: "clustered frost
       // highlights", not fine per-gland detail — that belongs in View Bud/Lab).
+      // Round 5 (specialist code review, 2026-07-03): fewer blobs (2.5 → 1.5×
+      // lush) — frost is also now gated to top-third clusters only at draw time
+      // (see cl.yf gate below), so the mockup's "subtle, top-third" frost read
+      // survives instead of firing on every cluster top to bottom.
       const tris = [];
-      const nT = Math.max(1, Math.round(2.5 * lush));
+      const nT = Math.max(1, Math.round(1.5 * lush));
       for (let j = 0; j < nT; j++)
         tris.push({ a: rnd() * TAU, len: 0.5 + rnd() * 0.5, headR: 0.7 + rnd() * 0.5, k: rnd(), mat: rnd() });
       clusters.push({
@@ -517,7 +526,13 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // gain 1.7 → 2.4) — near the tip most pods flip to the accent hue so
         // the purple reads as a continuous cap, not dots sprinkled mid-bud.
         const tipW = Math.pow(clamp((cl.yf - 0.25) / 0.75, 0, 1), 2.1);
-        const accent = accHue != null && p.blushK < accFrac * accGate * tipW * 2.4;
+        // Round 5 (specialist code review, 2026-07-03): gain 2.4 → 1.4 — the
+        // fused-mass gradient cap (drawn above, unchanged) already carries the
+        // purple identity; per-pod accents on top of it at 2.4x read as violet
+        // confetti sprinkled over an already-purple tip. 1.4x keeps a handful of
+        // accent pods as texture without fighting the mass gradient for the
+        // "where's the purple" read.
+        const accent = accHue != null && p.blushK < accFrac * accGate * tipW * 1.4;
         const baseHueP = accent ? accHue : calyxHue;
         // Accent calyxes are already a distinct hue — don't also apply the
         // ripeness blush shift, which would push violet toward pink.
@@ -564,7 +579,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // dozens of individual stalk+gland glyphs. The fine per-gland detail (still
       // driven by the same maturity model) lives in View Bud / Lab; at whole-plant
       // size it only ever read as speckled noise ("moss/caterpillar" — owner).
-      if (P.trich > 0) {
+      // Round 5 (specialist code review, 2026-07-03): gate frost to the top
+      // third of each cola (cl.yf > 0.66) — the specialist noted frost blobs
+      // fired on every cluster top to bottom, but the mockup's frost is subtle
+      // and concentrated near the tips, not spread the full length of the bud.
+      if (P.trich > 0 && cl.yf > 0.66) {
         const purple = clamp(live.current.budColor?.anthocyanin ?? 0, 0, 1);
         const mix = maturityMix(clamp(P.ripe * 0.7 + P.brown * 0.6, 0, 1), purple * 0.4);
         const dens = P.trich * clamp(trichScale, 0, 1);
@@ -761,8 +780,15 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // reach too — not just their tilt (below) — so the top 2-3 colas read
       // as a clearly separated candelabra instead of one fused column.
       const apexSplay = smooth(clamp((f - 0.58) / 0.3, 0, 1));
+      // Round 5 (specialist code review, 2026-07-03): 1.8x was actively WIDENING
+      // the f≈0.58-0.88 band — exactly the zone that should be narrowing toward
+      // a cone apex — producing the "shoulders/flare" the mockup doesn't have.
+      // Tamed to 1.25x: enough to keep genuinely multi-cola strains (White
+      // Rhino, Purple Diddy Punch — their own high-`lowerSpread`/low-
+      // `apicalDominance` identity carries the candelabra look) visibly
+      // separated, without flaring a single-leader cone's shoulders.
       // Lower branches splay wide (skirt); upper branches tuck in and shorten.
-      const spread = lerp(1, SK.lowerSpread, low) * lerp(1, 1.8, apexSplay);
+      const spread = lerp(1, SK.lowerSpread, low) * lerp(1, 1.25, apexSplay);
       const shorten = 1 - SK.upperShorten * f;
       // Engine 3/4: azimuth → signed-and-foreshortened horizontal projection
       // (lateral) + front/back depth. `side` keeps its legacy ±1 meaning for the
@@ -777,11 +803,17 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // above) so they visibly lean away from the leader instead of tucking
       // in parallel to it — this is what actually separates the spike tips,
       // not just their attachment point.
-      let tilt = (0.92 + rnd() * 0.3) * (1 - f * 0.22 + apexSplay * 0.55) * lerp(1, 1.12, low);
+      // Round 5 (specialist code review, 2026-07-03): the tilt term scales down
+      // proportionally with the spread cut above (0.55 * 1.25/1.8 ≈ 0.17) so the
+      // upper-middle stops flaring outward on both axes at once, not just one.
+      let tilt = (0.92 + rnd() * 0.3) * (1 - f * 0.22 + apexSplay * 0.17) * lerp(1, 1.12, low);
       // Round 2 (owner mockup): back to 0.27 — with the mid-branch fans and
       // extra branchlets filling the arcs, the wider reach buys the fuller
       // pine-tree silhouette without the "floating buds" regression.
-      let len = A * 0.27 * S.branchMul * (0.35 + 0.65 * low) * grow * shorten;
+      // Round 5 (specialist code review, 2026-07-03): taper steepened
+      // (0.35 + 0.65*low) → (0.24 + 0.76*low) — branch length now falls off
+      // faster toward the apex for a crisper, straighter cone silhouette.
+      let len = A * 0.27 * S.branchMul * (0.24 + 0.76 * low) * grow * shorten;
       if (topK >= 0) {
         // A released top straightens toward vertical and extends up to race the
         // leader to the canopy — turning a side branch into a competing cola.
@@ -830,6 +862,18 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // viewer (depth>0, front) or lifts behind the stem (depth<0, back) for volume.
       nd.tipX = Math.sin(nd.tilt) * lateral * nd.len * spread;
       nd.tipY = -Math.cos(nd.tilt) * nd.len * 0.55 + az.depth * nd.len * 0.18;
+      // Round 5 (specialist code review, 2026-07-03, punch-list item 7):
+      // explicit cone clamp — a straight-taper guarantee on top of the tamed
+      // apexSplay/tilt/len math above. Regular branches (topK<0; co-dominant
+      // tops are exempt — their wider reach is a deliberate multi-cola
+      // silhouette, not a flaw) can't reach past a half-width that shrinks
+      // linearly from the base to a small point at the apex, so the outer
+      // *edge* of the canopy is always a clean cone regardless of any one
+      // node's random tilt/spread roll.
+      if (topK < 0) {
+        const maxReach = A * lerp(0.1, 0.5 * SK.lowerSpread, low);
+        if (Math.abs(nd.tipX) > maxReach) nd.tipX = Math.sign(nd.tipX) * maxReach;
+      }
       if (P.budDev > 0 && topK >= 0) {
         // Co-dominant top → its own cola (a scaled-down sibling of the leader),
         // sized by this top's mass share relative to the leader so the leader
@@ -864,7 +908,18 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // relaxes so the lowest flowering nodes hold a chunky teardrop instead
         // of thinning into accents. The apex-weighted ramp is kept (top still
         // climaxes); only the bottom of the ladder comes up.
-        const sizeUp = lerp(0.95, 1.22, Math.pow(f, 1.1));
+        // Round 5 (specialist code review, 2026-07-03): the apex-weighted
+        // ramp above (0.95 → 1.22 as f → 1) was inflating EVERY near-apex side
+        // node's own bud, not just the true leader — on a single-leader strain
+        // that reads as a fan of several similar-size competing spikes at the
+        // very top (the residual "candelabra" look after apexSplay alone was
+        // tamed). Taper that inflation back down in the apex-splay band,
+        // scaled by how dominant this strain's leader is (SK.apicalDominance)
+        // — a high-dominance spear (G13, Gelato) shrinks its near-apex side
+        // buds so the true leader reads as the unmistakable climax; a low-
+        // dominance bush (White Rhino, Purple Diddy Punch) keeps most of its
+        // apex bud mass, since several strong tops are that strain's identity.
+        const sizeUp = lerp(0.95, 1.22, Math.pow(f, 1.1)) * lerp(1, 0.7, SK.apicalDominance * apexSplay);
         const axis = A * (0.075 + 0.082 * f) * S.clusterLen * sizeUp * (0.5 + 0.5 * P.budDev);
         // Round 2: side colas fatter still (0.33 → 0.37) — the mockup's side
         // buds are chunky teardrops, clearly slimmer than the leader but never
@@ -906,7 +961,16 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // fill the bare mid-branch stretches the mockup plant doesn't have.
         if (flowering && rnd() < 0.6) nBL += 1;
         for (let b = 0; b < nBL; b++) {
-          const along = 0.48 + rnd() * 0.34;
+          // Round 5 (specialist code review, 2026-07-03): bias the first
+          // branchlet on low-tier nodes toward the stem-facing side, close to
+          // the branch base — phyllotaxis leaves the opposite ~137° wedge
+          // empty each tier, and the longest (lowest-tier) branches leave the
+          // biggest gap there with the least correction from the inner fans
+          // above. The rest of the branchlets keep the existing along-branch
+          // spread/alternating side.
+          const wedgeFill = low > 0.55 && b === 0;
+          const along = wedgeFill ? 0.15 + rnd() * 0.06 : 0.48 + rnd() * 0.34;
+          const side = wedgeFill ? -nd.side : b % 2 ? 1 : -1;
           let blSite: FlowerSite | null = null;
           if (P.budDev > 0 && f > S.flowerFrom * 0.8) {
             // Round 3 (owner mockup): branchlet buds plumper (0.045 → 0.055
@@ -917,7 +981,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
             nd.weight += 0.2 * S.clusterFat;
           }
           nd.branchlets.push({
-            along, side: b % 2 ? 1 : -1,
+            along, side,
             len: nd.len * (0.4 + rnd() * 0.26), tilt: 0.55 + rnd() * 0.5, curve: 0.08 + rnd() * 0.14,
             leafSize: nd.leafSize * (0.42 + rnd() * 0.16), leaflets: Math.max(3, nd.leaflets - 2),
             phase: rnd() * TAU, site: blSite,
@@ -1590,6 +1654,40 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.restore();
       return;
     }
+    // Round 5 (specialist code review, 2026-07-03): soft canopy "under-mass" —
+    // a dark, cone-tapered silhouette painted BEHIND the branch/bud draw loop
+    // below, so any residual gap between branches reads as shaded interior
+    // foliage instead of black chamber background (depth-aware occlusion, done
+    // once instead of per-branch). Tapers wide-base -> narrow-apex in lock-step
+    // with the node spread math (SK.lowerSpread), so it reinforces the single-
+    // leader cone silhouette rather than fighting it.
+    if (p.nodes.length >= 4) {
+      const baseHalf = p.A * 0.3 * SK.lowerSpread;
+      const apexHalf = p.A * 0.055;
+      const leftPts: Array<[number, number]> = [];
+      const rightPts: Array<[number, number]> = [];
+      for (const sp of p.spine) {
+        if (sp.y < p.baseY - p.stemH * 1.02) break; // never runs past the apex
+        const hw = lerp(apexHalf, baseHalf, Math.pow(1 - clamp(sp.t, 0, 1), 0.85));
+        leftPts.push([sp.x - hw, sp.y]);
+        rightPts.push([sp.x + hw, sp.y]);
+      }
+      if (leftPts.length > 2) {
+        ctx!.save();
+        ctx!.beginPath();
+        ctx!.moveTo(rightPts[0][0], rightPts[0][1]);
+        for (let i = 1; i < rightPts.length; i++) ctx!.lineTo(rightPts[i][0], rightPts[i][1]);
+        for (let i = leftPts.length - 1; i >= 0; i--) ctx!.lineTo(leftPts[i][0], leftPts[i][1]);
+        ctx!.closePath();
+        const ug = ctx!.createLinearGradient(p.cx, p.baseY, p.cx, p.baseY - p.stemH);
+        ug.addColorStop(0, `hsla(${S.hue - 8}, 30%, 9%, 0.6)`);
+        ug.addColorStop(0.6, `hsla(${S.hue - 4}, 34%, 12%, 0.52)`);
+        ug.addColorStop(1, `hsla(${S.hue}, 30%, 14%, 0.38)`);
+        ctx!.fillStyle = ug;
+        ctx!.fill();
+        ctx!.restore();
+      }
+    }
     const bd = clamp(live.current.dev.budDev, 0, 1);
     const flex = branchFlexFor(S.branchMul);
     // Flowering weight ladder (seed/veg 0 → harvest 1): scales all bud-load droop.
@@ -1651,11 +1749,26 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // Round 3 (owner mockup): an INNER fan near the branch base, angled up
         // toward the stem — the wedge of dark space between the trunk and each
         // branch arc was the biggest interior hole left after round 2.
+        // Round 5 (specialist code review, 2026-07-03): enlarged 0.5x → 0.72x —
+        // phyllotaxis leaves the opposite ~137° wedge empty each tier, and this
+        // fan was the existing corrective for it but was too small to close the
+        // gap on the longest (lowest-tier) branches, which need it most.
         const it = 0.26;
         ctx!.save();
         ctx!.translate(endX * it, endY * it - nd.len * nd.curve * Math.sin(Math.PI * it) * 0.6);
         ctx!.rotate(-nd.side * 0.4 + nd.leafRoll * 0.5);
-        drawFan(nd.leafSize * 0.5, Math.max(3, nd.leaflets - 2), nd.f * 0.4, claw, nd.litAdj - 5, lerp(nd.leafYaw, 1, 0.6));
+        drawFan(nd.leafSize * 0.72, Math.max(3, nd.leaflets - 2), nd.f * 0.4, claw, nd.litAdj - 5, lerp(nd.leafYaw, 1, 0.6));
+        ctx!.restore();
+        // Round 5 (specialist code review, 2026-07-03): a SECOND inner fan even
+        // closer to the branch base (t≈0.12), angled further back toward the
+        // trunk than the t≈0.26 fan above — targets the specific lowest-tier
+        // trunk-to-branch wedge the specialist called out (longest branches =
+        // biggest gap, least correction from the existing single inner fan).
+        const it2 = 0.12;
+        ctx!.save();
+        ctx!.translate(endX * it2, endY * it2 - nd.len * nd.curve * Math.sin(Math.PI * it2) * 0.6);
+        ctx!.rotate(-nd.side * 0.62 + nd.leafRoll * 0.4);
+        drawFan(nd.leafSize * 0.6, Math.max(3, nd.leaflets - 2), nd.f * 0.35, claw, nd.litAdj - 6, lerp(nd.leafYaw, 1, 0.65));
         ctx!.restore();
       }
       // Leaf cluster hugging the stem at the node — every node carries foliage,

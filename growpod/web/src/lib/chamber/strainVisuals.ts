@@ -73,7 +73,18 @@ const SILHOUETTES: Record<string, Silhouette> = {
   // light); Gelato = colourful mid; Wedding Cake = dense indica-leaning chunk.
   "white-rhino": { nodeDensity: 1.24, vertStack: 0.9, branchletFrac: 0.8, lowerSpread: 1.5, upperShorten: 0.16, colaScale: 1.28, nodeLeaf: 1.2, branchStrength: 0.85, budWeightMul: 1.3, apicalDominance: 0.4 },
   "white-fire-og": { nodeDensity: 1.1, vertStack: 1.06, branchletFrac: 0.58, lowerSpread: 1.08, upperShorten: 0.32, colaScale: 1.08, nodeLeaf: 1.05, branchStrength: 1.05, budWeightMul: 0.95, apicalDominance: 0.72 },
-  gelato: { nodeDensity: 1.18, vertStack: 1.04, branchletFrac: 0.62, lowerSpread: 1.14, upperShorten: 0.3, colaScale: 1.1, nodeLeaf: 1.1, branchStrength: 0.95, budWeightMul: 1.05, apicalDominance: 0.55 },
+  // Round 5 (specialist code review, 2026-07-03): apicalDominance 0.55 → 0.82 —
+  // at 0.55, colaTops() resolved count=2 with release≈0.39, which straightens
+  // and extends a second top into a competing spike (chamberCore's topK path) —
+  // reading as a two-headed candelabra with a mid-plant waist, not the mockup's
+  // single-leader cone. 0.82 collapses colaTops(0.82) back to count=1 (verified
+  // in apicalDominance.test.ts's monotonic-count coverage) — one dominant
+  // leader, side branches stay subordinate. upperShorten 0.3 → 0.4 for a
+  // sharper, more Christmas-tree taper toward the apex (punch-list item 3).
+  // lowerSpread 1.14 → 1.28 (punch-list item 6): a wider base skirt gives the
+  // trunk-to-branch wedge (phyllotaxis leaves the opposite ~137° arc empty
+  // each tier) more foliage reach to close over.
+  gelato: { nodeDensity: 1.18, vertStack: 1.04, branchletFrac: 0.62, lowerSpread: 1.28, upperShorten: 0.4, colaScale: 1.1, nodeLeaf: 1.1, branchStrength: 0.95, budWeightMul: 1.05, apicalDominance: 0.82 },
   "wedding-cake": { nodeDensity: 1.28, vertStack: 1.0, branchletFrac: 0.7, lowerSpread: 1.2, upperShorten: 0.26, colaScale: 1.16, nodeLeaf: 1.14, branchStrength: 0.9, budWeightMul: 1.15, apicalDominance: 0.5 },
   // Blue Dream — tall OPEN sativa spear (owner harvest reference, 2026-07-02):
   // one towering main cola + a ring of long secondary colas, airy internodes,

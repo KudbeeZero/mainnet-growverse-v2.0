@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 3 in the parallel lane).
+once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 5 — single-leader cone architecture — in the parallel lane; round 4 superseded, see below).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -119,6 +119,54 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   are still chunkier/rounder with painterly airbrushed shading (ours are flatter vector
   gradients), its very bottom tier keeps bud mass where ours is mostly fan skirt, and its
   interior is still a touch denser.
+- 🎮 ❄️ **Plant mockup round 4 (2026-07-03, branch `design/plant-mockup-round4`, NOT merged —
+  superseded by round 5 below)** — a canopy-density/silhouette-fill pass (flowering node pack
+  1.42→2.5, cap 20→36, a new mid-branch `midBud`, wider/extra leaf fans, up to 2 bonus
+  branchlets). Independently reviewed twice before merge: the owner's delegate scored it
+  7.5/10 (real density win, but shape read as a two-headed **candelabra, not a cone**,
+  orange/purple busy texture); a specialist botanical+procedural-rendering consultant then
+  reviewed the CODE (not just the render) and scored it 6.0/10 with a precise root-cause
+  diagnosis — Gelato's `apicalDominance: 0.55` yielded 2 co-dominant tops (a straightened,
+  extended second spike), `apexSplay` was actively widening the f≈0.58-0.88 band instead of
+  narrowing it, the branch-length taper was too shallow for a crisp cone, `midBud` added a
+  3rd discrete bud blob botanically inconsistent with a continuous tapering spike, and
+  pistil/purple-accent/frost density read as busy confetti rather than sparse accents. Left
+  queued/unmerged rather than fixed in place, since it needed an independent architecture pass,
+  not more density.
+- 🎮 ✅ **Plant mockup round 5 (2026-07-03, specialist-diagnosed architecture fix)** — branched
+  from `main` (round 3), NOT round 4 (round 4's density work was left queued/unreleased, per
+  above) — implements the specialist's punch list against `chamberCore.ts` +
+  `strainVisuals.ts`'s Gelato record: (1) Gelato `apicalDominance` 0.55→0.82 (verified
+  `colaTops(0.82)` resolves `count=1`, collapsing the second co-dominant top); (2) `apexSplay`
+  spread multiplier 1.8→1.25x and its tilt term scaled proportionally, so the upper-middle
+  stops flaring; (3) branch-length taper `(0.35+0.65·low)`→`(0.24+0.76·low)` + Gelato
+  `upperShorten` 0.3→0.4 for a crisper cone; (4) calmer texture — pistil count ×0.6 + smaller
+  tip balls, per-pod purple-accent gain 2.4→1.4 (the fused-mass gradient carries the purple
+  identity, pods now carry grain only), frost blob count ×0.6 and gated to the top third of
+  each cola (`cl.yf > 0.66`) matching the mockup's subtle top-third frost. Additional restraint
+  beyond the literal list, in the same spirit: a soft dark "under-mass" cone silhouette painted
+  behind the branch loop so residual gaps read as shaded interior, not black background; a
+  wedge-fill pass on the lowest tier (Gelato `lowerSpread` 1.14→1.28, enlarged + a second inner
+  base fan, one low-node branchlet biased toward the stem-facing side); an explicit cone-reach
+  clamp on regular (non-co-dominant) branches as a straight-taper guarantee; and a
+  dominance-scaled taper on near-apex side-bud sizing (`SK.apicalDominance`-scaled) so a
+  single-leader strain's near-apex side nodes stop inflating into competing spikes — gated so
+  low-dominance bush strains (White Rhino, Purple Diddy Punch) keep their candelabra identity.
+  Spot-checked G13 (still a clean single spear), White Rhino (still bushy/candelabra, correctly
+  unaffected), Blue Dream (still a tall open sativa spear) via `gen-stage-pngs.ts` — no
+  cross-strain regression. Gates: `tsc --noEmit` clean, `next lint` 0 errors, vitest 463/463 (no
+  pinned values needed updating), `npm run build` clean, Playwright screenshots at 390×844 +
+  desktop plus the full `care-loop-shot.spec.ts` (4/4) all green. **Honest self-score: 8/10** —
+  single-leader cone architecture and calmer color/texture are a genuine, verified fix over
+  round 4's candelabra/busy-texture read; remaining gap: individual cola shapes still read as
+  separated, somewhat spiky "fingers" rather than the fully smooth, fused, painterly silhouette
+  of the owner's mockup — that's a bud-mass-shape/rendering-style question (spline smoothing,
+  color-fill technique), not an architecture one, and is out of this round's scope
+  (`chamberCore.ts` + Gelato record only, no bud-shape rewrite). This PR's recommendation is to
+  supersede round 4's PR #119 (open, draft, unmerged, base `main`) rather than merge it
+  separately — round 4's density work stays queued on its own branch/PR in case a future round
+  wants to layer it back on top of round 5's architecture; closing #119 is the owner's call, not
+  done unilaterally here.
 - 🎮 ✅ **Game-hub restructure — ACTIVE LANE DEFINITION (2026-07-03, owner directive, verbatim
   intent)** — *"There are too many windows. Everything should be accessible from the main game
   page. Don't repeat all of the watering everywhere — have that in ONE spot. Anybody should be
