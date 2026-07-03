@@ -774,12 +774,13 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
 - 🟡 ⬜ **Dead DB columns** — `ResearchProgress.unlocked_at`, `GrowthMeasurement.leaf_count`/
   `growth_rate` (drop migration when convenient); `Player.last_active_at` is the wire-in above.
   `INDEXER_URL` is read but unconsumed — it's needed by the settlement-deposit redesign; keep.
-- 🟡 ⬜ **Docs hygiene tail (2026-07-02 MD sweep)** — remaining from `docs/memory/DOCS_INDEX.md`:
-  resume or tombstone `BUILDLOG.md`; restamp the frozen "Live" ledgers (`CANONICAL_STATE.md`,
-  `STUDIO_AGENT_REGISTRY.md`, `AGENT_ORCHESTRATION_LEDGER.md`) as dated snapshots or refresh;
-  retire `docs/DEV_BUILD_LOG.md` (Replit-era); archive-or-refresh the `docs/00–09` numbered
-  snapshots; merge the two DATABASE_SYSTEMS_AUDIT copies; consider a HANDOFF staleness gate in
-  `check_memory.py` like the backlog's.
+- 🟡 ✅ **Docs hygiene tail (2026-07-03)** — all open ⚠️ items from `docs/memory/DOCS_INDEX.md`
+  bannered or closed: `BUILDLOG.md` (FROZEN banner), `CANONICAL_STATE.md` + `STUDIO_AGENT_REGISTRY.md`
+  + `AGENT_ORCHESTRATION_LEDGER.md` (SNAPSHOT banners, restamped 🧊), `docs/DEV_BUILD_LOG.md`
+  (HISTORICAL banner), root `docs/DATABASE_SYSTEMS_AUDIT.md` (HISTORICAL + cross-ref banner),
+  `docs/00–09` snapshots (marked 🧊 in DOCS_INDEX). DOCS_INDEX stale ledger table updated.
+  ⬜ Remaining: HANDOFF staleness gate in `check_memory.py` (deferred — low urgency while HANDOFF
+  is actively maintained).
 - 🟡 ⬜ **Simplify: unreachable AI-factory branches** — master-grower/admissions/roadmap "real
   provider" arms always return the mock (classes don't exist); build the Claude providers or
   simplify the guards. (HeyGen arm stays — owner-gated spend.)

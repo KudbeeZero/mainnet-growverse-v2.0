@@ -1,5 +1,7 @@
 # Developer Build Log — GROWv2 / GrowPod Empire
 
+> **⚠️ HISTORICAL (Replit-era)** — this milestone plan was written when the project ran on Replit. It is superseded by `docs/HANDOFF.md` (live baton) and `docs/memory/BACKLOG.md` (priority backlog). Preserved as a record of the early planning.
+
 A working, sequenced plan for taking the game from "running on Replit" to "launchable and
 long-lived", **without breaking the core loop** (grow → care → harvest → cure →
 sell/breed/stabilize → mint → trade).

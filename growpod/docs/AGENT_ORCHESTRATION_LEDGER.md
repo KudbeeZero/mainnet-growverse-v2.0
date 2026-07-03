@@ -1,5 +1,7 @@
 # GrowPod Empire — Agent Orchestration Ledger (REC-004)
 
+> **⚠️ SNAPSHOT (2026-06-14)** — frozen; sub-agent roster was never populated. Preserved as historical record of the orchestration design.
+
 > **The roster of who-deploys-whom.** Where the [Studio Agent Registry](STUDIO_AGENT_REGISTRY.md)
 > tracks *which directive owns which file surface*, this ledger tracks *how persistent employee
 > chats deploy ephemeral sub-agents* — the self-deployment caps, the temporary `SA-XXX` audit

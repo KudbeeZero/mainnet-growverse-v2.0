@@ -32,7 +32,7 @@ Roles: **living** (must stay true) · **historical** (frozen record) · **spec**
 | `docs/research/` (12 dated docs) + `docs/research/university/` (8) | 🧊 inputs to the codex; MASTER_BIBLE freeze banner superseded 2026-07-02 (University shipped) |
 | `docs/encyclopedia/` (17 strain-science files) | ✅ additive research DB |
 | `docs/ROADMAP.md`, PHASE1/2/3 docs, `docs/SIMULATION_TEST_CLOCK.md` | ✅/aging — dated baselines, not wrong |
-| `docs/00–09` numbered status snapshots (2026-06-19 baseline) | ⚠️ snapshot-dated; 01/04/05 claim the backend is "future" — it's deployed. Treat as history unless refreshed |
+| `docs/00–09` numbered status snapshots (2026-06-19 baseline) | 🧊 frozen-OK (2026-07-03) — historical baseline; some claims stale (backend deployed). Treat as history. |
 
 ## Historical (frozen — do not edit, banner if misleading)
 
@@ -52,8 +52,9 @@ audit; snapshot-workflow claim corrected in SECURITY.md) · root `CLONE_ROOM_QA_
 | `docs/HANDOFF.md` | main at PR #22 | ✅ REWRITTEN 2026-07-02 |
 | `docs/licenses/README.md`, `web/public/buds/README.md` | reference deleted `web/public/pod/*` stills | ✅ NOTED 2026-07-02 (revert recorded) |
 | `docs/research/university/GROWPOD_UNIVERSITY_MASTER_BIBLE.md` | "University PARKED until after MVP" | ✅ BANNERED 2026-07-02 (shipped as HERMES) |
-| `BUILDLOG.md` | "record of what shipped" but ends ~PR #50 | ⚠️ open — resume or tombstone (BACKLOG) |
-| `docs/memory/CANONICAL_STATE.md`, `docs/STUDIO_AGENT_REGISTRY.md`, `docs/AGENT_ORCHESTRATION_LEDGER.md` | "Live" ledgers frozen at 2026-06-14 | ⚠️ open — refresh or restamp as snapshots (BACKLOG) |
-| `docs/DEV_BUILD_LOG.md` | Replit-era workflow | ⚠️ open — retire (BACKLOG) |
+| `BUILDLOG.md` | "record of what shipped" but ends ~PR #50 | 🧊 BANNERED 2026-07-03 (frozen at ~PR #50; live state in HANDOFF.md) |
+| `docs/memory/CANONICAL_STATE.md`, `docs/STUDIO_AGENT_REGISTRY.md`, `docs/AGENT_ORCHESTRATION_LEDGER.md` | "Live" ledgers frozen at 2026-06-14 | 🧊 BANNERED 2026-07-03 (restamped as snapshots) |
+| `docs/DEV_BUILD_LOG.md` | Replit-era workflow | 🧊 BANNERED 2026-07-03 (historical Replit-era plan) |
+| root `docs/DATABASE_SYSTEMS_AUDIT.md` | companion audit (2026-06-18) without ERRATUM | 🧊 BANNERED 2026-07-03 (cross-refs growpod/docs copy) |
 | `growpod/docs/01_GROWVERSE_CURRENT_STATUS 2.md` | byte-identical duplicate | ✅ DELETED 2026-07-02 |
 | growpod/.pytest_cache/README.md (removed) | committed cache artifact that said "do not commit" | ✅ DELETED 2026-07-02 (+ gitignored) |
