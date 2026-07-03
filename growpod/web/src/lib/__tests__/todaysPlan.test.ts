@@ -38,10 +38,10 @@ describe("buildTodaysPlan", () => {
     expect(row!.why).toMatch(/1d 12h/);
   });
 
-  it("is empty for dead or harvested plants, and caps at 5 rows sorted by urgency", () => {
+  it("is empty for dead or harvested plants, and caps at 3 rows sorted by urgency", () => {
     expect(planFor(plant({ is_alive: false, water_level: 5 }))).toEqual([]);
     const busy = planFor(plant({ water_level: 10, nutrient_level: 10, pest_level: 9, disease_level: 9 }), 40);
-    expect(busy.length).toBeLessThanOrEqual(5);
+    expect(busy.length).toBeLessThanOrEqual(3);
     const ranks = busy.map((e) => ({ now: 0, soon: 1, upcoming: 2 })[e.urgency]);
     expect([...ranks].sort((a, b) => a - b)).toEqual(ranks);
   });

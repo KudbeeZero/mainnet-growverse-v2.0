@@ -63,7 +63,7 @@ export function buildTodaysPlan(
   }
 
   out.sort((a, b) => RANK[a.urgency] - RANK[b.urgency]);
-  return out.slice(0, 5);
+  return out.slice(0, 3);
 }
 
 export const URGENCY_LABEL: Record<PlanUrgency, string> = {

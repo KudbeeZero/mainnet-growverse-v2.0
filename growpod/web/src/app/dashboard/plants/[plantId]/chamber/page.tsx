@@ -176,7 +176,6 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   };
 
   // --- Arcade Mode (client-only visual layer) ---
-  const [hudHidden, setHudHidden] = useState(false);
   // Transient, in-memory "visual grow" offset that an active boost advances. It
   // moves the bud's LOOK forward only — never the server/DB/economy state.
   const [boostOffset, setBoostOffset] = useState(0);
@@ -483,6 +482,22 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </div>
         )}
 
+        {/* Boosts quick tray — collapsed pill anchored in the chamber scene,
+            so it can only ever overlap the stage, never the plan/insights. */}
+        {!ended && (
+          <ArcadeHUD
+            reducedMotion={reducedMotion}
+            chainSlot={
+              ALGO_ENABLED ? (
+                <ChainRow
+                  plant={plant}
+                  mintOptions={{ strainName: strain?.name, growDay: Math.round(day), budDev: budScalars.budDev }}
+                />
+              ) : undefined
+            }
+          />
+        )}
+
         {ended && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#050b12]/85 text-center">
             {plant.harvested ? (
@@ -674,30 +689,6 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       </div>
       </div>
 
-      {/* Arcade Mode controls — chamber-only, dismissible. */}
-      {!ended && !hudHidden && (
-        <ArcadeHUD
-          reducedMotion={reducedMotion}
-          onClose={() => setHudHidden(true)}
-          chainSlot={
-            ALGO_ENABLED ? (
-              <ChainRow
-                plant={plant}
-                mintOptions={{ strainName: strain?.name, growDay: Math.round(day), budDev: budScalars.budDev }}
-              />
-            ) : undefined
-          }
-        />
-      )}
-      {!ended && hudHidden && (
-        <button
-          onClick={() => setHudHidden(false)}
-          aria-label="Show arcade controls"
-          className="fixed bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+5rem))] left-1/2 z-40 -translate-x-1/2 rounded-full border border-cyan-400/40 bg-[#08141e]/85 px-3 py-1.5 text-xs font-bold text-cyan-200 backdrop-blur"
-        >
-          🎮 Arcade
-        </button>
-      )}
     </div>
   );
 }

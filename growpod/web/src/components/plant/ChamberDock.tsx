@@ -39,6 +39,7 @@ export function ChamberActionBar({ plant }: { plant: PlantState }) {
   const { care } = useCareActions(plant.id);
   const { fire, layer } = useCareFeedback();
   const [tapped, setTapped] = useState<string | null>(null);
+  const [succeeded, setSucceeded] = useState<string | null>(null);
   const avail = careAvailability(plant, plant.recent_events ?? []);
   const dead = !plant.is_alive || plant.harvested;
   const pending = care.isPending ? care.variables : null;
@@ -48,7 +49,12 @@ export function ChamberActionBar({ plant }: { plant: PlantState }) {
     window.setTimeout(() => setTapped((t) => (t === kind ? null : t)), 650);
     fire(kind);
     dispatchCareReaction(kind);
-    care.mutate(kind);
+    care.mutate(kind, {
+      onSuccess: () => {
+        setSucceeded(kind);
+        window.setTimeout(() => setSucceeded((k) => (k === kind ? null : k)), 1100);
+      },
+    });
   };
 
   return (
@@ -61,9 +67,9 @@ export function ChamberActionBar({ plant }: { plant: PlantState }) {
           const enabled = !dead && (isInspect || !!state?.available);
           const reason = !isInspect && !dead && state && !state.available ? state.reason : null;
           const lastUsed = state ? formatSinceUsed(state.hoursSinceUsed) : null;
-          const cls = `flex min-h-[62px] flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 py-1.5 text-center transition-all ${
+          const cls = `flex min-h-[64px] flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 py-1.5 text-center transition-all ${
             tapped === t.kind ? "gpe-tile-tap" : ""
-          } ${
+          } ${succeeded === t.kind ? "ring-2 ring-grow-400/80" : ""} ${
             enabled
               ? "cursor-pointer border-[var(--tile)]/50 bg-gradient-to-b from-white/[0.06] to-transparent hover:from-white/[0.12]"
               : "cursor-not-allowed border-white/10 opacity-45"
@@ -77,7 +83,7 @@ export function ChamberActionBar({ plant }: { plant: PlantState }) {
               <span className="text-[10px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
                 {t.label.toUpperCase()}
               </span>
-              <span className="text-[8px] leading-tight text-[#7fa9bf]">
+              <span className="text-[9px] leading-tight text-[#7fa9bf]">
                 {reason ? "Unavailable" : (lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit)}
               </span>
             </>
