@@ -84,6 +84,11 @@ export async function setup(
     "/pods": [POD],
     "/plants/plant1/state": plantState(stateOver),
     "/plants/plant1/water": { ok: true },
+    // Explicit, not just the "/plants" fallback below: without this, the
+    // substring match returns the plants LIST for the events endpoint too
+    // (both contain "/plants"), so EventLog renders plant objects as if they
+    // were PlantEvents and crashes on the missing event_type field.
+    "/plants/plant1/events": [],
     "/plants": [plant(stateOver)],
     "/strains": [STRAIN],
     "/turbo": { enabled: false, multiplier: 10, offset_hours: 0, effective_now: new Date().toISOString(), wall_now: new Date().toISOString(), synced_pods: 0 },
