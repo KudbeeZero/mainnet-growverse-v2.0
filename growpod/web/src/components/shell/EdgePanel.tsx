@@ -23,7 +23,6 @@ export function EdgePanel({
   icon,
   accent,
   open,
-  widthPx,
   widthIndex,
   onOpen,
   onClose,
@@ -37,7 +36,8 @@ export function EdgePanel({
   /** Tailwind-safe rgb triplet, e.g. "56,189,248" — reused from the care-tile accent language. */
   accent: string;
   open: boolean;
-  widthPx: number;
+  /** Index into `WIDTH_PRESETS` — the panel derives its own pixel width from
+   *  this so callers don't have to keep a redundant `widthPx` in sync. */
   widthIndex: number;
   onOpen: () => void;
   onClose: () => void;
@@ -46,6 +46,7 @@ export function EdgePanel({
   onTabPointerEnter?: () => void;
   children: ReactNode;
 }) {
+  const widthPx = WIDTH_PRESETS[widthIndex];
   const edgeCls = side === "left" ? "left-0" : "right-0";
   const panelEdgeCls = side === "left" ? "left-0 border-r" : "right-0 border-l";
   const tabRounded = side === "left" ? "rounded-r-xl" : "rounded-l-xl";

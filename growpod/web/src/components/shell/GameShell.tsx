@@ -185,7 +185,6 @@ export function GameShell({
           icon={left.icon}
           accent={left.accent}
           open={openSide === "left"}
-          widthPx={WIDTH_PRESETS[widthIdx.left]}
           widthIndex={widthIdx.left}
           onOpen={() => open("left")}
           onClose={() => close("left")}
@@ -201,7 +200,6 @@ export function GameShell({
           icon={right.icon}
           accent={right.accent}
           open={openSide === "right"}
-          widthPx={WIDTH_PRESETS[widthIdx.right]}
           widthIndex={widthIdx.right}
           onOpen={() => open("right")}
           onClose={() => close("right")}
