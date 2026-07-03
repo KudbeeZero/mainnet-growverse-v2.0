@@ -9,6 +9,7 @@ import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
 import { CareButtons } from "@/components/plant/CareButtons";
 import { PlantActionCTA } from "@/components/plant/PlantActionCTA";
+import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { useGrowthBoost } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap, usePods } from "@/hooks/queries";
@@ -163,6 +164,17 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   useEffect(() => () => {
     if (flashRef.current) clearTimeout(flashRef.current);
   }, []);
+  // Post-harvest "Save snapshot" — download the plant canvas as a PNG keepsake.
+  // Grabs the GrowChamber canvas from the stage; no server round-trip.
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const saveSnapshot = () => {
+    const canvas = stageRef.current?.querySelector("canvas");
+    if (!canvas) return;
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = `growverse-${plantId.slice(0, 8)}-harvest.png`;
+    a.click();
+  };
 
   // --- Arcade Mode (client-only visual layer) ---
   const [hudHidden, setHudHidden] = useState(false);
@@ -391,6 +403,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
       {/* stage */}
       <div
+        ref={stageRef}
         className="relative min-h-0 flex-1"
         style={rewindActive && !reducedMotion ? { filter: "hue-rotate(-20deg) saturate(0.85)" } : undefined}
       >
@@ -418,6 +431,8 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           conditionFlags={plant.condition_flags}
           view="chamber"
         />
+        {/* the plant's visible response to care taps (water/feed/prune/train…) */}
+        <PlantReactionLayer />
         <div className="pointer-events-none absolute left-2.5 top-2.5 rounded-lg border border-cyan-400/40 bg-[#08141e]/70 px-2.5 py-1.5 font-mono text-[11px] tracking-wide backdrop-blur">
           {strain?.name ?? "Plant"} · {titleCase(renderStage)}
           {previewing && <span className="text-grow-300"> · preview</span>}
@@ -483,12 +498,38 @@ function ChamberScreen({ plantId }: { plantId: string }) {
                 <p className="relative max-w-[16rem] text-xs text-cyan-200/70">
                   Your {strain?.name ?? "plant"} made it all the way. Cured, weighed and sold.
                 </p>
-                <Link
-                  href="/dashboard"
-                  className="relative mt-1 rounded-lg border border-grow-600 bg-grow-700/40 px-4 py-2 text-sm font-semibold text-grow-100 hover:bg-grow-700/60"
-                >
-                  Grow another →
-                </Link>
+                {/* Next actions — never leave the player wondering what's next
+                    (owner spec: Harvest Review / Enter Cup / Save Snapshot /
+                    Grow Another). Review = the plant's final report page
+                    (vitals, timeline, full journal). */}
+                <div className="relative mt-1 flex w-full max-w-[17rem] flex-col gap-2">
+                  <Link
+                    href="/dashboard"
+                    className="rounded-lg border border-grow-600 bg-grow-700/40 px-4 py-2 text-sm font-semibold text-grow-100 hover:bg-grow-700/60"
+                  >
+                    🌱 Grow another →
+                  </Link>
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/dashboard/plants/${plantId}`}
+                      className="flex-1 rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-2 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-400/20"
+                    >
+                      📋 Harvest review
+                    </Link>
+                    <Link
+                      href="/cup"
+                      className="flex-1 rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-2 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-400/20"
+                    >
+                      🏆 Enter the Cup
+                    </Link>
+                  </div>
+                  <button
+                    onClick={saveSnapshot}
+                    className="rounded-lg border border-cyan-400/25 bg-transparent px-2 py-1.5 text-[11px] font-semibold text-cyan-200/80 hover:bg-cyan-400/10"
+                  >
+                    📸 Save snapshot
+                  </button>
+                </div>
               </div>
             ) : (
               <>

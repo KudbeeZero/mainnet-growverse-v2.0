@@ -18,6 +18,7 @@ import { PlantMetrics } from "@/components/plant/PlantMetrics";
 import { StageTimeline } from "@/components/plant/StageTimeline";
 import { AdvisorPanel } from "@/components/plant/AdvisorPanel";
 import { PlantActionCTA } from "@/components/plant/PlantActionCTA";
+import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { StickyActionBar } from "@/components/ui/StickyActionBar";
 import { nextPlantAction } from "@/lib/plantAction";
 import { usePlantState } from "@/hooks/usePlantState";
@@ -140,6 +141,9 @@ function PlantDetail({ plantId }: { plantId: string }) {
               conditionFlags={plant.condition_flags}
               view="chamber"
             />
+            {/* Care taps below make the plant itself react; arriving here via
+                🔍 Inspect opens with a scanner sweep (auto). */}
+            <PlantReactionLayer auto="inspect" />
           </div>
           <div className="mt-3">
             <ConditionBadges flags={plant.condition_flags} />

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { useCareActions } from "@/hooks/useCareActions";
 import { useCareFeedback } from "./CareFeedback";
 import type { CareKind } from "./careFeedbackData";
+import { dispatchCareReaction } from "./careReactionsData";
 import { careAvailability, formatSinceUsed } from "@/lib/careAvailability";
 import type { PlantState } from "@/lib/types";
 
@@ -39,6 +40,7 @@ export function CareButtons({ plant }: { plant: PlantState }) {
   // immediate, not wait on the network round-trip.
   const doCare = (kind: Exclude<CareKind, "harvest">) => {
     fire(kind);
+    dispatchCareReaction(kind); // the plant itself reacts (PlantReactionLayer)
     care.mutate(kind);
   };
 
@@ -99,6 +101,7 @@ export function CareButtons({ plant }: { plant: PlantState }) {
           loading={harvest.isPending}
           onClick={() => {
             fire("harvest");
+            dispatchCareReaction("harvest");
             harvest.mutate({ sell: true });
           }}
         >
