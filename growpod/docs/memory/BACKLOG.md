@@ -14,6 +14,21 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
 > supersedes the 3D/Lab tracks below until the owner reopens them. Loop verified end-to-end by
 > `web/e2e/care-loop-shot.spec.ts` (button states → plant reaction → harvest-ready CTA →
 > post-harvest next-actions), 2026-07-03.
+- 🎮 ✅ **/university white-screen crash guarded (2026-07-03 PM)** — a client-side-exception
+  sweep across routes × plant states (default/harvested/dead/veg) found `/university` throwing
+  `Cannot read properties of undefined (reading 'filter')` → full-page "Application error". The
+  guard only checked `!transcript.data`, so a truthy-but-malformed response slipped through and
+  crashed on `t.courses.filter(...)`. Now validates the shape (`Array.isArray(courses)`) →
+  retryable `ErrorState`; shared e2e fixture gained a minimal transcript (keyed on the exact
+  `/players/p1/university` path, not a bare `/university` that'd shadow siblings). Happy path
+  unchanged (smoke green). `web/src/app/university/page.tsx`.
+- 🟠 ⬜ **Global React #418 hydration mismatch (observed 2026-07-03 PM, NOT yet fixed)** — the
+  same exception sweep showed a non-fatal "Minified React error #418" (server/client text
+  mismatch) firing on EVERY route, including passing ones (React recovers by re-rendering client-
+  side). Almost certainly a non-deterministic SSR value (a `new Date()`/`Date.now()` rendered at
+  request time then differing on the client — the footer build-timestamp is the prime suspect).
+  Non-fatal + pre-existing, so left for a focused pass: find the SSR-time value, make it stable
+  (render client-only or pass a fixed build stamp). Cosmetic-perf, not a blocker.
 - 🎮 ✅ **Store panelized + seasonal "undefined" drop fixed (2026-07-03 PM, owner: "redo the
   store... some sort of panel or tile type of look")** — all 7 store shelves now sit in a
   consistent elevated panel (`STORE_PANEL`, `store/page.tsx`) so the page reads as distinct
