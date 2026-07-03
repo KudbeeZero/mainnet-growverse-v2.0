@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do sweep).
+once they appear here. Last reconciled: **2026-07-03** (core-game-loop session: plant reactions + harvest next-actions).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -11,7 +11,9 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
 ## 🎮 Core Game Loop (TOP-PRIORITY ACTIVE track — owner freeze directive 2026-07-02, PR #111)
 > Owner directive: **freeze advanced 3D bud/model work** and ship the playable core loop on the
 > existing stylized 2D chamber engine — "I'm not worried about the 3-D right now." This track
-> supersedes the 3D/Lab tracks below until the owner reopens them.
+> supersedes the 3D/Lab tracks below until the owner reopens them. Loop verified end-to-end by
+> `web/e2e/care-loop-shot.spec.ts` (button states → plant reaction → harvest-ready CTA →
+> post-harvest next-actions), 2026-07-03.
 - 🎮 ✅ **Bud Viewer route parked, "Coming soon" (2026-07-02, PR #111)** — the dedicated Tier-2
   `/dashboard/plants/[plantId]/bud` screen (`BudGL` macro inspection) stays built and working
   (zero cost to leave, one-line re-enable later) but the Grow Chamber's floating "🔬 View Bud"
@@ -37,22 +39,26 @@ once they appear here. Last reconciled: **2026-07-02** (REC-005 owner to-do swee
   tab now shows the existing `PlantActionCTA`/`nextPlantAction` "what to do next" banner
   (previously only on the plant-detail page and PlantCard) so harvest-ready / critical-care state
   is never ambiguous inside the chamber itself.
-- 🎮 ⬜ **Per-action visual plant reactions (owner spec, not yet built)** — owner asked for
-  *targeted* feedback beyond the existing generic particle burst: Water → blue pulse to the root
-  zone, Feed → green pulse traveling up the stem, Prune → trim/sparkle at the cut site, Train →
-  branch-guide animation, Inspect → scanner sweep. Today `CareFeedback` fires the same
-  screen-space glyph burst for every action; these need to be geometry-aware (root/stem/branch
-  targeted) inside `chamberCore.ts`/`GrowChamber`.
-- 🎮 ⬜ **Harvest-ready next-actions (owner spec, partially built)** — owner wants: Harvest Review,
-  Final Report, Grow Another, Enter Cup, Save Snapshot. Today only "✂️ Harvest & Sell" (via
-  `PlantActionCTA`/`CareButtons`) and post-harvest "Grow Another" (celebration overlay) exist.
-  Harvest Review / Final Report / Enter Cup / Save Snapshot are not implemented — needs product
-  scoping (Enter Cup touches `/cup`, in scope per owner's "Cup logic unless required for harvest
-  handoff" carve-out; the other three are new screens/state).
-- 🎮 ⬜ **Menu clarity review (owner spec: Grow/Lab/Market/Cup/More)** — not yet audited against
-  current nav (`navLinks.ts`) for the specific 5-menu read the owner described (Grow = main
-  plant care, Lab = parked for later, Market = seeds/items, Cup = competition/final plant,
-  More = settings/history/help).
+- 🎮 ✅ **Per-action visual plant reactions (2026-07-03)** — owner-spec mapping shipped: Water →
+  blue ring pulse at the root zone, Feed → green pulse rising the stem line, Prune → trim
+  sparkles across the canopy, Train → branch-guide arcs, Inspect → scanner sweep (plays on
+  arriving at the plant detail page via 🔍 Inspect); treatments/boost get subtle zone washes.
+  Built as `web/src/components/plant/careReactionsData.ts` (pure spec map + CustomEvent
+  dispatch, 5 unit tests) + `web/src/components/plant/PlantReactionLayer.tsx` (overlay mounted
+  on the chamber stage and the detail render card; reduced-motion collapses to a static tint
+  wash). Decoupled from the canvas via the same window-event pattern as `boostEngine` — no
+  changes inside `chamberCore.ts` needed.
+- 🎮 ✅ **Harvest next-actions (2026-07-03)** — the post-harvest celebration overlay now offers
+  the owner's full set: 🌱 Grow another (dashboard), 📋 Harvest review (the plant detail page —
+  vitals, stage timeline, metrics and the full journal serve as the final report; no new screen
+  needed), 🏆 Enter the Cup (`/cup` link only — harvest handoff, no Cup logic touched), and
+  📸 Save snapshot (downloads the chamber canvas as a PNG keepsake, client-only). Harvest-READY
+  clarity was already covered by `PlantActionCTA` "Harvest now" + the ✂️ Harvest & Sell button.
+  Verified by `web/e2e/care-loop-shot.spec.ts`.
+- 🎮 ✅ **Menu clarity verified (2026-07-03, no change needed)** — `web/src/components/layout/navLinks.ts` already matches
+  the owner's 5-menu spec exactly: Grow/Lab/Market/Cup are the `primary` mobile tabs and
+  everything else (Store, University, Leaderboards, Guide, Profile, Economy) sits behind the
+  "More" sheet. Desktop nav derives from the same list, so the surfaces can't drift.
 - 🎮 ❄️ **Parked for later (owner-named, do not resume without explicit direction)**: photoreal
   bud viewer, full 3D cola inspection, trichome particle macro mode, scientific Lab breakdown,
   university 3D model, advanced morphology layer toggles. See the ❄️ items under "HERMES
