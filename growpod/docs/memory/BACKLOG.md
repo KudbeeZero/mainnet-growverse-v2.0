@@ -762,7 +762,7 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   refs) before deletion; full gate green after (tsc/lint/build/vitest 475/e2e 52). ⬜ Remaining:
   backend `serve_narration` route (superseded by produce-once audio). Owner-taste call:
   `onboarding/VideoHero.tsx` + `public/media/*` (revive on landing or retire).
-- 🟡 ✅ **Retire: stale TS scaffolding (2026-07-03)** — deleted `growpod/artifacts/` (TS Express
+- 🟡 ✅ **Retire: stale TS scaffolding (2026-07-03)** — deleted growpod/artifacts/ (TS Express
   api-server + Vite mockup-sandbox, ~106 files), `growpod/lib/` (Drizzle db stub, orval-generated
   api-client-react/api-zod, api-spec stub), `growpod/scripts/src/hello.ts` + tsconfig.json +
   package.json, `attached_assets/` (dev screenshot/paste dumps). Updated `pnpm-workspace.yaml`
