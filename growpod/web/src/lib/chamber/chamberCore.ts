@@ -153,7 +153,9 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     for (let i = 1; i < SEG; i++) {
       const t = i / SEG;
       const env = Math.sin(Math.PI * Math.pow(t, 0.85));
-      const serr = t > 0.1 && t < 0.94 ? (i % 2 ? 1 : 0.68) : 1;
+      // Mockup pass: deeper serration (0.68 → 0.62) so the sawtooth edge that
+      // says "cannabis fan leaf" survives at phone size.
+      const serr = t > 0.1 && t < 0.94 ? (i % 2 ? 1 : 0.62) : 1;
       pts.push([env * serr * 0.5, t]);
     }
     return pts;
@@ -304,7 +306,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // a dense field of individual stalk+gland glyphs (owner: "clustered frost
       // highlights", not fine per-gland detail — that belongs in View Bud/Lab).
       const tris = [];
-      const nT = Math.max(1, Math.round(2 * lush));
+      const nT = Math.max(1, Math.round(2.5 * lush));
       for (let j = 0; j < nT; j++)
         tris.push({ a: rnd() * TAU, len: 0.5 + rnd() * 0.5, headR: 0.7 + rnd() * 0.5, k: rnd(), mat: rnd() });
       clusters.push({
@@ -329,12 +331,25 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     trichScale = 1,
   ) {
     ctx!.strokeStyle = `hsl(${S.hue - 12}, 32%, 30%)`;
-    ctx!.lineWidth = Math.max(1.5, site.baseW * 0.06);
+    ctx!.lineWidth = Math.max(1.8, site.baseW * 0.07);
     ctx!.lineCap = "round";
     ctx!.beginPath();
     ctx!.moveTo(0, 0);
     ctx!.lineTo(0, -site.axisLen * 0.98);
     ctx!.stroke();
+
+    // ---- Purple/pink flower accents (owner mockup: purple-pink accents on
+    // green buds). Authored accents (accentHue/accentFrac) pass through; any
+    // strain expressing anthocyanin but with no authored accent derives one, so
+    // even mid-anthocyanin phenotypes show a visible purple tip. The accent
+    // strengthens through flowering into late flower (ripeness-gated) and is
+    // weighted toward the cluster TIPS — anthocyanin expresses at the top of
+    // the bud first. Zero-anthocyanin strains (G13, Blue Dream) are unchanged.
+    const bcA = live.current.budColor;
+    const anth = clamp(bcA.anthocyanin, 0, 1);
+    const accHue = bcA.accentHue ?? (anth > 0.05 ? 288 : null);
+    const accFrac = bcA.accentFrac ?? (anth > 0.05 ? clamp(0.12 + anth * 0.4, 0, 0.5) : 0);
+    const accGate = 0.55 + 0.45 * P.ripe; // mid-flower subtle → late-flower full
 
     // Per-cluster placement, computed once so the continuous bud-mass
     // silhouette and the calyx texture that rides on it stay in lock-step.
@@ -396,7 +411,17 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       for (let i = n - 1; i >= 0; i--) pts.push([cxs[i] - hw[i], mass[i].cy]);
       const massLit = 37 + bc.anthocyanin * 2;
       const mg = ctx!.createLinearGradient(0, tipY, 0, botY);
-      mg.addColorStop(0, `hsl(${bc.calyxHue + 4}, ${bc.calyxSat}%, ${massLit + 7}%)`);
+      // Purple/pink tip on the fused bud mass (mockup): accent-capable strains
+      // blend the top of the silhouette into the accent hue, deepest in late
+      // flower. The stop position scales with accent strength so a light-accent
+      // strain gets a small tip kiss, a heavy one a broad glow.
+      const accAmt = accHue != null ? clamp(accFrac * accGate, 0, 0.5) : 0;
+      if (accHue != null && accAmt > 0.06) {
+        mg.addColorStop(0, `hsl(${accHue}, ${Math.min(72, bc.calyxSat + 16)}%, ${massLit + 10}%)`);
+        mg.addColorStop(clamp(0.16 + accAmt * 0.5, 0.16, 0.42), `hsl(${bc.calyxHue + 4}, ${bc.calyxSat}%, ${massLit + 7}%)`);
+      } else {
+        mg.addColorStop(0, `hsl(${bc.calyxHue + 4}, ${bc.calyxSat}%, ${massLit + 7}%)`);
+      }
       mg.addColorStop(1, `hsl(${bc.calyxHue}, ${Math.min(88, bc.calyxSat + 8)}%, ${Math.max(12, massLit - 13)}%)`);
       ctx!.fillStyle = mg;
       // Closed midpoint-quadratic spline: each vertex is a control point, so the
@@ -450,8 +475,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         const py = cy + Math.sin(p.a) * p.rad * cw * 0.35 + p.ring * podH * 0.18;
         // Some calyxes can render in an accent hue (e.g. purple accents on a
         // green bud) — chosen deterministically per pod via its blushK roll.
-        const accent = bc.accentFrac != null && bc.accentHue != null && p.blushK < bc.accentFrac;
-        const baseHueP = accent ? bc.accentHue! : calyxHue;
+        // Tip clusters (cl.yf → 1) carry more accents than the base, and the
+        // share grows through ripening (accGate) — purple tips, not confetti.
+        const accent = accHue != null && p.blushK < accFrac * accGate * (0.7 + 0.6 * cl.yf);
+        const baseHueP = accent ? accHue : calyxHue;
         // Accent calyxes are already a distinct hue — don't also apply the
         // ripeness blush shift, which would push violet toward pink.
         const hueP = baseHueP + p.dh + (!accent && p.blushK < P.blush ? 18 : 0);
@@ -501,7 +528,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
           const sh = motionOK
             ? shimmer(tt, tr.a * 7.13, 0.6 + tr.len * 1.2, SHIMMER_MAX_AMP * 0.5)
             : 1;
-          const br = tr.headR * Math.max(1.6, cw * 0.14);
+          const br = tr.headR * Math.max(1.8, cw * 0.16);
           const glow = ctx!.createRadialGradient(bx, by, 0, bx, by, br);
           const core = trichHeadColor(m, clamp(0.6 * sh, 0, 1), purple);
           glow.addColorStop(0, core);
@@ -697,7 +724,9 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // in parallel to it — this is what actually separates the spike tips,
       // not just their attachment point.
       let tilt = (0.92 + rnd() * 0.3) * (1 - f * 0.22 + apexSplay * 0.55) * lerp(1, 1.12, low);
-      let len = A * 0.27 * S.branchMul * (0.35 + 0.65 * low) * grow * shorten;
+      // Mockup pass: 0.27 → 0.25 — slightly shorter branch reach keeps the buds
+      // and tip fans hugging the leafy canopy instead of floating on bare arcs.
+      let len = A * 0.25 * S.branchMul * (0.35 + 0.65 * low) * grow * shorten;
       if (topK >= 0) {
         // A released top straightens toward vertical and extends up to race the
         // leader to the canopy — turning a side branch into a competing cola.
@@ -723,10 +752,13 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         leaflets: Math.min(S.leafletMax, 3 + 2 * Math.floor(d / 14)),
         phase: rnd() * TAU,
         tipX: 0, tipY: 0, site: null, budRot: 0,
-        curve: 0.14 + rnd() * 0.22, // upward bend
+        // Mockup pass: 0.14–0.36 read as exaggerated arced wires at phone size
+        // (deferred backlog item from the mobile-readability PR) — steadier,
+        // shallower arcs make the plant read sturdy instead of spindly.
+        curve: 0.1 + rnd() * 0.14, // upward bend
         weight: 0,
         branchlets: [],
-        nodeLeafSize: A * (0.05 + 0.04 * low) * (0.55 + 0.45 * grow) * SK.nodeLeaf * (1 - 0.35 * P.budDev * f) * (1 + skirt * 0.5),
+        nodeLeafSize: A * (0.055 + 0.045 * low) * (0.55 + 0.45 * grow) * SK.nodeLeaf * (1 - 0.35 * P.budDev * f) * (1 + skirt * 0.5),
         nodeBud: null,
         depth: az.depth,
         litAdj: depthShade(az.depth),
@@ -748,9 +780,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         const coShare = tops.secondaryShares[topK] / tops.leaderShare; // ≤1 vs leader
         let axis = stemH * 0.10 * S.clusterLen * SK.colaScale * (0.5 + 0.5 * P.budDev) * lerp(0.72, 1.06, coShare) * (1 + P.ripe * 0.14);
         axis = Math.min(axis, stemH * 0.28);
-        const baseW = axis * (S.pattern === "spiral" ? 0.2 : 0.27) * S.clusterFat * (0.92 + 0.12 * P.ripe);
+        // Mockup pass: co-cola width up a notch (0.2/0.27 → 0.22/0.29) so side
+        // colas read as fat buds, while staying visibly slimmer than the leader.
+        const baseW = axis * (S.pattern === "spiral" ? 0.22 : 0.29) * S.clusterFat * (0.92 + 0.12 * P.ripe);
         const nC = Math.max(3, Math.round(S.bracts * (S.pattern === "spiral" ? 1.9 : 1.35)));
-        nd.site = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1.05 });
+        nd.site = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1.1 });
         nd.budRot = nd.side * 0.06;
         nd.weight = lerp(0.95, 1.7, f) * S.clusterFat; // a top cola is heavy
       } else if (P.budDev > 0 && f > S.flowerFrom) {
@@ -761,11 +795,12 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // keeps only the nodes nearest the apex prominent; mid-canopy sites
         // shrink to small accents so the fan leaves (skirt/nodeFans) read as
         // the dominant mass there, matching the reference's leaf-heavy middle.
-        const sizeUp = lerp(0.26, 1.18, Math.pow(f, 1.8));
+        const sizeUp = lerp(0.26, 1.24, Math.pow(f, 1.8));
         const axis = A * (0.055 + 0.10 * f) * S.clusterLen * sizeUp * (0.5 + 0.5 * P.budDev);
         // Slimmer + more stacked clusters → a small tapered side cola, not a
-        // two-lobed peanut.
-        const baseW = axis * 0.3 * S.clusterFat;
+        // two-lobed peanut. Mockup pass: a touch wider (0.3 → 0.33) so upper
+        // side colas read as fat buds rather than thin spikes.
+        const baseW = axis * 0.33 * S.clusterFat;
         const nC = Math.max(3, Math.round(S.bracts * 0.85 * (0.6 + 0.5 * f)));
         nd.site = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1 });
         nd.budRot = nd.side * 0.1;
@@ -798,7 +833,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
           }
           nd.branchlets.push({
             along, side: b % 2 ? 1 : -1,
-            len: nd.len * (0.4 + rnd() * 0.26), tilt: 0.55 + rnd() * 0.5, curve: 0.1 + rnd() * 0.2,
+            len: nd.len * (0.4 + rnd() * 0.26), tilt: 0.55 + rnd() * 0.5, curve: 0.08 + rnd() * 0.14,
             leafSize: nd.leafSize * (0.42 + rnd() * 0.16), leaflets: Math.max(3, nd.leaflets - 2),
             phase: rnd() * TAU, site: blSite,
           });
@@ -813,26 +848,29 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // (ripeness) — the apex should be the visual climax, not a tidy spike.
       const lateMass = 1 + P.ripe * 0.14;
       // Engines 1&2: when the canopy shares its mass across several tops the
-      // leader cola shrinks toward its share (but never below ~0.62×, so it still
-      // reads as THE main cola). leaderShare = 1 for single-cola strains → no change.
-      const leaderMul = lerp(0.62, 1, tops.leaderShare);
+      // leader cola shrinks toward its share (but never below ~0.72×, so it still
+      // reads as THE main cola — mockup pass raised the floor from 0.62 so the
+      // apical cola is always the clear visual climax). leaderShare = 1 for
+      // single-cola strains → no change.
+      const leaderMul = lerp(0.72, 1, tops.leaderShare);
       // Cola LENGTH as a fraction of stem height. The previous coefficients
       // compounded (clusterLen·colaScale·lateMass ≈ 1.8×) into a ~0.6·stemH
       // balloon; a harvest cola should read as a SLIM spear ~25–30% of plant
       // height. Keep the strain-differentiating multipliers but scale the base
       // down, then hard-cap the length so no strain balloons past ~a third of
       // the stem (owner harvest reference, 2026-07-02).
-      let axis = stemH * (0.055 + 0.10 * P.budDev) * S.clusterLen * SK.colaScale * lateMass * leaderMul;
-      axis = Math.min(axis, stemH * 0.34);
+      let axis = stemH * (0.06 + 0.115 * P.budDev) * S.clusterLen * SK.colaScale * lateMass * leaderMul;
+      axis = Math.min(axis, stemH * 0.38);
       // Slim the cola: width is a small fraction of its length (spear taper), not
       // half of it. Chunky strains stay chunkier via clusterFat; spiral sativas
-      // are slimmest.
-      const baseW = axis * (S.pattern === "spiral" ? 0.2 : 0.27) * S.clusterFat * (0.92 + 0.12 * P.ripe);
+      // are slimmest. Mockup pass: slightly fatter cluster width so the apical
+      // cola reads FULL and dense, not a thin spike.
+      const baseW = axis * (S.pattern === "spiral" ? 0.23 : 0.3) * S.clusterFat * (0.92 + 0.12 * P.ripe);
       // Pack more, smaller clusters up the spine so the cola reads as one dense
       // textured column rather than a handful of big teardrops.
       const nC = Math.round(S.bracts * (S.pattern === "spiral" ? 2.1 : 1.5));
       cola = {
-        site: buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1.1 }),
+        site: buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1.18 }),
         x: spine[24].x, y: spine[24].y + axis * 0.06,
       };
     }
@@ -1013,7 +1051,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.strokeStyle = "rgba(0,0,0,0.20)";
       ctx!.lineWidth = 0.6;
       ctx!.stroke();
-      ctx!.strokeStyle = "rgba(255,255,255,0.05)";
+      ctx!.strokeStyle = "rgba(255,255,255,0.09)";
       ctx!.beginPath();
       ctx!.moveTo(0, 0);
       ctx!.lineTo(0, -L * 0.96 + curl * L);
@@ -1276,8 +1314,9 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     const wind = Math.sin(windPhase) * CL.windAmp;
     const claw = (CL.tooMuchFan ? 0.35 : 0) + condClaw;
     // Mobile-readability pass: a thicker, more organic-feeling stem — at real
-    // phone size a thin line reads as a wire, not a plant stalk.
-    const sw0 = clamp(p.A * 0.0145 * (0.5 + p.stemH / p.A), 2.6, 9.5) * (CL.tooLowFan ? 0.8 : 1);
+    // phone size a thin line reads as a wire, not a plant stalk. Mockup pass
+    // thickened it further (owner: "less spindly, sturdier plant").
+    const sw0 = clamp(p.A * 0.0175 * (0.5 + p.stemH / p.A), 3.2, 11) * (CL.tooLowFan ? 0.8 : 1);
     // ── SEED ─────────────────────────────────────────────────────────────────
     // A dark brown bean sitting on the medium surface. Nothing green visible —
     // the seed is soaking up moisture and hasn't cracked yet.
@@ -1482,7 +1521,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.strokeStyle = `hsl(${S.hue - 10}, 32%, ${clamp(30 + nd.litAdj, 18, 46)}%)`;
       // Bolder branches, less thinning toward the apex — the upper branches carry
       // the flower sites, so a "wire" up there is the worst place for it.
-      ctx!.lineWidth = clamp(sw0 * 0.62 * (1 - nd.f * 0.3), 1.7, 5);
+      ctx!.lineWidth = clamp(sw0 * 0.7 * (1 - nd.f * 0.26), 2.1, 6);
       ctx!.lineCap = "round";
       // Curved branch: arcs upward (nd.curve) then sags at the tip under weight.
       ctx!.beginPath();
@@ -1505,10 +1544,13 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const nodeFans: Array<readonly [number, number]> = [
         [-nd.side * 0.32, 0.55], [-nd.side * 0.74, 0.36], [nd.side * 0.22, 0.3],
       ];
+      // Mockup pass: one extra fan on the mid-canopy band (all strains) so the
+      // middle of the plant reads leafy and full rather than bare stem + buds.
+      if (nd.f > 0.25 && nd.f < 0.8) nodeFans.push([nd.side * 0.5, 0.44]);
       // Full lower skirt (owner harvest reference): broad-leaf strains add two
       // more big fans on the low/mid nodes so the bottom canopy reads as a
       // dense layered skirt, not a bare diagram. Skirt fans sit in shade.
-      if (nd.skirt > 0.25) nodeFans.push([nd.side * 0.62, 0.52], [-nd.side * 1.08, 0.46]);
+      if (nd.skirt > 0.2) nodeFans.push([nd.side * 0.62, 0.52], [-nd.side * 1.08, 0.46]);
       for (const [ang, scl] of nodeFans) {
         ctx!.save();
         ctx!.rotate(ang);
@@ -1527,7 +1569,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.save();
         ctx!.translate(bx, by);
         ctx!.strokeStyle = `hsl(${S.hue - 8}, 30%, 32%)`;
-        ctx!.lineWidth = clamp(sw0 * 0.42 * (1 - nd.f * 0.3), 1.1, 3);
+        ctx!.lineWidth = clamp(sw0 * 0.48 * (1 - nd.f * 0.3), 1.4, 3.6);
         ctx!.lineCap = "round";
         ctx!.beginPath();
         ctx!.moveTo(0, 0);

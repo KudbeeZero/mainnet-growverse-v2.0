@@ -7,7 +7,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
-import { ChamberActionBar, ChamberPanel, BoostsInline } from "@/components/plant/ChamberDock";
+import {
+  ChamberActionBar,
+  ChamberPanel,
+  BoostsInline,
+  PlantProgressStrip,
+  EncouragementFooter,
+} from "@/components/plant/ChamberDock";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { useGrowthBoost } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
@@ -376,6 +382,18 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const health = clamp(plant.health, 0, 100);
   const ended = !plant.is_alive || plant.harvested;
   const sharedPod = (pod?.capacity ?? 1) > 1;
+  // Honest plant mood pill (mockup: "PLANT MOOD · Thriving"). Derived only from
+  // real health + condition flags — no invented streak/vibe score. health < 40
+  // always reads as struggling regardless of flags; otherwise any active
+  // condition flag (or a health band of 40–69) reads as "needs care".
+  const conditionFlags = plant.condition_flags ?? [];
+  const mood: "thriving" | "care" | "struggling" =
+    health < 40 ? "struggling" : health >= 70 && conditionFlags.length === 0 ? "thriving" : "care";
+  const MOOD_COPY = {
+    thriving: { icon: "🌿", label: "Thriving", cls: "border-grow-400/40 bg-grow-500/10 text-grow-200" },
+    care: { icon: "🌤", label: "Needs care", cls: "border-amber-300/40 bg-amber-300/10 text-amber-200" },
+    struggling: { icon: "🚨", label: "Struggling", cls: "border-red-400/40 bg-red-400/10 text-red-300" },
+  } as const;
 
   return (
     <div className="fixed inset-0 z-30 flex flex-col bg-[#050b12] text-[#cfeeff]">
@@ -435,7 +453,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             punch list item 1). Deeper detail stays on the CLIMATE tab. */}
         <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center gap-1.5 overflow-x-auto">
           <span className="flex-none rounded-lg border border-cyan-400/40 bg-[#08141e]/70 px-2 py-1 font-mono text-[10px] tracking-wide backdrop-blur">
-            {strain?.name ?? "Plant"} · {titleCase(renderStage)}
+            {strain?.name ?? "Plant"} · {titleCase(renderStage)} · Day {Math.round(day)}
             {previewing && <span className="text-grow-300"> · preview</span>}
           </span>
           <span className="flex-1" />
@@ -465,6 +483,17 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             }}
           />
         </div>
+
+        {/* Plant Mood pill — bottom-left, clear of the centered "View Bud" chip
+            and above the embedded action bar. Honest read of health + condition
+            flags only (see `mood` above) — no invented vibe/streak score. */}
+        {!ended && (
+          <span
+            className={`absolute bottom-[92px] left-2 flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold backdrop-blur ${MOOD_COPY[mood].cls}`}
+          >
+            {MOOD_COPY[mood].icon} {MOOD_COPY[mood].label}
+          </span>
+        )}
 
         {/* 🔬 View Bud — dedicated Tier-2 inspection screen (top cola only, the
             heavy WebGL bud engine). Parked while we focus on the core game loop;
@@ -597,7 +626,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
                 onClick={() => growthBoost.mutate()}
                 disabled={growthBoost.isPending}
                 data-testid="growth-boost"
-                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-cyan-400/50 bg-gradient-to-r from-cyan-500/15 to-grow-500/15 px-3 text-xs font-bold tracking-[0.06em] text-cyan-100 transition-all hover:border-cyan-300 hover:from-cyan-500/25 hover:to-grow-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/50 bg-gradient-to-r from-cyan-500/15 to-grow-500/15 px-3 text-xs font-bold tracking-[0.06em] text-cyan-100 transition-all hover:border-cyan-300 hover:from-cyan-500/25 hover:to-grow-500/25 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {growthBoost.isPending ? "Boosting…" : "⚡ Boost Growth · 60 🌿"}
               </button>
@@ -607,6 +636,12 @@ function ChamberScreen({ plantId }: { plantId: string }) {
                 ? `${strain.name} · ${indicaRatio >= 0.66 ? "indica-dominant" : indicaRatio <= 0.34 ? "sativa-dominant" : "balanced hybrid"} — grown live from your plant's real state.`
                 : "Loading strain…"}
             </p>
+            {/* Stage-progress strip — server forecast only (no invented streak/
+                resin stats: nothing tracks them). Hidden once the grow has ended. */}
+            {!ended && plant.forecast && <PlantProgressStrip forecast={plant.forecast} />}
+            {/* Footer encouragement bar — closes the GROW sheet with the real
+                health dial + copy that adapts honestly to the plant's state. */}
+            {!ended && <EncouragementFooter health={health} />}
           </div>
         )}
 

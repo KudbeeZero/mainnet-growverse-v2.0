@@ -22,8 +22,15 @@ import type { CareKind } from "./careFeedbackData";
 import { dispatchCareReaction } from "./careReactionsData";
 import { careAvailability, formatSinceUsed } from "@/lib/careAvailability";
 import { buildTodaysPlan, URGENCY_LABEL, type PlanUrgency } from "@/lib/todaysPlan";
-import { useBoostStore, BOOST_CONFIG, OPEN_BOOST_TRAY_EVENT } from "@/lib/arcade/boostEngine";
-import type { PlantState, Strain } from "@/lib/types";
+import {
+  useBoostStore,
+  BOOST_CONFIG,
+  BOOST_TYPES,
+  BOOST_ICONS,
+  OPEN_BOOST_TRAY_EVENT,
+} from "@/lib/arcade/boostEngine";
+import { titleCase } from "@/lib/format";
+import type { PlantState, StageForecast, Strain } from "@/lib/types";
 
 type BarKind = Exclude<CareKind, "harvest" | "treatPests" | "treatDisease">;
 
@@ -257,16 +264,100 @@ function InsightChip({
 }
 
 /**
+ * PLANT PROGRESS strip (design punch list "remaining" item 5, honest subset) —
+ * a compact stage-progress row fed entirely by the server's `plant.forecast`
+ * (stage / hours_in_stage / stage_progress_pct / hours_to_harvest). Care-streak
+ * and resin-score stats are deliberately NOT shown: no backend tracks them, and
+ * we never invent numbers.
+ */
+export function PlantProgressStrip({ forecast }: { forecast: StageForecast }) {
+  // Day within the CURRENT stage, 1-based (hour 0–23 = day 1).
+  const stageDay = Math.max(1, Math.floor(forecast.hours_in_stage / 24) + 1);
+  const pct = Math.max(0, Math.min(100, Math.round(forecast.stage_progress_pct)));
+  // Same whole-day countdown rule as the HUD chip: never show 0 until ready.
+  const harvestNote = forecast.is_harvest_ready
+    ? "Harvest ready"
+    : `≈${Math.max(1, Math.ceil(forecast.hours_to_harvest / 24))}d to harvest`;
+  return (
+    <div className="rounded-xl border border-[#1c3447] bg-[#0d1d2b] p-2.5">
+      <div className="mb-1.5 flex items-center justify-between">
+        <h3 className="text-[10px] font-extrabold tracking-[0.18em] text-cyan-300">PLANT PROGRESS</h3>
+        <span className="font-mono text-[10px] font-bold text-white/70">{harvestNote}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-none text-[11px] font-bold text-gray-100">
+          Day {stageDay} of {titleCase(forecast.stage)}
+        </span>
+        <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[#11212e]">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-grow-400 transition-[width] duration-500"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className="flex-none font-mono text-[11px] font-bold text-grow-300">{pct}%</span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Footer encouragement bar (design punch list "remaining" item 4) — slim
+ * full-width closer for the GROW sheet: a small circular health dial (real
+ * plant.health %) + copy that adapts HONESTLY to the plant's state instead of
+ * cheerleading a dying plant.
+ */
+export function EncouragementFooter({ health }: { health: number }) {
+  const pct = Math.max(0, Math.min(100, Math.round(health)));
+  const tier = pct >= 70 ? "thriving" : pct >= 40 ? "struggling" : "critical";
+  const line =
+    tier === "thriving"
+      ? "Keep it up. She's thriving."
+      : tier === "struggling"
+        ? "She needs a little care."
+        : "She's in trouble — act now.";
+  const ring = tier === "thriving" ? "#62d99a" : tier === "struggling" ? "#fbbf24" : "#f87171";
+  // SVG ring: r=15 → circumference ≈ 94.25; offset the gap for the missing %.
+  const C = 2 * Math.PI * 15;
+  return (
+    <div className="flex w-full items-center gap-2.5 rounded-xl border border-[#1c3447] bg-[#0d1d2b] px-2.5 py-2">
+      <svg width="36" height="36" viewBox="0 0 36 36" className="flex-none -rotate-90" aria-hidden>
+        <circle cx="18" cy="18" r="15" fill="none" stroke="#11212e" strokeWidth="3.5" />
+        <circle
+          cx="18"
+          cy="18"
+          r="15"
+          fill="none"
+          stroke={ring}
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          strokeDasharray={C}
+          strokeDashoffset={C * (1 - pct / 100)}
+        />
+      </svg>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-bold text-gray-100">Your actions make a difference</p>
+        <p className="text-[10px] text-[#7fa9bf]">{line}</p>
+      </div>
+      <span className="flex-none font-mono text-[11px] font-bold" style={{ color: ring }}>
+        {pct}%
+      </span>
+    </div>
+  );
+}
+
+/**
  * Inline BOOSTS section (design punch list item 2) — compact status row in the
- * GROW sheet: live multiplier, the active boost's remaining time, and one
+ * GROW sheet: live multiplier, the active boost's remaining time, one
  * "Add Boost" action that expands the in-scene quick tray (ArcadeHUD) via
- * OPEN_BOOST_TRAY_EVENT. Reads the existing boostEngine store only — no new
- * boost economy.
+ * OPEN_BOOST_TRAY_EVENT, and a QUICK BOOSTS row of one-tap chips (one per
+ * boost type) that apply directly via the shared store. Reads the existing
+ * boostEngine store only — no new boost economy.
  */
 export function BoostsInline() {
   const activeBoost = useBoostStore((s) => s.activeBoost);
   const boostExpiresAt = useBoostStore((s) => s.boostExpiresAt);
   const getMultiplier = useBoostStore((s) => s.getMultiplier);
+  const applyBoost = useBoostStore((s) => s.applyBoost);
   // 1s tick keeps the countdown honest while a boost runs.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -280,6 +371,18 @@ export function BoostsInline() {
   const total = activeBoost ? BOOST_CONFIG[activeBoost].durationMs : 1;
   const mult = getMultiplier();
   const active = remaining > 0 && activeBoost;
+
+  // Quick Boosts row (mockup): tap a chip to apply that boost directly —
+  // mirrors ArcadeHUD's onBoostTap (same store call + plant reaction), minus
+  // the per-type cooldown UI. Cooldowns in this game are tracked only in
+  // ArcadeHUD's local state (a useRef, not the shared boostEngine store), so
+  // there's nothing here to read a cooldown from; these chips are honest
+  // simple apply-taps. `applyBoost` itself still won't let a weaker boost
+  // override a stronger active one (see boostEngine.applyBoost).
+  const onQuickBoost = (type: (typeof BOOST_TYPES)[number]) => {
+    applyBoost(type);
+    dispatchCareReaction("boost");
+  };
 
   return (
     <div className="rounded-xl border border-[#1c3447] bg-[#0d1d2b] p-2.5">
@@ -313,6 +416,31 @@ export function BoostsInline() {
         >
           ⚡ Add Boost
         </button>
+      </div>
+      {/* QUICK BOOSTS — one-tap chips for the 4 boost types, sourced from the
+          shared boostEngine config so this stays a single source of truth
+          with ArcadeHUD's full tray. */}
+      <div className="mt-1.5 flex items-stretch gap-1.5">
+        {BOOST_TYPES.map((type) => {
+          const cfg = BOOST_CONFIG[type];
+          const isActive = activeBoost === type && !!active;
+          return (
+            <button
+              key={type}
+              onClick={() => onQuickBoost(type)}
+              title={`${cfg.label} · ${cfg.multiplier}× for ${Math.round(cfg.durationMs / 1000)}s`}
+              aria-label={`Quick-apply ${cfg.label}, ${cfg.multiplier} times multiplier`}
+              className={`flex min-h-[36px] flex-1 items-center justify-center gap-1 rounded-lg border font-mono text-[11px] font-bold transition-colors ${
+                isActive
+                  ? "border-grow-400/60 bg-grow-500/15 text-grow-200"
+                  : "border-white/10 bg-white/[0.04] text-cyan-100 hover:border-amber-300/40 hover:bg-amber-300/10"
+              }`}
+            >
+              <span className="text-sm leading-none">{BOOST_ICONS[type]}</span>
+              <span>{cfg.multiplier}×</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
