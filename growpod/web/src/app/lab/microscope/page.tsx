@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +11,10 @@ import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
 import { Microscope } from "@/components/viz/Microscope";
 import { useStrains } from "@/hooks/queries";
+import { usePlantState } from "@/hooks/usePlantState";
+import { useSession } from "@/lib/session";
+import { maturityFromTelemetry } from "@/lib/chamber/microscopeGeometry";
+import { budColorForStrain } from "@/lib/chamber/strainVisuals";
 import { terpeneInfo } from "@/lib/terpenes";
 
 function hashSeed(s: string): number {
@@ -43,8 +48,30 @@ function maturityLabel(m: number): { stage: string; advice: string; tone: string
 
 function MicroscopeInner() {
   const strains = useStrains({});
+  const { playerId } = useSession();
+  const params = useSearchParams();
+  // Live-specimen mode: ?plantId=… deep-links a REAL growing plant under the
+  // lens (entry point: the chamber's 🔬 Inspect trichomes chip). Strain +
+  // maturity then come from the plant's server-truth trichome telemetry
+  // instead of free-floating dropdown/slider picks.
+  const plantId = params.get("plantId");
+  const plantQ = usePlantState(playerId ?? "", plantId ?? "", Boolean(plantId && playerId));
+  const plant = plantId ? plantQ.data : undefined;
+  const telemetry = plant?.trichomes;
+  const liveMaturity = telemetry?.active ? maturityFromTelemetry(telemetry) : telemetry ? 0 : null;
+
   const [strainId, setStrainId] = useState<string | null>(null);
   const [maturity, setMaturity] = useState(0.5);
+  // Seed the bench from the live plant once its state arrives; the player can
+  // still scrub the slider afterwards for what-if reads (Re-sync snaps back).
+  const [seeded, setSeeded] = useState(false);
+  useEffect(() => {
+    if (!seeded && plant && liveMaturity != null) {
+      setStrainId(plant.strain_id);
+      setMaturity(liveMaturity);
+      setSeeded(true);
+    }
+  }, [seeded, plant, liveMaturity]);
 
   const list = strains.data ?? [];
   const selected = useMemo(
@@ -54,8 +81,14 @@ function MicroscopeInner() {
 
   const terpenes = selected?.terpenes ?? [];
   const seed = selected ? hashSeed(selected.id) : 1;
-  const purple = selected ? Math.min(0.6, (selected.indica_ratio ?? 0) * 0.5) : 0.2;
+  // Authored per-strain bud colour — the SAME source the Grow Chamber renders
+  // from (strainVisuals.ts), so purple strains are purple under the lens too.
+  const budColor = useMemo(
+    () => budColorForStrain(selected?.slug ?? selected?.name, 96, seed),
+    [selected, seed],
+  );
   const mInfo = maturityLabel(maturity);
+  const isLive = liveMaturity != null && Math.abs(maturity - liveMaturity) < 0.005;
 
   return (
     <div className="space-y-5">
@@ -64,13 +97,19 @@ function MicroscopeInner() {
         title="Trichome Microscope"
         subtitle="Put a bud under the lens. Drag to pan, scroll to zoom, and hover for the magnifier — resolve the calyxes, pistils, and frosty trichomes down to the terpene droplets."
         action={
-          <Link href="/lab">
-            <Button variant="secondary">← Strain Lab</Button>
-          </Link>
+          plantId && plant ? (
+            <Link href={`/dashboard/plants/${plantId}/chamber`}>
+              <Button variant="secondary">← Back to chamber</Button>
+            </Link>
+          ) : (
+            <Link href="/lab">
+              <Button variant="secondary">← Strain Lab</Button>
+            </Link>
+          )
         }
       />
 
-      {strains.isLoading ? (
+      {strains.isLoading || (plantId && plantQ.isLoading) ? (
         <LoadingBlock label="Loading specimens…" />
       ) : strains.isError ? (
         <ErrorState error={strains.error} onRetry={() => strains.refetch()} />
@@ -107,6 +146,21 @@ function MicroscopeInner() {
                 />
                 <span className={`font-mono ${mInfo.tone}`}>{Math.round(maturity * 100)}%</span>
               </div>
+              {liveMaturity != null &&
+                (isLive ? (
+                  <span className="flex items-center gap-1 rounded-full border border-grow-500/40 bg-grow-900/40 px-2 py-0.5 text-[10px] font-bold text-grow-300">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-grow-400" /> LIVE ·
+                    your plant
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setMaturity(liveMaturity)}
+                    className="rounded-full border border-ink-600 bg-ink-800/80 px-2 py-0.5 text-[10px] font-bold text-gray-300 hover:bg-ink-700"
+                    title="Snap the maturity slider back to your plant's live trichome telemetry"
+                  >
+                    ↺ Re-sync to live ({Math.round(liveMaturity * 100)}%)
+                  </button>
+                ))}
             </div>
             <div className="h-[460px] w-full">
               {selected && (
@@ -114,7 +168,7 @@ function MicroscopeInner() {
                   seed={seed}
                   terpenes={terpenes}
                   maturity={maturity}
-                  purple={purple}
+                  budColor={budColor}
                 />
               )}
             </div>
@@ -126,6 +180,11 @@ function MicroscopeInner() {
               <CardHeader title="Harvest readiness" />
               <p className={`text-sm font-semibold ${mInfo.tone}`}>{mInfo.stage}</p>
               <p className="mt-1 text-xs text-gray-400">{mInfo.advice}</p>
+              {telemetry && isLive && (
+                <p className="mt-2 rounded-md border border-grow-500/20 bg-grow-900/20 px-2 py-1.5 text-[11px] text-grow-200">
+                  🔬 Grower&apos;s read: {telemetry.recommendation}
+                </p>
+              )}
               <div className="mt-3 flex items-center gap-1 text-[10px] text-gray-500">
                 <span className="text-sky-300">Clear</span>
                 <div className="h-1.5 flex-1 rounded-full bg-gradient-to-r from-sky-300 via-gray-200 to-amber-400" />
@@ -171,7 +230,10 @@ function MicroscopeInner() {
 export default function MicroscopePage() {
   return (
     <RequireAuth>
-      <MicroscopeInner />
+      {/* useSearchParams requires a Suspense boundary in the App Router. */}
+      <Suspense fallback={<LoadingBlock label="Loading specimens…" />}>
+        <MicroscopeInner />
+      </Suspense>
     </RequireAuth>
   );
 }

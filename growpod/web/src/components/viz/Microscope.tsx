@@ -18,8 +18,10 @@ import { terpeneInfo } from "@/lib/terpenes";
 import {
   WORLD,
   buildBudGeometry,
+  calyxTint,
   frostAlpha,
   headColor,
+  type CalyxTint,
 } from "@/lib/chamber/microscopeGeometry";
 
 interface Props {
@@ -29,13 +31,19 @@ interface Props {
   terpenes: string[];
   /** Trichome maturity 0..1: clear → cloudy → amber (harvest readiness). */
   maturity: number;
-  /** Purple anthocyanin tint 0..1 for the calyxes (cool-night / strain trait). */
+  /**
+   * Authored strain bud colour (strainVisuals.ts, the same source the Grow
+   * Chamber renders from) — real calyx hue/sat + purple-accent mix, so a strain
+   * looks like the SAME plant here and in the chamber. Preferred over `purple`.
+   */
+  budColor?: CalyxTint;
+  /** Legacy purple scalar 0..1 fallback when no authored budColor exists. */
   purple?: number;
   className?: string;
 }
 
 
-export function Microscope({ seed, terpenes, maturity, purple = 0, className = "" }: Props) {
+export function Microscope({ seed, terpenes, maturity, budColor, purple = 0, className = "" }: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -43,8 +51,8 @@ export function Microscope({ seed, terpenes, maturity, purple = 0, className = "
   const cam = useRef({ x: WORLD / 2, y: WORLD / 2, zoom: 1 });
   const pointer = useRef<{ x: number; y: number; inside: boolean }>({ x: 0, y: 0, inside: false });
   const drag = useRef<{ on: boolean; px: number; py: number }>({ on: false, px: 0, py: 0 });
-  const live = useRef({ maturity, purple, terpenes });
-  live.current = { maturity, purple, terpenes };
+  const live = useRef({ maturity, purple, budColor, terpenes });
+  live.current = { maturity, purple, budColor, terpenes };
 
   const [zoomLabel, setZoomLabel] = useState(1);
   const geomKey = `${seed}|${terpenes.length}`;
@@ -98,17 +106,26 @@ export function Microscope({ seed, terpenes, maturity, purple = 0, className = "
       const mat = live.current.maturity;
       const pur = live.current.purple;
       const terps = live.current.terpenes;
+      // Terpene labels placed this pass — later labels that would overlap an
+      // earlier one are skipped, so a dense gland field can't collide labels
+      // into an unreadable pile (recon-verified rendering bug at max zoom).
+      const labelBoxes: Array<{ x: number; y: number; w: number; h: number }> = [];
 
       // bud mass — overlapping calyxes. Teardrop silhouette (a pinched tip via a
       // skewed quadratic) + a darker rim so they read as packed swollen tissue,
-      // not floating pebbles.
+      // not floating pebbles. Colour comes from the strain's AUTHORED BudColor
+      // (calyxTint) so purple strains actually render purple here, matching the
+      // chamber — the accent roll is a hash of the calyx's own position, so the
+      // green/purple mix is stable frame to frame without touching the
+      // geometry's RNG stream (pinned tests).
+      const bc = live.current.budColor;
       for (const c of geom.calyxes) {
         const cxp = sx(c.x);
         const cyp = sy(c.y);
         const rx = c.rx * scale;
         const ry = c.ry * c.skew * scale;
-        const hue = 96 - pur * 50; // green → toward violet
-        const sat = 45 + pur * 20;
+        const rollRaw = Math.sin(c.x * 12.9898 + c.y * 78.233) * 43758.5453;
+        const { hue, sat } = calyxTint(bc, pur, rollRaw - Math.floor(rollRaw));
         const lit = 22 + c.shade * 16;
         ctx.save();
         ctx.translate(cxp, cyp);
@@ -214,16 +231,28 @@ export function Microscope({ seed, terpenes, maturity, purple = 0, className = "
           ctx.fill();
           ctx.globalAlpha = 1;
           if (labels && hr > 26) {
-            ctx.strokeStyle = "rgba(255,255,255,0.5)";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(hx + hr, hy - hr);
-            ctx.lineTo(hx + hr + 18, hy - hr - 14);
-            ctx.stroke();
             ctx.font = "11px ui-monospace, monospace";
-            ctx.fillStyle = info.color;
-            ctx.textBaseline = "bottom";
-            ctx.fillText(info.name, hx + hr + 21, hy - hr - 12);
+            const labW = ctx.measureText(info.name).width;
+            const box = { x: hx + hr + 21, y: hy - hr - 23, w: labW, h: 13 };
+            const clear = labelBoxes.every(
+              (b) =>
+                box.x + box.w < b.x - 4 ||
+                box.x > b.x + b.w + 4 ||
+                box.y + box.h < b.y - 2 ||
+                box.y > b.y + b.h + 2,
+            );
+            if (clear) {
+              labelBoxes.push(box);
+              ctx.strokeStyle = "rgba(255,255,255,0.5)";
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(hx + hr, hy - hr);
+              ctx.lineTo(hx + hr + 18, hy - hr - 14);
+              ctx.stroke();
+              ctx.fillStyle = info.color;
+              ctx.textBaseline = "bottom";
+              ctx.fillText(info.name, hx + hr + 21, hy - hr - 12);
+            }
           }
         }
       }
@@ -240,6 +269,32 @@ export function Microscope({ seed, terpenes, maturity, purple = 0, className = "
 
       const scale = base * cam.current.zoom;
       drawScene(cam.current.x, cam.current.y, scale, W / 2, H / 2, true, time);
+
+      // Scale bar (bottom-right) — real-microscope framing. Calibration: the
+      // whole WORLD (1000 units) ≈ a 25 mm bud, so 1 world unit ≈ 25 µm; pick
+      // the largest 1/2/5×10ⁿ µm length that fits in ~90 screen px.
+      {
+        const UM_PER_UNIT = 25;
+        const maxUm = (90 / scale) * UM_PER_UNIT;
+        const pow = Math.pow(10, Math.floor(Math.log10(maxUm)));
+        const nice = maxUm / pow >= 5 ? 5 * pow : maxUm / pow >= 2 ? 2 * pow : pow;
+        const px = (nice / UM_PER_UNIT) * scale;
+        const bx = W - 14 - px;
+        const by = H - 16;
+        ctx.strokeStyle = "rgba(190,230,205,0.75)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(bx, by - 4);
+        ctx.lineTo(bx, by);
+        ctx.lineTo(bx + px, by);
+        ctx.lineTo(bx + px, by - 4);
+        ctx.stroke();
+        ctx.font = "10px ui-monospace, monospace";
+        ctx.fillStyle = "rgba(190,230,205,0.75)";
+        ctx.textBaseline = "bottom";
+        const label = nice >= 1000 ? `${nice / 1000} mm` : `${nice} µm`;
+        ctx.fillText(label, bx + px / 2 - ctx.measureText(label).width / 2, by - 5);
+      }
 
       // magnifier lens
       if (pointer.current.inside) {

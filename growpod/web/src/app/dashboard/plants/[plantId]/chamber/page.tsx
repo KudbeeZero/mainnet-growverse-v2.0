@@ -501,16 +501,20 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </span>
         )}
 
-        {/* 🔬 View Bud — dedicated Tier-2 inspection screen (top cola only, the
-            heavy WebGL bud engine). Parked while we focus on the core game loop;
-            the route/component stay intact so this is a one-line re-enable later. */}
+        {/* 🔬 Inspect trichomes — deep-links the LIVE plant into the Lab's
+            Canvas-2D Trichome Microscope (?plantId= pre-seeds strain + maturity
+            from this plant's real trichome telemetry). This replaced the dead
+            "View Bud · Coming soon" chip: the heavy WebGL View Bud screen stays
+            parked/intact under the owner's 3D freeze (one-line re-enable later);
+            the microscope is the working inspection tool players get today. */}
         {(renderStage === "flowering" || renderStage === "late_flower" || renderStage === "harvest") && !ended && (
-          <span
-            className="absolute bottom-[92px] left-1/2 -translate-x-1/2 flex cursor-not-allowed items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/20 bg-[#08141e]/70 px-3 py-1 text-[10px] font-bold text-cyan-200/50 backdrop-blur"
-            title="View Bud is coming soon"
+          <Link
+            href={`/lab/microscope?plantId=${plantId}`}
+            className="absolute bottom-[92px] left-1/2 -translate-x-1/2 flex items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/40 bg-[#08141e]/70 px-3 py-1 text-[10px] font-bold text-cyan-200 backdrop-blur transition hover:border-cyan-300/70 hover:bg-[#0c1e2c]/80"
+            title="Inspect this plant's trichomes under the Lab microscope"
           >
-            🔬 View Bud · Coming soon
-          </span>
+            🔬 Inspect trichomes
+          </Link>
         )}
 
         {/* embedded action bar — glassy tiles built into the chamber base */}

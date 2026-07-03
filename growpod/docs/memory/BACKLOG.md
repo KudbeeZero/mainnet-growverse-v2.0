@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (visual-verification archive — `docs/memory/VERIFIED_RENDERS.md` chapter list + `verification/golden/` + shared e2e fixtures (`web/e2e/fixtures/mockGame.ts`) + parameterized `capture.spec.ts` + sandbox-Chromium auto-detect in `playwright.config.ts` + `capture-shots` skill, ending the per-session throwaway-rig ritual; plant round 8c — leaf + bract TEXTURE LAYERING (owner: "the layering in the texture"): `drawFan` leaflets now carry deterministic per-leaflet size/angle/tone jitter plus a light↔shadow facet gradient (was one flat hsl() fill repeated identically at every node — the "stamped decal" read); `drawPod` now gives every calyx bract a volumetric gradient (the old `w>4.2` gate meant almost none ever cleared it, since podW's own ceiling is 4.2) plus a new base "undercut" shadow so overlapping bracts read as a physically shingled stack instead of blending into the mass gradient; plant round 8b — airier, more-separated candelabra branch layout in chamberCore.ts's `buildPlant`, matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
+once they appear here. Last reconciled: **2026-07-03** (Lab microscope rework phase 1 — purple-hue fix via authored strainVisuals BudColor (calyxTint), live-plant deep-link ?plantId= seeded from server trichome telemetry (maturityFromTelemetry), chamber 🔬 Inspect-trichomes chip replacing the dead View-Bud placeholder, terpene-label collision skip + µm scale bar; visual-verification archive — `docs/memory/VERIFIED_RENDERS.md` chapter list + `verification/golden/` + shared e2e fixtures (`web/e2e/fixtures/mockGame.ts`) + parameterized `capture.spec.ts` + sandbox-Chromium auto-detect in `playwright.config.ts` + `capture-shots` skill, ending the per-session throwaway-rig ritual; plant round 8c — leaf + bract TEXTURE LAYERING (owner: "the layering in the texture"): `drawFan` leaflets now carry deterministic per-leaflet size/angle/tone jitter plus a light↔shadow facet gradient (was one flat hsl() fill repeated identically at every node — the "stamped decal" read); `drawPod` now gives every calyx bract a volumetric gradient (the old `w>4.2` gate meant almost none ever cleared it, since podW's own ceiling is 4.2) plus a new base "undercut" shadow so overlapping bracts read as a physically shingled stack instead of blending into the mass gradient; plant round 8b — airier, more-separated candelabra branch layout in chamberCore.ts's `buildPlant`, matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -270,6 +270,37 @@ once they appear here. Last reconciled: **2026-07-03** (visual-verification arch
   the manifest rules: golden-promotion approval stays with the owner; commit budget stays
   curated. Design notes: recipes-not-pixels default, hybrid goldens (design-agent proposal,
   this session).
+- 🎮 ✅ **Lab microscope rework phase 1 — real colors, real plant, real-microscope framing
+  (2026-07-03, PR #137)** — first implementation slice of the 6-agent Lab-magnifier audit
+  (recon×2 + design + architecture + gamification; report in the session scratchpad, evidence
+  goldens VER-006..VER-010). Four changes, all Canvas-2D / plumbing — the frozen 3D lane
+  (`bud3d/`, `PlantGL`, `BudGL`) untouched:
+  1. **Purple-hue bug fixed at the root** — `Microscope.tsx` computed `hue = 96 - purple*50`
+     (max 66° olive-yellow; purple strains could never render purple, flagged independently by
+     all four specialists). New pure `calyxTint()` in `microscopeGeometry.ts` renders each calyx
+     from the strain's AUTHORED `strainVisuals.ts` BudColor — the same source the Grow Chamber
+     uses — including the accentHue/accentFrac purple-accent mix (Gelato: green base + ~50%
+     violet calyxes, verified in golden VER-010); the legacy scalar fallback now actually sweeps
+     96°→290°. Accent roll is a position hash, NOT a geometry-RNG draw, so the pinned
+     `buildBudGeometry` determinism tests are untouched.
+  2. **Live-plant deep-link** (the audit's flagged scope decision, owner-approved) —
+     `/lab/microscope?plantId=…` seeds specimen + maturity from the plant's real
+     `/state` trichome telemetry via new pure `maturityFromTelemetry()` (0.5·cloudy + amber,
+     normalized; care-loop fixture's 30/62/8 → 39% = "cloudy/peak", matching the server's own
+     dominant read). LIVE badge when synced, ↺ Re-sync button after what-if scrubbing, server
+     `recommendation` shown in the readiness card, Back-to-chamber action. Entry point: the
+     chamber's dead "🔬 View Bud · Coming soon" chip is now a live "🔬 Inspect trichomes" link
+     (the parked WebGL View Bud route itself is unchanged — still a one-line re-enable);
+     `bud3d-shot.spec.ts`'s chip assertion updated to match.
+  3. **Terpene-label collision fix** — max-zoom labels now skip placements overlapping an
+     already-drawn label (recon-verified pileup bug).
+  4. **µm/mm scale bar** (bottom-right, 1/2/5×10ⁿ steps, WORLD≈25 mm calibration) — the
+     real-microscope framing quick-win from the design review.
+  Gates: tsc clean · lint 0 errors · vitest 478/478 (6 new: calyxTint ×3, maturityFromTelemetry
+  ×3) · build clean · care-loop-shot 4/4 + bud3d-shot 1/1 green. Next phases (parked in this
+  entry, owner-prioritized): "Call the Harvest Window" scoring mechanic + scan-coverage lens
+  mechanic + terpene-discovery codex (gamification report §5), geometry swap to shared
+  `budDna.ts` bract-shape genetics, chamber-grade bract shading port.
 - 🎮 ✅ **Plant round 8c — leaf + bract texture layering (2026-07-03, owner: "the leaves and the
   actual node clusters... it's more of the layering in the texture")** — the owner flagged the
   live chamber plant's foliage and cola surface as reading flat/decal-like on close inspection.

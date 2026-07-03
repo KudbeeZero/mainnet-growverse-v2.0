@@ -1,4 +1,4 @@
-import { test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // Proof capture — the dedicated Bud Viewer screen (/dashboard/plants/[id]/bud)
 // rendering a real lit, volumetric WebGL cola. The chamber's "View Bud" entry
@@ -80,10 +80,13 @@ async function setup(page: Page) {
 test("PROOF: 3D bud renders in the dedicated Bud Viewer", async ({ page }) => {
   await setup(page);
   await page.goto("/dashboard/plants/plant1/chamber");
-  // Per the owner's core-game-loop freeze, the chamber shows "View Bud" as a
-  // disabled "Coming soon" chip (no link) once the plant is flowering — the
-  // heavy WebGL bud engine never mounts inside the Grow Chamber page itself.
-  await page.getByText(/View Bud · Coming soon/i).waitFor({ timeout: 20_000 });
+  // Per the owner's core-game-loop freeze the heavy WebGL bud engine never
+  // mounts inside the Grow Chamber page itself — the chamber's flowering-stage
+  // chip now deep-links the live plant into the Lab's Canvas-2D Trichome
+  // Microscope instead (the parked View Bud route is unchanged below).
+  const inspect = page.getByRole("link", { name: /Inspect trichomes/i });
+  await inspect.waitFor({ timeout: 20_000 });
+  await expect(inspect).toHaveAttribute("href", "/lab/microscope?plantId=plant1");
   // The dedicated Bud Viewer route stays built and working (parked, not
   // removed) — navigate to it directly and prove the 3D bud still renders.
   await page.goto("/dashboard/plants/plant1/bud");
