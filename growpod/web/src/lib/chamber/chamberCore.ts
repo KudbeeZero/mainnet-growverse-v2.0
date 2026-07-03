@@ -439,7 +439,13 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       clusters.push({
         yf, along, lateral, fat: fat * opt.fatMul, tipTaper, centerBias, pods, hairs, tris,
         ph: rnd() * TAU,
-        leaf: pat !== "nodal" && i % 3 === 0 && yf < 0.75,
+        // Round 8 (owner "10/10" hero render): bright green serrated sugar-leaf
+        // sepals poke OUT through the purple bud on EVERY cola, giving each a
+        // spiky green star/sunburst outline (the render's defining feature).
+        // Fire on ~every other cluster, all patterns (nodal included — the hero
+        // shows green sepals on indica colas too), the full length of the cola
+        // (up to the tip). Was: spiral/hybrid only, every 3rd cluster, yf<0.75.
+        leaf: i % 2 === 0 && yf < 0.94,
         leafSide: i % 2 ? 1 : -1,
       });
     }
@@ -635,22 +641,40 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const baseLit = 35 - (1 - cl.yf) * 5 + bc.anthocyanin * 3;
       const detailed = podW > 1.8;
 
-      if (cl.leaf && d > 0.25 && detailed) {
-        // Round 7: SMALL, NARROW sugar leaves emerging between bud clusters
-        // (reference "Top Cola Breakdown"/"Top Cola Tip Breakdown" item 5 —
-        // "small narrow leaves... not large fan leaves"). Prior rounds sized
-        // these as a near-full 3-blade fan (ls up to ~1.1·cw) which read as
-        // fan leaves poking out of the cola; shrunk to a thin 2-blade sprig.
-        const ls = cw * (0.5 - d * 0.18);
+      if (cl.leaf && d > 0.22 && detailed) {
+        // Round 8 (owner "10/10" hero render): the hero's signature is bright
+        // green, SERRATED sugar-leaf blades poking OUT through the purple-
+        // magenta bud, so each cola reads as a spiky green star/sunburst rather
+        // than a smooth teardrop. Prior rounds drew a tiny 2-blade sprig that
+        // barely cleared the calyx surface (ls≈0.4·cw, mid-green) — invisible at
+        // chamber scale. Now: a small fan of thin serrated blades radiating up-
+        // and-outward from the cola flank, LONG enough that their tips clear the
+        // bud silhouette (hw≈0.62·cw), in a vivid lime green. Drawn BEFORE the
+        // pods so each blade's base tucks between the calyxes (botanically the
+        // sepals emerge from the bract seams) and only the outer serrated tip
+        // pokes through — keeping the bud purple-DOMINANT with green spikes.
+        const ls = cw * (0.72 + 0.42 * d);
+        const wd = ls * 0.11 * S.leafW;
+        const base = cl.leafSide;
+        // One slender serrated blade out each side (up-and-outward) — alternating
+        // tiers build a symmetric spiky outline up the cola while the purple
+        // calyx mass stays the dominant surface between the spikes. Per-blade
+        // lightness/hue jitter keeps the sepals reading as varied natural
+        // foliage (as in the hero render) rather than a flat neon slab.
+        const blades: Array<[number, number, number]> = [
+          [base * (0.78 + 0.14 * Math.sin(cl.ph)), 1.0, 0.5 + 0.5 * Math.sin(cl.ph * 3.1)],
+          [-base * (0.72 + 0.12 * Math.sin(cl.ph * 1.7)), 0.86, 0.5 + 0.5 * Math.cos(cl.ph * 2.3)],
+        ];
         ctx!.save();
         ctx!.translate(cx, cy);
-        ctx!.rotate(cl.leafSide * (1.05 + 0.2 * Math.sin(cl.ph)));
-        const col = `hsl(${S.hue}, ${S.sat}%, ${S.lit + 6}%)`;
-        for (const la of [-0.16, 0.16]) {
+        for (const [ang, sc, jit] of blades) {
+          // Vivid lime sugar-leaf green, lifted well above the fan-leaf tone so
+          // the sepals pop against the purple calyx mass; ±7% lightness / ±5°
+          // hue per blade for organic variation.
+          ctx!.fillStyle = `hsl(${S.hue - 8 + jit * 10}, ${clamp(S.sat + 22, 0, 82)}%, ${clamp(S.lit + 12 + jit * 14, 0, 60)}%)`;
           ctx!.save();
-          ctx!.rotate(la);
-          ctx!.fillStyle = col;
-          leafletPath(ls, ls * 0.13 * S.leafW);
+          ctx!.rotate(ang);
+          leafletPath(ls * sc, wd * sc, 0.14);
           ctx!.fill();
           ctx!.restore();
         }
