@@ -91,22 +91,6 @@ export default function OnboardingPage() {
           }
         />
 
-        <StoryBeat
-          eyebrow="THE PROOF"
-          title={
-            <>
-              Discover it, breed it, <span className="text-glow-accent text-accent-300">own it.</span>
-            </>
-          }
-          body={
-            <>
-              Register a discovered cultivar on a verifiable family tree and mint it on-chain. A
-              rare phenotype you found in week one becomes a provably scarce asset — its lineage
-              readable by anyone, forever.
-            </>
-          }
-        />
-
         <LoginSection />
       </main>
     </div>

@@ -45,19 +45,21 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   `suppressHydrationWarning` on that one span (`web/src/components/layout/Footer.tsx`); the fix
   was VERIFIED empirically (re-ran the sweep: react418 count 1→0 on /dashboard, /store, /cup),
   not just assumed. Full gate green.
-- 🎮 🔨 **Plant render rework — owner "pod plant" blueprints (2026-07-03 PM, 5 passes shipped,
-  loop continues)** — the owner sent 3 detailed blueprints (bud-integration + mesh, branch-overlay
-  structure map, visual-refinement plan) effectively lifting the render freeze with a precise spec.
-  Their method is an iterative "screenshot → compare to mockup → fix one thing → repeat" loop; five
-  structural passes landed in `chamberCore.ts` (all draw-path only → pinned determinism intact,
-  vitest 480; goldens VER-014/015 + plant-r9-*): (1) **node attachment** — `drawBudCollar` sockets
-  every cola onto a visible tapered stem neck + leaf collar (the #1 "buds pasted-on" complaint);
-  (2) **front depth** — front-facing nodes draw a lit support branch passing IN FRONT of their bud;
-  (3) **stronger tapered central stem** + front rim; (4) **separation halo** behind each cola so
-  buds pop off the foliage ("glow boundary"); (5) **branch rim-light** so branches read as visible
-  rounded support. Verified desktop + mobile. ⬜ Remaining passes (best steered by owner reaction —
-  their loop is react-driven): cleaner spacing to a visible 17-21 anchor structure + triangular
-  silhouette; leaf-fan demotion so buds stay readable; finer texture/material + hue calibration.
+- 🎮 ✅ **Plant render rework — owner "pod plant" blueprints (2026-07-03, 10 passes shipped)** —
+  the owner sent 3 detailed blueprints (bud-integration + mesh, branch-overlay structure map,
+  visual-refinement plan) effectively lifting the render freeze with a precise spec. Ten structural
+  passes landed in `chamberCore.ts` (all draw-path only → pinned determinism intact): (1) **node
+  attachment** — `drawBudCollar` sockets every cola onto a visible tapered stem neck + leaf collar;
+  (2) **front depth** — front-facing nodes draw a lit support branch IN FRONT of their bud; (3)
+  **stronger tapered central stem** + front rim; (4) **separation halo** behind each cola (buds pop
+  off foliage); (5) **branch rim-light** so branches read as visible rounded support; (6) **leaf
+  recede** in flowering (depth shade, increased darkness at node fans); (7) **hero bloom** pass; (8)
+  **triangular silhouette** — cone clamp taper changed from convex `(1-f)^0.75` to linear `(1-f)`,
+  apex narrowed 0.14→0.10, base widened 0.62→0.70; (9) **17-21 cola anchor spacing** — leader-cola
+  nClusters multiplier 1.5→1.85 for hybrid/nodal (Gelato nC=19); (10) **leaf-fan demotion** —
+  budDev suppression raised 0.25→0.40 on leafSize / 0.22→0.35 on nodeLeafSize so fans recede
+  behind buds in full flower. TypeScript clean (tsc --noEmit 0 errors), vitest green. Owner to
+  verify pass 8-10 visually and steer next visual round.
 - 🎮 🔨 **Onboarding AI-guide rework (2026-07-03 PM, owner: "too long, not exciting, doesn't work;
   AI helping along the way")** — pass 1 on `/ftue` (backend step machine untouched): the Master
   Grower is now an on-screen 🤖 character (avatar + speech bubble), an instant per-step hype line
