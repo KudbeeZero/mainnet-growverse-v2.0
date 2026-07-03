@@ -636,6 +636,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     branchlets: Branchlet[]; // secondary forks
     nodeLeafSize: number; // leaf cluster hugging the stem at this node
     nodeBud: FlowerSite | null; // bud forming at the node intersection (upper)
+    // Round 4: a THIRD bud position riding directly on the branch shaft, midway
+    // between the base (nodeBud) and the tip (site) — the owner mockup carries
+    // cola mass along the ENTIRE branch length, not just its two ends.
+    midBud: FlowerSite | null;
     // ---- Engine 3 (phyllotaxy) / Engine 4 (leaf orientation) ----
     depth: number; // sin(azimuth) ∈ [-1,1]; +1 toward camera (front), -1 back
     litAdj: number; // atmospheric depth shade (HSL lightness delta)
@@ -724,9 +728,20 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     // Round 2 (owner mockup): denser flowering canopy — the mockup plant carries
     // colas + fans at every tier with almost no empty space inside the outline,
     // so flowering packs more nodes (1.18 → 1.32) and the hard cap rises 18 → 20.
-    const flowerPack = flowering ? 1.42 : d > 14 ? 1.1 : 1;
+    // Round 4 (owner side-by-side verdict): round 3 still read as 5-6 separate
+    // thin spikes with big gaps of visible black background — a SILHOUETTE-FILL
+    // problem, not a bud-recipe problem (the mockup is a continuous, solid conical
+    // outline). The single biggest lever for that is raw node count: golden-angle
+    // phyllotaxy (Engine 3, already at its maturity ceiling by flowering) spaces
+    // azimuths evenly around the stem, so more nodes directly means smaller
+    // angular gaps between branches — closer nodes also means neighbouring
+    // branches' foliage overlaps/occludes instead of tiling with gaps between.
+    // flowerPack 1.42 → 2.5 and the hard cap 20 → 36 (iterated against the
+    // mockup across several headless render passes — 2.2/32 still left thin
+    // background slivers between the upper tiers on some seeds).
+    const flowerPack = flowering ? 2.5 : d > 14 ? 1.1 : 1;
     const nodeTarget = Math.floor((hN / S.internode) * SK.nodeDensity * SK.vertStack * flowerPack);
-    const maxNodes = Math.min(20, Math.max(d <= 10 ? 1 : 2, nodeTarget));
+    const maxNodes = Math.min(36, Math.max(d <= 10 ? 1 : 2, nodeTarget));
     const grow = smooth(clamp((d - 8) / 22, 0, 1));
     // Engine 3 — phyllotaxy: azimuths winding around the stem (decussate at the
     // base → 137.5° golden spiral toward the apex). Veg keeps a gentle spiral
@@ -806,7 +821,19 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // Round 2 (owner mockup): flowering keeps most of its fan-leaf mass
         // (shrink 0.4 → 0.25 of budDev·f) — the mockup canopy is leaf-RICH in
         // full flower, with fans filling every gap between colas.
-        leafSize: A * (0.08 + 0.05 * low) * (0.55 + 0.45 * grow) * (1 - 0.25 * P.budDev * f) * depthSize * (1 + skirt * 0.4),
+        // Round 4 (owner side-by-side verdict): bigger base leaves + a shallower
+        // budDev shrink (0.25 → 0.16) — the mockup's upper canopy stays leaf-full
+        // even where colas are thickest; ours was thinning the fans out exactly
+        // where the density gap was worst. The `apexSplay` term compensates a
+        // low-apical-dominance strain's near-apex candelabra branches: those
+        // nodes get spread WIDER (see `spread` above) than their own `len`
+        // implies, which used to leave their extra visual reach carrying no
+        // extra leaf mass — a bare "antenna" poking past the rest of the
+        // canopy with a small tuft at the tip. Bigger leaves on exactly those
+        // nodes close that without touching the spread mechanic that gives
+        // multi-cola strains (White Rhino, Purple Diddy Punch) their
+        // deliberately separated candelabra silhouette.
+        leafSize: A * (0.095 + 0.06 * low) * (0.55 + 0.45 * grow) * (1 - 0.16 * P.budDev * f) * depthSize * (1 + skirt * 0.4) * (1 + apexSplay * 0.9),
         leaflets: Math.min(S.leafletMax, 3 + 2 * Math.floor(d / 14)),
         phase: rnd() * TAU,
         tipX: 0, tipY: 0, site: null, budRot: 0,
@@ -816,8 +843,12 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         curve: 0.1 + rnd() * 0.14, // upward bend
         weight: 0,
         branchlets: [],
-        nodeLeafSize: A * (0.055 + 0.045 * low) * (0.55 + 0.45 * grow) * SK.nodeLeaf * (1 - 0.22 * P.budDev * f) * (1 + skirt * 0.5),
+        // Round 4: bigger base + shallower shrink (0.22 → 0.14), same reasoning
+        // as leafSize above — the node-hugging leaf cluster is a big share of the
+        // "leaf fills gaps between colas" read the mockup carries top to bottom.
+        nodeLeafSize: A * (0.065 + 0.055 * low) * (0.55 + 0.45 * grow) * SK.nodeLeaf * (1 - 0.14 * P.budDev * f) * (1 + skirt * 0.5),
         nodeBud: null,
+        midBud: null,
         depth: az.depth,
         litAdj: depthShade(az.depth),
         // A camera-facing branch (lateral≈0) shows its fan nearly edge-on; a
@@ -895,20 +926,49 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         nd.nodeBud = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 0.95, lush: 0.7 });
         nd.weight += 0.25 * S.clusterFat;
       }
+      // Round 4 (owner side-by-side verdict): "every branch segment along its
+      // length seems to carry cola mass, not just its tip." nodeBud sits at the
+      // branch BASE and site sits at the branch TIP — the shaft between them was
+      // still bare stem + fans. A third, smaller bud riding directly on the
+      // branch curve at its midpoint closes that gap without touching either
+      // authored end-bud recipe. Same gating family as nodeBud, one tier looser
+      // so it reaches slightly lower branches too.
+      if (P.budDev > 0 && topK < 0 && nd.len > A * 0.05 && f > Math.max(S.flowerFrom * 0.72, 0.2)) {
+        const axis = A * (0.05 + 0.06 * f) * S.clusterLen * (0.5 + 0.5 * P.budDev);
+        const baseW = axis * 0.34 * S.clusterFat;
+        const nC = Math.max(3, Math.round(S.bracts * 0.6 * (0.5 + 0.5 * f)));
+        nd.midBud = buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 0.9, lush: 0.6 });
+        nd.weight += 0.18 * S.clusterFat;
+      }
       // Secondary branchlets — small forks carrying their own foliage and, in
-      // flower, a small bud at the tip. Denser on the lower/mid canopy. Skipped
-      // on co-cola tops (they read as a clean single cola).
-      if (topK < 0 && nd.len > A * 0.045 && d > 14) {
+      // flower, a small bud at the tip. Denser on the lower/mid canopy. Bud
+      // mass on a branchlet is still skipped on co-cola tops (they read as a
+      // clean single cola, unchanged) — but Round 4 (owner side-by-side
+      // verdict) gives co-cola tops the LEAF-ONLY branchlets too: the
+      // candelabra area near the apex was one of the biggest visible-background
+      // gaps, and it was bare because topK>=0 nodes got no branchlets at all.
+      if (nd.len > A * 0.045 && d > 14) {
         let nBL = rnd() < SK.branchletFrac ? 1 : 0;
         if (low > 0.45 && rnd() < SK.branchletFrac * 0.75) nBL += 1;
         // Round 2 (owner mockup): flowering sprouts one more branchlet on most
         // branches — each carries its own fan + small bud, and together they
         // fill the bare mid-branch stretches the mockup plant doesn't have.
-        if (flowering && rnd() < 0.6) nBL += 1;
+        // Round 4 (owner side-by-side verdict): push further still — the mockup
+        // is a solid conical outline with near-zero gaps, so flowering branches
+        // now roll for up to TWO bonus branchlets (was one), each an extra
+        // overlapping bud+leaf cluster that helps neighbouring branches fuse
+        // into one mass instead of reading as separate spikes.
+        if (flowering && rnd() < 0.8) nBL += 1;
+        if (flowering && rnd() < 0.45) nBL += 1;
         for (let b = 0; b < nBL; b++) {
-          const along = 0.48 + rnd() * 0.34;
+          // Round 4 (owner side-by-side verdict): spread branchlets across more
+          // of the branch (0.48–0.82 → 0.3–0.88) instead of clumping them near
+          // the tip — the mockup carries foliage/bud mass at every point along a
+          // branch, and a wider spread also raises the odds a branchlet lands at
+          // a height that overlaps a NEIGHBOURING branch's gap.
+          const along = 0.3 + rnd() * 0.58;
           let blSite: FlowerSite | null = null;
-          if (P.budDev > 0 && f > S.flowerFrom * 0.8) {
+          if (topK < 0 && P.budDev > 0 && f > S.flowerFrom * 0.8) {
             // Round 3 (owner mockup): branchlet buds plumper (0.045 → 0.055
             // axis, 0.3 → 0.34 width) — they carry the lower-third bud mass.
             const axis = A * 0.055 * S.clusterLen * (0.5 + 0.5 * P.budDev);
@@ -1612,6 +1672,15 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // Residual tip bow on top of the branch rotation, for a compound sag curve.
       const sag = Math.sin(droopRot) * nd.len * 0.35;
       const endX = nd.tipX, endY = nd.tipY + sag;
+      // Round 4 (owner side-by-side verdict): visual reach, not raw branch
+      // length — a released co-dominant top (apex candelabra) gets its
+      // `spread` multiplier boosted independently of `len` (see apexSplay
+      // above), so it can project far from the stem on a fairly short `len`.
+      // Gating the along-branch fill on `len` alone left exactly those
+      // branches — the ones the eye follows farthest — reading as bare spurs
+      // with a small tuft at the very end. `reach` is what the branch
+      // actually spans on screen, so it is what should decide fill density.
+      const reach = Math.hypot(endX, endY);
       ctx!.save();
       ctx!.translate(nd.x, nd.y);
       // The whole branch rotates downward under load (nd.side keeps the sign so
@@ -1641,7 +1710,8 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // Round 2 (owner mockup): a mid-branch fan on longer branches — the bare
       // arc between the node and the tip was the last "diagram" tell; the mockup
       // plant carries foliage along the whole branch, not just at its ends.
-      if (nd.len > p.A * 0.06) {
+      // Round 4: gate on `reach` (see above), not raw `len`.
+      if (reach > p.A * 0.06) {
         const mt = 0.55;
         ctx!.save();
         ctx!.translate(endX * mt, endY * mt - nd.len * nd.curve * Math.sin(Math.PI * mt) * 0.6);
@@ -1657,6 +1727,32 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.rotate(-nd.side * 0.4 + nd.leafRoll * 0.5);
         drawFan(nd.leafSize * 0.5, Math.max(3, nd.leaflets - 2), nd.f * 0.4, claw, nd.litAdj - 5, lerp(nd.leafYaw, 1, 0.6));
         ctx!.restore();
+        // Round 4 (owner side-by-side verdict): a deterministic (not RNG-gated)
+        // fourth fan for unusually LONG branches — released co-dominant tops
+        // stretch up to 2.6× (see topK below), and on an unlucky branchlet roll
+        // that extra length read as a bare spur with a small tuft at the very
+        // end. A fixed fan near the three-quarter point guarantees every long
+        // branch stays covered along its shaft regardless of RNG.
+        if (reach > p.A * 0.13) {
+          const lt = 0.78;
+          ctx!.save();
+          ctx!.translate(endX * lt, endY * lt - nd.len * nd.curve * Math.sin(Math.PI * lt) * 0.6);
+          ctx!.rotate(nd.side * 0.22 + nd.leafRoll * 0.5);
+          drawFan(nd.leafSize * 0.55, Math.max(3, nd.leaflets - 2), nd.f * 0.5, claw, nd.litAdj - 2, lerp(nd.leafYaw, 1, 0.5));
+          ctx!.restore();
+        }
+      }
+      // Round 4 (owner side-by-side verdict): the mid-branch BUD — riding the
+      // same shaft point as the mid-branch fan above, so it nests inside that
+      // leaf cluster instead of floating — is what actually puts cola mass along
+      // the branch length, not just at its base (nodeBud) and tip (site).
+      if (nd.midBud) {
+        const mt = 0.55;
+        ctx!.save();
+        ctx!.translate(endX * mt, endY * mt - nd.len * nd.curve * Math.sin(Math.PI * mt) * 0.6);
+        ctx!.rotate(nd.side * 0.16 + nd.leafRoll * 0.4);
+        drawFlowerSite(nd.midBud, p.P, jig, tt, budSiteDensity(nd.f) * 0.75);
+        ctx!.restore();
       }
       // Leaf cluster hugging the stem at the node — every node carries foliage,
       // not just the branch tip, so internodes don't read as bare gaps.
@@ -1665,11 +1761,19 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ];
       // Mockup pass: one extra fan on the mid-canopy band (all strains) so the
       // middle of the plant reads leafy and full rather than bare stem + buds.
-      if (nd.f > 0.25 && nd.f < 0.8) nodeFans.push([nd.side * 0.5, 0.44]);
+      // Round 4: widened band (0.25–0.8 → 0.15–0.92) so the extra fan reaches
+      // nearer the base and the apex too — the mockup has no bare tiers.
+      if (nd.f > 0.15 && nd.f < 0.92) nodeFans.push([nd.side * 0.5, 0.44]);
       // Round 3 (owner mockup): a cross-stem fan reaching over to the branch-
       // less side of this tier — alternating phyllotaxy leaves a dark wedge
       // opposite every branch, and the mockup's interior has no such holes.
-      if (nd.f > 0.2 && nd.f < 0.9) nodeFans.push([-nd.side * 1.18, 0.5]);
+      // Round 4: widened band (0.2–0.9 → 0.12–0.95) for the same reason.
+      if (nd.f > 0.12 && nd.f < 0.95) nodeFans.push([-nd.side * 1.18, 0.5]);
+      // Round 4 (owner side-by-side verdict): one more always-on fan, angled
+      // steeply off-axis, so even tiers that miss every conditional band above
+      // still carry enough leaf mass to bridge into their neighbours' foliage —
+      // the mockup's silhouette never drops to a single thin fan per tier.
+      nodeFans.push([nd.side * 0.98, 0.38]);
       // Full lower skirt (owner harvest reference): broad-leaf strains add two
       // more big fans on the low/mid nodes so the bottom canopy reads as a
       // dense layered skirt, not a bare diagram. Skirt fans sit in shade.

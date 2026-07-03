@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (plant mockup round 3: lower cola mass, interior fill, finer calyx grain, deeper green).
+once they appear here. Last reconciled: **2026-07-03** (plant mockup round 4: dense continuous canopy silhouette, buds along branch length).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -119,6 +119,40 @@ once they appear here. Last reconciled: **2026-07-03** (plant mockup round 3: lo
   are still chunkier/rounder with painterly airbrushed shading (ours are flatter vector
   gradients), its very bottom tier keeps bud mass where ours is mostly fan skirt, and its
   interior is still a touch denser.
+- 🎮 ✅ **Plant mockup round 4 (2026-07-03, owner side-by-side verdict)** — round 3 fixed bud
+  color/texture but the owner's side-by-side review named the gap as STRUCTURAL: the mockup
+  is a dense, continuous conical silhouette (near-zero visible background through the
+  canopy); round 3 still read as 5-6 separate thin spikes with big gaps between them. This
+  round is a canopy-density/silhouette-fill pass in `chamberCore` only (bud/color template
+  from rounds 2-3 untouched): (1) node count — flowering `flowerPack` 1.42→2.5 and the hard
+  cap 20→36, the single biggest lever since golden-angle phyllotaxy (Engine 3, already at its
+  maturity ceiling in flower) spaces azimuths evenly, so more nodes directly means smaller
+  angular gaps; (2) bud mass along branch LENGTH not just tips — a new `midBud` flower site
+  rides the branch shaft at its midpoint (a third position alongside the existing base
+  `nodeBud` and tip `site`); (3) leaf fill — bigger base leaf/node-leaf sizes, a shallower
+  budDev shrink so the upper canopy stays leaf-full, two widened/added node-hugging fan
+  bands, and co-dominant top nodes (candelabra apex) now grow leafy (non-competing)
+  branchlets too, closing the apex gap that was previously bare; (4) branchlets — up to two
+  flowering bonus branchlets per branch (was one), spread across more of the branch length;
+  (5) occlusion follow-up (owner note mid-session) — along-branch fill is now gated on the
+  branch's actual on-screen `reach` (hypot of its projected tip, which includes the apex-
+  splay spread multiplier) rather than raw geometric `len`, so branches stretched wide by
+  apical-dominance splay don't skip their fill and read as bare "antenna" spurs; painter's-
+  algorithm depth ordering (Engine 3, draws back-azimuth nodes first) was already in place
+  and now has far more nodes to occlude with. Iterated 7 headless-render passes vs the
+  mockup (canonical-stages) plus a final live Playwright pass at 390×844 and desktop
+  (`e2e-output/round4-mobile.png`, `round4-desktop.png`, both read and compared against the
+  mockup) — outline now reads as a solid conical mass top to bottom, colas run the full
+  height, leaves interleave throughout. Blue Dream / G13 / White Rhino identities
+  spot-checked (still visually distinct: Blue Dream tall teal spear, G13 tight green spike,
+  White Rhino wide chunky bush); veg + harvest sane; all 4 gates green (tsc, lint 0 errors,
+  vitest 463/463, build, playwright care-loop-shot 3/3). Honest remaining gap: on
+  low-apical-dominance strains (White Rhino, Purple Diddy Punch) the 1-2 released
+  co-dominant top branches can still show a thinner stretch of stem before their leaf
+  cluster on some seeds — better than round 3 (bigger leaves on exactly those nodes via an
+  `apexSplay`-weighted size boost) but not fully eliminated; and the very top 2-3cm of the
+  silhouette (the last taper to a point) is very slightly gappier than the mockup's
+  near-solid tip, since a point can't be fully solid by definition.
 - 🎮 ⬜ **Bud/flower polish notes (owner, future polish — NOT blockers)** — remaining after the
   round-3 pass above: tighter bract clusters; better embedded sugar leaves; subtle trichome
   sparkle at phone size (current frost is deliberately faint); painterly per-cola shading
