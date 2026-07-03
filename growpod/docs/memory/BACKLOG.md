@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (plant round 8c — leaf + bract TEXTURE LAYERING (owner: "the layering in the texture"): `drawFan` leaflets now carry deterministic per-leaflet size/angle/tone jitter plus a light↔shadow facet gradient (was one flat hsl() fill repeated identically at every node — the "stamped decal" read); `drawPod` now gives every calyx bract a volumetric gradient (the old `w>4.2` gate meant almost none ever cleared it, since podW's own ceiling is 4.2) plus a new base "undercut" shadow so overlapping bracts read as a physically shingled stack instead of blending into the mass gradient; plant round 8b — airier, more-separated candelabra branch layout in chamberCore.ts's `buildPlant`, matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
+once they appear here. Last reconciled: **2026-07-03** (visual-verification archive — `docs/memory/VERIFIED_RENDERS.md` chapter list + `verification/golden/` + shared e2e fixtures (`web/e2e/fixtures/mockGame.ts`) + parameterized `capture.spec.ts` + sandbox-Chromium auto-detect in `playwright.config.ts` + `capture-shots` skill, ending the per-session throwaway-rig ritual; plant round 8c — leaf + bract TEXTURE LAYERING (owner: "the layering in the texture"): `drawFan` leaflets now carry deterministic per-leaflet size/angle/tone jitter plus a light↔shadow facet gradient (was one flat hsl() fill repeated identically at every node — the "stamped decal" read); `drawPod` now gives every calyx bract a volumetric gradient (the old `w>4.2` gate meant almost none ever cleared it, since podW's own ceiling is 4.2) plus a new base "undercut" shadow so overlapping bracts read as a physically shingled stack instead of blending into the mass gradient; plant round 8b — airier, more-separated candelabra branch layout in chamberCore.ts's `buildPlant`, matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -249,6 +249,27 @@ once they appear here. Last reconciled: **2026-07-03** (plant round 8c — leaf 
   1440×900, 2 look-compare-adjust rounds; script cleaned up). Gates: `tsc --noEmit` clean, `next
   lint` 0 new errors, vitest 472/472, `npm run build` clean, `care-loop-shot` 4/4 green.
 =======
+- 🧰 ✅ **Visual-verification archive — screenshots become durable, indexed memory (2026-07-03,
+  owner: "save those images... reference them... pull from the chapter list")** — every visual
+  round used to rebuild the same throwaway Playwright rig (hand-copying `setup()` from
+  `care-loop-shot.spec.ts`, hand-patching `playwright.config.ts` with the sandbox Chromium path,
+  writing a one-off spec, deleting it all) and the evidence screenshots died with the session
+  container. Now: (1) shared fixtures `web/e2e/fixtures/mockGame.ts` (extracted verbatim;
+  `care-loop-shot.spec.ts` refactored onto it, 4/4 green = the regression proof); (2) permanent
+  env-driven `web/e2e/capture.spec.ts` (`CAPTURE_ROUTE/STATE/VIEWPORTS/NAME/OUT/WAIT/CANVAS`,
+  self-skips when unset so CI cost is zero); (3) `playwright.config.ts` auto-detects
+  `/opt/pw-browsers/chromium` (stable symlink) with a `PW_CHROMIUM` override — the hand-patch
+  ritual is dead; (4) `docs/memory/VERIFIED_RENDERS.md` — the chapter list: golden images
+  committed under `docs/memory/verification/golden/` (curated, owner-taste moments only) and
+  regen-only rows whose command+SHA is the artifact, link-rot enforced by the existing
+  `check_memory.py` link rule since it lives in docs/memory/; (5) `.claude/skills/capture-shots/`
+  skill + rows in CLAUDE.md/MAP.md/DOCS_INDEX.md for discoverability. Seeded with 5 goldens
+  (round-8c chamber before/after; 3 microscope-audit evidence shots) + regen recipes for the
+  care-loop proofs and the `gen:stages` browserless matrix (PR #29's renderer, rediscovered as
+  the fastest plant-capture path). Zero new deps, no lockfile diff. Open owner calls recorded in
+  the manifest rules: golden-promotion approval stays with the owner; commit budget stays
+  curated. Design notes: recipes-not-pixels default, hybrid goldens (design-agent proposal,
+  this session).
 - 🎮 ✅ **Plant round 8c — leaf + bract texture layering (2026-07-03, owner: "the leaves and the
   actual node clusters... it's more of the layering in the texture")** — the owner flagged the
   live chamber plant's foliage and cola surface as reading flat/decal-like on close inspection.

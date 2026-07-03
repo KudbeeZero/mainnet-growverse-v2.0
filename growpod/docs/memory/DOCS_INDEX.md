@@ -19,7 +19,8 @@ Roles: **living** (must stay true) · **historical** (frozen record) · **spec**
 | Charters: `docs/BUILD_RULES.md`, `docs/GLOBAL_EVIDENCE_MEMORY_LAYER.md`, `docs/SESSION_PROTOCOL.md`, `docs/OMNI_CHARTER.md` | ✅ governance stack |
 | `SECURITY.md` (+ `docs/licenses/README.md` rights record) | ✅ corrected 2026-07-02 (snapshot claim, pod-stills note) |
 | `docs/manual/` (player manual, 8 files) · `web/README.md` | ✅ |
-| `.claude/skills/closeout/SKILL.md` + `.claude/skills/handoff-audit/SKILL.md` | ✅ process skills |
+| `.claude/skills/closeout/SKILL.md` + `.claude/skills/handoff-audit/SKILL.md` + `.claude/skills/capture-shots/SKILL.md` | ✅ process skills |
+| `docs/memory/VERIFIED_RENDERS.md` (+ `docs/memory/verification/golden/`) | ✅ new 2026-07-03 — the screenshot archive / chapter list; every verification session adds a row |
 | `knowledge/` (10 canonical morphology/botany specs) + `docs/BUD_ARCHITECTURE_BLUEPRINT.md` | ✅ cited by the Design Codex |
 
 ## Spec / planning docs
