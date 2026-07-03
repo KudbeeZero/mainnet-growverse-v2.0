@@ -2464,7 +2464,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         const [ang, scl] = nodeFans[fi];
         ctx!.save();
         ctx!.rotate(ang);
-        drawFan(nd.nodeLeafSize * scl, Math.max(3, nd.leaflets - 2), 0, claw, nd.litAdj - nd.skirt * 5, lerp(nd.leafYaw, 1, 0.4), nd.phase + 6 + fi * 1.9);
+        // Plant rework pass 6 (owner blueprint: "keep leaf fans SECONDARY so buds
+        // stay readable"). Node/skirt fans recede a few % darker (−8 vs −5 on the
+        // skirt) so the bright colas dominate the read — leaves support the buds,
+        // they don't compete. Density is unchanged (no bareness).
+        drawFan(nd.nodeLeafSize * scl, Math.max(3, nd.leaflets - 2), 0, claw, nd.litAdj - 3 - nd.skirt * 8, lerp(nd.leafYaw, 1, 0.4), nd.phase + 6 + fi * 1.9);
         ctx!.restore();
       }
       // Secondary branchlets — forks part-way along the branch (sharing the
