@@ -103,6 +103,11 @@ export const university = {
       query: { horizon },
     }),
 
+  // Returns the URL for the produced-once audio file for a course lecture.
+  // Not an apiFetch call — the <audio> element and HEAD check need a raw URL.
+  audioUrl: (courseKey: string) =>
+    `/api/game/university/courses/${courseKey}/audio`,
+
   // The Admissions intake quiz definition (public read, like the catalog).
   admissionsQuiz: () =>
     apiFetch<AdmissionsQuiz>(`/university/admissions/quiz`),

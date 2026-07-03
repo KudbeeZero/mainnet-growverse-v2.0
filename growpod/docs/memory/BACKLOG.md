@@ -656,8 +656,13 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
 - 🏛️ ✅ **Online-school catalog restyle** (2026-07-02) — HERMES branding on all university eyebrows,
   degree-progress strip, department "School of …" sections, credits on course cards
   (`web/src/app/university/page.tsx`). No data-model changes.
-- 🏛️ 🔨 **University wiring audit** — end-to-end trace (curriculum → skills → learner model → agents →
-  exams → web). Owner suspects mis-wiring; findings + fixes land in the HERMES memory doc.
+- 🏛️ ✅ **University wiring audit (2026-07-03)** — 16 backend routes traced against 15 api.university.*
+  frontend methods. One structural gap found + fixed: `GET /university/courses/<key>/audio` was
+  accessed via hardcoded raw `fetch()` URL in the course page (outside the api abstraction, no
+  error handling, no auth injection). Fixed by adding `api.university.audioUrl(courseKey)` helper
+  (returns the URL string — intentionally not an apiFetch call since audio streaming and HEAD
+  probe need a raw URL). All 15 remaining routes verified: paths, HTTP methods, auth behavior all
+  match their backend routes. Remaining open work: HERMES memory doc (see ⬜ item below).
 - 🏛️ 🔨 **Produce-once lesson audio (ElevenLabs)** — lectures must be produced once and saved, never
   re-billed per delivery. Today `/lecture` can mint a fresh AI lecture *and* fresh TTS per attend
   (content-hash keyed); the produced-once path exists only on `/university/courses/<key>/audio`.
@@ -757,9 +762,15 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   refs) before deletion; full gate green after (tsc/lint/build/vitest 475/e2e 52). ⬜ Remaining:
   backend `serve_narration` route (superseded by produce-once audio). Owner-taste call:
   `onboarding/VideoHero.tsx` + `public/media/*` (revive on landing or retire).
-- 🟡 ⬜ **Retire: stale infra** — `growpod/artifacts/*` nested duplicates (confirmed stale vs root),
-  `scripts/build-production.sh` + `start-production.sh` (describe a deploy that doesn't exist),
-  `scripts/src/hello.ts` scaffolds, `attached_assets/` dumps, empty `growpod/lib/db` schema stub.
+- 🟡 ✅ **Retire: stale TS scaffolding (2026-07-03)** — deleted `growpod/artifacts/` (TS Express
+  api-server + Vite mockup-sandbox, ~106 files), `growpod/lib/` (Drizzle db stub, orval-generated
+  api-client-react/api-zod, api-spec stub), `growpod/scripts/src/hello.ts` + tsconfig.json +
+  package.json, `attached_assets/` (dev screenshot/paste dumps). Updated `pnpm-workspace.yaml`
+  (packages: []), `growpod/tsconfig.json` (references: []), `growpod/package.json` (typecheck
+  simplified). Python/shell scripts (check_memory.py, testenv-up.sh, etc.) untouched. Net: 9917
+  lines removed, no functionality lost. ⬜ Remaining: backend `serve_narration` route (superseded
+  by produce-once audio); `scripts/build-production.sh` + `start-production.sh` (stale deploy
+  scripts — left since they're shell, not tracked by pnpm).
 - 🟡 ⬜ **Dead DB columns** — `ResearchProgress.unlocked_at`, `GrowthMeasurement.leaf_count`/
   `growth_rate` (drop migration when convenient); `Player.last_active_at` is the wire-in above.
   `INDEXER_URL` is read but unconsumed — it's needed by the settlement-deposit redesign; keep.

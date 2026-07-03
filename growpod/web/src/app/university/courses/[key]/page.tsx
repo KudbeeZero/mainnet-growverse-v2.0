@@ -169,7 +169,7 @@ function CourseAudioPlayer({ courseKey }: { courseKey: string }) {
   const [genElapsed, setGenElapsed] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const audioUrl = `/api/game/university/courses/${courseKey}/audio`;
+  const audioUrl = api.university.audioUrl(courseKey);
 
   // On mount: start pre-loading the Audio element immediately (optimistic).
   // A background HEAD probe confirms availability; if the server returns 204
