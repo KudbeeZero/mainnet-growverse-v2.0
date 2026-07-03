@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (core-game-loop session: plant reactions + harvest next-actions).
+once they appear here. Last reconciled: **2026-07-03** (chamber game-hub redesign, owner mockup).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -59,6 +59,27 @@ once they appear here. Last reconciled: **2026-07-03** (core-game-loop session: 
   the owner's 5-menu spec exactly: Grow/Lab/Market/Cup are the `primary` mobile tabs and
   everything else (Store, University, Leaderboards, Guide, Profile, Economy) sits behind the
   "More" sheet. Desktop nav derives from the same list, so the surfaces can't drift.
+- 🎮 ✅ **Chamber game-hub redesign (2026-07-03, owner mockup)** — built in-place on the existing
+  chamber (no new page/route/room): `web/src/components/plant/ChamberDock.tsx` adds the six
+  glassy embedded action tiles (Water/Feed/Prune/Train/Inspect/Boost — glow when available,
+  dim+reason when not, flash on tap, per-action plant reaction) at the chamber base, plus the
+  side-panel Today's Plan (ranked Do Now/Soon/Upcoming rows from the new pure
+  `web/src/lib/todaysPlan.ts`, 5 tests, tappable Do-Now) and Plant Insights (top cola,
+  trichome %, aroma, health, journal link). Boost reaction upgraded to a temporary aura ring.
+  Treatments surface as Do-Now plan rows (bar keeps the mockup's six tiles). `CareButtons`
+  stays as-is on the plant detail page. Verified mobile (390×844) + desktop via Playwright.
+- 🎮 ⬜ **Design-department punch list (owner annotated mockup, 2026-07-03)** — next chamber
+  polish round, in-place only: (1) compress the top stats into one tight horizontal HUD strip
+  (TO HARVEST · TEMP · HUM · CO₂) instead of stacked cards; (2) move Boosts to a compact INLINE
+  "BOOSTS · 1 active / Add Boost" section in the GROW sheet (mockup) — the stage pill was the
+  interim fix; (3) Plant Insights as a scannable 4-chip row (Top cola / Health / Terpene /
+  Trichome %); (4) footer encouragement bar ("Your actions make a difference" + health dial);
+  (5) care-streak / resin-score / plant-progress stat strip; (6) ambient in-scene care glyphs
+  (floating ✂️/💧/❤️ accents). Plan pills relabelled Soon→Recommended (done this pass).
+- 🎮 ⬜ **Bud/flower polish notes (owner, future polish — NOT blockers)** — stronger main top
+  cola; cleaner bud silhouette; less noisy pistils; tighter bract clusters; better embedded
+  sugar leaves; subtle trichome sparkle/frost; buds readable at phone size. 2D chamber-engine
+  tuning lane (chamberCore), distinct from the ❄️ frozen 3D lane below.
 - 🎮 ❄️ **Parked for later (owner-named, do not resume without explicit direction)**: photoreal
   bud viewer, full 3D cola inspection, trichome particle macro mode, scientific Lab breakdown,
   university 3D model, advanced morphology layer toggles. See the ❄️ items under "HERMES
