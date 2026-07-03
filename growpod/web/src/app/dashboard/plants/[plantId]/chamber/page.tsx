@@ -48,7 +48,9 @@ const GrowChamber = dynamic(
   { ssr: false, loading: () => null },
 );
 
-// Arcade Mode HUD — lazy so it's tree-shaken from every non-chamber route.
+// Arcade Mode HUD (rewind + chain row only) — lazy so it's tree-shaken from
+// every non-chamber route. Boost-apply UI lives in BoostsInline (ChamberDock)
+// so it isn't duplicated here.
 const ArcadeHUD = dynamic(
   () => import("@/components/arcade/ArcadeHUD").then((m) => m.ArcadeHUD),
   { ssr: false, loading: () => null },
@@ -518,8 +520,10 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </div>
         )}
 
-        {/* Boosts quick tray — collapsed pill anchored in the chamber scene,
-            so it can only ever overlap the stage, never the plan/insights. */}
+        {/* REWIND control + chain row — floating button anchored in the chamber
+            scene, so it can only ever overlap the stage, never the plan/insights.
+            Boost-APPLY UI lives only in the inline BoostsInline (GROW/ARCADE
+            sheet below) — this no longer duplicates it. */}
         {!ended && (
           <ArcadeHUD
             reducedMotion={reducedMotion}

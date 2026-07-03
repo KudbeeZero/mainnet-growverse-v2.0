@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; chamber ambient glow layer Phase 1 (DOM-only); mint metadata server-truth fix).
+once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -14,6 +14,23 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
 > supersedes the 3D/Lab tracks below until the owner reopens them. Loop verified end-to-end by
 > `web/e2e/care-loop-shot.spec.ts` (button states → plant reaction → harvest-ready CTA →
 > post-harvest next-actions), 2026-07-03.
+- 🎮 ✅ **Dedupe the floating boost tray (2026-07-03)** — the chamber had two boost-apply UIs
+  reading the same `useBoostStore` state: the floating `ArcadeHUD` tray (4 boost buttons + its
+  own grow-speed/countdown readout, absolutely-positioned over the 3D stage) and the inline
+  `BoostsInline` quick-chip row already embedded in the GROW/ARCADE sheet
+  (`web/src/components/plant/ChamberDock.tsx`) — the "floating menu" residue the owner
+  specifically dislikes. `ArcadeHUD` (`web/src/components/arcade/ArcadeHUD.tsx`) is now slimmed
+  to the two things `BoostsInline` doesn't cover — REWIND (`useRewindStore` snapshot scrubber)
+  and the optional Phase-2 `chainSlot` (WalletConnect + Mint NFT, `ALGO_ENABLED`-gated) — as a
+  small floating ⏪ button instead of a boost tray. `BoostsInline` is now the single boost-apply
+  surface; its "Add Boost" button (which used to expand the old tray via
+  `OPEN_BOOST_TRAY_EVENT`) was removed since the quick chips already apply boosts directly.
+  `boostEngine.ts`'s store, cooldown logic, and `BOOST_COLORS`/reduced-motion handling are
+  untouched — presentation-layer only. Verified mobile 390×844 + desktop
+  (`web/e2e/dedupe-boost-tray-shot.spec.ts`): one boost surface, rewind opens its sheet, care
+  tiles/ARCADE sheet/growth-boost unaffected; chain row (`ChainRow`) verified separately with a
+  one-off `NEXT_PUBLIC_ALGO_ENABLE=true` build (this is a build-time flag with no existing e2e
+  coverage) — Connect Wallet + Mint NFT still render inside the slimmed `ArcadeHUD`.
 - 🎮 ✅ **Bud Viewer route parked, "Coming soon" (2026-07-02, PR #111)** — the dedicated Tier-2
   `/dashboard/plants/[plantId]/bud` screen (`BudGL` macro inspection) stays built and working
   (zero cost to leave, one-line re-enable later) but the Grow Chamber's floating "🔬 View Bud"
