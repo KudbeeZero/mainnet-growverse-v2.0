@@ -2218,12 +2218,27 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const satS = lerp(34, 32, bark);
       const litS = 26 + a.t * 8 - bark * 4;
       ctx!.strokeStyle = `hsl(${hueS}, ${satS}%, ${litS}%)`;
-      ctx!.lineWidth = lerp(sw0, sw0 * 0.35, a.t);
+      // Plant rework pass 3 (owner blueprint: "build a STRONGER central stem with
+      // CLEAR taper"). Thicker base (×1.4) with a sharper power-curve taper so the
+      // spine reads as a strong tapering trunk that visibly supports the colas,
+      // not a thin wire. Branch widths are unchanged (they key off sw0 directly).
+      ctx!.lineWidth = lerp(sw0 * 1.4, sw0 * 0.3, Math.pow(a.t, 0.8));
       ctx!.lineCap = "round";
       ctx!.beginPath();
       ctx!.moveTo(a.x, a.y);
       ctx!.lineTo(b.x, b.y);
       ctx!.stroke();
+      // A soft light edge up the front of the lower trunk (below mid) — a rim
+      // that sculpts the stem into a rounded stalk instead of a flat ribbon
+      // (blueprint: "increase material definition", "lighting sculpts the plant").
+      if (a.t < 0.5) {
+        ctx!.strokeStyle = `hsla(${hueS + 4}, ${satS + 6}%, ${litS + 16}%, ${0.5 * (1 - a.t * 2)})`;
+        ctx!.lineWidth = lerp(sw0 * 0.5, sw0 * 0.16, Math.pow(a.t, 0.8));
+        ctx!.beginPath();
+        ctx!.moveTo(a.x - lerp(sw0 * 0.42, 0, a.t * 2), a.y);
+        ctx!.lineTo(b.x - lerp(sw0 * 0.42, 0, b.t * 2), b.y);
+        ctx!.stroke();
+      }
     }
 
     // ── SEEDLING ──────────────────────────────────────────────────────────────
