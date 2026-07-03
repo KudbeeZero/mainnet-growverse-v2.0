@@ -167,3 +167,52 @@ export function frostAlpha(m: number): number {
   const c = Math.max(0, Math.min(1, m));
   return c < 0.3 ? 0.4 : c > 0.7 ? 0.72 : 0.55;
 }
+
+/** The subset of BudColor (strainVisuals/morphology) the microscope needs. */
+export interface CalyxTint {
+  anthocyanin: number;
+  calyxHue: number;
+  calyxSat: number;
+  accentHue?: number;
+  accentFrac?: number;
+}
+
+/**
+ * Per-calyx hue/sat for the microscope's calyx fill. With an authored BudColor
+ * (strainVisuals.ts — the same source the Grow Chamber renders from) the calyx
+ * takes the strain's real calyxHue/Sat, and `accentRoll` flips an accentFrac
+ * share of calyxes to the accent hue (e.g. Gelato's green-base + purple-accent
+ * mix). The legacy scalar fallback previously computed `96 - purple*50`, which
+ * capped at 66° olive-yellow — "purple" strains could never render purple; it
+ * now sweeps green (96°) all the way to violet (290°) as `purple` → 1.
+ */
+export function calyxTint(
+  bc: CalyxTint | undefined,
+  purple: number,
+  accentRoll: number,
+): { hue: number; sat: number } {
+  if (bc) {
+    const accented = bc.accentHue != null && accentRoll < (bc.accentFrac ?? 0);
+    return accented
+      ? { hue: bc.accentHue!, sat: Math.min(80, bc.calyxSat + 8) }
+      : { hue: bc.calyxHue, sat: bc.calyxSat };
+  }
+  const p = Math.max(0, Math.min(1, purple));
+  return { hue: 96 + p * 194, sat: 45 + p * 22 };
+}
+
+/**
+ * Map the simulation's real trichome telemetry (clear/cloudy/amber percentages,
+ * from the plant /state endpoint) onto the microscope's single maturity scalar
+ * (0 clear → 0.5 cloudy → 1 amber). Cloudy heads sit mid-ramp, amber at the
+ * top, so e.g. 30/62/8 lands at ~0.39 — inside the "cloudy / peak" window,
+ * matching the server's own `dominant: "cloudy"` read.
+ */
+export function maturityFromTelemetry(t: {
+  clear_pct: number;
+  cloudy_pct: number;
+  amber_pct: number;
+}): number {
+  const total = Math.max(1, t.clear_pct + t.cloudy_pct + t.amber_pct);
+  return Math.max(0, Math.min(1, (0.5 * t.cloudy_pct + 1.0 * t.amber_pct) / total));
+}

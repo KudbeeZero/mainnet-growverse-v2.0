@@ -54,7 +54,18 @@ export function HeroSection() {
           Cultivate a living simulation, breed discovered cultivars, and register them on a
           verifiable family tree. A genome is a graph — so we render it as one.
         </p>
-        <div data-reveal className="mt-3">
+        {/* Fast path to login — the cinematic scroll is optional, not a gate
+            (owner: onboarding "is way too long"). Anyone who just wants in taps
+            here and jumps straight to the login card; the story beats stay below
+            for first-time visitors who want the pitch. */}
+        <a
+          data-reveal
+          href="#login"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-grow-500 bg-grow-600/90 px-6 py-2.5 text-sm font-semibold text-white shadow-glow-grow transition-colors hover:bg-grow-500"
+        >
+          Enter the greenhouse →
+        </a>
+        <div data-reveal className="mt-1">
           <ScrollCue />
         </div>
       </div>

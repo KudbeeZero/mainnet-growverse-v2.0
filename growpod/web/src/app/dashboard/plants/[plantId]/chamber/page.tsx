@@ -2,6 +2,7 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
@@ -10,7 +11,8 @@ import { ErrorState } from "@/components/ui/States";
 import { ChamberActionBar, BoostsInline } from "@/components/plant/ChamberDock";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { BoostAmbientLayer } from "@/components/plant/BoostAmbientLayer";
-import { useGrowthBoost } from "@/hooks/useCareActions";
+import { usePlantBounce } from "@/hooks/usePlantBounce";
+import { useGrowthBoost, useCleanupPlant } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap, usePods } from "@/hooks/queries";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -158,18 +160,33 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   // forward + revive it; on success we flash the ⚡ electric surge over the stage.
   const [boostFlash, setBoostFlash] = useState(false);
   const flashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The plant lives in this stage; the bounce hook auto-fires the squash-stretch
+  // on every arcade boost and returns a trigger the ⚡ growth-boost reuses.
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const bouncePlant = usePlantBounce(stageRef);
   const growthBoost = useGrowthBoost(plantId, () => {
+    bouncePlant(); // owner arcade juice: the plant squashes then pops on boost
     if (reducedMotion) return;
     setBoostFlash(true);
     if (flashRef.current) clearTimeout(flashRef.current);
     flashRef.current = setTimeout(() => setBoostFlash(false), 1100);
   });
+  // "Grow another" used to just link back to /dashboard, leaving the
+  // harvested plant sitting in the pod — the pod never actually reset, so the
+  // dashboard still showed full (stale) vitals and no way to plant again
+  // (owner: "there's nothing else I can do... it should recycle"). Now it
+  // pays the cleanup fee first so the pod is genuinely empty on arrival.
+  const router = useRouter();
+  const cleanup = useCleanupPlant();
+  function growAnother() {
+    cleanup.mutate(plantId, { onSettled: () => router.push("/dashboard") });
+  }
   useEffect(() => () => {
     if (flashRef.current) clearTimeout(flashRef.current);
   }, []);
   // Post-harvest "Save snapshot" — download the plant canvas as a PNG keepsake.
-  // Grabs the GrowChamber canvas from the stage; no server round-trip.
-  const stageRef = useRef<HTMLDivElement | null>(null);
+  // Grabs the GrowChamber canvas from the stage (stageRef declared above); no
+  // server round-trip.
   const saveSnapshot = () => {
     const canvas = stageRef.current?.querySelector("canvas");
     if (!canvas) return;
@@ -456,13 +473,18 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         {/* rim/backlight pop (always on) + boost-reactive ring pulse/sparkles */}
         <BoostAmbientLayer />
         {/* Compact top HUD — strain + the four key stats in one strip (design
-            punch list item 1). Deeper detail stays on the CLIMATE tab. */}
-        <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center gap-1.5 overflow-x-auto">
+            punch list item 1). Deeper detail stays on the CLIMATE tab.
+            Mobile: wrap (no scroll — the strip is pointer-events-none, so an
+            overflow-x-auto could never actually be dragged, and the flex-1
+            spacer used to shove the CO₂ chip ~26px off the right edge of a
+            390px phone with no way to reach it). Desktop (sm+): restore the
+            single-line strain-left / stats-right layout via the spacer. */}
+        <div className="pointer-events-none absolute inset-x-2 top-2 flex flex-wrap items-center gap-1.5 sm:flex-nowrap sm:overflow-x-auto">
           <span className="flex-none rounded-lg border border-cyan-400/40 bg-[#08141e]/70 px-2 py-1 font-mono text-[10px] tracking-wide backdrop-blur">
             {strain?.name ?? "Plant"} · {titleCase(renderStage)} · Day {Math.round(day)}
             {previewing && <span className="text-grow-300"> · preview</span>}
           </span>
-          <span className="flex-1" />
+          <span className="hidden flex-1 sm:block" />
           <HudChip k="TO HARVEST" v={harvestDays ?? "—"} unit="d" />
           <HudChip k="TEMP" v={climate.temperature} unit="°C" alert={Math.abs(climate.temperature - 24) > 5} />
           <HudChip k="HUM" v={climate.humidity} unit="%" alert={Math.abs(climate.humidity - 50) > 15} />
@@ -501,16 +523,20 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </span>
         )}
 
-        {/* 🔬 View Bud — dedicated Tier-2 inspection screen (top cola only, the
-            heavy WebGL bud engine). Parked while we focus on the core game loop;
-            the route/component stay intact so this is a one-line re-enable later. */}
+        {/* 🔬 Inspect trichomes — deep-links the LIVE plant into the Lab's
+            Canvas-2D Trichome Microscope (?plantId= pre-seeds strain + maturity
+            from this plant's real trichome telemetry). This replaced the dead
+            "View Bud · Coming soon" chip: the heavy WebGL View Bud screen stays
+            parked/intact under the owner's 3D freeze (one-line re-enable later);
+            the microscope is the working inspection tool players get today. */}
         {(renderStage === "flowering" || renderStage === "late_flower" || renderStage === "harvest") && !ended && (
-          <span
-            className="absolute bottom-[92px] left-1/2 -translate-x-1/2 flex cursor-not-allowed items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/20 bg-[#08141e]/70 px-3 py-1 text-[10px] font-bold text-cyan-200/50 backdrop-blur"
-            title="View Bud is coming soon"
+          <Link
+            href={`/lab/microscope?plantId=${plantId}`}
+            className="absolute bottom-[92px] left-1/2 -translate-x-1/2 flex items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/40 bg-[#08141e]/70 px-3 py-1 text-[10px] font-bold text-cyan-200 backdrop-blur transition hover:border-cyan-300/70 hover:bg-[#0c1e2c]/80"
+            title="Inspect this plant's trichomes under the Lab microscope"
           >
-            🔬 View Bud · Coming soon
-          </span>
+            🔬 Inspect trichomes
+          </Link>
         )}
 
         {/* embedded action bar — glassy tiles built into the chamber base */}
@@ -567,12 +593,14 @@ function ChamberScreen({ plantId }: { plantId: string }) {
                     Grow Another). Review = the plant's final report page
                     (vitals, timeline, full journal). */}
                 <div className="relative mt-1 flex w-full max-w-[17rem] flex-col gap-2">
-                  <Link
-                    href="/dashboard"
-                    className="rounded-lg border border-grow-600 bg-grow-700/40 px-4 py-2 text-sm font-semibold text-grow-100 hover:bg-grow-700/60"
+                  <button
+                    type="button"
+                    onClick={growAnother}
+                    disabled={cleanup.isPending}
+                    className="rounded-lg border border-grow-600 bg-grow-700/40 px-4 py-2 text-sm font-semibold text-grow-100 hover:bg-grow-700/60 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    🌱 Grow another →
-                  </Link>
+                    {cleanup.isPending ? "Cleaning up…" : "🌱 Grow another →"}
+                  </button>
                   <div className="flex gap-2">
                     <Link
                       href={`/dashboard/plants/${plantId}`}
@@ -598,9 +626,14 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             ) : (
               <>
                 <p className="text-lg font-bold">This plant has died</p>
-                <Link href="/dashboard" className="text-sm text-grow-300 hover:underline">
-                  ← Back to dashboard
-                </Link>
+                <button
+                  type="button"
+                  onClick={growAnother}
+                  disabled={cleanup.isPending}
+                  className="rounded-lg border border-grow-600 bg-grow-700/40 px-4 py-2 text-sm font-semibold text-grow-100 hover:bg-grow-700/60 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {cleanup.isPending ? "Cleaning up…" : "🧹 Clean & recycle pod →"}
+                </button>
               </>
             )}
           </div>

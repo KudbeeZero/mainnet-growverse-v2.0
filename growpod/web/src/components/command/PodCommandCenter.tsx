@@ -47,6 +47,7 @@ import { GrowthScrubber } from "@/components/command/GrowthScrubber";
 import { TimeControls } from "@/components/command/TimeControls";
 import { NextActionHint } from "@/components/command/NextActionHint";
 import { StageInfoCard } from "@/components/command/StageInfoCard";
+import { PlantActionCTA } from "@/components/plant/PlantActionCTA";
 import { PlantSeedForm } from "@/components/plant/PlantSeedForm";
 
 const GrowChamber = dynamic(
@@ -388,8 +389,14 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
           )}
 
           {/* Right under the slider: where this stage is at + what's happening,
-              then the most-reached-for tools (do-next hint, levels, care bar). */}
-          {plant && (
+              then the most-reached-for tools (do-next hint, levels, care bar).
+              Once the plant is harvested/dead (`ended`) none of this applies —
+              there is nothing left to water/feed/prune, and showing full vitals
+              + a live care bar on a finished plant is exactly the "there's
+              nothing else I can do, but it still looks alive" complaint. Swap
+              the whole block for the one real remaining action: pay to clean
+              the pod and free it for a new seed. */}
+          {plant && !ended && (
             <div className="order-7 xl:order-none">
               <StageInfoCard
                 stage={renderStage}
@@ -398,14 +405,24 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
               />
             </div>
           )}
-          {plant && (
+          {plant && !ended && (
             <div className="order-8 xl:order-none">
               <NextActionHint plant={plant} />
             </div>
           )}
-          {plant && (
+          {plant && !ended && (
             <div className="order-9 xl:order-none">
               <CareDeck plant={plant} />
+            </div>
+          )}
+          {plant && ended && (
+            <div className="order-9 space-y-2 rounded-xl border border-cyan-400/15 bg-[#0b1b27]/50 p-3 xl:order-none">
+              <p className="text-center text-sm text-gray-300">
+                {plant.harvested
+                  ? "🌾 Harvested — this pod needs cleaning before your next grow."
+                  : "🥀 This plant didn't make it — this pod needs cleaning before your next grow."}
+              </p>
+              <PlantActionCTA plant={plant} pod={pod} />
             </div>
           )}
 
@@ -413,7 +430,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
               play the ENTIRE game from the main game page"): Today's Plan +
               Plant Insights + the Harvest CTA — the same tested dock panels the
               chamber used to carry (ChamberDock), imported, not forked. */}
-          {plant && (
+          {plant && !ended && (
             <div className="order-10 xl:order-none">
               <ChamberPanel plant={plant} strain={strain} />
             </div>

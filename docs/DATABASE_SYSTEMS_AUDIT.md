@@ -1,5 +1,7 @@
 # Database Systems + Process Audit — GROWv2 (`mainnet-growverse-v2.0`)
 
+> **⚠️ HISTORICAL (2026-06-18)** — frozen evidence audit. A companion audit with ERRATUM is at `growpod/docs/DATABASE_SYSTEMS_AUDIT.md`. Both are historical; for current DB state see `growpod/docs/HANDOFF.md`.
+
 > Read-only, evidence-based audit. Baselined against `origin/main`. No schema,
 > migration, CI, or production behavior was changed by this document. Conducted
 > 2026-06-18 via a 10-role parallel review (database map, migrations, storage,

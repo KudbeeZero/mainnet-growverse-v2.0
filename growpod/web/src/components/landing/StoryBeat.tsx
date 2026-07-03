@@ -30,7 +30,7 @@ export function StoryBeat({
   return (
     <section
       ref={ref}
-      className="relative flex min-h-[90svh] items-center justify-center px-6 py-20"
+      className="relative flex items-center justify-center px-6 py-16 sm:py-20"
     >
       <div
         className={`grid w-full max-w-5xl items-center gap-8 ${

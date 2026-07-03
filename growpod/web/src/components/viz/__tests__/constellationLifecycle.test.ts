@@ -92,11 +92,20 @@ describe("Constellation lifecycle contracts", () => {
   });
 
   it("does not touch the sacred geometry/physics/render functions", () => {
+    // draw() hash intentionally updated (owner: mobile particles read as
+    // "huge" and the effect "ran very slow"): the per-particle draw now blits
+    // a cached glow+core sprite (getGlowSprite) instead of rebuilding a
+    // createRadialGradient every frame, and scales the blit by `sizeScale`
+    // (viewport-proportional, was a fixed pixel size regardless of screen
+    // width — the actual cause of the mobile "huge blobs" read) with a
+    // gradient fallback for headless/unsupported canvases. Pixel output is
+    // the same shape/color, just computed differently and now correctly
+    // proportional — leafParticles/graphParticles/step are untouched.
     const expected: Record<string, string> = {
       leafParticles: "4730224577faa700724cae8f16b880dc6697b8c947670cc7a302d01b48a66d21",
       graphParticles: "17e3fc14e098d0f3f1a68f938252cedcc274dd1d8ee72d74abbfbbfd03e5a0de",
       step: "7ea722e92cc4757851cb0f61ce3927cd3d3da0a0c2671c8c190a352b8ab332cf",
-      draw: "1e9983b03ffed42bd04e47801ad15b7801bb6032f9a94dcd4faadb97f3f38ffd",
+      draw: "6bf9e53a37040adf47c09cf49c3c9c51e95f7fba11f6ea32c088c30f92d5f80e",
     };
     for (const [name, hash] of Object.entries(expected)) {
       expect(

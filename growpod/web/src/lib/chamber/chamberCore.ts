@@ -230,29 +230,36 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     ctx!.save();
     ctx!.translate(x, y);
     ctx!.rotate(rot);
-    if (w > 4.2) {
-      // Big calyx (macro / cola): a soft volumetric gradient for depth — matte,
-      // not glossy. Real flower scatters light (dusty/frosted), so the bright
-      // stop is gentle and there is NO white specular highlight (that read as wet
-      // plastic); depth comes from the dark edge + the seam/ridge shadows.
-      // Round 3 (owner mockup): juicier calyx — a slightly hotter, more
-      // saturated bright face and a deeper saturated shadow edge, so each pod
-      // reads as a plump ribbed bract instead of a flat dot.
-      const g = ctx!.createRadialGradient(-w * 0.22, -h * 0.24, w * 0.08, 0, 0, w * 1.15);
-      g.addColorStop(0, `hsl(${hue}, ${Math.min(80, sat + 6)}%, ${Math.min(64, lit + 8)}%)`);
-      g.addColorStop(0.55, `hsl(${hue}, ${sat}%, ${lit}%)`);
-      g.addColorStop(1, `hsl(${hue}, ${Math.min(88, sat + 16)}%, ${Math.max(10, lit - 16)}%)`);
-      ctx!.fillStyle = g;
-      podPath(w, h);
-      ctx!.fill();
-      ctx!.strokeStyle = "rgba(0,0,0,0.24)";
-      ctx!.lineWidth = 0.6;
-      ctx!.stroke();
-    } else {
-      ctx!.fillStyle = `hsl(${hue}, ${sat}%, ${lit}%)`;
-      podPath(w, h);
-      ctx!.fill();
-    }
+    // Round 8c (owner: "the layering in the texture" — the cola read as a
+    // smooth blended blob, not a stack of individually lit scales). The old
+    // `w > 4.2` gate meant almost every pod took the flat single-hsl() fill
+    // below (podW is CLAMPED to a 4.2 ceiling, so only a rare oversized-jitter
+    // pod ever cleared it) — the volumetric gradient this file's own comments
+    // describe as "the single highest-leverage fix" was effectively dead code
+    // at real render sizes. Every pod now gets the gradient.
+    const g = ctx!.createRadialGradient(-w * 0.22, -h * 0.24, w * 0.08, 0, 0, w * 1.15);
+    g.addColorStop(0, `hsl(${hue}, ${Math.min(80, sat + 6)}%, ${Math.min(64, lit + 8)}%)`);
+    g.addColorStop(0.55, `hsl(${hue}, ${sat}%, ${lit}%)`);
+    g.addColorStop(1, `hsl(${hue}, ${Math.min(88, sat + 16)}%, ${Math.max(10, lit - 16)}%)`);
+    ctx!.fillStyle = g;
+    podPath(w, h);
+    ctx!.fill();
+    // Shingle "undercut" shadow — the base third of every bract tucks under
+    // the tier above it in the stack (see the tip-first/base-last paint order
+    // in drawFlowerSite). A soft dark wash there, independent of the radial
+    // gradient above (which shades by LIGHT DIRECTION, not stack position), is
+    // what makes overlapping bracts read as physically layered scales instead
+    // of blending into one smooth mass — the read the reference calls a
+    // shingled/scaled surface, not a teardrop gradient.
+    const undercut = ctx!.createLinearGradient(0, h * 0.06, 0, h * 0.5);
+    undercut.addColorStop(0, `hsla(${hue}, ${sat}%, ${Math.max(6, lit - 8)}%, 0)`);
+    undercut.addColorStop(1, `hsla(${hue}, ${Math.min(90, sat + 10)}%, ${Math.max(4, lit - 22)}%, 0.5)`);
+    ctx!.fillStyle = undercut;
+    podPath(w, h);
+    ctx!.fill();
+    ctx!.strokeStyle = "rgba(0,0,0,0.24)";
+    ctx!.lineWidth = Math.max(0.4, w * 0.05);
+    ctx!.stroke();
     // Inner cap — the lighter, younger calyx tip peeking out (kept subtle/matte).
     ctx!.translate(0, -h * 0.14);
     ctx!.scale(0.55, 0.48);
@@ -260,7 +267,13 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     podPath(w, h);
     ctx!.fill();
     ctx!.restore();
-    if (w > 2.2) {
+    // Round 8c: gate lowered 2.2 → 1.2 — podW's own ceiling is 4.2 and most
+    // pods render well under 2.2 once size jitter (p.sz) and reveal (g) scale
+    // it down, so the old gate silently skipped this layer (tip brightening +
+    // ridge vein) on the majority of bracts, leaving only the undercut shadow
+    // above to carry any per-pod depth. Only the smallest slivers (w<1.2) skip
+    // it now, where a linear gradient + stroke would be sub-pixel noise anyway.
+    if (w > 1.2) {
       // Reference "Bract/Calyx Scale Breakdown" items 4 & 7: a faint central
       // ridge/vein tip→base (not a flat colour fill), and the bract's OWN
       // surface intensifying — brighter/more saturated toward its tip,
@@ -527,6 +540,50 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     return clamp(budDev * (0.4 + 0.9 * Math.max(0, cl.centerBias)), 0, 1) * (budDev > 0.02 ? 1 : 0);
   }
 
+  // Node attachment collar (owner blueprint 2026-07-03: "buds look pasted on;
+  // no clear attachment → attach every bud to a visible branch joint / node").
+  // Drawn in the flower-site's local space (base at origin, cola growing up -y)
+  // right BEFORE the cola, so each bud visibly sockets onto a tapered stem neck
+  // with a small calyx-green leaf collar at the junction instead of floating.
+  // Draw-path only — no build-time RNG, so pinned determinism tests are intact.
+  function drawBudCollar(site: FlowerSite, litAdj: number) {
+    const w = Math.max(3, site.baseW * 0.5); // socket half-width at the branch
+    const h = Math.max(6, site.baseW * 0.9); // neck height into the cola base
+    ctx!.save();
+    // Tapered stem "socket" the cola sits on — wide at the branch, narrowing up
+    // into the bud base so the join reads as continuous stem, not a seam.
+    const g = ctx!.createLinearGradient(0, h * 0.5, 0, -h);
+    g.addColorStop(0, `hsl(${S.hue - 8}, 36%, ${clamp(24 + litAdj, 14, 40)}%)`);
+    g.addColorStop(1, `hsl(${S.hue - 6}, 42%, ${clamp(33 + litAdj, 20, 48)}%)`);
+    ctx!.fillStyle = g;
+    ctx!.beginPath();
+    ctx!.moveTo(-w, h * 0.4);
+    ctx!.quadraticCurveTo(-w * 0.5, -h * 0.25, -w * 0.26, -h);
+    ctx!.lineTo(w * 0.26, -h);
+    ctx!.quadraticCurveTo(w * 0.5, -h * 0.25, w, h * 0.4);
+    ctx!.closePath();
+    ctx!.fill();
+    // Collar band — a small darker ellipse at the node junction (the "visible
+    // node joint + slight ring" of the target reference).
+    ctx!.strokeStyle = `hsl(${S.hue - 14}, 30%, ${clamp(18 + litAdj, 10, 32)}%)`;
+    ctx!.lineWidth = Math.max(1, w * 0.22);
+    ctx!.beginPath();
+    ctx!.ellipse(0, h * 0.06, w * 0.7, w * 0.26, 0, 0, Math.PI * 2);
+    ctx!.stroke();
+    // Two small sugar-leaf blades cupping the base up-and-out — the "small leaf
+    // collar / sugar leaf ring" that supports the bud and hides the seam.
+    ctx!.fillStyle = `hsl(${S.hue - 4}, 44%, ${clamp(30 + litAdj, 18, 46)}%)`;
+    for (const s of [-1, 1]) {
+      ctx!.beginPath();
+      ctx!.moveTo(s * w * 0.3, h * 0.1);
+      ctx!.quadraticCurveTo(s * w * 1.5, -h * 0.15, s * w * 1.7, -h * 0.75);
+      ctx!.quadraticCurveTo(s * w * 0.9, -h * 0.2, s * w * 0.15, h * 0.05);
+      ctx!.closePath();
+      ctx!.fill();
+    }
+    ctx!.restore();
+  }
+
   function drawFlowerSite(
     site: FlowerSite,
     P: DevParams,
@@ -534,6 +591,27 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     tt: number,
     trichScale = 1,
   ) {
+    // Plant rework pass 4 (owner blueprint: "glow boundary — a soft emissive edge
+    // that SEPARATES the bud from the foliage behind it"; "buds stay readable").
+    // A soft dark halo behind the cola silhouette so the bright bud reads as a
+    // distinct foreground object instead of fusing into the leaf mass — pure
+    // depth/readability, additive, removes no foliage. Drawn first so the stem,
+    // mass, calyxes and frost all layer on top of it.
+    {
+      const bw = site.baseW * 1.45;
+      const bh = site.axisLen * 0.6;
+      const cy = -site.axisLen * 0.5;
+      const halo = ctx!.createRadialGradient(0, cy, 0, 0, cy, Math.max(bw, bh));
+      halo.addColorStop(0, "rgba(3,9,7,0.4)");
+      halo.addColorStop(0.7, "rgba(3,9,7,0.22)");
+      halo.addColorStop(1, "rgba(3,9,7,0)");
+      ctx!.save();
+      ctx!.fillStyle = halo;
+      ctx!.beginPath();
+      ctx!.ellipse(0, cy, bw, bh, 0, 0, TAU);
+      ctx!.fill();
+      ctx!.restore();
+    }
     ctx!.strokeStyle = `hsl(${S.hue - 12}, 32%, 30%)`;
     ctx!.lineWidth = Math.max(1.8, site.baseW * 0.07);
     ctx!.lineCap = "round";
@@ -1136,9 +1214,17 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     // Round 2 (owner mockup): denser flowering canopy — the mockup plant carries
     // colas + fans at every tier with almost no empty space inside the outline,
     // so flowering packs more nodes (1.18 → 1.32) and the hard cap rises 18 → 20.
-    const flowerPack = flowering ? 1.42 : d > 14 ? 1.1 : 1;
+    // Round 8 (owner "10/10" hero render — airier candelabra): the round-2..7
+    // density push overshot — the live plant read as a solid fir-tree mass with
+    // colas crowding into one another, no dark air between them. The hero shows
+    // FEWER, more vertically-separated tiers so each cola reads as a distinct
+    // spear. Pack cut (1.42 → 1.16) and the hard cap lowered (20 → 16): fewer
+    // flowering tiers over the same stem height = a visible vertical gap between
+    // each cola. Foliage per node is untouched (fans still fill the interior),
+    // so the plant stays leaf-full/airy — not bare.
+    const flowerPack = flowering ? 1.16 : d > 14 ? 1.1 : 1;
     const nodeTarget = Math.floor((hN / S.internode) * SK.nodeDensity * SK.vertStack * flowerPack);
-    const maxNodes = Math.min(20, Math.max(d <= 10 ? 1 : 2, nodeTarget));
+    const maxNodes = Math.min(16, Math.max(d <= 10 ? 1 : 2, nodeTarget));
     const grow = smooth(clamp((d - 8) / 22, 0, 1));
     // Engine 3 — phyllotaxy: azimuths winding around the stem (decussate at the
     // base → 137.5° golden spiral toward the apex). Veg keeps a gentle spiral
@@ -1172,7 +1258,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // upper node), so their bud spikes overlapped it. Widen their lateral
       // reach too — not just their tilt (below) — so the top 2-3 colas read
       // as a clearly separated candelabra instead of one fused column.
-      const apexSplay = smooth(clamp((f - 0.58) / 0.3, 0, 1));
+      // Round 8 (hero render): the splay band starts lower (0.58 → 0.46) and is
+      // wider so more of the upper-half side branches — not just the top 2-3 —
+      // fan away from the spine, opening the crowded upper column into a
+      // separated candelabra.
+      const apexSplay = smooth(clamp((f - 0.46) / 0.36, 0, 1));
       // Round 5 (specialist code review, 2026-07-03): 1.8x was actively WIDENING
       // the f≈0.58-0.88 band — exactly the zone that should be narrowing toward
       // a cone apex — producing the "shoulders/flare" the mockup doesn't have.
@@ -1181,7 +1271,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // `apicalDominance` identity carries the candelabra look) visibly
       // separated, without flaring a single-leader cone's shoulders.
       // Lower branches splay wide (skirt); upper branches tuck in and shorten.
-      const spread = lerp(1, SK.lowerSpread, low) * lerp(1, 1.25, apexSplay);
+      // Round 8 (hero render): apex-splay reach widened (1.25 → 1.5) so the
+      // upper side colas are held clearly OUT from the leader — distinct
+      // separated spears with dark air between, not a fused vertical column.
+      const spread = lerp(1, SK.lowerSpread, low) * lerp(1, 1.5, apexSplay);
       const shorten = 1 - SK.upperShorten * f;
       // Engine 3/4: azimuth → signed-and-foreshortened horizontal projection
       // (lateral) + front/back depth. `side` keeps its legacy ±1 meaning for the
@@ -1199,14 +1292,22 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // Round 5 (specialist code review, 2026-07-03): the tilt term scales down
       // proportionally with the spread cut above (0.55 * 1.25/1.8 ≈ 0.17) so the
       // upper-middle stops flaring outward on both axes at once, not just one.
-      let tilt = (0.92 + rnd() * 0.3) * (1 - f * 0.22 + apexSplay * 0.17) * lerp(1, 1.12, low);
+      // Round 8 (hero render): more branch angle away from vertical, especially
+      // in the splay band (0.17 → 0.28) and low skirt (1.12 → 1.18) — a branch
+      // that reaches out sideways carries its cola away from the spine, which is
+      // what actually separates the spears (their attachment points AND their
+      // tips), instead of a column of near-parallel upright colas.
+      let tilt = (0.98 + rnd() * 0.3) * (1 - f * 0.2 + apexSplay * 0.28) * lerp(1, 1.18, low);
       // Round 2 (owner mockup): back to 0.27 — with the mid-branch fans and
       // extra branchlets filling the arcs, the wider reach buys the fuller
       // pine-tree silhouette without the "floating buds" regression.
       // Round 5 (specialist code review, 2026-07-03): taper steepened
       // (0.35 + 0.65*low) → (0.24 + 0.76*low) — branch length now falls off
       // faster toward the apex for a crisper, straighter cone silhouette.
-      let len = A * 0.27 * S.branchMul * (0.24 + 0.76 * low) * grow * shorten;
+      // Round 8 (hero render): longer branches (0.27 → 0.31 base) with a lifted
+      // apex floor (0.24 → 0.30) so even the upper branches reach out far enough
+      // to hold their cola clear of the leader — the "held further OUT" ask.
+      let len = A * 0.31 * S.branchMul * (0.3 + 0.7 * low) * grow * shorten;
       if (topK >= 0) {
         // A released top straightens toward vertical and extends up to race the
         // leader to the canopy — turning a side branch into a competing cola.
@@ -1228,10 +1329,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const skirt = clamp(low + midFill * 0.55, 0, 1) * clamp((SK.nodeLeaf - 1) / 0.2, 0, 1);
       const nd: Node = {
         x: p.x, y: p.y, f, side, tilt, len, spread,
-        // Round 2 (owner mockup): flowering keeps most of its fan-leaf mass
-        // (shrink 0.4 → 0.25 of budDev·f) — the mockup canopy is leaf-RICH in
-        // full flower, with fans filling every gap between colas.
-        leafSize: A * (0.08 + 0.05 * low) * (0.55 + 0.45 * grow) * (1 - 0.25 * P.budDev * f) * depthSize * (1 + skirt * 0.4),
+        // Pass 10 (plant render): fan-leaf demotion — raise budDev suppression
+        // 0.25→0.40 and trim skirt bonus 0.40→0.28 so leaves recede behind
+        // buds in full flower instead of competing for the same visual real estate.
+        leafSize: A * (0.08 + 0.05 * low) * (0.55 + 0.45 * grow) * (1 - 0.40 * P.budDev * f) * depthSize * (1 + skirt * 0.28),
         leaflets: Math.min(S.leafletMax, 3 + 2 * Math.floor(d / 14)),
         phase: rnd() * TAU,
         tipX: 0, tipY: 0, site: null, budRot: 0,
@@ -1241,7 +1342,8 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         curve: 0.1 + rnd() * 0.14, // upward bend
         weight: 0,
         branchlets: [],
-        nodeLeafSize: A * (0.055 + 0.045 * low) * (0.55 + 0.45 * grow) * SK.nodeLeaf * (1 - 0.22 * P.budDev * f) * (1 + skirt * 0.5),
+        // Pass 10: node leaf suppression up 0.22→0.35, skirt bonus trimmed 0.5→0.35.
+        nodeLeafSize: A * (0.055 + 0.045 * low) * (0.55 + 0.45 * grow) * SK.nodeLeaf * (1 - 0.35 * P.budDev * f) * (1 + skirt * 0.35),
         nodeBud: null,
         depth: az.depth,
         litAdj: depthShade(az.depth),
@@ -1264,7 +1366,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // *edge* of the canopy is always a clean cone regardless of any one
       // node's random tilt/spread roll.
       if (topK < 0) {
-        const maxReach = A * lerp(0.1, 0.5 * SK.lowerSpread, low);
+        // Pass 8 (plant render): true triangular silhouette — linear taper (1-f)
+        // replaces the convex (1-f)^0.75 that made the canopy flare sideways at
+        // mid-height. Apex narrowed 0.14→0.10, base widened 0.62→0.70 so the
+        // cone sits wider at the skirt while the top stays tight.
+        const maxReach = A * lerp(0.10, 0.70 * SK.lowerSpread, 1 - f);
         if (Math.abs(nd.tipX) > maxReach) nd.tipX = Math.sign(nd.tipX) * maxReach;
       }
       if (P.budDev > 0 && topK >= 0) {
@@ -1336,7 +1442,12 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // 0.24) and run bigger, so the space between the stem and the branch-tip
       // colas carries bud mass at every tier (the mockup has near-zero empty
       // interior). The skirt fans are untouched — this fills, not drowns.
-      if (P.budDev > 0 && topK < 0 && f > Math.max(S.flowerFrom * 0.8, 0.24)) {
+      // Round 8 (hero render): the stem-hugging node bud is the "near-zero empty
+      // interior" filler from round 3 — exactly what packed the interior into a
+      // solid mass. Gate raised (0.24 → 0.5) so only the UPPER nodes carry one:
+      // the lower/mid interior opens to dark air + fan leaves, letting the
+      // branch-tip colas read as the distinct separated spears the hero shows.
+      if (P.budDev > 0 && topK < 0 && f > Math.max(S.flowerFrom * 0.8, 0.5)) {
         const axis = A * (0.058 + 0.08 * f) * S.clusterLen * (0.5 + 0.5 * P.budDev);
         const baseW = axis * 0.36 * S.clusterFat;
         const nC = Math.max(3, Math.round(S.bracts * 0.7 * (0.5 + 0.5 * f)));
@@ -1415,7 +1526,9 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const baseW = axis * (S.pattern === "spiral" ? 0.26 : 0.34) * S.clusterFat * (0.92 + 0.12 * P.ripe);
       // Pack more, smaller clusters up the spine so the cola reads as one dense
       // textured column rather than a handful of big teardrops.
-      const nC = Math.round(S.bracts * (S.pattern === "spiral" ? 2.1 : 1.5));
+      // Pass 9: raise hybrid/nodal multiplier 1.5→1.85 to hit 17-21 anchor
+      // clusters (Gelato bracts=10 → nC=19; indica bracts=11 → nC=20).
+      const nC = Math.round(S.bracts * (S.pattern === "spiral" ? 2.1 : 1.85));
       cola = {
         site: buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1.18 }),
         x: spine[24].x, y: spine[24].y + axis * 0.06,
@@ -1561,10 +1674,25 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
   // ---- leaves ----
   const FAN_A = [0, 0.42, -0.42, 0.85, -0.85, 1.22, -1.22, 1.5, -1.5];
   const FAN_M = [1, 0.86, 0.86, 0.7, 0.7, 0.52, 0.52, 0.36, 0.36];
+  // Cheap deterministic hash (GLSL-style sin/frac) for per-leaflet jitter. Pure
+  // function of (seed, i, k) — no RNG stream consumed, so it's safe to call every
+  // frame from the draw path without touching build-time determinism/pinned
+  // tests. `seed` is a stable per-node/per-fan value already on hand (nd.phase,
+  // bl.phase, lf.rot, …), so the same fan always jitters the same way — no
+  // frame-to-frame flicker — while different fan instances read differently.
+  function fanJit(seed: number, i: number, k: number): number {
+    const x = Math.sin(seed * 12.9898 + i * 78.233 + k * 37.719) * 43758.5453;
+    return x - Math.floor(x); // 0..1
+  }
   // Engine 4 — fan-leaf orientation. `litAdj` shades the leaf by canopy depth;
   // `yaw` horizontally squashes the whole fan (1 = broad/face-on, →0 edge-on) so a
   // leaf on a branch winding toward the camera turns side-on instead of billboarding.
-  function drawFan(size: number, n: number, topBoost: number, claw: number, litAdj = 0, yaw = 1) {
+  // `seed` breaks every fan out of the identical-decal look (owner: "leaves ...
+  // hard to explain" — flat, stamped, no texture layering): per-leaflet length/
+  // width/angle/tone jitter plus a light↔shadow gradient fill (was one flat
+  // hsl()) so each leaflet reads as a folded blade with its own facet, not a
+  // solid-colour sticker.
+  function drawFan(size: number, n: number, topBoost: number, claw: number, litAdj = 0, yaw = 1, seed = 0) {
     // Clamp to the FAN_A/FAN_M table length: a future per-strain leaflet count
     // above 9 would otherwise index past the arrays → undefined → NaN geometry.
     const leaflets = Math.min(n, FAN_A.length);
@@ -1577,31 +1705,54 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.scale(yaw, 1);
     }
     for (let i = 0; i < leaflets; i++) {
-      const L = size * FAN_M[i], Wd = L * 0.32 * S.leafW;
-      const a = FAN_A[i] + (claw ? Math.sign(FAN_A[i] || 1) * claw * (0.2 + Math.abs(FAN_A[i]) * 0.5) : 0);
+      const jL = fanJit(seed, i, 1), jA = fanJit(seed, i, 2), jT = fanJit(seed, i, 3);
+      const L = size * FAN_M[i] * (0.86 + 0.28 * jL), Wd = L * 0.32 * S.leafW * (0.88 + 0.24 * fanJit(seed, i, 4));
+      const a =
+        FAN_A[i] +
+        (claw ? Math.sign(FAN_A[i] || 1) * claw * (0.2 + Math.abs(FAN_A[i]) * 0.5) : 0) +
+        (jA - 0.5) * 0.16;
       // Outer leaflets arch over harder than the central spike, so the whole fan
       // cups downward/outward (natural relaxed leaf) rather than splaying flat.
       const curl = arch * (0.5 + Math.abs(FAN_A[i]) * 0.7);
+      // Per-leaflet tone jitter (±3 lit / ±4 sat) so a fan isn't 7 identical
+      // swatches — real foliage has this much natural variation leaflet to leaflet.
+      const litJ = lit + (jT - 0.5) * 6, satJ = clamp(sat + (fanJit(seed, i, 5) - 0.5) * 8, 0, 100);
       ctx!.save();
       ctx!.rotate(a);
-      const col = `hsl(${hue}, ${sat}%, ${lit}%)`;
-      ctx!.strokeStyle = `hsl(${hue}, ${sat * 0.7}%, ${lit * 0.8}%)`;
+      ctx!.strokeStyle = `hsl(${hue}, ${satJ * 0.7}%, ${litJ * 0.8}%)`;
       ctx!.lineWidth = 1;
       ctx!.beginPath();
       ctx!.moveTo(0, 0);
       ctx!.lineTo(0, -size * 0.12);
       ctx!.stroke();
       ctx!.translate(0, -size * 0.12);
-      ctx!.fillStyle = col;
+      // Light↔shadow facet: a cross-blade gradient (not a flat fill) so each
+      // leaflet reads as a folded surface catching light unevenly — the layering
+      // a single hsl() fill can't carry. The lit edge leans toward whichever side
+      // this leaflet already tilts (jA), so the facet direction varies fan to fan.
+      const litSide = jA < 0.5 ? -1 : 1;
+      const facet = ctx!.createLinearGradient(-litSide * Wd, 0, litSide * Wd, 0);
+      facet.addColorStop(0, `hsl(${hue}, ${Math.max(0, satJ - 6)}%, ${Math.max(6, litJ - 9)}%)`);
+      facet.addColorStop(0.48, `hsl(${hue}, ${satJ}%, ${litJ}%)`);
+      facet.addColorStop(1, `hsl(${hue}, ${Math.min(76, satJ + 8)}%, ${Math.min(70, litJ + 10)}%)`);
+      ctx!.fillStyle = facet;
       leafletPath(L, Wd, curl);
       ctx!.fill();
-      ctx!.strokeStyle = "rgba(0,0,0,0.20)";
+      ctx!.strokeStyle = "rgba(0,0,0,0.22)";
       ctx!.lineWidth = 0.6;
       ctx!.stroke();
-      ctx!.strokeStyle = "rgba(255,255,255,0.09)";
+      // Central vein (light) + an adjacent shadow crease on the shaded side —
+      // the pair is what sells a folded blade instead of a flat cutout.
+      ctx!.strokeStyle = "rgba(255,255,255,0.1)";
       ctx!.beginPath();
       ctx!.moveTo(0, 0);
       ctx!.lineTo(0, -L * 0.96 + curl * L);
+      ctx!.stroke();
+      ctx!.strokeStyle = "rgba(0,0,0,0.14)";
+      ctx!.lineWidth = 0.5;
+      ctx!.beginPath();
+      ctx!.moveTo(-litSide * Wd * 0.3, -L * 0.1);
+      ctx!.lineTo(-litSide * Wd * 0.55, -L * 0.7 + curl * L);
       ctx!.stroke();
       ctx!.restore();
     }
@@ -2092,12 +2243,27 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const satS = lerp(34, 32, bark);
       const litS = 26 + a.t * 8 - bark * 4;
       ctx!.strokeStyle = `hsl(${hueS}, ${satS}%, ${litS}%)`;
-      ctx!.lineWidth = lerp(sw0, sw0 * 0.35, a.t);
+      // Plant rework pass 3 (owner blueprint: "build a STRONGER central stem with
+      // CLEAR taper"). Thicker base (×1.4) with a sharper power-curve taper so the
+      // spine reads as a strong tapering trunk that visibly supports the colas,
+      // not a thin wire. Branch widths are unchanged (they key off sw0 directly).
+      ctx!.lineWidth = lerp(sw0 * 1.4, sw0 * 0.3, Math.pow(a.t, 0.8));
       ctx!.lineCap = "round";
       ctx!.beginPath();
       ctx!.moveTo(a.x, a.y);
       ctx!.lineTo(b.x, b.y);
       ctx!.stroke();
+      // A soft light edge up the front of the lower trunk (below mid) — a rim
+      // that sculpts the stem into a rounded stalk instead of a flat ribbon
+      // (blueprint: "increase material definition", "lighting sculpts the plant").
+      if (a.t < 0.5) {
+        ctx!.strokeStyle = `hsla(${hueS + 4}, ${satS + 6}%, ${litS + 16}%, ${0.5 * (1 - a.t * 2)})`;
+        ctx!.lineWidth = lerp(sw0 * 0.5, sw0 * 0.16, Math.pow(a.t, 0.8));
+        ctx!.beginPath();
+        ctx!.moveTo(a.x - lerp(sw0 * 0.42, 0, a.t * 2), a.y);
+        ctx!.lineTo(b.x - lerp(sw0 * 0.42, 0, b.t * 2), b.y);
+        ctx!.stroke();
+      }
     }
 
     // ── SEEDLING ──────────────────────────────────────────────────────────────
@@ -2218,12 +2384,31 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         endX, endY,
       );
       ctx!.stroke();
+      // Plant rework pass 5 (owner blueprint: "increase material definition";
+      // "branches visibly support each bud"). A thin lighter rim along the top of
+      // each branch so it reads as a rounded, lit supporting branch instead of a
+      // flat line — the visible support structure the blueprint repeatedly asks
+      // for. Same bezier, offset up by the rim width. Additive, draw-path only.
+      {
+        const rw = clamp(sw0 * 0.28 * (1 - nd.f * 0.26), 0.9, 2.4);
+        const ro = rw * 0.5 + 0.6;
+        ctx!.strokeStyle = `hsl(${S.hue - 6}, 42%, ${clamp(48 + nd.litAdj, 30, 64)}%)`;
+        ctx!.lineWidth = rw;
+        ctx!.beginPath();
+        ctx!.moveTo(0, -ro);
+        ctx!.bezierCurveTo(
+          nd.tipX * 0.35, nd.tipY * 0.4 - nd.len * nd.curve - ro,
+          nd.tipX * 0.72, nd.tipY * 0.7 - nd.len * nd.curve * 0.4 + sag * 0.5 - ro,
+          endX, endY - ro,
+        );
+        ctx!.stroke();
+      }
       ctx!.save();
       ctx!.translate(endX, endY);
       // Engine 4: roll the fan a touch per node and yaw it by the branch azimuth
       // so the tip leaves aren't all flat to the camera.
       ctx!.rotate(nd.side * (0.5 + nd.tilt * 0.18) + nd.leafRoll);
-      drawFan(nd.leafSize, nd.leaflets, nd.f, claw, nd.litAdj, nd.leafYaw);
+      drawFan(nd.leafSize, nd.leaflets, nd.f, claw, nd.litAdj, nd.leafYaw, nd.phase);
       ctx!.restore();
       // Round 2 (owner mockup): a mid-branch fan on longer branches — the bare
       // arc between the node and the tip was the last "diagram" tell; the mockup
@@ -2233,7 +2418,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.save();
         ctx!.translate(endX * mt, endY * mt - nd.len * nd.curve * Math.sin(Math.PI * mt) * 0.6);
         ctx!.rotate(nd.side * 0.32 + nd.leafRoll * 0.7);
-        drawFan(nd.leafSize * 0.6, Math.max(3, nd.leaflets - 2), nd.f * 0.5, claw, nd.litAdj - 3, lerp(nd.leafYaw, 1, 0.5));
+        drawFan(nd.leafSize * 0.6, Math.max(3, nd.leaflets - 2), nd.f * 0.5, claw, nd.litAdj - 3, lerp(nd.leafYaw, 1, 0.5), nd.phase + 1.7);
         ctx!.restore();
         // Round 3 (owner mockup): an INNER fan near the branch base, angled up
         // toward the stem — the wedge of dark space between the trunk and each
@@ -2246,7 +2431,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.save();
         ctx!.translate(endX * it, endY * it - nd.len * nd.curve * Math.sin(Math.PI * it) * 0.6);
         ctx!.rotate(-nd.side * 0.4 + nd.leafRoll * 0.5);
-        drawFan(nd.leafSize * 0.72, Math.max(3, nd.leaflets - 2), nd.f * 0.4, claw, nd.litAdj - 5, lerp(nd.leafYaw, 1, 0.6));
+        drawFan(nd.leafSize * 0.72, Math.max(3, nd.leaflets - 2), nd.f * 0.4, claw, nd.litAdj - 5, lerp(nd.leafYaw, 1, 0.6), nd.phase + 3.1);
         ctx!.restore();
         // Round 5 (specialist code review, 2026-07-03): a SECOND inner fan even
         // closer to the branch base (t≈0.12), angled further back toward the
@@ -2257,7 +2442,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.save();
         ctx!.translate(endX * it2, endY * it2 - nd.len * nd.curve * Math.sin(Math.PI * it2) * 0.6);
         ctx!.rotate(-nd.side * 0.62 + nd.leafRoll * 0.4);
-        drawFan(nd.leafSize * 0.6, Math.max(3, nd.leaflets - 2), nd.f * 0.35, claw, nd.litAdj - 6, lerp(nd.leafYaw, 1, 0.65));
+        drawFan(nd.leafSize * 0.6, Math.max(3, nd.leaflets - 2), nd.f * 0.35, claw, nd.litAdj - 6, lerp(nd.leafYaw, 1, 0.65), nd.phase + 4.6);
         ctx!.restore();
       }
       // Leaf cluster hugging the stem at the node — every node carries foliage,
@@ -2279,10 +2464,15 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // 0.6/0.54) — the lower interior still showed dark wedges between the
       // stem and the low colas; the mockup's lower third is packed foliage.
       if (nd.skirt > 0.2) nodeFans.push([nd.side * 0.62, 0.6], [-nd.side * 1.08, 0.54]);
-      for (const [ang, scl] of nodeFans) {
+      for (let fi = 0; fi < nodeFans.length; fi++) {
+        const [ang, scl] = nodeFans[fi];
         ctx!.save();
         ctx!.rotate(ang);
-        drawFan(nd.nodeLeafSize * scl, Math.max(3, nd.leaflets - 2), 0, claw, nd.litAdj - nd.skirt * 5, lerp(nd.leafYaw, 1, 0.4));
+        // Plant rework pass 6 (owner blueprint: "keep leaf fans SECONDARY so buds
+        // stay readable"). Node/skirt fans recede a few % darker (−8 vs −5 on the
+        // skirt) so the bright colas dominate the read — leaves support the buds,
+        // they don't compete. Density is unchanged (no bareness).
+        drawFan(nd.nodeLeafSize * scl, Math.max(3, nd.leaflets - 2), 0, claw, nd.litAdj - 3 - nd.skirt * 8, lerp(nd.leafYaw, 1, 0.4), nd.phase + 6 + fi * 1.9);
         ctx!.restore();
       }
       // Secondary branchlets — forks part-way along the branch (sharing the
@@ -2306,7 +2496,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.save();
         ctx!.translate(bex, bey);
         ctx!.rotate(bl.side * (0.4 + bl.tilt * 0.2) + nd.leafRoll * 0.6);
-        drawFan(bl.leafSize, bl.leaflets, nd.f, claw, nd.litAdj, lerp(nd.leafYaw, 1, 0.5));
+        drawFan(bl.leafSize, bl.leaflets, nd.f, claw, nd.litAdj, lerp(nd.leafYaw, 1, 0.5), bl.phase);
         ctx!.restore();
         if (bl.site) {
           ctx!.save();
@@ -2314,6 +2504,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
           // Small extra nod: the bud hangs a touch beyond the (already drooped) branch.
           ctx!.rotate(nd.side * 0.12 + nd.side * droopRot * 0.15);
           // branchlet buds sit lower/outer — thinner frost than their parent node
+          drawBudCollar(bl.site, nd.litAdj - 3);
           drawFlowerSite(bl.site, p.P, jig, tt, budSiteDensity(nd.f) * 0.7);
           ctx!.restore();
         }
@@ -2324,6 +2515,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.save();
         ctx!.translate(0, -2);
         ctx!.rotate(-nd.side * 0.12);
+        drawBudCollar(nd.nodeBud, nd.litAdj);
         drawFlowerSite(nd.nodeBud, p.P, jig, tt, budSiteDensity(nd.f) * 0.9);
         ctx!.restore();
       }
@@ -2332,8 +2524,33 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.save();
         ctx!.translate(endX * 0.85, endY * 0.85);
         ctx!.rotate(nd.budRot + nd.side * droopRot * 0.2); // bud nods a touch past the drooped branch
+        drawBudCollar(nd.site, nd.litAdj);
         drawFlowerSite(nd.site, p.P, jig, tt, budSiteDensity(nd.f));
         ctx!.restore();
+        // Plant rework pass 2 (owner blueprint: "add visible branch segments in
+        // FRONT of some buds, not only behind them" → front/mid/rear depth).
+        // Front-facing nodes (high azimuth depth, painted last) get a short lit
+        // support branch arcing across the cola's lower third with a small leaf
+        // tip — a foreground overlap so the bud reads as layered, not flat. Only
+        // the front nodes get it, so it's depth, not clutter (blueprint: "keep
+        // leaf fans secondary so buds stay readable"). Draw-path only.
+        if (nd.depth > 0.6) {
+          const cw = nd.site.baseW;
+          ctx!.save();
+          ctx!.translate(endX * 0.85, endY * 0.85);
+          ctx!.rotate(nd.budRot + nd.side * droopRot * 0.2);
+          ctx!.strokeStyle = `hsl(${S.hue - 8}, 40%, ${clamp(40 + nd.litAdj, 26, 54)}%)`;
+          ctx!.lineWidth = clamp(sw0 * 0.5, 1.6, 4);
+          ctx!.lineCap = "round";
+          ctx!.beginPath();
+          ctx!.moveTo(-cw * 1.15, cw * 0.25);
+          ctx!.quadraticCurveTo(-cw * 0.1, -nd.site.axisLen * 0.14, cw * 0.95, -nd.site.axisLen * 0.26);
+          ctx!.stroke();
+          ctx!.translate(cw * 0.95, -nd.site.axisLen * 0.26);
+          ctx!.rotate(nd.side * 0.45 + nd.leafRoll);
+          drawFan(nd.leafSize * 0.52, 3, 0, claw, nd.litAdj + 6, nd.leafYaw, nd.phase + 8.2);
+          ctx!.restore();
+        }
       }
       ctx!.restore();
     }
@@ -2352,15 +2569,39 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.rotate(phys.cola.ao + colaSway + colaDroop);
       ctx!.save();
       ctx!.translate(0, -p.cola.site.axisLen * 0.04);
-      drawFan(p.A * 0.08 * (1 - 0.35 * p.P.budDev), Math.min(S.leafletMax, 5 + Math.floor(day / 18)), 1, claw);
+      drawFan(p.A * 0.08 * (1 - 0.35 * p.P.budDev), Math.min(S.leafletMax, 5 + Math.floor(day / 18)), 1, claw, 0, 1, seed + day * 0.3);
       ctx!.restore();
-      drawFlowerSite(p.cola.site, p.P, cjig, tt, 1.0); // top cola — full frost
+      drawBudCollar(p.cola.site, 2); // the top cola gets the strongest node collar
+      // Plant rework pass 7 (owner blueprint: "clear MAIN cola", "1 top cola —
+      // the HERO", "silhouette lacks hierarchy"). A warm apical hero-bloom behind
+      // the crown so the top cola reads as the clear dominant apex, not just the
+      // tallest of a row. Additive light ("lighter"), gated on flower dev so it
+      // only blooms as the crown matures. Draw-path only.
+      {
+        const hb = clamp(live.current.dev.budDev, 0, 1);
+        if (hb > 0.05) {
+          const r = p.cola.site.baseW * 3.2;
+          const cy = -p.cola.site.axisLen * 0.5;
+          const bloom = ctx!.createRadialGradient(0, cy, 0, 0, cy, r);
+          bloom.addColorStop(0, `hsla(${S.hue + 14}, 62%, 66%, ${0.16 * hb})`);
+          bloom.addColorStop(0.6, `hsla(${S.hue + 6}, 56%, 56%, ${0.08 * hb})`);
+          bloom.addColorStop(1, "hsla(0,0%,100%,0)");
+          ctx!.save();
+          ctx!.globalCompositeOperation = "lighter";
+          ctx!.fillStyle = bloom;
+          ctx!.beginPath();
+          ctx!.ellipse(0, cy, r * 0.8, r, 0, 0, TAU);
+          ctx!.fill();
+          ctx!.restore();
+        }
+      }
+      drawFlowerSite(p.cola.site, p.P, cjig, tt, 1.05); // top cola — full frost + hero
       ctx!.restore();
     } else {
       ctx!.save();
       ctx!.translate(top.x, top.y);
       ctx!.rotate(swayT);
-      drawFan(p.A * 0.08, Math.min(S.leafletMax, 5 + Math.floor(day / 18)), 1, claw);
+      drawFan(p.A * 0.08, Math.min(S.leafletMax, 5 + Math.floor(day / 18)), 1, claw, 0, 1, seed + day * 0.3);
       ctx!.restore();
     }
     drawConditionOverlay(p);
@@ -2452,7 +2693,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.save();
       ctx!.translate(lf.lx, lf.ly);
       ctx!.rotate(lf.rot);
-      drawFan(lf.lsz, Math.min(S.leafletMax, 7), 0.2, 0);
+      drawFan(lf.lsz, Math.min(S.leafletMax, 7), 0.2, 0, 0, 1, lf.rot * 41.3);
       ctx!.restore();
     }
     ctx!.restore();
@@ -2556,7 +2797,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.save();
         ctx!.translate(lf.x - baseX, lf.y - baseY);
         ctx!.rotate(lf.rot);
-        drawFan(lf.sz * (0.6 + 0.4 * grow), 3, 0.3, 0);
+        drawFan(lf.sz * (0.6 + 0.4 * grow), 3, 0.3, 0, 0, 1, lf.rot * 41.3);
         ctx!.restore();
       }
     }

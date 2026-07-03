@@ -286,7 +286,17 @@ function LiveSnapshotCard({ onSeed }: { onSeed: (data: LedgerSummary) => void })
     );
   }
 
-  if (!summary) return null;
+  // Shape guard, not just presence: a truthy-but-malformed response (e.g. an
+  // empty array from a 200) has no `daily`/`totals`, which used to white-screen
+  // the page on the chart's `data.length` / `totals.minted`.
+  if (!summary || !Array.isArray(summary.daily) || !summary.totals || summary.active_players == null || summary.money_supply == null) {
+    return (
+      <Card>
+        <CardHeader title="Live 30-Day Token Flow" />
+        <p className="text-sm text-gray-500 py-4">No ledger data available.</p>
+      </Card>
+    );
+  }
 
   const { daily, totals, money_supply, active_players } = summary;
 
@@ -631,7 +641,7 @@ function SeasonalDropsCard() {
         "/admin/seasonal/strains",
         { auth: true },
       );
-      setEntries(data.strains);
+      setEntries(Array.isArray(data?.strains) ? data.strains : []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load seasonal drops");
     } finally {
@@ -954,7 +964,7 @@ function StorePartnersCard() {
     setError(null);
     try {
       const data = await apiFetch<PartnerRow[]>("/admin/store/partners", { auth: true });
-      setPartners(data);
+      setPartners(Array.isArray(data) ? data : []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load partners");
     } finally {
@@ -1133,7 +1143,7 @@ function FeaturedItemsCard() {
     setError(null);
     try {
       const data = await apiFetch<FeaturedRow[]>("/store/featured");
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load featured items");
     } finally {

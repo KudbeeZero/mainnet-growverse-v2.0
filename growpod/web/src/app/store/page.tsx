@@ -61,6 +61,13 @@ function SectionHeader({ icon, title, subtitle }: { icon: string; title: string;
   );
 }
 
+// Every store shelf sits in a consistent elevated panel so the whole page reads
+// as a set of distinct tiles/panels (owner: "some sort of panel or tile type of
+// look") instead of loose headers-and-buttons stacked on the bare background.
+// Presentation-only — no section's data or purchase logic changes.
+const STORE_PANEL =
+  "rounded-2xl border border-ink-800 bg-ink-950/40 p-4 sm:p-5";
+
 function FeaturedShelf() {
   const featured = useStoreFeatured();
   const seasonal = useSeasonalStrains();
@@ -89,10 +96,10 @@ function FeaturedShelf() {
     id: `seasonal-${s.id}`,
     item_type: "seasonal" as const,
     item_id: s.id,
-    label: `${s.strain_name} — Seasonal genetics`,
+    label: `${s.strain_name ?? "Seasonal strain"} — Seasonal genetics`,
     badge: "seasonal" as const,
     price_gc: s.price_gc as number,
-    product_name: s.strain_name,
+    product_name: s.strain_name ?? "Seasonal strain",
     source: "seasonal" as const,
   }));
 
@@ -140,7 +147,7 @@ function FeaturedShelf() {
     item.item_type === "strain";
 
   return (
-    <section>
+    <section className={STORE_PANEL}>
       <SectionHeader icon="⭐" title="This Week's Drops" subtitle="Curated picks — limited, seasonal, and pinned items" />
       <div className="flex gap-4 overflow-x-auto pb-2">
         {allItems.map((item) => (
@@ -245,7 +252,7 @@ function PartnerDropsSection() {
   if (partners.isLoading) return <LoadingBlock />;
   if (!partners.data?.length) return null;
   return (
-    <section>
+    <section className={STORE_PANEL}>
       <SectionHeader icon="🤝" title="Partner Drops" subtitle="Featured products from dispensary partners" />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {partners.data.map((p) => <PartnerCard key={p.id} partner={p} />)}
@@ -326,7 +333,7 @@ function BundlesSection() {
   if (bundles.isLoading) return <LoadingBlock />;
   if (!bundles.data?.length) return null;
   return (
-    <section>
+    <section className={STORE_PANEL}>
       <SectionHeader icon="📦" title="Bundle Deals" subtitle="Curated kits at a discount" />
       <div className="space-y-4">
         {bundles.data.map((b) => <BundleCard key={b.id} bundle={b} />)}
@@ -383,7 +390,7 @@ function ConsumablesSection() {
   }
 
   return (
-    <section>
+    <section className={STORE_PANEL}>
       <SectionHeader icon="🧪" title="Consumables" subtitle="One-shot plant boosters" />
       {!isAuthed ? (
         <p className="text-sm text-gray-500">Sign in to browse consumables.</p>
@@ -477,7 +484,7 @@ function SeedsSection() {
   }
 
   return (
-    <section>
+    <section className={STORE_PANEL}>
       <SectionHeader icon="🌱" title="Seeds" subtitle="Catalog genetics — buy and grow" />
       {strains === null ? (
         <Button onClick={load} disabled={loading} size="sm">
@@ -565,7 +572,7 @@ function ResearchSection() {
   }
 
   return (
-    <section>
+    <section className={STORE_PANEL}>
       <SectionHeader icon="🔬" title="Research" subtitle="Permanent upgrades to your grow operation" />
       {!isAuthed ? (
         <p className="text-sm text-gray-500">Sign in to browse research upgrades.</p>
@@ -780,7 +787,7 @@ function GrowRoomGearSection() {
   const shown = (items ?? []).filter((i) => i.category === tab);
 
   return (
-    <section>
+    <section className={STORE_PANEL}>
       <SectionHeader
         icon="🛠️"
         title="Grow Room Gear"
@@ -823,7 +830,7 @@ function GrowRoomGearSection() {
 
 function StoreInner() {
   return (
-    <div className="space-y-10">
+    <div className="space-y-5">
       <PageHeader
         eyebrow="GROWPOD EMPIRE"
         title="Store"

@@ -128,16 +128,16 @@ def get_admissions_provider(settings=None) -> AdmissionsProvider:
     """The Admissions agent's provider (Phase 6c).
 
     Returns the deterministic offline mock when the mock is forced or no Anthropic
-    key is configured (so CI never needs a key). A real ``ClaudeAdmissions`` is a
-    later sub-deliverable; until it lands, even a key-configured environment
-    returns the mock — mirroring the Master Grower factory.
+    key is configured (so CI never needs a key). With a key, returns the real
+    Claude-backed provider that interprets quiz answers and writes a personalized
+    rationale — same validity guarantees as the mock (department/track keys are
+    always validated against the live curriculum).
     """
     settings = settings or get_settings()
     if settings.use_mock_ai or not settings.anthropic_api_key:
         return MockAdmissions()
-    # Real Claude-backed Admissions is a later sub-deliverable; until then the
-    # deterministic mock is the only implementation, so always return it.
-    return MockAdmissions()
+    from .admissions_claude import ClaudeAdmissions
+    return ClaudeAdmissions(api_key=settings.anthropic_api_key, model=settings.advisor_model)
 
 
 _admissions: Optional[AdmissionsProvider] = None
@@ -159,16 +159,16 @@ def get_roadmap_provider(settings=None) -> RoadmapProvider:
     """The Roadmap agent's provider (Phase 6d).
 
     Returns the deterministic offline mock when the mock is forced or no Anthropic
-    key is configured (so CI never needs a key). A real ``ClaudeRoadmap`` is a later
-    sub-deliverable; until it lands, even a key-configured environment returns the
-    mock — mirroring the Admissions factory.
+    key is configured (so CI never needs a key). With a key, returns the real
+    Claude-backed provider — uses the same deterministic topological sort as the
+    mock (guaranteeing valid skill_ids and prerequisite order) but asks Claude to
+    write a personalized, motivating rationale for the learner's specific path.
     """
     settings = settings or get_settings()
     if settings.use_mock_ai or not settings.anthropic_api_key:
         return MockRoadmap()
-    # Real Claude-backed Roadmap is a later sub-deliverable; until then the
-    # deterministic mock is the only implementation, so always return it.
-    return MockRoadmap()
+    from .roadmap_claude import ClaudeRoadmap
+    return ClaudeRoadmap(api_key=settings.anthropic_api_key, model=settings.advisor_model)
 
 
 _roadmap: Optional[RoadmapProvider] = None

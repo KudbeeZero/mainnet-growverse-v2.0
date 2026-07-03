@@ -27,14 +27,14 @@ const podSet = { temperature: 24 } as Pick<Pod, "temperature">;
 const podUnset = { temperature: null } as Pick<Pod, "temperature">;
 
 describe("nextPlantAction", () => {
-  it("returns a calm, button-less status for a harvested plant", () => {
+  it("offers cleanup for a harvested plant (not a dead end)", () => {
     const a = nextPlantAction(plant({ harvested: true }));
-    expect(a.kind).toBe("none");
-    expect(a.urgency).toBe("calm");
+    expect(a.kind).toBe("cleanup");
+    expect(a.urgency).toBe("due");
   });
 
-  it("returns a calm status for a dead plant", () => {
-    expect(nextPlantAction(plant({ is_alive: false })).kind).toBe("none");
+  it("offers cleanup for a dead plant", () => {
+    expect(nextPlantAction(plant({ is_alive: false })).kind).toBe("cleanup");
   });
 
   it("prioritises harvest above everything when ripe", () => {

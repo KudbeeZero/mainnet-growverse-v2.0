@@ -87,6 +87,30 @@ Status legend: 🔴 open · 🟡 fix in flight · ✅ resolved (root cause fixed
   tests pin the fallback. **Rule:** provider calls must degrade on capability 400s, never assume
   the default model's features.
 
+### ✅ `/plants/:id/events` mock returned the plants LIST, crashing EventLog (pod-cleanup-shot)
+- **Symptom:** `e2e/pod-cleanup-shot.spec.ts › a harvested plant's detail page …` timed out
+  waiting for the "Clean & recycle pod" button — first seen locally, then again in real CI on
+  PR #137 (`06c0e7c`), both the attempt and the CI retry. First guess was CI parallel-worker
+  contention (2-core runner, shared `next start`) and the fix was a widened assertion timeout —
+  **that guess was wrong**: bumping to 20s locally still failed every time, 100% reproducible,
+  which is the signature of a real bug, not a flake.
+- **Root cause:** `e2e/fixtures/mockGame.ts`'s route matcher does `path.includes(needle)` over
+  the `overrides` map. `/plants/plant1/events` (used by `usePlantState`'s sibling events query)
+  has no explicit entry, so it substring-matches the `"/plants"` fallback and gets back the
+  **plants list** instead of an events array. `EventLog` then maps that list and calls
+  `titleCase(e.event_type)` on plant objects that have no `event_type` field →
+  `TypeError: Cannot read properties of undefined (reading 'replace')` → Next.js's client-side
+  exception boundary replaces the whole page with "Application error", so no button of any kind
+  is ever visible — explaining why it failed even at 20s.
+- **Permanent fix (2026-07-03):** added an explicit `"/plants/plant1/events": []` entry to
+  `mockGame.ts`'s default overrides (sorted before the shorter `"/plants"` needle either way, but
+  now present so it doesn't need to fall through). Reverted the timeout bump — it was masking
+  nothing and the real fix makes the test pass instantly again. **Rule extracted:** when a
+  substring-matching mock fixture adds a new API route, check whether an existing broader needle
+  (e.g. `/plants`) already unintentionally shadows it — and when a "flaky" test fails at 2x the
+  original timeout too, stop widening timeouts and look for `page.on("pageerror")` output first;
+  a deterministic client-side exception reads exactly like a timeout from the assertion's side.
+
 ## The rule, restated
 
 1. Hit a problem? **Check this ledger first** — if it's here, apply the recorded fix, don't

@@ -15,6 +15,7 @@ export type PlantActionKind =
   | "water"
   | "feed"
   | "setClimate"
+  | "cleanup"
   | "none";
 
 /** How loudly the UI should shout: a pulsing primary, a calm primary, or a quiet status. */
@@ -44,11 +45,15 @@ const THREAT_CRITICAL = 50;
  * thriving. `pod` is optional; the climate nudge only fires when it is known.
  */
 export function nextPlantAction(plant: Plant, pod?: Pick<Pod, "temperature"> | null): PlantAction {
+  // Terminal states have exactly one thing left to do: pay to clear the pod
+  // for a new seed (GameService.cleanup_plant). Was "none" — a dead end with
+  // no button, which is why a harvested plant used to just sit there forever
+  // with nothing offering the reset (owner: "there's nothing else I can do").
   if (plant.harvested) {
-    return { kind: "none", urgency: "calm", emoji: "🏆", label: "Harvested", reason: "Already harvested — nice work." };
+    return { kind: "cleanup", urgency: "due", emoji: "🧹", label: "Clean & recycle pod", reason: "Harvested — clear the pod for your next grow." };
   }
   if (!plant.is_alive) {
-    return { kind: "none", urgency: "calm", emoji: "🥀", label: "No longer alive", reason: "This plant didn't make it." };
+    return { kind: "cleanup", urgency: "due", emoji: "🧹", label: "Clean & recycle pod", reason: "This plant didn't make it — clear the pod for your next grow." };
   }
 
   // The payoff — a ripe plant outranks everything else.

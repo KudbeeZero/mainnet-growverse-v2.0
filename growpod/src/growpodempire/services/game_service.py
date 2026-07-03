@@ -396,7 +396,7 @@ class GameService:
         self.get_player(player_id)
         return (
             self.session.query(Plant)
-            .filter(Plant.player_id == player_id)
+            .filter(Plant.player_id == player_id, Plant.archived_at.is_(None))
             .order_by(Plant.planted_at.desc())
             .all()
         )
@@ -670,7 +670,11 @@ class GameService:
 
         planted = (
             self.session.query(Plant)
-            .filter(Plant.pod_id == pod_id, Plant.harvested.is_(False))
+            .filter(
+                Plant.pod_id == pod_id,
+                Plant.harvested.is_(False),
+                Plant.archived_at.is_(None),
+            )
             .count()
         )
         if planted >= pod.capacity:
@@ -1113,23 +1117,31 @@ class GameService:
         leveling_service.award(self.session, player_id, "harvest", self.cfg)
         return harvest
 
-    def cleanup_plant(self, player_id: str, plant_id: str, cleanup_cost: int = 25) -> None:
-        """Pay GROW to remove a harvested or dead plant and free the pod slot."""
-        from sqlalchemy import text
+    def cleanup_plant(self, player_id: str, plant_id: str, cleanup_cost: Optional[int] = None) -> None:
+        """Pay GROW to remove a harvested or dead plant and free the pod slot.
+
+        ARCHIVES the plant rather than deleting it: its `Harvest` row (and any
+        `CupEntry.harvest_id` pointing at it) must stay valid forever, so the
+        plant row is kept with `archived_at` set. `list_plants` (and therefore
+        every "which plant is in this pod" read) excludes archived rows, so
+        the pod reads as empty and ready for a new seed — same UX as a delete,
+        without the dangling-FK risk a hard delete carried.
+        """
         plant = self.session.get(Plant, plant_id)
         if plant is None or plant.player_id != player_id:
             raise GameError("Plant not found")
         if plant.is_alive and not plant.harvested:
             raise GameError("Plant must be harvested or dead before cleanup")
+        if plant.archived_at is not None:
+            raise GameError("This plant has already been cleaned up")
+        if cleanup_cost is None:
+            cleanup_cost = self.cfg.raw.get("simulation", {}).get("actions", {}).get(
+                "pod_cleanup", {}
+            ).get("cost", 25)
         cost = Decimal(str(cleanup_cost))
         post(self.session, player_id, -cost, LedgerEntryType.POD_CLEANUP,
              ref_type="plant", ref_id=plant_id)
-        # Delete child rows that have FK constraints before removing the plant.
-        self.session.execute(text("DELETE FROM growth_measurements WHERE plant_id = :pid"), {"pid": plant_id})
-        self.session.execute(text("DELETE FROM plant_events WHERE plant_id = :pid"), {"pid": plant_id})
-        self.session.execute(text("DELETE FROM harvests WHERE plant_id = :pid"), {"pid": plant_id})
-        self.session.flush()
-        self.session.delete(plant)
+        plant.archived_at = datetime.utcnow()
         self.session.flush()
 
     def _terpene_intensity(self, harvest: Harvest) -> float:

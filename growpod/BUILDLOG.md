@@ -1,5 +1,7 @@
 # Build Log
 
+> **⚠️ FROZEN** — shipping record through the overnight build session (~PR #50). Subsequent work is in git log and PR descriptions; current live state is in `docs/HANDOFF.md`.
+
 Chronological record of what shipped on the trunk (`main`). Newest at the bottom of each section.
 
 > Day-to-day status, priorities and the daily LUT round-table reports live in `docs/memory/`

@@ -58,6 +58,15 @@ export const plants = {
       method: "POST",
     }),
 
+  // Use one OWNED shop consumable on this plant (POST .../apply). Spends the
+  // owned inventory stack (no currency/ledger — it's already been bought) and
+  // applies its effect to the plant's simulated levels.
+  applyConsumable: (playerId: string, plantId: string, itemKey: string) =>
+    apiFetch<Plant>(`/players/${playerId}/plants/${plantId}/apply`, {
+      method: "POST",
+      body: { item_key: itemKey },
+    }),
+
   // Purchasable (simulated) growth boost — spends in-game GROW to fast-forward
   // the lifecycle a few hours AND revive a struggling plant. Real-money checkout
   // attaches later server-side; this calls the same effect with GROW now.

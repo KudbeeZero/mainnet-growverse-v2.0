@@ -41,6 +41,7 @@ flowchart TD
 | 3 | `docs/memory/BACKLOG.md` | Prioritized work — now / medium / low | High |
 | 3 | `docs/memory/INCIDENTS.md` | Recurring-problems ledger — the "twice rule": check before debugging, root-cause fix on second occurrence | Append-mostly |
 | 3 | `docs/memory/DOCS_INDEX.md` | Docs tracking layer — every repo .md with role/status; living docs must stay true (fix-in-same-PR) | Append-mostly |
+| 3 | `docs/memory/VERIFIED_RENDERS.md` | Visual-verification archive ("the chapter list"): golden screenshots in `verification/golden/` + one-command regen recipes; capture harness in `.claude/skills/capture-shots/SKILL.md` | Append-mostly |
 | 4 | `docs/memory/standups/` | Dated LUT round-table reports | Daily |
 
 Read **top-down** (Layer 0 is short + stable; each layer down is more detailed + volatile). Write
@@ -66,7 +67,9 @@ repo-relative (under `src/growpodempire/` unless noted); every ✅ here is check
 | `design/08-immersive-classroom.md` | greenfield — 3D Lecture Hall + 4-tier Plant Anatomy Explorer over the existing `web/src/lib/chamber/bud3d/` generators + the pure `simulation/` engine (R3F renderer, server-authoritative) | ⬜ research/spec (immersive-university) |
 | `design/09-master-grower-bot.md` | extends `04`/advisor — `services/advisor_service.py` · `ai/provider.py`; RAG-over-corpus Master Grower bot + monetization (sell guidance, decoupled from the GROW ledger) | ⬜ research/spec (immersive-university) |
 | `design/10-hermes-university.md` | wiring truth + identity for **HERMES University** — `services/learner_model_service.py` · `services/admissions_service.py`/`roadmap_service.py` · `ai/elevenlabs_narrator.py` · `api/audio_prewarm.py` · `data/curriculum.yaml` · `data/skills.yaml` · `data/assessments/` · `web/src/app/university/` | ✅ audited 2026-07-02; produce-once audio + mastery fix live |
+| `design/HERMES_UNIVERSITY.md` | **live memory companion** to `10` — current layer map, AI provider table, open-work list, must-not-drift invariants; updated each session | ✅ created 2026-07-03 |
 | `design/11-global-learning-memory.md` | personalized experience + the global learning memory — `services/learner_model_service.py` · `services/master_grower_service.py` · `services/lecturer_service.py` · `db/models.py` (planned `knowledge_events`) | ⬜ design (owner directive 2026-07-02); P1–P4 build order |
+| `design/12-arcade-animation-system.md` | the arcade-feel rulebook — `web/src/app/globals.css` (`@keyframes gpe-*` + reduced-motion) · `web/src/hooks/usePlantBounce.ts` · `web/src/components/plant/careReactionsData.ts`/`PlantReactionLayer.tsx` · `web/src/lib/arcade/boostEngine.ts` · `BoostAmbientLayer.tsx` | 🔨 rules + boost squash-stretch-bounce live (owner directive 2026-07-03) |
 
 **What the sim engine actually reads today** (`simulation/engine.py`): water, nutrient (single
 scalar), temperature, humidity, pH, **light (PPFD)**, **derived leaf VPD**, pest & disease levels;

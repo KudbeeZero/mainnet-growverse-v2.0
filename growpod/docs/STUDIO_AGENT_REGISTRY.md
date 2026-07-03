@@ -1,5 +1,7 @@
 # GrowPod Empire — Studio Agent Registry (REC-003)
 
+> **⚠️ SNAPSHOT (2026-06-14)** — frozen; single-agent sessions no longer need multi-agent air-traffic control. `CLAUDE.md` and `docs/memory/BACKLOG.md` are the live coordination surfaces.
+
 > **Air-traffic control for the studio.** The [OMNI Charter](OMNI_CHARTER.md) defines *who may
 > build what*; this registry tracks *who is building what right now* — live branch/PR ownership,
 > the file surfaces each directive touches, and the rules that stop two agents from colliding on

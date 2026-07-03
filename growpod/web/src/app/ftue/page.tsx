@@ -10,6 +10,7 @@ import { LoadingBlock } from "@/components/ui/Spinner";
 import { UrgencyPill } from "@/components/ui/Pills";
 import { PlantVisual } from "@/components/plant/PlantVisual";
 import { StatBars } from "@/components/plant/StatBars";
+import { useCareFeedback } from "@/components/plant/CareFeedback";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
@@ -29,6 +30,19 @@ const ACTION_LABEL: Record<FtueStep, string> = {
   grow: "⏩ Grow it out",
   harvest: "✂️ Harvest & sell",
   completed: "Enter the game →",
+};
+
+// One punchy line the Master Grower says as you land each step — a quick hit of
+// personality + momentum so the tutorial feels like a coach hyping you up, not a
+// form to click through (owner: "not very exciting").
+const STEP_HYPE: Record<FtueStep, string> = {
+  welcome: "Welcome, grower. I'm your Master Grower — I'll get you to your first harvest in about a minute.",
+  plant: "Drop your first seed. This is where every legend starts.",
+  water: "She's thirsty — give her a drink and watch her perk up.",
+  environment: "Dial the climate in and the whole grow speeds up. Pro move.",
+  grow: "Now we let her run. Watch those buds stack up.",
+  harvest: "Buds are frosted and ready. Cut it, cash it — you just closed the loop.",
+  completed: "That's the whole game. Go run it back on your own terms.",
 };
 
 function FtueInner() {
@@ -65,6 +79,8 @@ function FtueInner() {
     enabled: !!playerId && !!plantId,
   });
 
+  const { fire, layer } = useCareFeedback();
+
   const advance = useApiMutation(() => api.ftue.advance(playerId!, step!), {
     invalidate: [
       queryKeys.ftueStatus(playerId!),
@@ -74,6 +90,13 @@ function FtueInner() {
     ],
   });
 
+  // Fire the same delight burst the real care buttons use the instant a step is
+  // tapped — the tutorial should feel as rewarding as the game it's teaching.
+  const advanceStep = () => {
+    fire("boost");
+    advance.mutate();
+  };
+
   if (statusQ.isLoading || !step) return <LoadingBlock label="Loading your first grow…" />;
 
   const done = step === "completed";
@@ -82,46 +105,61 @@ function FtueInner() {
   const plant = plantQ.data;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="relative mx-auto max-w-2xl space-y-5">
+      {/* Delight burst layer (absolutely positioned, matches the game's care taps) */}
+      {layer}
+
       <PageHeader
-        eyebrow={done ? "TUTORIAL COMPLETE" : `MASTER GROWER · STEP ${idx + 1} OF ${STEP_FLOW.length}`}
+        eyebrow={done ? "TUTORIAL COMPLETE" : `YOUR FIRST GROW · STEP ${idx + 1} OF ${STEP_FLOW.length}`}
         title={done ? "Your first harvest is in 🏆" : "Your First Grow"}
-        subtitle="Your Master Grower walks you through the whole loop — plant, care, grow, harvest, sell."
+        subtitle="One minute, start to harvest — your Master Grower has you the whole way."
       />
 
-      {/* Progress rail */}
+      {/* Progress rail — the current step glows so momentum is obvious. */}
       <div className="flex gap-1.5" aria-hidden>
         {STEP_FLOW.map((s, i) => (
           <div
             key={s}
-            className={`h-1.5 flex-1 rounded-full ${i <= idx || done ? "bg-grow-500" : "bg-ink-700"}`}
+            className={`h-1.5 flex-1 rounded-full transition-colors ${
+              i < idx || done ? "bg-grow-600" : i === idx ? "bg-grow-400 shadow-glow-grow" : "bg-ink-700"
+            }`}
           />
         ))}
       </div>
 
-      {/* The Master Grower's scripted coaching for this step */}
-      <Card>
-        <CardHeader title="🌿 Master Grower" subtitle={report?.summary} />
-        {report ? (
-          <div className="space-y-3">
-            <p className="text-sm leading-relaxed text-gray-300">{report.diagnosis}</p>
-            {report.suggestions.map((s, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-3 rounded-md border border-ink-600 bg-ink-900 p-3"
-              >
-                <UrgencyPill urgency={s.urgency} />
-                <div>
-                  <div className="text-sm font-medium text-gray-100">{titleCase(s.action)}</div>
-                  <div className="text-xs text-gray-400">{s.reason}</div>
-                </div>
-              </div>
-            ))}
+      {/* The Master Grower, as a character — avatar + speech bubble, so the
+          tutorial reads as a coach talking to you, not a form. */}
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full border border-grow-500/50 bg-grow-950/60 text-2xl shadow-glow-grow">
+          🤖
+        </div>
+        <div className="relative flex-1 rounded-2xl rounded-tl-sm border border-grow-500/30 bg-[#0b1b12]/70 p-4">
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-grow-300">
+            Master Grower
           </div>
-        ) : (
-          <LoadingBlock label="Your coach is thinking…" />
-        )}
-      </Card>
+          <p className="text-sm font-medium leading-relaxed text-gray-100">{STEP_HYPE[step]}</p>
+          {report && (
+            <>
+              {report.diagnosis && (
+                <p className="mt-2 text-xs leading-relaxed text-gray-400">{report.diagnosis}</p>
+              )}
+              {report.suggestions.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {report.suggestions.map((s, i) => (
+                    <div key={i} className="flex items-start gap-2.5 rounded-lg border border-ink-700 bg-ink-900/70 p-2.5">
+                      <UrgencyPill urgency={s.urgency} />
+                      <div>
+                        <div className="text-xs font-medium text-gray-100">{titleCase(s.action)}</div>
+                        <div className="text-[11px] text-gray-400">{s.reason}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
       {/* The tutorial plant, once it's in the ground */}
       {plant && (
@@ -136,14 +174,14 @@ function FtueInner() {
         </Card>
       )}
 
-      {/* The single guided action */}
-      <div className="flex items-center justify-between">
+      {/* The single guided action — big, primary, one obvious thing to do. */}
+      <div className="flex items-center justify-between gap-3">
         {done ? (
           <Button size="md" onClick={leaveFtue}>
             {ACTION_LABEL.completed}
           </Button>
         ) : (
-          <Button size="md" loading={advance.isPending} onClick={() => advance.mutate()}>
+          <Button size="md" loading={advance.isPending} onClick={advanceStep}>
             {ACTION_LABEL[step]}
           </Button>
         )}
@@ -151,9 +189,9 @@ function FtueInner() {
           <button
             type="button"
             onClick={leaveFtue}
-            className="rounded-md border border-ink-600 px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:border-gray-500 hover:text-gray-100"
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:text-gray-300"
           >
-            Skip onboarding →
+            Skip →
           </button>
         )}
       </div>

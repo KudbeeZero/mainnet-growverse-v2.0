@@ -51,6 +51,17 @@ export interface StoreBundle {
   active: boolean;
 }
 
+// A shop consumable, as returned by GET /players/:id/shop — the whole catalog,
+// each with the player's `owned` count. `owned > 0` = usable on a plant.
+export interface ConsumableItem {
+  key: string;
+  name: string;
+  cost: number;
+  description: string;
+  stage_req: string | null;
+  owned: number;
+}
+
 export type GearCategory = "light" | "fan" | "soil";
 
 export interface GearItem {
@@ -68,6 +79,10 @@ export interface GearItem {
 export const store = {
   partners: () =>
     apiFetch<StorePartner[]>("/store/partners"),
+
+  // The consumables catalog + this player's owned counts (GET /players/:id/shop).
+  consumables: (playerId: string) =>
+    apiFetch<ConsumableItem[]>(`/players/${playerId}/shop`, { auth: true }),
 
   gear: (playerId: string) =>
     apiFetch<GearItem[]>(`/players/${playerId}/store/gear`, { auth: true }),

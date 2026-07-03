@@ -1,5 +1,7 @@
 # 📒 Canonical Project State — Records Department source of truth
 
+> **⚠️ SNAPSHOT (2026-06-14, post-PR #46)** — this "live" ledger is frozen at that date. Current project state is in `docs/HANDOFF.md` (baton) and `docs/memory/BACKLOG.md`. The code always wins over this file.
+
 > **Authoritative records ledger** (per the Director's REC-004 decision, 2026-06-14): the consolidated,
 > point-in-time picture of *what exists* — PRs, branches, directives, the launch critical path, and
 > department status — reconciled against `main`. It complements the live baton (`docs/HANDOFF.md`),
