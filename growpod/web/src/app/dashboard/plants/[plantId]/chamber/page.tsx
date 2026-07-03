@@ -2,6 +2,7 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
@@ -10,7 +11,7 @@ import { ErrorState } from "@/components/ui/States";
 import { ChamberActionBar, BoostsInline } from "@/components/plant/ChamberDock";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { BoostAmbientLayer } from "@/components/plant/BoostAmbientLayer";
-import { useGrowthBoost } from "@/hooks/useCareActions";
+import { useGrowthBoost, useCleanupPlant } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap, usePods } from "@/hooks/queries";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -164,6 +165,16 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     if (flashRef.current) clearTimeout(flashRef.current);
     flashRef.current = setTimeout(() => setBoostFlash(false), 1100);
   });
+  // "Grow another" used to just link back to /dashboard, leaving the
+  // harvested plant sitting in the pod — the pod never actually reset, so the
+  // dashboard still showed full (stale) vitals and no way to plant again
+  // (owner: "there's nothing else I can do... it should recycle"). Now it
+  // pays the cleanup fee first so the pod is genuinely empty on arrival.
+  const router = useRouter();
+  const cleanup = useCleanupPlant();
+  function growAnother() {
+    cleanup.mutate(plantId, { onSettled: () => router.push("/dashboard") });
+  }
   useEffect(() => () => {
     if (flashRef.current) clearTimeout(flashRef.current);
   }, []);
@@ -571,12 +582,14 @@ function ChamberScreen({ plantId }: { plantId: string }) {
                     Grow Another). Review = the plant's final report page
                     (vitals, timeline, full journal). */}
                 <div className="relative mt-1 flex w-full max-w-[17rem] flex-col gap-2">
-                  <Link
-                    href="/dashboard"
-                    className="rounded-lg border border-grow-600 bg-grow-700/40 px-4 py-2 text-sm font-semibold text-grow-100 hover:bg-grow-700/60"
+                  <button
+                    type="button"
+                    onClick={growAnother}
+                    disabled={cleanup.isPending}
+                    className="rounded-lg border border-grow-600 bg-grow-700/40 px-4 py-2 text-sm font-semibold text-grow-100 hover:bg-grow-700/60 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    🌱 Grow another →
-                  </Link>
+                    {cleanup.isPending ? "Cleaning up…" : "🌱 Grow another →"}
+                  </button>
                   <div className="flex gap-2">
                     <Link
                       href={`/dashboard/plants/${plantId}`}
@@ -602,9 +615,14 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             ) : (
               <>
                 <p className="text-lg font-bold">This plant has died</p>
-                <Link href="/dashboard" className="text-sm text-grow-300 hover:underline">
-                  ← Back to dashboard
-                </Link>
+                <button
+                  type="button"
+                  onClick={growAnother}
+                  disabled={cleanup.isPending}
+                  className="rounded-lg border border-grow-600 bg-grow-700/40 px-4 py-2 text-sm font-semibold text-grow-100 hover:bg-grow-700/60 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {cleanup.isPending ? "Cleaning up…" : "🧹 Clean & recycle pod →"}
+                </button>
               </>
             )}
           </div>

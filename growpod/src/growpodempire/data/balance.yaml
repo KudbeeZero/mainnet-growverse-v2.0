@@ -248,6 +248,12 @@ simulation:
       nutrient_floor: 80     # tops nutrients up to at least this
       cooldown_hours: 8      # min hours between paid boosts on one plant
 
+    # Pay to clear a harvested/dead plant and free the pod for a new seed
+    # (GameService.cleanup_plant). Cheap on purpose — a light "reset the room"
+    # sink, not a paywall on replanting.
+    pod_cleanup:
+      cost: 25
+
   # Per-engine tunables for the composable micro-engines (simulation/engines/).
   engines:
     # TrichomeResinGland is TELEMETRY ONLY: it drives the clear→cloudy→amber

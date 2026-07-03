@@ -7,7 +7,7 @@
 // authoritative state only — no new game logic.
 
 import Link from "next/link";
-import { useCareActions } from "@/hooks/useCareActions";
+import { useCareActions, useCleanupPlant } from "@/hooks/useCareActions";
 import { useCareFeedback } from "./CareFeedback";
 import { nextPlantAction } from "@/lib/plantAction";
 import type { CareKind } from "./careFeedbackData";
@@ -29,6 +29,7 @@ export function PlantActionCTA({
   compact?: boolean;
 }) {
   const { care, harvest } = useCareActions(plant.id);
+  const cleanup = useCleanupPlant();
   // Same delight burst the manual care buttons use — the primary CTA is the
   // most-tapped care action, so it deserves the celebration too (DX-005).
   const { fire, layer } = useCareFeedback();
@@ -45,6 +46,9 @@ export function PlantActionCTA({
       harvest.mutate({ sell: true });
     };
     pending = harvest.isPending;
+  } else if (action.kind === "cleanup") {
+    onClick = () => cleanup.mutate(plant.id);
+    pending = cleanup.isPending;
   } else if (
     action.kind === "water" ||
     action.kind === "feed" ||

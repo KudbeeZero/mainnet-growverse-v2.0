@@ -301,7 +301,7 @@ def test_cleanup_plant_not_found(db):
             svc.cleanup_plant(p.id, "no-plant")
 
 
-def test_cleanup_dead_plant_removes_it(db):
+def test_cleanup_dead_plant_archives_it(db):
     with session_scope() as s:
         svc = GameService(s)
         p = svc.create_player("clean2")
@@ -314,8 +314,77 @@ def test_cleanup_dead_plant_removes_it(db):
         s.flush()
         before = balance(s, p.id)
         svc.cleanup_plant(p.id, plant.id, cleanup_cost=25)
-        assert s.get(Plant, plant.id) is None
+        # Archived, NOT deleted — the row (and any Harvest/CupEntry referencing
+        # it) must survive; only archived_at flips and it drops out of listings.
+        archived = s.get(Plant, plant.id)
+        assert archived is not None
+        assert archived.archived_at is not None
         assert balance(s, p.id) == before - Decimal("25")
+        assert archived.id not in [pl.id for pl in svc.list_plants(p.id)]
+
+
+def test_cleanup_plant_preserves_harvest_record(db):
+    with session_scope() as s:
+        svc = GameService(s)
+        p = svc.create_player("clean3")
+        strain = _strain(s, "blue-dream")
+        stack = svc.buy_seed(p.id, strain.id)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        plant = svc.plant_seed(p.id, stack.id, pod.id)
+        harvest = svc.harvest_plant(p.id, plant.id, weight_g=50, quality=80, sell=False)
+        svc.cleanup_plant(p.id, plant.id)
+        # The harvest row (and anything referencing it, e.g. a Cup entry) must
+        # still resolve after the pod is cleaned up.
+        from growpodempire.db.models import Harvest
+        assert s.get(Harvest, harvest.id) is not None
+
+
+def test_cleanup_plant_twice_raises(db):
+    with session_scope() as s:
+        svc = GameService(s)
+        p = svc.create_player("clean4")
+        strain = _strain(s, "blue-dream")
+        stack = svc.buy_seed(p.id, strain.id)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        plant = svc.plant_seed(p.id, stack.id, pod.id)
+        plant.is_alive = False
+        s.flush()
+        svc.cleanup_plant(p.id, plant.id)
+        with pytest.raises(GameError):
+            svc.cleanup_plant(p.id, plant.id)
+
+
+def test_cleanup_plant_default_cost_from_balance_yaml(db):
+    with session_scope() as s:
+        svc = GameService(s)
+        p = svc.create_player("clean5")
+        strain = _strain(s, "blue-dream")
+        stack = svc.buy_seed(p.id, strain.id)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        plant = svc.plant_seed(p.id, stack.id, pod.id)
+        plant.is_alive = False
+        s.flush()
+        before = balance(s, p.id)
+        svc.cleanup_plant(p.id, plant.id)  # no explicit cost -> reads balance.yaml
+        expected = svc.cfg.raw["simulation"]["actions"]["pod_cleanup"]["cost"]
+        assert balance(s, p.id) == before - Decimal(str(expected))
+
+
+def test_list_plants_excludes_archived(db):
+    with session_scope() as s:
+        svc = GameService(s)
+        p = svc.create_player("clean6")
+        strain = _strain(s, "blue-dream")
+        stack = svc.buy_seed(p.id, strain.id, quantity=2)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        plant1 = svc.plant_seed(p.id, stack.id, pod.id)
+        plant1.is_alive = False
+        s.flush()
+        svc.cleanup_plant(p.id, plant1.id)
+        plant2 = svc.plant_seed(p.id, stack.id, pod.id)
+        ids = [pl.id for pl in svc.list_plants(p.id)]
+        assert plant1.id not in ids
+        assert plant2.id in ids
 
 
 # ----- Stored harvest sale + curing --------------------------------------

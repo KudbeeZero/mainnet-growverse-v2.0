@@ -72,7 +72,10 @@ test("PROOF: harvested plant shows the full next-action set", async ({ page }) =
   await setup(page, { growth_stage: "harvest", harvested: true });
   await page.goto("/dashboard/plants/plant1/chamber");
   await expect(page.getByText(/Harvest complete!/i)).toBeVisible();
-  await expect(page.getByRole("link", { name: /Grow another/i })).toBeVisible();
+  // "Grow another" pays the pod-cleanup fee before navigating away (was a
+  // plain Link that left the harvested plant sitting in the pod forever) —
+  // now a button so it can fire the DELETE /plants/:id cleanup first.
+  await expect(page.getByRole("button", { name: /Grow another/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /Harvest review/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /Enter the Cup/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /Save snapshot/i })).toBeVisible();

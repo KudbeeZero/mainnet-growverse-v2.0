@@ -349,6 +349,11 @@ class Plant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     is_alive: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     harvested: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Set when the player pays to "clean up" a harvested/dead plant and free the
+    # pod slot (GameService.cleanup_plant). The row is kept (never deleted) so
+    # its Harvest — and any CupEntry.harvest_id referencing it — stay valid;
+    # list_plants() excludes archived rows so the pod reads as empty again.
+    archived_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
 
 
 class EnvironmentReading(UUIDPrimaryKeyMixin, Base):

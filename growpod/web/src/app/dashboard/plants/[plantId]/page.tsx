@@ -167,14 +167,30 @@ function PlantDetail({ plantId }: { plantId: string }) {
               <PlantMetrics plant={plant} />
             </div>
           )}
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-gray-300">Vitals</h3>
-            <StatBars plant={plant} />
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-gray-300">Care</h3>
-            <CareButtons plant={plant} />
-          </div>
+          {/* Terminal plant (harvested/dead): live vitals + care taps read as a
+              lie once nothing is actually growing — the AI advisor below still
+              says so ("nothing to do"), but there was no button to act on that
+              until PlantActionCTA above learned the "cleanup" kind. Swap the
+              stat bars + care grid for a plain summary instead of hiding the
+              real endgame numbers entirely. */}
+          {plant.harvested || !plant.is_alive ? (
+            <div className="rounded-lg border border-ink-700 bg-ink-900/40 p-3 text-sm text-gray-400">
+              {plant.harvested
+                ? "Harvested — this grow is complete. Use the Clean & recycle action above to free this pod for a new seed."
+                : "This plant didn't survive. Use the Clean & recycle action above to free this pod for a new seed."}
+            </div>
+          ) : (
+            <>
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-gray-300">Vitals</h3>
+                <StatBars plant={plant} />
+              </div>
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-gray-300">Care</h3>
+                <CareButtons plant={plant} />
+              </div>
+            </>
+          )}
           <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
             <span>Planted: {dateTime(plant.planted_at)}</span>
             <span>Alive: {plant.is_alive ? "yes" : "no"}</span>
