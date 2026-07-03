@@ -12,6 +12,7 @@ import {
   cycleDays,
   daysToHarvest,
   ageDays,
+  mintTruthMetadata,
 } from "../morphology";
 
 describe("mulberry32 / seedForPlant", () => {
@@ -171,6 +172,73 @@ describe("nominalGrowDay", () => {
     expect(longFl).toBeGreaterThan(shortFl);
     expect(previewDev(shortFl, 45).budDev).toBeGreaterThan(0);
     expect(previewDev(longFl, 90).budDev).toBeGreaterThan(0);
+  });
+});
+
+describe("mintTruthMetadata", () => {
+  // Regression coverage for the mint-metadata-consistency bug: an active
+  // growth boost or an engaged time-preview scrubber must never leak into
+  // the values written to the permanent on-chain (ARC-69) snapshot. The
+  // chamber page must always call this with `liveNominalDay` — the
+  // server-authoritative day BEFORE any boost offset or preview override —
+  // never with the boosted/previewed `day` it renders on screen.
+
+  it("matches previewDev(liveNominalDay) — the same server-truth day the live render uses pre-boost/preview", () => {
+    const liveNominalDay = nominalGrowDay("flowering", 60, 60);
+    const truth = mintTruthMetadata(liveNominalDay, 60);
+    expect(truth.growDay).toBe(Math.round(liveNominalDay));
+    expect(truth.budDev).toBeCloseTo(previewDev(liveNominalDay, 60).budDev, 10);
+  });
+
+  it("is unaffected by a simulated growth-boost offset — caller must pass liveNominalDay, not liveNominalDay + boostOffset", () => {
+    const liveNominalDay = nominalGrowDay("flowering", 20, 60);
+    const boostOffset = 15; // a boost has been running and visually advanced the plant
+    const boostedLiveDay = liveNominalDay + boostOffset;
+
+    const truthFromServer = mintTruthMetadata(liveNominalDay, 60);
+    const truthFromBoostedVisual = mintTruthMetadata(boostedLiveDay, 60);
+
+    // The boosted value would mint different (and wrong) metadata — proving
+    // the two are NOT interchangeable, so the caller's choice of input matters.
+    expect(truthFromBoostedVisual.growDay).not.toBe(truthFromServer.growDay);
+    expect(truthFromBoostedVisual.budDev).toBeGreaterThan(truthFromServer.budDev);
+    // The server-truth value must reflect only the real stage/progress.
+    expect(truthFromServer.growDay).toBe(Math.round(liveNominalDay));
+  });
+
+  it("is unaffected by an arbitrary time-preview scrubber day — caller must pass liveNominalDay, not previewDay", () => {
+    const liveNominalDay = nominalGrowDay("vegetative", 40, 60); // pre-flower, no buds yet
+    const previewDay = nominalGrowDay("harvest", 100, 60); // player scrubbed to full maturity
+
+    const truthFromServer = mintTruthMetadata(liveNominalDay, 60);
+    const truthFromPreviewedVisual = mintTruthMetadata(previewDay, 60);
+
+    expect(truthFromServer.growDay).toBe(Math.round(liveNominalDay));
+    expect(truthFromServer.budDev).toBe(0); // still pre-flower server-side
+    // The scrubbed preview would mint a fully mature bud — proving the two
+    // diverge sharply, so minting must never source from the preview day.
+    expect(truthFromPreviewedVisual.budDev).toBe(1);
+    expect(truthFromPreviewedVisual.growDay).not.toBe(truthFromServer.growDay);
+  });
+
+  it("boost AND preview simultaneously: server truth still wins when the caller passes liveNominalDay", () => {
+    // Mirrors the chamber page's own logic: `boostedLiveDay` folds in the
+    // boost, but the moment previewing is engaged the page displays
+    // `previewDay` instead — boost is dropped from the on-screen `day`, but
+    // BOTH are visual/transient. mintTruthMetadata must be called with
+    // liveNominalDay regardless of which (if either) is active.
+    const liveNominalDay = nominalGrowDay("flowering", 15, 60);
+    const boostOffset = 25;
+    const boostedLiveDay = liveNominalDay + boostOffset;
+    const previewDayValue = nominalGrowDay("late_flower", 50, 60);
+
+    const truth = mintTruthMetadata(liveNominalDay, 60);
+    const boostedTruth = mintTruthMetadata(boostedLiveDay, 60);
+    const previewedTruth = mintTruthMetadata(previewDayValue, 60);
+
+    expect(truth.growDay).toBe(Math.round(liveNominalDay));
+    expect(truth.growDay).not.toBe(boostedTruth.growDay);
+    expect(truth.growDay).not.toBe(previewedTruth.growDay);
   });
 });
 
