@@ -591,6 +591,27 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     tt: number,
     trichScale = 1,
   ) {
+    // Plant rework pass 4 (owner blueprint: "glow boundary — a soft emissive edge
+    // that SEPARATES the bud from the foliage behind it"; "buds stay readable").
+    // A soft dark halo behind the cola silhouette so the bright bud reads as a
+    // distinct foreground object instead of fusing into the leaf mass — pure
+    // depth/readability, additive, removes no foliage. Drawn first so the stem,
+    // mass, calyxes and frost all layer on top of it.
+    {
+      const bw = site.baseW * 1.45;
+      const bh = site.axisLen * 0.6;
+      const cy = -site.axisLen * 0.5;
+      const halo = ctx!.createRadialGradient(0, cy, 0, 0, cy, Math.max(bw, bh));
+      halo.addColorStop(0, "rgba(3,9,7,0.4)");
+      halo.addColorStop(0.7, "rgba(3,9,7,0.22)");
+      halo.addColorStop(1, "rgba(3,9,7,0)");
+      ctx!.save();
+      ctx!.fillStyle = halo;
+      ctx!.beginPath();
+      ctx!.ellipse(0, cy, bw, bh, 0, 0, TAU);
+      ctx!.fill();
+      ctx!.restore();
+    }
     ctx!.strokeStyle = `hsl(${S.hue - 12}, 32%, 30%)`;
     ctx!.lineWidth = Math.max(1.8, site.baseW * 0.07);
     ctx!.lineCap = "round";
