@@ -19,10 +19,21 @@ export function usePlantBounce(ref: RefObject<HTMLElement | null>) {
     (cls: string) => {
       const el = ref.current?.querySelector("canvas");
       if (!el) return;
+      // Under reduced-motion the CSS kills the animation, so animationend never
+      // fires — bailing here prevents a permanent listener + class leak.
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       el.classList.remove(cls);
       void (el as HTMLCanvasElement).offsetWidth; // reflow → restart cleanly
       el.classList.add(cls);
-      el.addEventListener("animationend", () => el.classList.remove(cls), { once: true });
+      // Scope the cleanup to THIS animation name; without the check any concurrent
+      // animation (e.g. trim ending while bounce is mid-flight) would strip the
+      // wrong class and cancel the still-running one.
+      const onEnd = (e: Event) => {
+        if ((e as AnimationEvent).animationName !== cls) return;
+        el.classList.remove(cls);
+        el.removeEventListener("animationend", onEnd);
+      };
+      el.addEventListener("animationend", onEnd);
     },
     [ref],
   );

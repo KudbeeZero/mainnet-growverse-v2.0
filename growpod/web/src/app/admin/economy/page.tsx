@@ -289,7 +289,7 @@ function LiveSnapshotCard({ onSeed }: { onSeed: (data: LedgerSummary) => void })
   // Shape guard, not just presence: a truthy-but-malformed response (e.g. an
   // empty array from a 200) has no `daily`/`totals`, which used to white-screen
   // the page on the chart's `data.length` / `totals.minted`.
-  if (!summary || !Array.isArray(summary.daily) || !summary.totals) {
+  if (!summary || !Array.isArray(summary.daily) || !summary.totals || summary.active_players == null || summary.money_supply == null) {
     return (
       <Card>
         <CardHeader title="Live 30-Day Token Flow" />

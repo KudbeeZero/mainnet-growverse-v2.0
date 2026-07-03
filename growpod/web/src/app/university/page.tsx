@@ -35,7 +35,7 @@ function UniversityInner() {
   // past a bare `!transcript.data` check and then white-screen the whole page on
   // the first `t.courses.filter(...)`. Treat a missing courses array as an error
   // state (retryable) rather than an unhandled exception.
-  if (transcript.isError || !transcript.data || !Array.isArray(transcript.data.courses))
+  if (transcript.isError || !transcript.data || !Array.isArray(transcript.data.courses) || !Array.isArray(transcript.data.degrees))
     return <ErrorState error={transcript.error} onRetry={() => transcript.refetch()} />;
 
   const t = transcript.data;

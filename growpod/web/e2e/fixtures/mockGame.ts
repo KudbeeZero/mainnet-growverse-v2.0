@@ -98,15 +98,24 @@ export async function setup(
     "/seasonal/strains": [],
     "/strains": [STRAIN],
     "/turbo": { enabled: false, multiplier: 10, offset_hours: 0, effective_now: new Date().toISOString(), wall_now: new Date().toISOString(), synced_pods: 0 },
-    // Minimal well-formed transcript so /university renders under the shared
-    // fixture instead of white-screening (the page reads t.courses/.departments/
-    // .degrees). Keyed on the exact transcript path — NOT a bare "/university",
-    // which would substring-shadow sibling endpoints like "/university/catalog".
-    // Specs needing real catalog data still override via extraOverrides.
+    // University siblings — all contain "/players/p1/university" as a substring,
+    // so they MUST be longer than the transcript key (27 chars) to sort before it
+    // and avoid being swallowed. Without explicit entries, the transcript shape
+    // would be returned for progress/learner/roadmap/admissions too.
+    "/players/p1/university/progress": { kxp: 0, streak_count: 0, freeze_tokens: 0, last_study_date: null, next_nudge: null },
+    "/players/p1/university/learner": { mastery_by_skill: {}, misconceptions: {}, preferred_format: null, goals: null, experience_level: "beginner", risk_level: "none", updated_at: null, engagement: { kxp: 0, streak_count: 0, freeze_tokens: 0, last_study_date: null } },
+    "/players/p1/university/roadmap": { horizon_days: 7, steps: [], skipped_mastered: [], rationale: "", mastery_by_skill: {} },
+    // Transcript — shorter key (27 chars), wins only for the exact transcript path
+    // after the longer sibling keys above have already matched.
     "/players/p1/university": { player_id: "p1", title: null, departments: {}, courses: [], degrees: [] },
-    // Single-strain detail (`/strains/str1`) — an explicit, longer needle so it
-    // wins over "/strains" (which returns the LIST) and the strain-detail page
-    // gets an object, not an array. Longest-needle-first sorting handles it.
+    // Strain sub-endpoints — all contain "/strains/str1", so they MUST be longer
+    // (>13 chars) to sort before the single-strain key and return the right shape.
+    // Without these, the STRAIN object was returned for knowledge/lineage/provenance
+    // (which then crash reading .lineage.map / .in_knowledge_base on a Strain).
+    "/strains/str1/knowledge": { strain_id: "str1", name: "Gelato", slug: "gelato", rarity: "rare", lineage_type: "hybrid", is_base_catalog: true, in_knowledge_base: false, knowledge: null },
+    "/strains/str1/lineage": { strain_id: "str1", fully_verified: false, node_count: 0, root_count: 0, truncated: false, lineage: [] },
+    "/strains/str1/provenance": { strain_id: "str1", verifiable: false },
+    // Single-strain detail — shorter key (13 chars), wins only for the strain root
     "/strains/str1": STRAIN,
     // Owned-consumables catalog (GET /players/p1/shop) — one owned, one not, one
     // stage-gated — so the "use item" panel has something to render + gate.
@@ -115,9 +124,9 @@ export async function setup(
       { key: "bloom_boost", name: "Bloom Boost", cost: 40, description: "Fattens flowering buds", stage_req: "flowering", owned: 1 },
       { key: "rooting_gel", name: "Rooting Gel", cost: 15, description: "Speeds early roots", stage_req: "seedling", owned: 0 },
     ],
-    // Apply an owned consumable — echo the plant back (the real route returns the
-    // updated plant dict; the UI just refetches state after).
-    "/apply": plant(stateOver),
+    // Apply an owned consumable — uses the full plant-scoped path so it sorts
+    // longer than "/plants" (7 chars) and fires instead of returning the plant list.
+    "/plants/plant1/apply": plant(stateOver),
     ...extraOverrides,
   };
   await page.route("**/api/game/**", async (route) => {
