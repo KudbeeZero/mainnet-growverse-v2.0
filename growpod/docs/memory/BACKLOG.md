@@ -45,6 +45,32 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   `suppressHydrationWarning` on that one span (`web/src/components/layout/Footer.tsx`); the fix
   was VERIFIED empirically (re-ran the sweep: react418 count 1→0 on /dashboard, /store, /cup),
   not just assumed. Full gate green.
+- 🎮 🔨 **Plant render rework — owner "pod plant" blueprints (2026-07-03 PM, 5 passes shipped,
+  loop continues)** — the owner sent 3 detailed blueprints (bud-integration + mesh, branch-overlay
+  structure map, visual-refinement plan) effectively lifting the render freeze with a precise spec.
+  Their method is an iterative "screenshot → compare to mockup → fix one thing → repeat" loop; five
+  structural passes landed in `chamberCore.ts` (all draw-path only → pinned determinism intact,
+  vitest 480; goldens VER-014/015 + plant-r9-*): (1) **node attachment** — `drawBudCollar` sockets
+  every cola onto a visible tapered stem neck + leaf collar (the #1 "buds pasted-on" complaint);
+  (2) **front depth** — front-facing nodes draw a lit support branch passing IN FRONT of their bud;
+  (3) **stronger tapered central stem** + front rim; (4) **separation halo** behind each cola so
+  buds pop off the foliage ("glow boundary"); (5) **branch rim-light** so branches read as visible
+  rounded support. Verified desktop + mobile. ⬜ Remaining passes (best steered by owner reaction —
+  their loop is react-driven): cleaner spacing to a visible 17-21 anchor structure + triangular
+  silhouette; leaf-fan demotion so buds stay readable; finer texture/material + hue calibration.
+- 🎮 🔨 **Onboarding AI-guide rework (2026-07-03 PM, owner: "too long, not exciting, doesn't work;
+  AI helping along the way")** — pass 1 on `/ftue` (backend step machine untouched): the Master
+  Grower is now an on-screen 🤖 character (avatar + speech bubble), an instant per-step hype line
+  (`STEP_HYPE`) shows before the AI coaching loads so a step never looks empty/broken, a delight
+  burst fires on each tap, and the current step glows on the rail. Answers "where's the AI" (it was
+  already wired on dashboard/plant/FTUE/University; this makes it the visible guide). ⬜ Remaining:
+  the `/onboarding` cinematic LANDING scroll length ("too long") — a separate taste pass.
+- 🎮 ✅ **Consumables "use item" wired (2026-07-03 PM)** — the store sold consumables you couldn't
+  use; a living plant's Care area now shows an "Items" panel that applies owned consumables
+  (`POST .../apply`, no ledger/currency — inventory→plant-state, safe). `api.store.consumables` +
+  `api.plants.applyConsumable`, `useConsumables`/`useApplyConsumable`, pure `ownedConsumableOptions`
+  (5 tests) mirroring the server's living-plant + stage_req guards, `ConsumablesPanel`, e2e proof.
+  Closes the wire-in flagged in "finished backends one UI hop from paying off."
 - 🎮 ✅ **Store panelized + seasonal "undefined" drop fixed (2026-07-03 PM, owner: "redo the
   store... some sort of panel or tile type of look")** — all 7 store shelves now sit in a
   consistent elevated panel (`STORE_PANEL`, `store/page.tsx`) so the page reads as distinct
@@ -715,8 +741,12 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
 - 🟠 ⬜ **Wire in: finished backends one UI hop from paying off** — `POST .../plants/<id>/apply`
   (consumables; store sells them but has no "use item"), `GET /strains/<id>/effects` (effects panel),
   admissions department/track recommendation (persist + surface; HERMES open-work #2),
-  `Player.last_active_at` (exactly what WO-2 "welcome-back delta" needs), `/contracts` page
-  (whole built surface with no nav entry — one `navLinks.ts` line).
+  `Player.last_active_at` (exactly what WO-2 "welcome-back delta" needs). **Corrected 2026-07-03:
+  the old `/contracts` "whole built surface, one navLinks line" item is STALE — `web/src/app/
+  contracts/page.tsx` is now just a 6-line legacy `redirect("/market")` (NPC contracts already
+  live under Market → Contracts tab, which IS in the nav). Do NOT add a nav entry (it would point
+  at a redirect that lands on Market, already reachable). The redirect stub is fine to keep for
+  old bookmarks; nothing to wire.**
 - 🟠 🔨 **Retire: superseded/dead web code** — ✅ **web cluster retired (2026-07-03 PM)**:
   removed `components/intro/` (4 files; superseded by FTUE), `components/pod/PodCard.tsx` +
   `EnvironmentForm`/`WeatherRoller` (superseded by Command Center), `command/CommandTopBar.tsx`/
