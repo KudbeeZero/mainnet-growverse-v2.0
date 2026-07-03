@@ -2464,6 +2464,30 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         drawBudCollar(nd.site, nd.litAdj);
         drawFlowerSite(nd.site, p.P, jig, tt, budSiteDensity(nd.f));
         ctx!.restore();
+        // Plant rework pass 2 (owner blueprint: "add visible branch segments in
+        // FRONT of some buds, not only behind them" → front/mid/rear depth).
+        // Front-facing nodes (high azimuth depth, painted last) get a short lit
+        // support branch arcing across the cola's lower third with a small leaf
+        // tip — a foreground overlap so the bud reads as layered, not flat. Only
+        // the front nodes get it, so it's depth, not clutter (blueprint: "keep
+        // leaf fans secondary so buds stay readable"). Draw-path only.
+        if (nd.depth > 0.6) {
+          const cw = nd.site.baseW;
+          ctx!.save();
+          ctx!.translate(endX * 0.85, endY * 0.85);
+          ctx!.rotate(nd.budRot + nd.side * droopRot * 0.2);
+          ctx!.strokeStyle = `hsl(${S.hue - 8}, 40%, ${clamp(40 + nd.litAdj, 26, 54)}%)`;
+          ctx!.lineWidth = clamp(sw0 * 0.5, 1.6, 4);
+          ctx!.lineCap = "round";
+          ctx!.beginPath();
+          ctx!.moveTo(-cw * 1.15, cw * 0.25);
+          ctx!.quadraticCurveTo(-cw * 0.1, -nd.site.axisLen * 0.14, cw * 0.95, -nd.site.axisLen * 0.26);
+          ctx!.stroke();
+          ctx!.translate(cw * 0.95, -nd.site.axisLen * 0.26);
+          ctx!.rotate(nd.side * 0.45 + nd.leafRoll);
+          drawFan(nd.leafSize * 0.52, 3, 0, claw, nd.litAdj + 6, nd.leafYaw, nd.phase + 8.2);
+          ctx!.restore();
+        }
       }
       ctx!.restore();
     }
