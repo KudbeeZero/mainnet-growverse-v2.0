@@ -64,8 +64,12 @@ interface Cluster {
   // `seam`: the grouped calyx-seam root angle this hair emerges from
   // (reference "Pistil Hair Breakdown" items 1-2 — grouped origin points,
   // never floating); several hairs per cluster share the same seam.
-  hairs: Array<{ a: number; seam: number; len: number; bend: number; ball: number; k: number }>;
-  tris: Array<{ a: number; len: number; headR: number; k: number; mat: number }>;
+  // `curl`: secondary tip-hook offset layered on top of `bend`'s mid-length
+  // arch so the filament reads as an organic S/curl rather than a single arc
+  // (item 4). `mat`: per-hair maturity roll driving the pale-cream→orange
+  // colour spread so one bud shows a MIX of young and ripe strands (item 8).
+  hairs: Array<{ a: number; seam: number; len: number; bend: number; curl: number; ball: number; k: number; mat: number }>;
+  tris: Array<{ a: number; r: number; v: number; sz: number; k: number; mat: number; spk: number }>;
   ph: number;
   leaf: boolean;
   leafSide: number;
@@ -281,18 +285,24 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.restore();
     }
   }
-  // Pistil colour: white → cream/amber with ripeness+browning, then blended
-  // toward magenta/pink for anthocyanin phenotypes (mag 0..1).
+  // Pistil colour (reference "Pistil Hair Breakdown" item 8 — pale/cream when
+  // young, shifting to orange-pink as maturity progresses). `w` is now a
+  // PER-HAIR maturity (0 = fresh cream stigma, 1 = ripe orange) rather than a
+  // single per-cluster ripeness, so a mature cola renders a MIX of pale and
+  // orange strands. Endpoints tuned toward a warmer orange target (was a
+  // muddier amber): young 248/242/222 cream → ripe 235/118/44 orange. `brown`
+  // deepens over-ripe strands; `mag` blends toward orange-pink for the rare
+  // strains that express pistilMagenta (independent of anthocyanin).
   function pistilFiber(w: number, brown: number, mag: number) {
-    let r = lerp(244, 226, w), g = lerp(238, 138, w), b = lerp(220, 58, w);
-    r = lerp(r, 152, brown); g = lerp(g, 88, brown); b = lerp(b, 48, brown);
-    r = lerp(r, 232, mag); g = lerp(g, 74, mag); b = lerp(b, 150, mag);
+    let r = lerp(248, 235, w), g = lerp(242, 118, w), b = lerp(222, 44, w);
+    r = lerp(r, 150, brown); g = lerp(g, 86, brown); b = lerp(b, 46, brown);
+    r = lerp(r, 234, mag); g = lerp(g, 82, mag); b = lerp(b, 150, mag);
     return `rgb(${r | 0},${g | 0},${b | 0})`;
   }
   function pistilBall(w: number, brown: number, mag: number) {
-    let r = lerp(250, 246, w), g = lerp(244, 170, w), b = lerp(230, 86, w);
-    r = lerp(r, 188, brown); g = lerp(g, 116, brown); b = lerp(b, 60, brown);
-    r = lerp(r, 244, mag); g = lerp(g, 120, mag); b = lerp(b, 178, mag);
+    let r = lerp(252, 248, w), g = lerp(246, 156, w), b = lerp(232, 74, w);
+    r = lerp(r, 186, brown); g = lerp(g, 114, brown); b = lerp(b, 58, brown);
+    r = lerp(r, 246, mag); g = lerp(g, 124, mag); b = lerp(b, 178, mag);
     return `rgb(${r | 0},${g | 0},${b | 0})`;
   }
   // Hue/sat blend for the base→tip purple gradient (see drawFlowerSite's
@@ -436,35 +446,77 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // cluster (never an independent floating root — items 1/2/9) and
       // density scales with tier position — more hairs near the tip/active
       // upper sites, fewer near the base (item 7).
-      const tierDensity = 0.55 + 0.85 * Math.pow(clamp(yf, 0, 1), 0.8);
-      const nSeams = Math.max(1, Math.round(1 + 2 * yf + rnd() * 0.6));
+      // Round 8 ("Pistil Hair Breakdown" macro re-read): the prior round read
+      // as too few / too straight / too uniform vs. the macro photo (abundant
+      // curling orange filaments). Four pushes toward the reference:
+      //  • Density (item 7): more seams + more hairs, steeper tip weighting so
+      //    the active upper bud sites carry a proper tuft while the base stays
+      //    sparse — grouped from seams, so it reads as fans not confetti.
+      //  • Length (item 6): explicit short/medium/long tiers, not one band.
+      //  • Curve (item 4): each hair carries a `curl` (tip hook) layered on
+      //    `bend` (mid-length arch) in the draw block — an organic S, not an arc.
+      //  • Colour (item 8): a per-hair `mat` maturity roll, tip-weighted, so a
+      //    ripe cola shows pale-cream young strands mixed with orange ripe ones.
+      const tierDensity = 0.5 + 1.35 * Math.pow(clamp(yf, 0, 1), 0.85);
+      const nSeams = Math.max(1, Math.round(1 + 2.6 * yf + rnd() * 0.7));
       const seams: number[] = [];
       for (let s = 0; s < nSeams; s++) seams.push(rnd() * TAU);
-      const nH = Math.max(1, Math.round((pat === "spiral" ? 2 : 3) * lush * 0.6 * tierDensity));
+      const nH = Math.max(1, Math.round((pat === "spiral" ? 3 : 4) * lush * 0.72 * tierDensity));
       for (let j = 0; j < nH; j++) {
         const seam = seams[j % seams.length];
         // Directional fan: mostly upward, biased slightly toward the seam's
         // own outward direction, with slight per-hair randomness (item 5).
-        const dir = seam * 0.3 + -Math.PI / 2 * 0.7 + (rnd() - 0.5) * 0.95;
-        // Round 5: smaller tip balls (0.9+0.4 → 0.65+0.3) so each pistil reads
-        // as a fine amber thread, not a bead.
-        hairs.push({ a: dir, seam, len: 0.5 + rnd() * 0.45, bend: (rnd() - 0.5) * 1.3, ball: 0.55 + rnd() * 0.25, k: rnd() * 0.85 });
+        const dir = seam * 0.3 + -Math.PI / 2 * 0.7 + (rnd() - 0.5) * 1.05;
+        // Length variation (item 6): short / medium / long tiers so the tuft
+        // has a natural ragged silhouette instead of one uniform length.
+        const lr = rnd();
+        const len = lr < 0.42 ? 0.34 + rnd() * 0.22 : lr < 0.8 ? 0.58 + rnd() * 0.3 : 0.92 + rnd() * 0.42;
+        // Per-hair maturity (item 8): tip clusters trend riper/oranger, base
+        // paler, plus a wide random term so pale and orange strands coexist.
+        const mat = clamp(0.34 * yf + rnd() * 0.92, 0, 1);
+        hairs.push({
+          a: dir,
+          seam,
+          len,
+          bend: (rnd() - 0.5) * 1.5,
+          curl: (rnd() - 0.5) * 1.15,
+          // Round 5: small tip balls so each pistil reads as a fine thread.
+          ball: 0.5 + rnd() * 0.22,
+          k: rnd() * 0.85,
+          mat,
+        });
       }
-      // Trichome "frost" — a few CLUSTERED highlight blobs per cluster instead of
-      // a dense field of individual stalk+gland glyphs (owner: "clustered frost
-      // highlights", not fine per-gland detail — that belongs in View Bud/Lab).
-      // Round 5 (specialist code review, 2026-07-03): fewer blobs (2.5 → 1.5×
-      // lush) — frost is also now gated to top-third clusters only at draw time
-      // (see cl.yf gate below), so the mockup's "subtle, top-third" frost read
-      // survives instead of firing on every cluster top to bottom.
+      // Trichome "frost" — the crystalline "sugar coat" of a real bud is
+      // THOUSANDS of fine resin glands (owner macro reference: "the trichomes
+      // are tiny — there's thousands of them"), not a handful of soft blobs.
+      // Round 8 (macro-photo reference, 2026-07-03): rounds 5/7 read as sparse
+      // sparkles because the count was tiny (~1.5×lush) and each spark was a
+      // big soft glow. We now carry MANY MORE, much FINER glint points per
+      // cluster — each drawn as a ~1px solid dot anchored to a bract's own face
+      // (see draw block) so the surface reads caked in frost rather than dotted.
+      // Cost stays phone-safe: bulk glints are cheap solid fills (no per-glint
+      // gradient); only a rare `spk` catch-light and one soft per-cluster sheen
+      // wash use a gradient. Tip-concentration still comes from the draw-time
+      // `frostGate`; `r`/`v` scatter each glint across a bract face, `sz` gives
+      // size variety, `spk` flags the few brightest sparkles.
       const tris = [];
-      const nT = Math.max(1, Math.round(1.5 * lush));
+      // Density budget: ~18×lush glints/cluster reads as the dense sugar-coat
+      // while keeping the per-frame fill cost modest — each is a sub-pixel solid
+      // arc, and the draw-time frostGate skips most on lower (base) clusters, so
+      // the literal glint count on screen is a few hundred, not thousands.
+      const nT = Math.max(8, Math.round(18 * lush));
       for (let j = 0; j < nT; j++)
-        tris.push({ a: rnd() * TAU, len: 0.5 + rnd() * 0.5, headR: 0.7 + rnd() * 0.5, k: rnd(), mat: rnd() });
+        tris.push({ a: rnd() * TAU, r: rnd(), v: rnd(), sz: rnd(), k: rnd(), mat: rnd(), spk: rnd() });
       clusters.push({
         yf, along, lateral, fat: fat * opt.fatMul, tipTaper, centerBias, pods, hairs, tris,
         ph: rnd() * TAU,
-        leaf: pat !== "nodal" && i % 3 === 0 && yf < 0.75,
+        // Round 8 (owner "10/10" hero render): bright green serrated sugar-leaf
+        // sepals poke OUT through the purple bud on EVERY cola, giving each a
+        // spiky green star/sunburst outline (the render's defining feature).
+        // Fire on ~every other cluster, all patterns (nodal included — the hero
+        // shows green sepals on indica colas too), the full length of the cola
+        // (up to the tip). Was: spiral/hybrid only, every 3rd cluster, yf<0.75.
+        leaf: i % 2 === 0 && yf < 0.94,
         leafSide: i % 2 ? 1 : -1,
       });
     }
@@ -660,22 +712,48 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const baseLit = 35 - (1 - cl.yf) * 5 + bc.anthocyanin * 3;
       const detailed = podW > 1.8;
 
-      if (cl.leaf && d > 0.25 && detailed) {
-        // Round 7: SMALL, NARROW sugar leaves emerging between bud clusters
-        // (reference "Top Cola Breakdown"/"Top Cola Tip Breakdown" item 5 —
-        // "small narrow leaves... not large fan leaves"). Prior rounds sized
-        // these as a near-full 3-blade fan (ls up to ~1.1·cw) which read as
-        // fan leaves poking out of the cola; shrunk to a thin 2-blade sprig.
-        const ls = cw * (0.5 - d * 0.18);
+      if (cl.leaf && d > 0.22 && detailed) {
+        // Round 8 (owner "10/10" hero render): the hero's signature is bright
+        // green, SERRATED sugar-leaf blades poking OUT through the purple-
+        // magenta bud, so each cola reads as a spiky green star/sunburst rather
+        // than a smooth teardrop. Prior rounds drew a tiny 2-blade sprig that
+        // barely cleared the calyx surface (ls≈0.4·cw, mid-green) — invisible at
+        // chamber scale. Now: a small fan of thin serrated blades radiating up-
+        // and-outward from the cola flank, LONG enough that their tips clear the
+        // bud silhouette (hw≈0.62·cw), in a vivid lime green. Drawn BEFORE the
+        // pods so each blade's base tucks between the calyxes (botanically the
+        // sepals emerge from the bract seams) and only the outer serrated tip
+        // pokes through — keeping the bud purple-DOMINANT with green spikes.
+        // Round 8b (owner combined-preview verify): the first pass overshot —
+        // long neon-lime blades read as a spiky cactus/thistle and fought the
+        // purple. The hero shows green sepal TIPS peeking through a
+        // purple-DOMINANT bud, not green spikes dominating it. Shortened so
+        // only the tips clear the silhouette (0.72+0.42 → 0.40+0.26) and
+        // thinned slightly.
+        const ls = cw * (0.40 + 0.26 * d);
+        const wd = ls * 0.10 * S.leafW;
+        const base = cl.leafSide;
+        // One slender serrated blade out each side (up-and-outward) — alternating
+        // tiers build a symmetric spiky outline up the cola while the purple
+        // calyx mass stays the dominant surface between the spikes. Per-blade
+        // lightness/hue jitter keeps the sepals reading as varied natural
+        // foliage (as in the hero render) rather than a flat neon slab.
+        const blades: Array<[number, number, number]> = [
+          [base * (0.78 + 0.14 * Math.sin(cl.ph)), 1.0, 0.5 + 0.5 * Math.sin(cl.ph * 3.1)],
+          [-base * (0.72 + 0.12 * Math.sin(cl.ph * 1.7)), 0.86, 0.5 + 0.5 * Math.cos(cl.ph * 2.3)],
+        ];
         ctx!.save();
         ctx!.translate(cx, cy);
-        ctx!.rotate(cl.leafSide * (1.05 + 0.2 * Math.sin(cl.ph)));
-        const col = `hsl(${S.hue}, ${S.sat}%, ${S.lit + 6}%)`;
-        for (const la of [-0.16, 0.16]) {
+        for (const [ang, sc, jit] of blades) {
+          // Muted natural sugar-leaf green (round 8b): a notch above the
+          // fan-leaf tone so the tips read as green against the purple, but
+          // NOT the neon lime that fought the bud in the first pass. Hue nudged
+          // back toward true green (was -8, which pushed yellow-lime), sat/lit
+          // pulled in so purple stays the dominant surface.
+          ctx!.fillStyle = `hsl(${S.hue + 2 + jit * 8}, ${clamp(S.sat + 12, 0, 70)}%, ${clamp(S.lit + 6 + jit * 10, 0, 50)}%)`;
           ctx!.save();
-          ctx!.rotate(la);
-          ctx!.fillStyle = col;
-          leafletPath(ls, ls * 0.13 * S.leafW);
+          ctx!.rotate(ang);
+          leafletPath(ls * sc, wd * sc, 0.14);
           ctx!.fill();
           ctx!.restore();
         }
@@ -766,14 +844,22 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       }
       if (drawn === 0) continue;
 
-      const fiberCol = pistilFiber(P.ripe, P.brown, bc.pistilMagenta);
-      const ballCol = pistilBall(P.ripe, P.brown, bc.pistilMagenta);
       // Round 7 (structure-first, "Pistil Hair Breakdown" reference): the
       // root now sits ON the bract-ring surface at the hair's grouped SEAM
       // point (never an independent floating radius — items 1/2/9), and the
       // filament is a filled TAPERED wedge (thicker at the root, fine at the
       // tip — item 3) instead of a constant-width stroke, which at chamber
       // scale read as a rigid uniform spike rather than a delicate hair.
+      // Round 8: the wedge was a single quadratic arc (one bend) — the macro
+      // shows filaments that arch AND hook. The centreline is now sampled as a
+      // curved polyline carrying `bend` (a mid-length sin arch) plus `curl` (a
+      // t^1.9 tip hook), and the tapered ribbon is built by offsetting each
+      // sample along its LOCAL normal — so the curl reads cleanly and the width
+      // still tapers to a fine tip (item 3/4). Colour is resolved PER HAIR from
+      // its own maturity so the tuft is a pale→orange mix, not one flat tone
+      // (item 8); tip stigma bead stays small so each hair reads as a thread.
+      const bw0 = Math.max(0.85, cw * 0.02); // root half-width
+      const STEPS = 7;
       for (const h of cl.hairs) {
         if (h.k > d) continue;
         const stretch = clamp((d - h.k * 0.5) / 0.6, 0.35, 1);
@@ -781,20 +867,43 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         const seamR = 0.6 + 0.22 * Math.sin(h.seam * 3.1);
         const x0 = cx + Math.cos(h.seam) * seamR * cw * 0.5, y0 = cy + Math.sin(h.seam) * seamR * cw * 0.32 - podH * 0.22;
         const x1 = x0 + Math.cos(h.a) * L, y1 = y0 + Math.sin(h.a) * L;
-        const mx = (x0 + x1) / 2 + h.bend * (1.6 + P.ripe * 2.2), my = (y0 + y1) / 2 - 2;
         const dx = x1 - x0, dy = y1 - y0, dlen = Math.max(0.001, Math.hypot(dx, dy));
-        const bw0 = Math.max(0.9, cw * 0.021); // root half-width
-        const perpX = (-dy / dlen) * bw0, perpY = (dx / dlen) * bw0;
-        ctx!.fillStyle = fiberCol;
+        const nX = -dy / dlen, nY = dx / dlen; // chord normal (unit)
+        const bendAmp = h.bend * (1.5 + P.ripe * 2.0); // mid-length arch
+        const curlAmp = h.curl * (2.2 + P.ripe * 3.4); // tip hook, ripens stronger
+        // Sample the curved centreline once (root → tip).
+        const pts: Array<[number, number]> = [];
+        for (let s = 0; s <= STEPS; s++) {
+          const t = s / STEPS;
+          const off = bendAmp * Math.sin(Math.PI * t) + curlAmp * Math.pow(t, 1.9);
+          pts.push([x0 + dx * t + nX * off, y0 + dy * t + nY * off]);
+        }
+        // Build a tapered ribbon: offset each sample by its LOCAL normal so the
+        // width follows the curl, shrinking from bw0 at the root to ~0 at tip.
+        const left: Array<[number, number]> = [], right: Array<[number, number]> = [];
+        for (let s = 0; s <= STEPS; s++) {
+          const a = pts[Math.max(0, s - 1)], b = pts[Math.min(STEPS, s + 1)];
+          const tx = b[0] - a[0], ty = b[1] - a[1], tl = Math.max(0.001, Math.hypot(tx, ty));
+          const lnX = -ty / tl, lnY = tx / tl;
+          const hw = bw0 * Math.pow(1 - s / STEPS, 0.85);
+          left.push([pts[s][0] + lnX * hw, pts[s][1] + lnY * hw]);
+          right.push([pts[s][0] - lnX * hw, pts[s][1] - lnY * hw]);
+        }
+        // Per-hair maturity → pale-cream (young) ⇢ orange (ripe). Floor keeps a
+        // few strands pale even on a ripe cola; mag rides pistilMagenta only.
+        const hairMat = clamp(P.ripe * (0.15 + 0.95 * h.mat), 0, 1);
+        const magH = bc.pistilMagenta * (0.4 + 0.6 * h.mat);
+        ctx!.fillStyle = pistilFiber(hairMat, P.brown, magH);
         ctx!.beginPath();
-        ctx!.moveTo(x0 - perpX, y0 - perpY);
-        ctx!.quadraticCurveTo(mx - perpX * 0.35, my - perpY * 0.35, x1, y1);
-        ctx!.quadraticCurveTo(mx + perpX * 0.35, my + perpY * 0.35, x0 + perpX, y0 + perpY);
+        ctx!.moveTo(left[0][0], left[0][1]);
+        for (let s = 1; s <= STEPS; s++) ctx!.lineTo(left[s][0], left[s][1]);
+        for (let s = STEPS; s >= 0; s--) ctx!.lineTo(right[s][0], right[s][1]);
         ctx!.closePath();
         ctx!.fill();
-        ctx!.fillStyle = ballCol;
+        const tip = pts[STEPS];
+        ctx!.fillStyle = pistilBall(hairMat, P.brown, magH);
         ctx!.beginPath();
-        ctx!.arc(x1, y1, h.ball * Math.max(0.6, cw * 0.014), 0, TAU);
+        ctx!.arc(tip[0], tip[1], h.ball * Math.max(0.5, cw * 0.012), 0, TAU);
         ctx!.fill();
       }
       // Trichome frost (Engine 7, simplified for chamber scale) — a few CLUSTERED
@@ -820,36 +929,76 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
           const purple = clamp(live.current.budColor?.anthocyanin ?? 0, 0, 1);
           const mix = maturityMix(clamp(P.ripe * 0.7 + P.brown * 0.6, 0, 1), purple * 0.4);
           const dens = P.trich * clamp(trichScale, 0, 1) * frostGate;
+          // (A) Frost SHEEN wash — the macro reference reads as a CONTINUOUS
+          // crystalline coating catching the light, which a field of discrete
+          // glints alone can't convey. One cool milky radial per cluster,
+          // biased to the upper (tip) face and kept very low-alpha, lays down
+          // that sheen for the cost of a single gradient fill.
+          const shy = cy - podH * 0.5;
+          const shR = Math.max(4, cw * 1.35);
+          const sa = 0.07 * dens;
+          if (sa > 0.006) {
+            const sheen = ctx!.createRadialGradient(cx, shy, 0, cx, shy, shR);
+            sheen.addColorStop(0, `rgba(233,245,247,${sa})`);
+            sheen.addColorStop(0.4, `rgba(226,241,240,${sa * 0.4})`);
+            sheen.addColorStop(1, "rgba(220,238,236,0)");
+            ctx!.fillStyle = sheen;
+            ctx!.beginPath();
+            ctx!.arc(cx, shy, shR, 0, TAU);
+            ctx!.fill();
+          }
+          // (B) Dense fine glint field — each is a tiny solid dot anchored to a
+          // bract's own face and scattered across it (tr.r across the width,
+          // tr.v from mid-bract up toward the tip), so the whole surface reads
+          // sugar-coated. Solid fills keep the bulk cheap; only the rare `spk`
+          // sparkle spends a gradient on a hot catch-light.
           for (const tr of cl.tris) {
             if (tr.k > dens) continue;
-            const srcPod = cl.pods.length ? cl.pods[Math.floor(((tr.a % TAU) / TAU) * cl.pods.length) % cl.pods.length] : null;
+            // Pick the source bract from a hash DECORRELATED from tr.a (which
+            // drives the scatter angle + shimmer phase below) so glints don't
+            // pile onto the same few pods — they spread evenly over the surface.
+            const srcPod = cl.pods.length
+              ? cl.pods[Math.floor((((tr.r * 5.0 + tr.sz * 2.7) % 1) + 1) % 1 * cl.pods.length) % cl.pods.length]
+              : null;
             let bx: number, by: number;
             if (srcPod) {
               const ppx = cx + Math.cos(srcPod.a) * srcPod.rad * cw * 0.55;
               const ppy = cy + Math.sin(srcPod.a) * srcPod.rad * cw * 0.35 + srcPod.ring * podH * 0.18;
-              bx = ppx + Math.cos(tr.a) * cw * 0.05;
-              by = ppy - podH * (0.34 + 0.12 * tr.k); // biased toward the bract TIP, not its base
+              // Scatter across the bract face in a small upward-biased disc so
+              // frost dusts the whole raised scale (heavier toward its tip),
+              // matching the macro's continuous coat rather than dotting centres.
+              const spread = podW * srcPod.sz;
+              bx = ppx + Math.cos(tr.a) * spread * (0.2 + 0.75 * tr.sz);
+              by = ppy - podH * (0.02 + 0.52 * tr.v) + Math.sin(tr.a) * spread * 0.35;
             } else {
-              const rad = cw * (0.1 + 0.5 * tr.k);
+              const rad = cw * (0.1 + 0.5 * tr.r);
               bx = cx + Math.cos(tr.a) * rad;
               by = cy + Math.sin(tr.a) * rad - podH * 0.14;
             }
             const m = maturityFor(tr.mat, mix);
             const sh = motionOK
-              ? shimmer(tt, tr.a * 7.13, 0.6 + tr.len * 1.2, SHIMMER_MAX_AMP * 0.5)
+              ? shimmer(tt, tr.a * 7.13, 0.6 + tr.sz * 1.2, SHIMMER_MAX_AMP * 0.6)
               : 1;
-            // Round 2 (owner mockup): smaller, fainter frost sparks — the old
-            // 1.8/0.16 radius at 0.6 alpha read as grey smoke balls hovering over
-            // the bud, not resin glints on its surface.
-            const br = tr.headR * Math.max(1.1, cw * 0.09);
-            const glow = ctx!.createRadialGradient(bx, by, 0, bx, by, br);
-            const core = trichHeadColor(m, clamp(0.32 * sh, 0, 1), purple);
-            glow.addColorStop(0, core);
-            glow.addColorStop(1, "rgba(220,238,236,0)");
-            ctx!.fillStyle = glow;
+            // Fine grain: most glints sit near a pixel — a fine crystalline dust,
+            // not beads. Slightly brighter so each catches the light like resin.
+            const gr = Math.max(0.6, cw * (0.008 + 0.013 * tr.sz));
+            ctx!.fillStyle = trichHeadColor(m, clamp(0.5 * sh, 0, 0.9), purple);
             ctx!.beginPath();
-            ctx!.arc(bx, by, br, 0, TAU);
+            ctx!.arc(bx, by, gr, 0, TAU);
             ctx!.fill();
+            // The brightest ~6% of glints get a hot white catch-light + halo —
+            // this is the "sparkle" that sells wet resin without gilding the
+            // whole field with expensive gradients.
+            if (tr.spk > 0.95) {
+              const hr = gr * 1.9;
+              const halo = ctx!.createRadialGradient(bx, by, 0, bx, by, hr);
+              halo.addColorStop(0, `rgba(255,255,255,${clamp(0.42 * sh, 0, 0.8)})`);
+              halo.addColorStop(1, "rgba(240,250,250,0)");
+              ctx!.fillStyle = halo;
+              ctx!.beginPath();
+              ctx!.arc(bx, by, hr, 0, TAU);
+              ctx!.fill();
+            }
           }
         }
       }
@@ -1534,6 +1683,18 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     const cap = scene!.cap;
     const fan = live.current.climate.fan;
     const co2 = live.current.climate.co2;
+    // Arcade layer (Phase 2) glow intensity. Always-on baseline so the plant
+    // separates from the dark panel even in veg; ramps as the plant flowers so
+    // mature colas "pop" hardest (matches the hero render). budDev is server
+    // truth from the live dev params.
+    // TODO(arcade): modulate this by the active boost multiplier once the
+    // boostEngine store is threaded into the renderer. That is out of scope
+    // here — it would require plumbing new React state through
+    // createChamberCore, and the DOM BoostAmbientLayer (PR #124) already
+    // reacts to boosts on the overlay. Keep this always-on baseline.
+    const arcBudDev = clamp(live.current.dev.budDev, 0, 1);
+    const arcBloom = 0.5 + 0.5 * arcBudDev; // canopy back-glow strength
+    const arcRing = 0.55 + 0.45 * arcBudDev; // pot-ring / soil-pad strength
     let g = ctx!.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, "#060d16");
     g.addColorStop(1, "#04080e");
@@ -1599,25 +1760,92 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     ctx!.ellipse(hx, hy, hr * 0.55, hr * 0.13, 0, 0.4, Math.PI - 0.4);
     ctx!.stroke();
 
+    // ── Arcade layer (Phase 2): in-canvas rim / back glow behind the plant ──
+    // The chamber panel is fully OPAQUE, so a green backlight cannot bleed
+    // through via a CSS drop-shadow (that is why PR #124's rim pop is a DOM
+    // screen-blend overlay). Here we paint the same "pop" INSIDE the canvas,
+    // behind the canopy, with additive ("lighter") compositing so it reads as
+    // LIGHT, not a flat shape — each cola separates from the dark panel and
+    // glows. drawChamberShell runs before drawPlant, so this always lands
+    // behind the plant.
+    if (plant) {
+      const gx = plant.cx;
+      const canopyTop = plant.baseY - plant.stemH;
+      // Wide soft green column halo hugging the whole canopy.
+      ctx!.save();
+      ctx!.globalCompositeOperation = "lighter";
+      const gy = canopyTop + plant.stemH * 0.4;
+      const gw = cap.w * 0.46;
+      const gh = plant.stemH * 0.62;
+      ctx!.translate(gx, gy);
+      ctx!.scale(1, gh / gw);
+      const halo = ctx!.createRadialGradient(0, 0, 0, 0, 0, gw);
+      halo.addColorStop(0, `rgba(102,230,124,${0.24 * arcBloom})`);
+      halo.addColorStop(0.42, `rgba(74,200,110,${0.12 * arcBloom})`);
+      halo.addColorStop(1, "rgba(60,170,95,0)");
+      ctx!.fillStyle = halo;
+      ctx!.beginPath();
+      ctx!.arc(0, 0, gw, 0, TAU);
+      ctx!.fill();
+      ctx!.restore();
+      // Brighter apical core bloom hugging the top colas.
+      ctx!.save();
+      ctx!.globalCompositeOperation = "lighter";
+      const coreY = canopyTop + plant.stemH * 0.24;
+      const coreR = cap.w * 0.27;
+      const core = ctx!.createRadialGradient(gx, coreY, 0, gx, coreY, coreR);
+      core.addColorStop(0, `rgba(156,255,156,${0.18 * arcBloom})`);
+      core.addColorStop(0.55, `rgba(102,230,124,${0.07 * arcBloom})`);
+      core.addColorStop(1, "rgba(96,224,120,0)");
+      ctx!.fillStyle = core;
+      ctx!.beginPath();
+      ctx!.arc(gx, coreY, coreR, 0, TAU);
+      ctx!.fill();
+      ctx!.restore();
+    }
+
     const fy = cap.floorY;
     ctx!.fillStyle = "#0b1d2b";
     ctx!.beginPath();
     ctx!.ellipse(hx, fy + 8, cap.w * 0.4, 18, 0, 0, TAU);
     ctx!.fill();
+    // ── Arcade layer (Phase 2): bright green energy ring around the pot base ─
+    // A wide additive green bloom seated under the ring, then a bright green
+    // ring stroke with a strong glow — the teal tech-ring reads as the hero
+    // render's glowing green energy ring.
     ctx!.save();
-    ctx!.shadowColor = "rgba(127,212,240,0.6)";
-    ctx!.shadowBlur = 14;
-    ctx!.strokeStyle = "rgba(127,212,240,0.65)";
-    ctx!.lineWidth = 2.5;
+    ctx!.globalCompositeOperation = "lighter";
+    const ringGlow = ctx!.createRadialGradient(
+      hx, fy + 6, scene!.ringR * 0.2,
+      hx, fy + 6, scene!.ringR * 1.18,
+    );
+    ringGlow.addColorStop(0, `rgba(96,232,124,${0.15 * arcRing})`);
+    ringGlow.addColorStop(0.6, `rgba(74,200,110,${0.07 * arcRing})`);
+    ringGlow.addColorStop(1, "rgba(74,200,110,0)");
+    ctx!.fillStyle = ringGlow;
+    ctx!.beginPath();
+    ctx!.ellipse(hx, fy + 6, scene!.ringR * 1.18, scene!.ringR * 0.3, 0, 0, TAU);
+    ctx!.fill();
+    ctx!.restore();
+    ctx!.save();
+    ctx!.shadowColor = `rgba(120,255,140,${0.7 * arcRing})`;
+    ctx!.shadowBlur = 22;
+    ctx!.strokeStyle = `rgba(150,255,162,${0.5 + 0.4 * arcRing})`;
+    ctx!.lineWidth = 3;
     ctx!.beginPath();
     ctx!.ellipse(hx, fy + 6, scene!.ringR, scene!.ringR * 0.24, 0, 0, TAU);
     ctx!.stroke();
     ctx!.restore();
-    ctx!.strokeStyle = "rgba(127,212,240,1)";
+    // Clean white-green radiating spokes/tick-marks (hero render), with a soft
+    // glow so they read as light rather than hairline scratches.
+    ctx!.save();
+    ctx!.shadowColor = "rgba(150,255,170,0.55)";
+    ctx!.shadowBlur = 5;
+    ctx!.strokeStyle = "rgba(214,255,222,1)";
     ctx!.lineCap = "round";
     for (const cr of scene!.cracks) {
-      ctx!.globalAlpha = cr.al;
-      ctx!.lineWidth = 1;
+      ctx!.globalAlpha = Math.min(1, cr.al + 0.2);
+      ctx!.lineWidth = 1.1;
       const a = cr.a;
       ctx!.beginPath();
       ctx!.moveTo(hx + Math.cos(a) * cr.r0, fy + 6 + Math.sin(a) * cr.r0 * 0.24);
@@ -1628,6 +1856,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.stroke();
     }
     ctx!.globalAlpha = 1;
+    ctx!.restore();
     ctx!.fillStyle = "#33421f";
     ctx!.beginPath();
     ctx!.ellipse(hx, fy + 4, scene!.soilR, scene!.soilR * 0.26, 0, 0, TAU);
@@ -1636,6 +1865,22 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     ctx!.beginPath();
     ctx!.ellipse(hx, fy + 2.5, scene!.soilR * 0.92, scene!.soilR * 0.22, 0, 0, TAU);
     ctx!.fill();
+    // ── Arcade layer (Phase 2): green glowing soil pad where the stem meets
+    // the base — the bright green pad under the plant in the hero render.
+    ctx!.save();
+    ctx!.globalCompositeOperation = "lighter";
+    const padGlow = ctx!.createRadialGradient(
+      hx, fy + 3, 0,
+      hx, fy + 3, scene!.soilR * 1.28,
+    );
+    padGlow.addColorStop(0, `rgba(150,242,120,${0.22 * arcRing})`);
+    padGlow.addColorStop(0.55, `rgba(110,210,90,${0.1 * arcRing})`);
+    padGlow.addColorStop(1, "rgba(110,210,90,0)");
+    ctx!.fillStyle = padGlow;
+    ctx!.beginPath();
+    ctx!.ellipse(hx, fy + 3, scene!.soilR * 1.28, scene!.soilR * 0.36, 0, 0, TAU);
+    ctx!.fill();
+    ctx!.restore();
 
     // CO2 rig — glow scales with co2 level
     const tx = cap.x + cap.w * 0.085, ty = cap.y + cap.h * 0.135, tw = cap.w * 0.1, th = cap.h * 0.19;

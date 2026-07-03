@@ -9,6 +9,7 @@ import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
 import { ChamberActionBar, BoostsInline } from "@/components/plant/ChamberDock";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
+import { BoostAmbientLayer } from "@/components/plant/BoostAmbientLayer";
 import { useGrowthBoost } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap, usePods } from "@/hooks/queries";
@@ -29,6 +30,7 @@ import {
   previewDev,
   nominalGrowDay,
   cycleDays,
+  mintTruthMetadata,
 } from "@/lib/chamber/morphology";
 import { budColorForStrain, silhouetteFor } from "@/lib/chamber/strainVisuals";
 import { budDnaFor, applyEnvironmentToBudDNA } from "@/lib/chamber/budDna";
@@ -46,7 +48,9 @@ const GrowChamber = dynamic(
   { ssr: false, loading: () => null },
 );
 
-// Arcade Mode HUD — lazy so it's tree-shaken from every non-chamber route.
+// Arcade Mode HUD (rewind + chain row only) — lazy so it's tree-shaken from
+// every non-chamber route. Boost-apply UI lives in BoostsInline (ChamberDock)
+// so it isn't duplicated here.
 const ArcadeHUD = dynamic(
   () => import("@/components/arcade/ArcadeHUD").then((m) => m.ArcadeHUD),
   { ssr: false, loading: () => null },
@@ -337,6 +341,12 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const liveNominalDay = plant.forecast
     ? nominalGrowDay(plant.growth_stage, plant.forecast.stage_progress_pct, flMid)
     : ageDays(plant.planted_at);
+  // Server-truth snapshot for permanent on-chain mint metadata — always off
+  // liveNominalDay, so an active growth boost or an engaged time-preview
+  // scrubber (below) can never leak a transient visual state into the ARC-69
+  // note field. Matches how grow_stage/trich_density already read straight
+  // off `plant` in buildPlantMetadata. Do NOT swap this for `day`/`budScalars`.
+  const mintTruth = mintTruthMetadata(liveNominalDay, flMid);
   const previewing = previewDay !== null;
   const maxPreviewDay = Math.round(cycleDays(flMid) + 8);
   // Fold the Arcade boost offset into the LIVE look only (clamped); the time-preview
@@ -443,6 +453,8 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         />
         {/* the plant's visible response to care taps (water/feed/prune/train…) */}
         <PlantReactionLayer />
+        {/* rim/backlight pop (always on) + boost-reactive ring pulse/sparkles */}
+        <BoostAmbientLayer />
         {/* Compact top HUD — strain + the four key stats in one strip (design
             punch list item 1). Deeper detail stays on the CLIMATE tab. */}
         <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center gap-1.5 overflow-x-auto">
@@ -508,8 +520,10 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </div>
         )}
 
-        {/* Boosts quick tray — collapsed pill anchored in the chamber scene,
-            so it can only ever overlap the stage, never the plan/insights. */}
+        {/* REWIND control + chain row — floating button anchored in the chamber
+            scene, so it can only ever overlap the stage, never the plan/insights.
+            Boost-APPLY UI lives only in the inline BoostsInline (GROW/ARCADE
+            sheet below) — this no longer duplicates it. */}
         {!ended && (
           <ArcadeHUD
             reducedMotion={reducedMotion}
@@ -517,7 +531,10 @@ function ChamberScreen({ plantId }: { plantId: string }) {
               ALGO_ENABLED ? (
                 <ChainRow
                   plant={plant}
-                  mintOptions={{ strainName: strain?.name, growDay: Math.round(day), budDev: budScalars.budDev }}
+                  // Server truth, not the boosted/previewed display values (`day`,
+                  // `budScalars.budDev`) — see `mintTruth` above. The on-screen
+                  // stage below still renders `day`/`budScalars` unchanged.
+                  mintOptions={{ strainName: strain?.name, growDay: mintTruth.growDay, budDev: mintTruth.budDev }}
                 />
               ) : undefined
             }

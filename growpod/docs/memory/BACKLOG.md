@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; top cola construction round 8 — deterministic ring-parity stacking-alternation colour, ported from `buildMacro`'s golden-angle ring-pack; chamber ambient glow layer Phase 1 (DOM-only); mint metadata server-truth fix; round 4 superseded, see below).
+once they appear here. Last reconciled: **2026-07-03** (top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack, rebased onto and layered atop the round-8 combined push; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -14,6 +14,23 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
 > supersedes the 3D/Lab tracks below until the owner reopens them. Loop verified end-to-end by
 > `web/e2e/care-loop-shot.spec.ts` (button states → plant reaction → harvest-ready CTA →
 > post-harvest next-actions), 2026-07-03.
+- 🎮 ✅ **Dedupe the floating boost tray (2026-07-03)** — the chamber had two boost-apply UIs
+  reading the same `useBoostStore` state: the floating `ArcadeHUD` tray (4 boost buttons + its
+  own grow-speed/countdown readout, absolutely-positioned over the 3D stage) and the inline
+  `BoostsInline` quick-chip row already embedded in the GROW/ARCADE sheet
+  (`web/src/components/plant/ChamberDock.tsx`) — the "floating menu" residue the owner
+  specifically dislikes. `ArcadeHUD` (`web/src/components/arcade/ArcadeHUD.tsx`) is now slimmed
+  to the two things `BoostsInline` doesn't cover — REWIND (`useRewindStore` snapshot scrubber)
+  and the optional Phase-2 `chainSlot` (WalletConnect + Mint NFT, `ALGO_ENABLED`-gated) — as a
+  small floating ⏪ button instead of a boost tray. `BoostsInline` is now the single boost-apply
+  surface; its "Add Boost" button (which used to expand the old tray via
+  `OPEN_BOOST_TRAY_EVENT`) was removed since the quick chips already apply boosts directly.
+  `boostEngine.ts`'s store, cooldown logic, and `BOOST_COLORS`/reduced-motion handling are
+  untouched — presentation-layer only. Verified mobile 390×844 + desktop
+  (`web/e2e/dedupe-boost-tray-shot.spec.ts`): one boost surface, rewind opens its sheet, care
+  tiles/ARCADE sheet/growth-boost unaffected; chain row (`ChainRow`) verified separately with a
+  one-off `NEXT_PUBLIC_ALGO_ENABLE=true` build (this is a build-time flag with no existing e2e
+  coverage) — Connect Wallet + Mint NFT still render inside the slimmed `ArcadeHUD`.
 - 🎮 ✅ **Bud Viewer route parked, "Coming soon" (2026-07-02, PR #111)** — the dedicated Tier-2
   `/dashboard/plants/[plantId]/bud` screen (`BudGL` macro inspection) stays built and working
   (zero cost to leave, one-line re-enable later) but the Grow Chamber's floating "🔬 View Bud"
@@ -212,6 +229,55 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   architecture ones, and are out of this round's scope. Round 5's architecture (single-leader
   `colaTops` count=1, taper) is untouched and confirmed intact by the same cross-strain spot-check
   above.
+- 🎮 ✅ **Chamber glow layer — Phase 2, in-canvas "arcade layer" (2026-07-03, PR pending)** — the
+  in-canvas counterpart to Phase 1's DOM overlay, painted directly inside `drawChamberShell` in
+  `web/src/lib/chamber/chamberCore.ts` (environment-only; the plant draw functions were untouched
+  to merge cleanly alongside the cola-construction branches). Three additive-light pieces matching
+  the owner's "10/10" hero render: (a) a soft GREEN rim/back glow behind the plant column — a wide
+  scaled radial "column halo" plus a brighter apical "core bloom" over the top colas, both drawn
+  with `globalCompositeOperation = "lighter"` so they read as backlight, not flat shapes (the
+  panel is fully opaque — same reason Phase 1 needed a screen-blend DOM overlay); (b) the pot-base
+  tech-ring upgraded to a bright green energy ring — a wide additive green bloom seated under it +
+  a green ring stroke with a strong `shadowBlur` glow; (c) a green glowing soil pad where the stem
+  meets the base, and the radiating spokes recolored to clean white-green ticks with a soft glow.
+  Glow intensity is gated on `live.current.dev.budDev` (always-on baseline `0.5`/`0.55`, ramping
+  to full as the plant flowers) so mature colas pop hardest. Boost-reactivity left as a clean
+  `TODO(arcade)` — wiring the `boostEngine` zustand store into the plain-module renderer is
+  non-trivial plumbing and out of scope; the DOM `BoostAmbientLayer` already handles boost tint.
+  Verified with a standalone Playwright script (flowering Gelato fixture, mobile 390×844 + desktop
+  1440×900, 2 look-compare-adjust rounds; script cleaned up). Gates: `tsc --noEmit` clean, `next
+  lint` 0 new errors, vitest 472/472, `npm run build` clean, `care-loop-shot` 4/4 green.
+- 🎮 ✅ **Chamber ambient glow layer — Phase 1, DOM/CSS only (2026-07-03, PR pending)** — new
+  `web/src/components/plant/BoostAmbientLayer.tsx`, mounted as a sibling of `PlantReactionLayer`
+  in the chamber stage (`chamber/page.tsx`). Zero `chamberCore.ts` edits — deliberately scoped
+  around the two concurrent cola-construction branches (`design/cola-construction-layers`,
+  `design/cola-construction-structure`) that are mid-flight on that file's bud-drawing functions,
+  so this ships as a pure overlay with no collision surface. Three pieces: (a) a static
+  rim/backlight bloom behind the plant column, always on (not boost-gated) — `mix-blend-mode:
+  screen` because the chamber canvas is fully opaque, so a CSS drop-shadow can't bleed through it
+  but a screen-blended radial gradient can; (b) a boost-tinted ring pulse over the floor-ring
+  band (reuses the `gpe-react-aura` keyframe looped instead of its one-shot class), visible only
+  while `useBoostStore`'s `activeBoost` is set and unexpired; (c) drifting sparkle bokeh
+  (reuses `gpe-arcade-particle`'s `--angle`/`--dist`/`--dur` custom props, looped + alternated,
+  capped at 8 particles), tinted from `BOOST_COLORS`. All new animated classes
+  (`gpe-glow-ring-pulse`, `gpe-glow-sparkle`) added to the `prefers-reduced-motion` kill-switch in
+  `globals.css`; reduced motion collapses the ring to a static `gpe-glow-ring-static` glow and
+  drops the sparkles, the rim bloom stays (per spec, it's meant to read as static ambience either
+  way). Verified live: mobile (390×844) portrait stacks the action-tile bar directly over the
+  canvas's `floorY` band (chamberCore's `cap.floorY = cap.y + cap.h*0.875`), so the ring is tuned
+  to `bottom-[13%]` of the stage rather than a naive `bottom-[6%]` (which landed the glow fully
+  behind the opaque WATER/FEED/… tiles) — it now reads as a warm glow at the base of the canopy,
+  above the tile row; desktop's landscape split (dedicated stage column, no tile overlay) reads
+  cleanly at the same offset. Evidence screenshots at `e2e-output/glow-layer-idle.png` /
+  `glow-layer-boosted.png` (mobile, gitignored — not committed) plus per-viewport idle/boosted
+  shots at 390×844 and 1440×900 during iteration (3 look-compare-adjust rounds: initial mount →
+  ring found buried under the action tiles and repositioned → reduced-motion collapse verified
+  via a `reducedMotion: 'reduce'` Playwright context). Gates: `tsc --noEmit` clean, `next lint` 0
+  errors, vitest 463/463 (no new/changed pinned values), `npm run build` clean, `care-loop-shot`
+  4/4 green unmodified. **Phase 2 (DONE — see entry above): in-canvas ring/soil glow modulation in
+  `chamberCore.ts` itself** (matching the reference image's radiating tech-ring spokes more
+  directly than a DOM overlay can) — was intentionally deferred until the two cola-construction
+  branches landed, to avoid a three-way collision on the same file's draw functions.
 - 🎮 ✅ **Top cola construction v2 — structure-first (2026-07-03, "GroVerse Anatomy & Construction
   Guide" reference set — Top Cola / Pistil Hair / Top Cola Tip / Bract-Calyx Scale breakdowns)** —
   branched from round 6's commit (`9f98c9e`; round 5's single-leader cone architecture + round 6's
@@ -312,6 +378,21 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   bud viewer, full 3D cola inspection, trichome particle macro mode, scientific Lab breakdown,
   university 3D model, advanced morphology layer toggles. See the ❄️ items under "HERMES
   University + hardening" below for the specific backlog rows this covers.
+- 🎮 ✅ **Mint metadata server-truth fix (2026-07-03)** — fixed — mint metadata now sources
+  grow_day/bud_dev from server truth, not boosted/preview display values, matching
+  trich_density/grow_stage. `chamber/page.tsx` was passing the boosted/previewed visual `day`
+  and `budScalars.budDev` into `ChainRow`'s `mintOptions`, so minting mid-boost or mid-scrub
+  could permanently write an internally inconsistent ARC-69 snapshot: grow_day/bud_dev reading
+  a fictional advanced state while trich_density/grow_stage (already read straight off `plant`
+  in `buildPlantMetadata`) read the real one. Added `mintTruthMetadata()` (pure, in
+  `lib/chamber/morphology.ts`) that derives grow_day/bud_dev from `liveNominalDay` — the
+  authoritative (stage, stage_progress_pct) day, before any boost offset or preview override —
+  and wired the chamber page to feed it into `mintOptions` instead. On-screen rendering
+  (`day`/`dev`/`budScalars`) is untouched; only what gets minted changed. No change to
+  `mintPlantNFT`/`updatePlantMetadata`/`harvestAtomicGroup` signatures or transaction-building.
+  Tests: `morphology.test.ts` (boost-only, preview-only, and boost+preview-simultaneously cases)
+  + new `chain/algorand/__tests__/plantNFT.test.ts` locking `buildPlantMetadata`'s
+  server-truth contract.
 - 🎮 **Do-not-touch (owner-named, unrelated to this track, restated for visibility):** wallet/funds
   path, staking, claim logic, Algorand production token flows, market purchases (unless required
   for button state), Cup logic (unless required for harvest handoff).
