@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; mint metadata server-truth fix).
+once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; chamber ambient glow layer Phase 1 (DOM-only); mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -212,6 +212,37 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   architecture ones, and are out of this round's scope. Round 5's architecture (single-leader
   `colaTops` count=1, taper) is untouched and confirmed intact by the same cross-strain spot-check
   above.
+- 🎮 ✅ **Chamber ambient glow layer — Phase 1, DOM/CSS only (2026-07-03, PR pending)** — new
+  `web/src/components/plant/BoostAmbientLayer.tsx`, mounted as a sibling of `PlantReactionLayer`
+  in the chamber stage (`chamber/page.tsx`). Zero `chamberCore.ts` edits — deliberately scoped
+  around the two concurrent cola-construction branches (`design/cola-construction-layers`,
+  `design/cola-construction-structure`) that are mid-flight on that file's bud-drawing functions,
+  so this ships as a pure overlay with no collision surface. Three pieces: (a) a static
+  rim/backlight bloom behind the plant column, always on (not boost-gated) — `mix-blend-mode:
+  screen` because the chamber canvas is fully opaque, so a CSS drop-shadow can't bleed through it
+  but a screen-blended radial gradient can; (b) a boost-tinted ring pulse over the floor-ring
+  band (reuses the `gpe-react-aura` keyframe looped instead of its one-shot class), visible only
+  while `useBoostStore`'s `activeBoost` is set and unexpired; (c) drifting sparkle bokeh
+  (reuses `gpe-arcade-particle`'s `--angle`/`--dist`/`--dur` custom props, looped + alternated,
+  capped at 8 particles), tinted from `BOOST_COLORS`. All new animated classes
+  (`gpe-glow-ring-pulse`, `gpe-glow-sparkle`) added to the `prefers-reduced-motion` kill-switch in
+  `globals.css`; reduced motion collapses the ring to a static `gpe-glow-ring-static` glow and
+  drops the sparkles, the rim bloom stays (per spec, it's meant to read as static ambience either
+  way). Verified live: mobile (390×844) portrait stacks the action-tile bar directly over the
+  canvas's `floorY` band (chamberCore's `cap.floorY = cap.y + cap.h*0.875`), so the ring is tuned
+  to `bottom-[13%]` of the stage rather than a naive `bottom-[6%]` (which landed the glow fully
+  behind the opaque WATER/FEED/… tiles) — it now reads as a warm glow at the base of the canopy,
+  above the tile row; desktop's landscape split (dedicated stage column, no tile overlay) reads
+  cleanly at the same offset. Evidence screenshots at `e2e-output/glow-layer-idle.png` /
+  `glow-layer-boosted.png` (mobile, gitignored — not committed) plus per-viewport idle/boosted
+  shots at 390×844 and 1440×900 during iteration (3 look-compare-adjust rounds: initial mount →
+  ring found buried under the action tiles and repositioned → reduced-motion collapse verified
+  via a `reducedMotion: 'reduce'` Playwright context). Gates: `tsc --noEmit` clean, `next lint` 0
+  errors, vitest 463/463 (no new/changed pinned values), `npm run build` clean, `care-loop-shot`
+  4/4 green unmodified. **Phase 2 (queued, not started): in-canvas ring/soil glow modulation in
+  `chamberCore.ts` itself** (matching the reference image's radiating tech-ring spokes more
+  directly than a DOM overlay can) — intentionally deferred until the two cola-construction
+  branches land, to avoid a three-way collision on the same file's draw functions.
 - 🎮 ✅ **Top cola construction v2 — structure-first (2026-07-03, "GroVerse Anatomy & Construction
   Guide" reference set — Top Cola / Pistil Hair / Top Cola Tip / Bract-Calyx Scale breakdowns)** —
   branched from round 6's commit (`9f98c9e`; round 5's single-leader cone architecture + round 6's
