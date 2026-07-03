@@ -7,7 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
-import { ChamberActionBar, ChamberPanel } from "@/components/plant/ChamberDock";
+import { ChamberActionBar, ChamberPanel, BoostsInline } from "@/components/plant/ChamberDock";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { useGrowthBoost } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
@@ -120,18 +120,18 @@ function NudgeBtn({
   );
 }
 
-function ReadoutCard({ k, v, unit, alert }: { k: string; v: string | number; unit?: string; alert?: boolean }) {
+function HudChip({ k, v, unit, alert }: { k: string; v: string | number; unit?: string; alert?: boolean }) {
   return (
     <div
-      className={`flex min-w-[92px] items-center gap-2 rounded-xl border px-2.5 py-1.5 font-mono backdrop-blur sm:min-w-[104px] ${
-        alert ? "border-orange-500/60 bg-orange-500/10" : "border-cyan-400/30 bg-cyan-400/[0.06]"
+      className={`flex flex-none flex-col items-center rounded-lg border px-2 py-0.5 font-mono backdrop-blur ${
+        alert ? "border-orange-500/60 bg-orange-500/10" : "border-cyan-400/25 bg-[#08141e]/60"
       }`}
     >
-      <span className="text-[10px] tracking-[0.14em] text-cyan-200/70">{k}</span>
-      <span className={`ml-auto text-sm font-bold ${alert ? "text-orange-300" : "text-white"}`}>
+      <span className={`text-[12px] font-bold leading-tight ${alert ? "text-orange-300" : "text-white"}`}>
         {v}
-        {unit && <span className="text-[10px] text-cyan-200/60">{unit}</span>}
+        {unit && <span className="text-[9px] text-cyan-200/60">{unit}</span>}
       </span>
+      <span className="text-[7px] tracking-[0.14em] text-cyan-200/60">{k}</span>
     </div>
   );
 }
@@ -431,15 +431,18 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         />
         {/* the plant's visible response to care taps (water/feed/prune/train…) */}
         <PlantReactionLayer />
-        <div className="pointer-events-none absolute left-2.5 top-2.5 rounded-lg border border-cyan-400/40 bg-[#08141e]/70 px-2.5 py-1.5 font-mono text-[11px] tracking-wide backdrop-blur">
-          {strain?.name ?? "Plant"} · {titleCase(renderStage)}
-          {previewing && <span className="text-grow-300"> · preview</span>}
-        </div>
-        <div className="pointer-events-none absolute right-2 top-2 flex flex-col gap-1.5">
-          <ReadoutCard k="TO HARVEST" v={harvestDays ?? "—"} unit="d" />
-          <ReadoutCard k="TEMP" v={climate.temperature} unit="°C" alert={Math.abs(climate.temperature - 24) > 5} />
-          <ReadoutCard k="HUM" v={climate.humidity} unit="%" alert={Math.abs(climate.humidity - 50) > 15} />
-          <ReadoutCard k="CO₂" v={climate.co2_level} />
+        {/* Compact top HUD — strain + the four key stats in one strip (design
+            punch list item 1). Deeper detail stays on the CLIMATE tab. */}
+        <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center gap-1.5 overflow-x-auto">
+          <span className="flex-none rounded-lg border border-cyan-400/40 bg-[#08141e]/70 px-2 py-1 font-mono text-[10px] tracking-wide backdrop-blur">
+            {strain?.name ?? "Plant"} · {titleCase(renderStage)}
+            {previewing && <span className="text-grow-300"> · preview</span>}
+          </span>
+          <span className="flex-1" />
+          <HudChip k="TO HARVEST" v={harvestDays ?? "—"} unit="d" />
+          <HudChip k="TEMP" v={climate.temperature} unit="°C" alert={Math.abs(climate.temperature - 24) > 5} />
+          <HudChip k="HUM" v={climate.humidity} unit="%" alert={Math.abs(climate.humidity - 50) > 15} />
+          <HudChip k="CO₂" v={climate.co2_level} />
         </div>
         {/* ⚡ Growth-boost surge — electric flash + bolt over the stage on success. */}
         {boostFlash && (
@@ -584,6 +587,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         {tab === "grow" && (
           <div className="space-y-2">
             <ChamberPanel plant={plant} strain={strain} />
+            {!ended && <BoostsInline />}
             {/* Purchasable growth boost — fast-forward + revive for in-game GROW.
                 Cost mirrors balance.yaml simulation.actions.growth_boost.cost.
                 Hidden at the harvest window: the server rejects it (nothing left

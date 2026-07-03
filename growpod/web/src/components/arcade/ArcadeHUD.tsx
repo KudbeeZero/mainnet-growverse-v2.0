@@ -17,6 +17,7 @@ import {
   BOOST_COLORS,
   BOOST_ICONS,
   BOOST_TYPES,
+  OPEN_BOOST_TRAY_EVENT,
   type BoostType,
 } from "@/lib/arcade/boostEngine";
 import { useRewindStore } from "@/lib/arcade/timeRewind";
@@ -53,6 +54,11 @@ export function ArcadeHUD({
   // Quick tool tray, not a room: collapsed to a slim pill until the player
   // opens it, and it re-collapses right after a boost is applied.
   const [collapsed, setCollapsed] = useState(true);
+  useEffect(() => {
+    const open = () => setCollapsed(false);
+    window.addEventListener(OPEN_BOOST_TRAY_EVENT, open);
+    return () => window.removeEventListener(OPEN_BOOST_TRAY_EVENT, open);
+  }, []);
   // A coarse tick forces re-render so rings/countdowns advance.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -126,19 +132,10 @@ export function ArcadeHUD({
       {/* Optional Phase-2 chain row. */}
       {chainSlot && <div className="pointer-events-auto w-full max-w-md">{chainSlot}</div>}
 
-      {/* Collapsed: a slim pill — quick tool tray, not a room. */}
-      {collapsed ? (
-        <button
-          onClick={() => setCollapsed(false)}
-          aria-label="Open boosts tray"
-          aria-expanded={false}
-          className="pointer-events-auto flex min-h-[40px] items-center gap-1.5 self-start rounded-full border border-cyan-400/30 bg-[#08141e]/85 px-3.5 py-1.5 font-mono text-[11px] font-bold text-cyan-100 shadow-lg backdrop-blur hover:border-cyan-300/60"
-          style={mult > 1 ? { boxShadow: "0 0 14px rgba(118,192,36,0.4)", borderColor: "rgba(118,192,36,0.6)" } : undefined}
-        >
-          ⚡ Boosts <span className={mult > 1 ? "text-grow-300" : "text-white/70"}>{fmtMult(mult)}</span>
-          {boostRemaining > 0 && <span className="text-[9px] text-grow-300/80">· active</span>}
-        </button>
-      ) : (
+      {/* Collapsed: nothing — the inline BOOSTS section in the sheet is the
+          entry point (design punch list item 2); it dispatches
+          OPEN_BOOST_TRAY_EVENT to expand this tray. */}
+      {collapsed ? null : (
       <div className="pointer-events-auto flex w-full max-w-sm flex-col gap-2 rounded-2xl border border-cyan-400/30 bg-[#08141e]/90 p-2.5 shadow-lg backdrop-blur">
         {/* Top row: grow-speed readout + active boost countdown + dismiss. */}
         <div className="flex items-center gap-2">
