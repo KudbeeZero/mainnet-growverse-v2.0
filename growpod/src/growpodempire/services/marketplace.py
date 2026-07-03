@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 from ..chain.factory import shared_provider
 from ..chain.provider import ChainError
 from ..db.models import NFTAsset, NFTListing, NFTTrade, LedgerEntry, Player
-from ..services.ledger import LedgerService
 
 
 class MarketplaceError(Exception):
@@ -26,7 +25,6 @@ class MarketplaceError(Exception):
 class MarketplaceService:
     def __init__(self, session: Session):
         self.session = session
-        self.ledger = LedgerService(session)
 
     def create_listing(
         self,
