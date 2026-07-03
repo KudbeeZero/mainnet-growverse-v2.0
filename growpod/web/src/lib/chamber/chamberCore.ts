@@ -2380,6 +2380,25 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         endX, endY,
       );
       ctx!.stroke();
+      // Plant rework pass 5 (owner blueprint: "increase material definition";
+      // "branches visibly support each bud"). A thin lighter rim along the top of
+      // each branch so it reads as a rounded, lit supporting branch instead of a
+      // flat line — the visible support structure the blueprint repeatedly asks
+      // for. Same bezier, offset up by the rim width. Additive, draw-path only.
+      {
+        const rw = clamp(sw0 * 0.28 * (1 - nd.f * 0.26), 0.9, 2.4);
+        const ro = rw * 0.5 + 0.6;
+        ctx!.strokeStyle = `hsl(${S.hue - 6}, 42%, ${clamp(48 + nd.litAdj, 30, 64)}%)`;
+        ctx!.lineWidth = rw;
+        ctx!.beginPath();
+        ctx!.moveTo(0, -ro);
+        ctx!.bezierCurveTo(
+          nd.tipX * 0.35, nd.tipY * 0.4 - nd.len * nd.curve - ro,
+          nd.tipX * 0.72, nd.tipY * 0.7 - nd.len * nd.curve * 0.4 + sag * 0.5 - ro,
+          endX, endY - ro,
+        );
+        ctx!.stroke();
+      }
       ctx!.save();
       ctx!.translate(endX, endY);
       // Engine 4: roll the fan a touch per node and yaw it by the branch azimuth
