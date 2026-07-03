@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; mint metadata server-truth fix; Lab 3D bud viewer reference prototype (owner-authored Three.js grow chamber) saved to docs/prototypes/ with the furrier-pistils / denser-trichomes / more-lighting punch list — parked under the 3D freeze).
+once they appear here. Last reconciled: **2026-07-03** (plant mockup round 8 — airier, more-separated candelabra branch layout in chamberCore.ts matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; mint metadata server-truth fix; Lab 3D bud viewer reference prototype (owner-authored Three.js grow chamber) saved to docs/prototypes/ with the furrier-pistils / denser-trichomes / more-lighting punch list — parked under the 3D freeze).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -229,6 +229,36 @@ once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boos
   architecture ones, and are out of this round's scope. Round 5's architecture (single-leader
   `colaTops` count=1, taper) is untouched and confirmed intact by the same cross-strain spot-check
   above.
+- 🎮 ✅ **Plant mockup round 8 — airier separated candelabra (2026-07-03, owner "10/10" hero
+  render)** — whole-plant branch-LAYOUT pass in `chamberCore.ts` only (no `strainVisuals`/
+  `apicalDominance`/`morphology` value changes, so no pinned test touched). The owner's new hero
+  render reverses the round-2..7 density push: it wants FEWER, more-separated colas fanning OUT
+  from the spine with visible dark air between each distinct spear — not the solid fir-tree mass
+  the live plant had become. This is the direct fix for the "separated spiky fingers vs fused
+  mass" tension rounds 5/6 flagged as out-of-scope (branch spacing / whole-plant layout) — but
+  toward SEPARATION, not fusion, per the hero. Six `buildPlant` levers: (1) flowering node pack
+  1.42→1.16 + hard cap 20→16 (more vertical gap between tiers); (2) branch length base 0.27→0.31
+  with a lifted apex floor `(0.24+0.76·low)`→`(0.30+0.70·low)` (colas held further OUT); (3)
+  `apexSplay` band starts lower/wider (`f-0.58/0.30`→`f-0.46/0.36`) so more upper side branches
+  fan out, not just the top 2-3; (4) apex-splay spread reach 1.25→1.5×; (5) branch tilt base
+  0.92→0.98, splay tilt term 0.17→0.28, skirt tilt 1.12→1.18× (branches angle away from
+  vertical, carrying colas off the spine); (6) cone-reach clamp opened `lerp(0.1,0.5·spread)`→
+  `lerp(0.14,0.62·spread)` so the longer branches aren't clipped back. Plus the interior
+  de-clutter: the stem-hugging node-intersection bud (round 3's "near-zero empty interior"
+  filler) gate raised `0.24`→`0.5` so only upper nodes carry one — the lower/mid interior opens
+  to dark air + fan leaves, letting branch-tip colas read as distinct separated spears. Foliage
+  (skirt/inner/node fans) untouched, so the plant stays leaf-full/airy, not bare. Verified with a
+  headless mock-API Playwright render (full chamber, `late_flower`) of Purple Diddy Punch
+  (multi-cola), G13 (single green spear) and Gelato (single purple-dessert spear) — all three now
+  read as an airy separated candelabra with a dominant apex and clear dark gaps between distinct
+  colas, matching the hero; single-dominant-apex preserved. Gates: `tsc --noEmit` clean, `next
+  lint` 0 new errors, vitest 472/472 (no pinned values needed updating), `npm run build` clean,
+  `care-loop-shot.spec.ts` 4/4 green. **Honest self-score: 8.5/10** — the airier separated
+  candelabra + held-out colas is a genuine, verified match to the hero's spacing over the prior
+  dense-fir read. Remaining gaps (out of this layout round's scope): individual cola shape/width
+  and the pistil/frost texture (a parallel specialist owns those in the same file); indica/sativa
+  height-spread widening (indica ~½ sativa height) was left untouched — a `morphology.ts`
+  archetype change, deferred as not needed for the spacing fix.
 - 🎮 ✅ **Chamber ambient glow layer — Phase 1, DOM/CSS only (2026-07-03, PR pending)** — new
   `web/src/components/plant/BoostAmbientLayer.tsx`, mounted as a sibling of `PlantReactionLayer`
   in the chamber stage (`chamber/page.tsx`). Zero `chamberCore.ts` edits — deliberately scoped
