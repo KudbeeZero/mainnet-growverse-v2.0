@@ -4,11 +4,9 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-07-02 · **By:** the handoff-audit session (baton catch-up + Blue Dream
-round 4; see `docs/audits/PR-110-global-learning-memory-blue-dream-r3.md` for the catch-up audit).
-**Active branch:** `claude/project-onboarding-review-vpx0aj` — open PR awaiting owner review/audit.
-**`main`:** PR #110 merge — CI green (backend + web checks both `success`); this session's PR not
-yet merged.
+**Last rewritten:** 2026-07-03 · **By:** the PR #137 session (multi-slice hardening + feature batch).
+**Active branch:** `claude/research-pr-review-1whd6v` — **open PR #137**, CI green on each push.
+**`main`:** unchanged this session (all work is on #137, not yet merged).
 **Production:** `growverse-api` on Fly is LIVE on current code (verified 2026-07-02: bio-101 +
 factions flag present, `/health` OK, lecture audio cache-hit **and** the Haiku adaptive-thinking
 fallback is live — see Incident below). Deploys are AUTOMATIC on merge
@@ -18,6 +16,27 @@ from `main`.
 > **Owner rule in force: ONE active PR at a time.** Queue further units here, don't open them.
 
 ---
+
+## What shipped 2026-07-03 (PR #137, this session — all on one branch)
+
+A large hardening + feature batch (all gate-green, CI green each push):
+1. **Whole-web crash hardening** — a route-wide client-exception sweep found the
+   "unexpected API shape white-screens the page" class in 5 pages (`/university`,
+   `/lab/strains/[id]`, `/university/learner`, `/admin/economy`, plus the
+   `/plants/:id/events` fixture crash). All fixed with shape guards; locked in by
+   a permanent `web/e2e/route-crash-sweep.spec.ts` (29 routes, 0 crashes now).
+2. **Mobile** — fixed the chamber HUD CO₂ chip clipping off a 390px screen
+   (the "text off the screen" report); verified overflow clean across all routes.
+3. **React #418** hydration errors (every page) fixed at the footer build-stamp.
+4. **Store** — panelized/tiled look (owner request) + fixed a bogus "undefined —
+   Seasonal genetics" card.
+5. **Consumables "use item"** wired — owned consumables are finally usable on a
+   plant (`POST .../apply`), the missing half of the store loop. No ledger touch.
+6. **Pod-recycle + particle fixes** (earlier in the session, see BACKLOG).
+7. **Memory/process** — resolved committed git conflict markers in `BACKLOG.md`
+   and added `check_memory.py` check #6 (conflict-marker gate); retired 12
+   verified-dead web files (Command Center / FTUE supersessions); corrected a
+   stale `/contracts` backlog claim; README + this baton refreshed.
 
 ## What shipped 2026-07-02 (PRs #104–#110)
 
@@ -54,23 +73,30 @@ from `main`.
 
 ## NEXT ACTION (single)
 
-**Owner is choosing the next backlog unit this session** (options on the table: Blue Dream
-round 4 renderer polish per the owner's reaction to round 3; the HERMES University wiring
-audit; the security follow-ups queued from PR #104; or Global Learning Memory design/11 P1
-build). Whichever is picked, scope it to the backlog's stated bounds before writing code — see
-`docs/memory/BACKLOG.md` for each item's detail. Off-limits unless separately approved: economy
-values, treasury paths, settlement deposit/withdraw.
+**Two owner-directed threads are open on #137 and need a decision or a build:**
+1. **Onboarding rework (owner, 2026-07-03):** "it's too long, not exciting, doesn't really work —
+   set up some sort of onboarding with AI helping along the way." The AI advisor (Master Grower)
+   already exists on the dashboard, plant detail, FTUE (per-step coaching) and University — it's
+   wired, just not prominent, and needs the advisor key in prod. Current onboarding = a 4-beat
+   cinematic landing (`/onboarding`) + a 7-step FTUE (`/ftue`). Needs a shorter, AI-guided
+   first-run — scope/taste to confirm with owner before a big rebuild.
+2. **Plant render:** owner says it's not 10/10 (honest self-score ~8). It's under the owner's own
+   "don't chase the macro bud" freeze — needs the owner to name the specific gap (or lift the
+   freeze) before a targeted 2D-chamber round.
+
+Also queued (owner-gated): the 🔴 security launch-blockers (PR #104), gear→sim wiring, economy
+values. Off-limits unless separately approved: economy values, treasury paths, settlement
+deposit/withdraw.
 
 ## Verification split
 
-- **Agent-verified (test-backed, this session):** `make lint` clean, `make check-memory` green
-  (33 files), web `typecheck`/`lint` clean on a fresh `npm ci`; backend `make test` re-run in
-  progress (results pending at time of this baton rewrite — confirm before trusting a red/green
-  claim beyond PR #110's own CI, which was green: backend + web jobs both `success`).
-- **Device-verify (owner):** growverse.dev in a browser — grow room shows the procedural
-  plant; HERMES catalog renders school sections; lecture audio plays; Blue Dream round 3 render
-  reaction (round 4 go/no-go). Optional one-tap: GitHub → Settings → "Automatically delete head
-  branches" (INCIDENTS.md branch entry).
+- **Agent-verified (test-backed, this session):** web `typecheck`/`lint` clean, `vitest` 480
+  passing (54 files), `next build` clean, Playwright e2e 53 passing (2 skipped) incl. the new
+  route-crash net; `make check-memory` green (34 files). Every #137 push's CI (backend + web
+  jobs) came back `success`.
+- **Device-verify (owner):** growverse.dev in a browser — the store's new panel look; a harvested
+  pod's Clean & recycle; owned consumables appearing under a plant's Care as "Items"; the mobile
+  chamber HUD (all 4 stat chips on-screen at phone width); and the plant render (the 10/10 call).
 
 ## OPEN RISKS (carried)
 

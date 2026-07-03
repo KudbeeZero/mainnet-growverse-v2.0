@@ -29,7 +29,7 @@ where your rarest strains become NFTs.
 ![Status](https://img.shields.io/badge/STATUS-IN__ORBIT-22C55E?style=for-the-badge&labelColor=0B0E2C)
 ![Phase](https://img.shields.io/badge/BUILD-Core__Loop__Launch__Track-7C3AED?style=for-the-badge&labelColor=0B0E2C)
 ![Backend](https://img.shields.io/badge/BACKEND-108_test_files_·_cov_gate_79%25-22C55E?style=for-the-badge&labelColor=0B0E2C)
-![Web](https://img.shields.io/badge/WEB_TESTS-478_passing-22C55E?style=for-the-badge&labelColor=0B0E2C)
+![Web](https://img.shields.io/badge/WEB_TESTS-480_passing-22C55E?style=for-the-badge&labelColor=0B0E2C)
 ![Chain](https://img.shields.io/badge/ALGORAND-TestNet-000000?style=for-the-badge&labelColor=0B0E2C)
 ![License](https://img.shields.io/badge/LICENSE-MIT-FACC15?style=for-the-badge&labelColor=0B0E2C)
 
@@ -191,8 +191,12 @@ But cultivation is only the engine. The **game** is the loop around it:
 
 ### 🔨 In progress / parked (honestly labeled)
 
-- **Store restructure** — the Store sells consumables, but the "use item" flow
-  (`POST …/plants/<id>/apply`) isn't wired into the UI yet.
+- **Store visual identity** — the Store now renders as consistent panels/tiles
+  and owned consumables are usable on a plant (the "use item" flow,
+  `POST …/plants/<id>/apply`, is wired into the plant's Care area). A deeper
+  bespoke-art redesign remains an open owner-taste call.
+- **Onboarding** — the FTUE guided first grow + the cinematic landing work, but
+  a shorter, more AI-guided first-run experience is a tracked rework.
 - **Algorand real-value settlement** — minting runs in **simulate mode** by
   default; production token flows and the non-custodial wallet path are on the
   backlog. The fiat payment rail is parked by owner decision (launch liquidity
@@ -272,7 +276,7 @@ make check-memory      # memory-layer integrity (links, ✅ citations, structure
 make check-migrations  # Alembic graph must have exactly one head
 
 cd web
-npx vitest run         # 478 unit tests across 54 files
+npx vitest run         # 480 unit tests across 54 files
 npx playwright test    # e2e + the screenshot capture harness
 ```
 
