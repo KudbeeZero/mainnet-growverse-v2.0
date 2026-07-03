@@ -492,6 +492,7 @@ def plant_seed(player_id):
 
 # ----- Breeding ----------------------------------------------------------
 @game_bp.post("/players/<player_id>/breed")
+@require_feature("breeding_lab")
 @require_player
 def breed(player_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -679,6 +680,7 @@ def apply_consumable(player_id, plant_id):
 
 # ----- Simulation (real-time grow) ---------------------------------------
 @game_bp.get("/players/<player_id>/plants/<plant_id>/state")
+@require_feature("grow_chamber")
 @require_player
 def plant_state(player_id, plant_id):
     """Return the plant's live simulated state (runs catch-up first)."""
@@ -697,6 +699,7 @@ def plant_state(player_id, plant_id):
 
 
 @game_bp.get("/players/<player_id>/plants/<plant_id>/advisor")
+@require_feature("master_grower_advisor")
 @require_player
 @limiter.limit("20 per minute")
 def plant_advisor(player_id, plant_id):
@@ -721,6 +724,7 @@ def plant_advisor(player_id, plant_id):
 
 
 @game_bp.get("/players/<player_id>/ftue/status")
+@require_feature("ftue_tutorial")
 @require_player
 def ftue_status(player_id):
     """Current first-time-tutorial step + the tutorial plant (if any)."""
@@ -734,6 +738,7 @@ def ftue_status(player_id):
 
 
 @game_bp.get("/players/<player_id>/ftue/coaching/<step>")
+@require_feature("ftue_tutorial")
 @require_player
 def ftue_coaching(player_id, step):
     """The Master Grower's scripted coaching for a tutorial step (deterministic)."""
@@ -748,6 +753,7 @@ def ftue_coaching(player_id, step):
 
 
 @game_bp.post("/players/<player_id>/ftue/advance")
+@require_feature("ftue_tutorial")
 @require_player
 @limiter.limit("60 per minute")
 def ftue_advance(player_id):
@@ -1090,6 +1096,7 @@ def player_profile(player_id):
 
 # ----- Progression: daily stipend & achievements -------------------------
 @game_bp.post("/players/<player_id>/daily")
+@require_feature("daily_stipend")
 @require_player
 @limiter.limit("30 per hour")
 def claim_daily(player_id):

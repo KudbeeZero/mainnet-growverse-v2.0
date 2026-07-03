@@ -41,6 +41,18 @@ def client(db):
 # irrelevant for the disabled path; we send a minimal valid-shaped JSON where the
 # method is a write so request parsing isn't what differs.
 GATED_ROUTES = [
+    # ----- ftue tutorial -----
+    ("ftue_tutorial", "GET", "/api/game/players/p1/ftue/status"),
+    ("ftue_tutorial", "GET", "/api/game/players/p1/ftue/coaching/water"),
+    ("ftue_tutorial", "POST", "/api/game/players/p1/ftue/advance"),
+    # ----- grow chamber (whole-plant live-state view) -----
+    ("grow_chamber", "GET", "/api/game/players/p1/plants/PL1/state"),
+    # ----- master grower AI advisor -----
+    ("master_grower_advisor", "GET", "/api/game/players/p1/plants/PL1/advisor"),
+    # ----- breeding lab -----
+    ("breeding_lab", "POST", "/api/game/players/p1/breed"),
+    # ----- daily stipend faucet -----
+    ("daily_stipend", "POST", "/api/game/players/p1/daily"),
     # ----- marketplace -----
     ("marketplace", "GET", "/api/game/market"),
     ("marketplace", "POST", "/api/game/players/p1/market/list"),
