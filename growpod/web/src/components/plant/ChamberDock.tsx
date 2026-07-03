@@ -14,7 +14,7 @@
  *   actions, tappable) + Plant Insights (health, trichomes, top cola, aroma).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCareActions } from "@/hooks/useCareActions";
 import { useCareFeedback } from "./CareFeedback";
@@ -22,6 +22,7 @@ import type { CareKind } from "./careFeedbackData";
 import { dispatchCareReaction } from "./careReactionsData";
 import { careAvailability, formatSinceUsed } from "@/lib/careAvailability";
 import { buildTodaysPlan, URGENCY_LABEL, type PlanUrgency } from "@/lib/todaysPlan";
+import { useBoostStore, BOOST_CONFIG, OPEN_BOOST_TRAY_EVENT } from "@/lib/arcade/boostEngine";
 import type { PlantState, Strain } from "@/lib/types";
 
 type BarKind = Exclude<CareKind, "harvest" | "treatPests" | "treatDisease">;
@@ -192,35 +193,126 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
       {/* PLANT INSIGHTS */}
       <div className="rounded-xl border border-[#1c3447] bg-[#0d1d2b] p-2.5">
         <h3 className="mb-1.5 text-[10px] font-extrabold tracking-[0.18em] text-cyan-300">PLANT INSIGHTS</h3>
-        <dl className="space-y-1.5 text-[11px]">
-          <div className="flex items-center justify-between">
-            <dt className="text-[#7fa9bf]">🌸 Top cola</dt>
-            <dd className="font-bold text-grow-200">{topCola}</dd>
-          </div>
-          {tr?.active && (
-            <div className="flex items-center justify-between">
-              <dt className="text-[#7fa9bf]">❄️ Trichomes</dt>
-              <dd className="font-mono text-[10px] text-gray-200">
-                {Math.round(tr.cloudy_pct)}% Cloudy · {Math.round(tr.amber_pct)}% Amber
-              </dd>
-            </div>
-          )}
-          {strain?.terpenes && strain.terpenes.length > 0 && (
-            <div className="flex items-center justify-between gap-2">
-              <dt className="flex-none text-[#7fa9bf]">👃 Aroma</dt>
-              <dd className="truncate text-right text-[10px] capitalize text-gray-300">{strain.terpenes.slice(0, 3).join(" · ")}</dd>
-            </div>
-          )}
-          <div className="flex items-center justify-between">
-            <dt className="text-[#7fa9bf]">❤️ Health</dt>
-            <dd className={`font-mono font-bold ${plant.health >= 70 ? "text-grow-300" : plant.health >= 40 ? "text-amber-300" : "text-red-400"}`}>
-              {Math.round(plant.health)}%
-            </dd>
-          </div>
-        </dl>
+        {/* 4-chip glanceable row (design punch list item 3): honest fallbacks,
+            no dense paragraphs. Deeper science stays on Inspect / the journal. */}
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          <InsightChip icon="🌸" label="Top cola" value={topCola} strong={topCola === "Strong"} />
+          <InsightChip
+            icon="❤️"
+            label="Health"
+            value={`${Math.round(plant.health)}%`}
+            strong={plant.health >= 70}
+            warn={plant.health < 40}
+          />
+          <InsightChip
+            icon="👃"
+            label="Aroma"
+            value={strain?.terpenes?.length ? strain.terpenes[0] : "Not scanned"}
+            cap
+          />
+          <InsightChip
+            icon="❄️"
+            label="Trichomes"
+            value={tr?.active ? `${Math.round(tr.cloudy_pct)}% cloudy · ${Math.round(tr.amber_pct)}% amber` : "Not yet"}
+          />
+        </div>
         <Link href={`/dashboard/plants/${plant.id}#journal`} className="mt-2 block text-[10px] font-semibold text-cyan-300 hover:underline">
           📓 Open journal →
         </Link>
+      </div>
+    </div>
+  );
+}
+
+function InsightChip({
+  icon,
+  label,
+  value,
+  strong,
+  warn,
+  cap,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  strong?: boolean;
+  warn?: boolean;
+  cap?: boolean;
+}) {
+  return (
+    <div className="flex min-h-[46px] flex-col justify-center rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1">
+      <span className="text-[9px] text-[#7fa9bf]">
+        {icon} {label}
+      </span>
+      <span
+        className={`truncate text-[11px] font-bold ${cap ? "capitalize" : ""} ${
+          warn ? "text-red-400" : strong ? "text-grow-300" : "text-gray-100"
+        }`}
+        title={value}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Inline BOOSTS section (design punch list item 2) — compact status row in the
+ * GROW sheet: live multiplier, the active boost's remaining time, and one
+ * "Add Boost" action that expands the in-scene quick tray (ArcadeHUD) via
+ * OPEN_BOOST_TRAY_EVENT. Reads the existing boostEngine store only — no new
+ * boost economy.
+ */
+export function BoostsInline() {
+  const activeBoost = useBoostStore((s) => s.activeBoost);
+  const boostExpiresAt = useBoostStore((s) => s.boostExpiresAt);
+  const getMultiplier = useBoostStore((s) => s.getMultiplier);
+  // 1s tick keeps the countdown honest while a boost runs.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!activeBoost) return;
+    const id = window.setInterval(() => setTick((t) => t + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [activeBoost]);
+
+  const now = Date.now();
+  const remaining = activeBoost && boostExpiresAt > now ? boostExpiresAt - now : 0;
+  const total = activeBoost ? BOOST_CONFIG[activeBoost].durationMs : 1;
+  const mult = getMultiplier();
+  const active = remaining > 0 && activeBoost;
+
+  return (
+    <div className="rounded-xl border border-[#1c3447] bg-[#0d1d2b] p-2.5">
+      <div className="mb-1.5 flex items-center justify-between">
+        <h3 className="text-[10px] font-extrabold tracking-[0.18em] text-amber-200">
+          BOOSTS{active ? " · 1 active" : ""}
+        </h3>
+        <span className={`font-mono text-[11px] font-bold ${mult > 1 ? "text-grow-300" : "text-white/60"}`}>
+          🌿 {mult}×
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        {active ? (
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold text-gray-100">
+              {BOOST_CONFIG[activeBoost].label} · {Math.ceil(remaining / 60_000)}m left
+            </p>
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#11212e]">
+              <div
+                className="h-full rounded-full bg-grow-400 transition-[width] duration-1000"
+                style={{ width: `${(remaining / total) * 100}%` }}
+              />
+            </div>
+          </div>
+        ) : (
+          <p className="flex-1 text-[10px] text-[#7fa9bf]">No boost active — speed up the grow.</p>
+        )}
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_BOOST_TRAY_EVENT))}
+          className="flex min-h-[36px] flex-none items-center gap-1 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 text-[11px] font-bold text-amber-100 hover:bg-amber-300/20"
+        >
+          ⚡ Add Boost
+        </button>
       </div>
     </div>
   );

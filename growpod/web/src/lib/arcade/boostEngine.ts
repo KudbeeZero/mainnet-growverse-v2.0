@@ -150,3 +150,7 @@ export const useBoostStore = create<BoostState>((set, get) => ({
 export function getBoostMultiplier(): number {
   return useBoostStore.getState().getMultiplier();
 }
+
+/** Window event asking the chamber's quick tray (ArcadeHUD) to expand —
+ *  dispatched by the inline BOOSTS section's "Add Boost" button. */
+export const OPEN_BOOST_TRAY_EVENT = "gpe:open-boost-tray";
