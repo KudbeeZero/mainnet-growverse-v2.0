@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos — in the parallel lane, supersedes round 5's color read; round 4 superseded, see below).
+once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos — in the parallel lane, supersedes round 5's color read; top cola construction v2 — structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) builds on round 6 in the same parallel lane, a sibling layer-order-first attempt is on `design/cola-construction-layers`; round 4 superseded, see below).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -212,6 +212,52 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   architecture ones, and are out of this round's scope. Round 5's architecture (single-leader
   `colaTops` count=1, taper) is untouched and confirmed intact by the same cross-strain spot-check
   above.
+- 🎮 ✅ **Top cola construction v2 — structure-first (2026-07-03, "GroVerse Anatomy & Construction
+  Guide" reference set — Top Cola / Pistil Hair / Top Cola Tip / Bract-Calyx Scale breakdowns)** —
+  branched from round 6's commit (`9f98c9e`; round 5's single-leader cone architecture + round 6's
+  purple-dominant color are inherited, not redone). Round 6 flagged the remaining gap as "spiky
+  stacked-pod look, not the references' smooth fused diamond-bract silhouette" — this round
+  targets exactly that, scoped to `chamberCore.ts`'s flower-site build/draw functions only. (1)
+  **Bract shape** — `podPath` rewritten from a wide rounded bulb to a pointed elongated
+  teardrop/diamond (narrow base → shoulder ~30% up → sharp needle tip at `-0.86h`), the
+  single highest-leverage change per the reference's "pointed scales, not round berries" goal;
+  `drawPod` gained a faint tip-to-base ridge/vein overlay + a per-bract axial brighten (muted at
+  the base, saturated glow at the tip) for non-flat surface read. (2) **Shingle overlap** — the
+  per-cluster paint loop now iterates tip-to-base instead of base-to-tip (`shingleOrder`), so each
+  lower tier's bracts lay forward over the base of the tier above (roof-shingle read); bract
+  height bumped 1.6→1.85× width to close the dark chamber-background valleys the sharper tip
+  shape initially opened between tiers (verified via cropped screenshot iteration, not asserted).
+  (3) **Purple gradient** — round 6's per-pod colour was a coin-flip between two flat hues
+  (probability-gated by tip position); replaced with a continuous `tipBlend` driven by the pod's
+  tier position, blended in RGB space (`blendHueSat`, new pure helper) rather than HSL hue-degree
+  space — direct hue-angle interpolation swept through a hot saturated red/orange band at ~mid-
+  cola (caught and fixed via the first screenshot round), RGB blending reads as the reference's
+  muted dusty-maroon transition instead. (4) **Pistil hairs** — root points are now grouped
+  per-cluster "seams" (2-4 shared anchors, not one independent random root per hair), density
+  scales with tier position (`tierDensity`, denser near the tip), and the filament is a filled
+  tapered wedge (thick root → fine tip) instead of a constant-width stroke. (5) **Sugar leaves**
+  shrunk/narrowed (2 thin blades vs. the old 3-blade near-full fan) per "small narrow leaves
+  between clusters, not fan leaves." (6) **Frost** anchored to a specific pod's tip/ridge
+  (deterministic pick from the spark's angle) instead of a free polar offset from the cluster
+  centre, and the hard `cl.yf > 0.66` cutoff replaced with a smooth taper so it thins gradually
+  toward the base. Spot-checked G13/White Rhino/Blue Dream (all `accentHue == null` → the new
+  gradient blend is a no-op for them by construction; confirmed visually unchanged aside from the
+  shared structural changes). Gates: `tsc --noEmit` clean, `next lint` 0 errors, vitest 463/463
+  (no pinned values needed updating), `npm run build` clean, `care-loop-shot.spec.ts` 4/4 green
+  via a local playwright config (deleted before commit, not tracked; port 3010 was occupied by a
+  concurrent sibling agent's server on this shared sandbox host, so the local config used 3055
+  instead to avoid colliding with it). **Honest self-score: 7/10** — the bract shape, shingle
+  paint order, RGB-blended gradient, and seam-anchored tapered pistils are genuine, verified fixes
+  directly against the reference breakdowns and close the round-6-flagged gap significantly;
+  remaining shortfalls: (a) node anchor tiers were NOT restructured this round (still the
+  round-5/6 continuous-ish tier spacing, not visually discrete node points) — item 2 of the
+  8-layer guide is only partially addressed; (b) a handful of small dark valleys between tiers
+  persist in places even after the podH increase — "no visible gaps" (bract/calyx reference item
+  3) isn't fully met; (c) trichome frost's anchoring mechanism now correctly follows bract
+  tips/ridges, but its visual weight at chamber scale reads as subtle/light rather than the
+  references' heavy tip frosting — a density/alpha tune, not touched here to stay inside this
+  round's scope. A sibling agent is attempting the same brief with a layer-order-first approach on
+  branch `design/cola-construction-layers` — see that PR for a second read on the same references.
 - 🎮 ✅ **Game-hub restructure — ACTIVE LANE DEFINITION (2026-07-03, owner directive, verbatim
   intent)** — *"There are too many windows. Everything should be accessible from the main game
   page. Don't repeat all of the watering everywhere — have that in ONE spot. Anybody should be
