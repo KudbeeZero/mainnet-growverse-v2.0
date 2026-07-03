@@ -104,6 +104,10 @@ export async function setup(
     // which would substring-shadow sibling endpoints like "/university/catalog".
     // Specs needing real catalog data still override via extraOverrides.
     "/players/p1/university": { player_id: "p1", title: null, departments: {}, courses: [], degrees: [] },
+    // Single-strain detail (`/strains/str1`) — an explicit, longer needle so it
+    // wins over "/strains" (which returns the LIST) and the strain-detail page
+    // gets an object, not an array. Longest-needle-first sorting handles it.
+    "/strains/str1": STRAIN,
     ...extraOverrides,
   };
   await page.route("**/api/game/**", async (route) => {

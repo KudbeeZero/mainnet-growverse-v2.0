@@ -99,7 +99,11 @@ export function RoadmapPanel() {
   const plan = q.data;
   const lead = nextLesson(plan);
   const days = groupStepsByDay(plan);
-  const masteredCount = plan.skipped_mastered.length;
+  // Defensive (matches nextLesson/groupStepsByDay above): a truthy-but-malformed
+  // roadmap response (e.g. an empty array from a 200 with no plan yet) has no
+  // skipped_mastered field — reading .length on undefined white-screened the
+  // whole learner dashboard.
+  const masteredCount = plan.skipped_mastered?.length ?? 0;
 
   return (
     <Card className="space-y-4">

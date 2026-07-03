@@ -60,7 +60,11 @@ function StrainInner({ strainId }: { strainId: string }) {
   });
 
   if (strain.isLoading) return <LoadingBlock label="Loading strain…" />;
-  if (strain.isError || !strain.data)
+  // Guard the SHAPE, not just presence: a malformed/wrong-typed response (e.g. a
+  // list where a single Strain object was expected) is truthy and slips past a
+  // bare `!strain.data`, then white-screens on the first `s.lineage_type`
+  // access. A real Strain always carries a string id — key off that.
+  if (strain.isError || !strain.data || typeof strain.data.id !== "string")
     return <ErrorState error={strain.error} onRetry={() => strain.refetch()} />;
 
   const s = strain.data;
