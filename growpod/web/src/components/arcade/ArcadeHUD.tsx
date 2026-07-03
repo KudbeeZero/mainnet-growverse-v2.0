@@ -10,7 +10,7 @@
 // All state is in-memory (boostStore / rewindStore). No DB, no API, no chain here —
 // the Phase-2 chain row is mounted via the optional `chainSlot`.
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   useBoostStore,
   BOOST_CONFIG,
@@ -42,14 +42,15 @@ export function ArcadeHUD({
   const activeBoost = useBoostStore((s) => s.activeBoost);
   const boostExpiresAt = useBoostStore((s) => s.boostExpiresAt);
   const getMultiplier = useBoostStore((s) => s.getMultiplier);
+  // Per-type cooldown clock — SHARED store state (lifted from a local useRef) so
+  // the quick-boost chips in ChamberDock see the same lockouts as this tray.
+  const cooldownUntil = useBoostStore((s) => s.cooldownUntil);
 
   const snapshots = useRewindStore((s) => s.snapshots);
   const rewindActive = useRewindStore((s) => s.rewindActive);
   const rewindTo = useRewindStore((s) => s.rewindTo);
   const exitRewind = useRewindStore((s) => s.exitRewind);
 
-  // Per-type cooldown clock (local — driven by HUD taps).
-  const cooldownUntil = useRef<Record<string, number>>({});
   const [sheetOpen, setSheetOpen] = useState(false);
   // Quick tool tray, not a room: collapsed to a slim pill until the player
   // opens it, and it re-collapses right after a boost is applied.
@@ -72,11 +73,11 @@ export function ArcadeHUD({
   const boostTotal = activeBoost ? BOOST_CONFIG[activeBoost].durationMs : 1;
 
   function onBoostTap(type: BoostType) {
-    if ((cooldownUntil.current[type] ?? 0) > now) return;
     resumeAudio();
-    applyBoost(type);
+    // The store enforces the cooldown (and the weaker-vs-active rule) and starts
+    // the lockout itself — only a REAL apply gets sound + plant feedback.
+    if (!applyBoost(type)) return;
     playBoostApply();
-    cooldownUntil.current[type] = Date.now() + BOOST_CONFIG[type].cooldownMs;
     // Quick-tray behaviour: close the tray and let the PLANT show the feedback.
     setCollapsed(true);
     dispatchCareReaction("boost");
@@ -175,7 +176,7 @@ export function ArcadeHUD({
         <div className="flex items-stretch gap-1.5">
           {BOOST_TYPES.map((type) => {
             const cfg = BOOST_CONFIG[type];
-            const until = cooldownUntil.current[type] ?? 0;
+            const until = cooldownUntil[type] ?? 0;
             const onCooldown = until > now;
             const cdPct = onCooldown ? ((until - now) / cfg.cooldownMs) * 100 : 0;
             const isActive = activeBoost === type && boostRemaining > 0;

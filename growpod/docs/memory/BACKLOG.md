@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (design polish pass: plant fullness/color, mood chip, quick-boost chips, progress strip, encouragement footer).
+once they appear here. Last reconciled: **2026-07-03** (plant mockup round 2: denser canopy + purple-tipped colas; boost cooldowns lifted into the shared store).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -85,10 +85,30 @@ once they appear here. Last reconciled: **2026-07-03** (design polish pass: plan
 - 🎮 ⬜ **Design punch list — remaining** — care-streak / resin-score stats (later: needs
   backend tracking; no server field exists, and we never invent numbers); (6) ambient
   in-scene care glyphs (floating ✂️/💧/❤️ accents).
-- 🎮 ⬜ **Bud/flower polish notes (owner, future polish — NOT blockers)** — stronger main top
-  cola; cleaner bud silhouette; less noisy pistils; tighter bract clusters; better embedded
-  sugar leaves; subtle trichome sparkle/frost; buds readable at phone size. 2D chamber-engine
-  tuning lane (chamberCore), distinct from the ❄️ frozen 3D lane below.
+- 🎮 ✅ **Plant mockup round 2 (2026-07-03, owner mockup image)** — "master one bud, then repeat
+  it" pass on `chamberCore`: template bud now reads purple-TIPPED over green (tip-weighted
+  accent pods + deeper mass-tip gradient, calmer per-pod jitter, sparser/shorter pistils,
+  smaller frost sparks, pod-size cap so leader calyxes stop ballooning into marbles), then
+  stamped across a denser canopy (flowering node pack 1.18→1.42 / cap 20, chunkier side +
+  node colas starting lower, extra flowering branchlet, mid-branch fans, fuller flowering
+  fan-leaf mass, wider reach 0.27) + maturity-gated woody brown lower trunk. Iterated 5
+  headless-render rounds against the mockup; Blue Dream / G13 / White Rhino identities
+  spot-checked (still distinct); veg + harvest stages sanity-checked. Honest gap vs mockup:
+  the mockup is still denser (near-zero interior space) with chunky colas even lower on the
+  plant — next lever is lower-canopy cola mass without drowning the skirt fans.
+- 🎮 ✅ **Boost cooldowns lifted into the shared store (2026-07-03)** — per-type `cooldownUntil`
+  moved from `ArcadeHUD`'s local `useRef` into `boostEngine`'s zustand store; `applyBoost` now
+  enforces the lockout itself (returns applied/rejected so callers only fire sound/plant
+  feedback on real applies; rejected taps start no cooldown; `clearBoost` can't dodge a
+  lockout). `BoostsInline`'s quick-boost chips in `ChamberDock` now show honest
+  disabled+countdown states from the same clock as the HUD tray. 13 unit tests in
+  `web/src/lib/arcade/__tests__/boostEngine.test.ts`; chip lockout verified live via
+  Playwright (tap → disabled + countdown; other types stay enabled).
+- 🎮 ⬜ **Bud/flower polish notes (owner, future polish — NOT blockers)** — remaining after the
+  round-2 pass above: tighter bract clusters; better embedded sugar leaves; subtle trichome
+  sparkle at phone size (current frost is deliberately faint); lower-canopy cola mass toward
+  the mockup's zero-interior-space density. 2D chamber-engine tuning lane (chamberCore),
+  distinct from the ❄️ frozen 3D lane below.
 - 🎮 ❄️ **Parked for later (owner-named, do not resume without explicit direction)**: photoreal
   bud viewer, full 3D cola inspection, trichome particle macro mode, scientific Lab breakdown,
   university 3D model, advanced morphology layer toggles. See the ❄️ items under "HERMES
