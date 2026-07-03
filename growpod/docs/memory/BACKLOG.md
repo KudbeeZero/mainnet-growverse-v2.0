@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; chamber ambient glow layer Phase 1 (DOM-only)).
+once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; chamber ambient glow layer Phase 1 (DOM-only); mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -212,7 +212,6 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   architecture ones, and are out of this round's scope. Round 5's architecture (single-leader
   `colaTops` count=1, taper) is untouched and confirmed intact by the same cross-strain spot-check
   above.
-<<<<<<< HEAD
 - 🎮 ✅ **Chamber ambient glow layer — Phase 1, DOM/CSS only (2026-07-03, PR pending)** — new
   `web/src/components/plant/BoostAmbientLayer.tsx`, mounted as a sibling of `PlantReactionLayer`
   in the chamber stage (`chamber/page.tsx`). Zero `chamberCore.ts` edits — deliberately scoped
@@ -244,7 +243,6 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   `chamberCore.ts` itself** (matching the reference image's radiating tech-ring spokes more
   directly than a DOM overlay can) — intentionally deferred until the two cola-construction
   branches land, to avoid a three-way collision on the same file's draw functions.
-=======
 - 🎮 ✅ **Top cola construction v2 — structure-first (2026-07-03, "GroVerse Anatomy & Construction
   Guide" reference set — Top Cola / Pistil Hair / Top Cola Tip / Bract-Calyx Scale breakdowns)** —
   branched from round 6's commit (`9f98c9e`; round 5's single-leader cone architecture + round 6's
@@ -291,7 +289,6 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   references' heavy tip frosting — a density/alpha tune, not touched here to stay inside this
   round's scope. A sibling agent is attempting the same brief with a layer-order-first approach on
   branch `design/cola-construction-layers` — see that PR for a second read on the same references.
->>>>>>> origin/main
 - 🎮 ✅ **Game-hub restructure — ACTIVE LANE DEFINITION (2026-07-03, owner directive, verbatim
   intent)** — *"There are too many windows. Everything should be accessible from the main game
   page. Don't repeat all of the watering everywhere — have that in ONE spot. Anybody should be
@@ -319,6 +316,21 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   bud viewer, full 3D cola inspection, trichome particle macro mode, scientific Lab breakdown,
   university 3D model, advanced morphology layer toggles. See the ❄️ items under "HERMES
   University + hardening" below for the specific backlog rows this covers.
+- 🎮 ✅ **Mint metadata server-truth fix (2026-07-03)** — fixed — mint metadata now sources
+  grow_day/bud_dev from server truth, not boosted/preview display values, matching
+  trich_density/grow_stage. `chamber/page.tsx` was passing the boosted/previewed visual `day`
+  and `budScalars.budDev` into `ChainRow`'s `mintOptions`, so minting mid-boost or mid-scrub
+  could permanently write an internally inconsistent ARC-69 snapshot: grow_day/bud_dev reading
+  a fictional advanced state while trich_density/grow_stage (already read straight off `plant`
+  in `buildPlantMetadata`) read the real one. Added `mintTruthMetadata()` (pure, in
+  `lib/chamber/morphology.ts`) that derives grow_day/bud_dev from `liveNominalDay` — the
+  authoritative (stage, stage_progress_pct) day, before any boost offset or preview override —
+  and wired the chamber page to feed it into `mintOptions` instead. On-screen rendering
+  (`day`/`dev`/`budScalars`) is untouched; only what gets minted changed. No change to
+  `mintPlantNFT`/`updatePlantMetadata`/`harvestAtomicGroup` signatures or transaction-building.
+  Tests: `morphology.test.ts` (boost-only, preview-only, and boost+preview-simultaneously cases)
+  + new `chain/algorand/__tests__/plantNFT.test.ts` locking `buildPlantMetadata`'s
+  server-truth contract.
 - 🎮 **Do-not-touch (owner-named, unrelated to this track, restated for visibility):** wallet/funds
   path, staking, claim logic, Algorand production token flows, market purchases (unless required
   for button state), Cup logic (unless required for harvest handoff).
