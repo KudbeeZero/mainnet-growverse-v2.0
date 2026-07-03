@@ -8,6 +8,65 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
 > PRs / branches / directives + the launch critical path + department status live in
 > `docs/memory/CANONICAL_STATE.md`.
 
+---
+## ⚡ Priority Snapshot — open items only (2026-07-03)
+> Compact directory of every ⬜ todo and 🔨 doing item. Jump to the `##` section heading to read the full entry.
+> ✅ done and ❄️ parked items are in their track sections below and are NOT listed here.
+
+### 🔴 Now — correctness / risk / security (must close before public launch)
+1. 🔨 **Concurrency hardening** — remaining: `Idempotency-Key` header + one-shot-grant uniqueness → `## 🔴 Immediate`
+2. ⬜ **Chain settlement verification (RISK #7)** — deposit txid verify, replay protection, reconciliation job → `## 🔴 Immediate`
+3. ⬜ **Security follow-ups PR #104** — deposit redesign, CSP nonce, CORS allowlist, player key off localStorage, CODEOWNERS → `## 🏛️ HERMES`
+4. ⬜ **5 of 12 feature flags gate nothing** — `ftue_tutorial`/`grow_chamber`/`master_grower_advisor`/`breeding_lab`/`daily_stipend` off does nothing (owner OK needed) → `### 🕵️ Dormant investments`
+5. ⬜ **Web gating never reads `GET /api/game/flags`** — `features.ts` is env-var default-ON; land the re-point → `### 🕵️ Dormant investments`
+6. ⬜ **Reconcile `docs/ROADMAP.md`** — Sprints 1–3 still show ⬜/🔨 → `## 🔴 Immediate`
+7. ⬜ **Retire `docs/NEXT_SESSION_SPRINT3.md`** — Sprint 3 is done; doc is stale → `## 🔴 Immediate`
+8. ⬜ **Fix `BUILDLOG.md` header** — still references old trunk branch → `## 🔴 Immediate`
+
+### 🎮 Core Game Loop — active (owner-freeze directive 2026-07-02, PR #111)
+9. 🔨 **Onboarding AI-guide rework** — remaining: landing-page scroll + 3-panel FTUE coach wiring → `## 🎮`
+10. ⬜ **Design punch list remaining** — care-streak / resin-score stats polish → `## 🎮`
+11. ⬜ **Bud/flower polish** (NOT launch-blocking) — bract clusters, sugar leaves, trichome sparkle at phone size → `## 🎮`
+12. ⬜ **Chamber mobile follow-ups** — branch curve amplitude untouched; sativa + bushy spot-check → `## 🎮`
+
+### 🏛️ HERMES University — active (owner directive 2026-07-02)
+13. 🔨 **Produce-once lesson audio** — unify `/lecture` endpoint on produce-once path → `## 🏛️ HERMES`
+14. ⬜ **Assessment banks — 14 remaining courses** — `cult/gen/nut/ipm/chem/ph` YAML files in `data/assessments/` (only `bio-101.yaml` exists; see `docs/memory/design/HERMES_UNIVERSITY.md` §Open work #1)
+15. ⬜ **Persist + surface admissions recommendation** — store dept/track on profile, surface on `/university/learner` (see HERMES open work #2 + `### 🕵️ Dormant investments` wire-in item)
+16. ⬜ **MasteryPanel metadata** — serve skill name/domain from catalog; mastered skills render as raw ids today (HERMES open work #4)
+17. ⬜ **Retire `serve_narration`** — `/narration/<key>/<level>?h=` superseded; confirm no external links, then remove → `## 🟠 Medium` retire item
+18. ⬜ **Global Learning Memory (design/11)** — P1 `knowledge_events` at 4 generative call sites; P2 admissions + personal context into lecture/MasterGrower → `## 🏛️ HERMES`
+
+### 🚀 Launch Readiness — active
+19. 🔨 **Playtesting → Retention → MVP Launch** — the critical-path tail; economy in free-testing mode (**restore `balance.yaml` launch values before launch**) → `## 🚀`
+20. ⬜ **Wire in finished backends** — consumables use-item UI, `GET /strains/<id>/effects` panel, `Player.last_active_at` → `### 🕵️ Dormant investments`
+21. ⬜ **Retire dead web code** — remaining: `serve_narration` + owner-taste call on `VideoHero.tsx`/`public/media/*` → `## 🟠 Medium`
+22. ⬜ **WO-1 / WO-2 (Grow Guide salvage)** — per-action care-ack signals + welcome-back delta endpoint → `## 🚀`
+23. ⬜ **Boost economy + AI-assistance packages** — planning docs only; 5 owner gates each before any activation → `## 🚀`
+
+### 🟠 Medium — next 1–2 weeks
+24. ⬜ **Sprint 4: real TestNet + IPFS** — fund treasury, `reset_asa`, wire `ASA_ID`, reconciliation job → `## 🟠 Medium`
+25. ⬜ **Idempotency keys on mutations** — general `Idempotency-Key` header (dup → original, not 409) → `## 🟠 Medium`
+26. ⬜ **Anti-bot / fair-play framework** — spec logged; build on owner green-light → `## 🟠 Medium`
+27. ⬜ **Load/soak test `/state` catch-up** — find cost knee before players do → `## 🟠 Medium`
+28. ⬜ **Web e2e smoke (Playwright)** — over the full loop; today web CI is lint/typecheck/build only → `## 🟠 Medium`
+29. ⬜ **HANDOFF staleness gate** in `check_memory.py` — low urgency while HANDOFF is actively maintained → `## 🟠 Medium`
+
+### 🟡 Low / later
+30. 🔨 **Trust layer** — remaining: generalize replay, genome fingerprint, public faucet/sink view, no-dark-patterns → `## 🟡 Low`
+31. ⬜ **Constellation leaf-mesh follow-ups** — batch edges, color from accent prop, debounce resize → `## 🟡 Low`
+32. ⬜ **KB enrichment pass** — `terpene_cluster` per strain, assayed THC distribution, PPFD/DLI→yield → `## 🟡 Low`
+33. ⬜ **Education-gated Master Grower knowledge** — tie advisor depth + breeding consumables to degree progress → `## 🟡 Low`
+34. ⬜ **Macro Bud Polish II** (NOT launch-blocking) — calyx ridges, denser clusters, ombré buds → `## 🎮` (parked item)
+35. ⬜ **Generative genetics** — polygenic genome + mutation/epistasis/G×E + on-chain GenBank → `## 🟡 Low`
+36. ⬜ **Grower-skill mastery** — use-based skill trees (effort/time → capability) → `## 🟡 Low`
+37. ⬜ **Sprint 6 LiveOps** — seasonal rotations, timed events, breeding competitions, admin console → `## 🟡 Low`
+38. ⬜ **Non-custodial Pera/WalletConnect** path for player-owned NFTs → `## 🟡 Low`
+39. ⬜ **Observability** upgrade + secrets management hardening + age-gating/compliance → `## 🟡 Low`
+40. ⬜ **Fiat payment rail** — parked by owner; RISK #7 + 5 owner decisions required before any activation → `## 🟡 Low`
+41. ⬜ **Sponsored / branded content** — real brands sponsoring cultivars; business/LiveOps track → `## 🟡 Low`
+
+---
 ## 🎮 Core Game Loop (TOP-PRIORITY ACTIVE track — owner freeze directive 2026-07-02, PR #111)
 > Owner directive: **freeze advanced 3D bud/model work** and ship the playable core loop on the
 > existing stylized 2D chamber engine — "I'm not worried about the 3-D right now." This track
