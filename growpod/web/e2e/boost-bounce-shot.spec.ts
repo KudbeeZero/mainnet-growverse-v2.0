@@ -22,3 +22,13 @@ test("PROOF: an arcade boost plays the squash-stretch bounce on the plant", asyn
   );
   await expect(page.locator("canvas.gpe-plant-bounce")).toHaveCount(1);
 });
+
+test("PROOF: pruning plays the trim relax motion (the 'mass came off' receipt)", async ({ page }) => {
+  await setup(page, { growth_stage: "late_flower" });
+  await page.goto("/dashboard/plants/plant1/chamber");
+  await page.waitForTimeout(1500);
+  await page.evaluate(() =>
+    window.dispatchEvent(new CustomEvent("gpe:care-reaction", { detail: "prune" })),
+  );
+  await expect(page.locator("canvas.gpe-plant-trim")).toHaveCount(1);
+});

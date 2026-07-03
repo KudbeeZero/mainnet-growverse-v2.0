@@ -590,8 +590,26 @@ body {
   will-change: transform;
 }
 
+/* Trim relax (owner: "trimming has to have a purpose"). The receipt for a prune:
+   the canopy briefly settles LIGHTER — a small downward relax from the top, the
+   opposite of the boost's grow — so the motion reads as "mass came off", not a
+   generic sparkle. Paired with the canopy trim sparkle (CARE_REACTIONS.prune).
+   See docs/memory/design/12-arcade-animation-system.md (Law 1). */
+@keyframes gpe-plant-trim {
+  0%   { transform: scale(1, 1); }
+  28%  { transform: scale(1.0, 0.955); } /* canopy relaxes down as leaves come off */
+  64%  { transform: scale(1.0, 1.012); } /* gentle settle */
+  100% { transform: scale(1, 1); }
+}
+.gpe-plant-trim {
+  animation: gpe-plant-trim 560ms cubic-bezier(0.33, 0.9, 0.5, 1) both;
+  transform-origin: 50% 40%; /* the canopy — the trim reads from the top */
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gpe-plant-bounce,
+  .gpe-plant-trim,
   .gpe-agent-pop,
   .gpe-think-dot,
   .gpe-scan-ring,
