@@ -98,6 +98,12 @@ export async function setup(
     "/seasonal/strains": [],
     "/strains": [STRAIN],
     "/turbo": { enabled: false, multiplier: 10, offset_hours: 0, effective_now: new Date().toISOString(), wall_now: new Date().toISOString(), synced_pods: 0 },
+    // Minimal well-formed transcript so /university renders under the shared
+    // fixture instead of white-screening (the page reads t.courses/.departments/
+    // .degrees). Keyed on the exact transcript path — NOT a bare "/university",
+    // which would substring-shadow sibling endpoints like "/university/catalog".
+    // Specs needing real catalog data still override via extraOverrides.
+    "/players/p1/university": { player_id: "p1", title: null, departments: {}, courses: [], degrees: [] },
     ...extraOverrides,
   };
   await page.route("**/api/game/**", async (route) => {

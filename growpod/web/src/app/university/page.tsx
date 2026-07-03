@@ -30,7 +30,12 @@ function UniversityInner() {
   const [dept, setDept] = useState<string | "all">("all");
 
   if (transcript.isLoading) return <LoadingBlock label="Loading the registrar…" />;
-  if (transcript.isError || !transcript.data)
+  // Guard the SHAPE, not just presence: a truthy-but-malformed response (partial
+  // data, schema drift, an error body that still parses as JSON) used to slip
+  // past a bare `!transcript.data` check and then white-screen the whole page on
+  // the first `t.courses.filter(...)`. Treat a missing courses array as an error
+  // state (retryable) rather than an unhandled exception.
+  if (transcript.isError || !transcript.data || !Array.isArray(transcript.data.courses))
     return <ErrorState error={transcript.error} onRetry={() => transcript.refetch()} />;
 
   const t = transcript.data;
