@@ -106,6 +106,13 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   with auto-compact-after-action, desktop hover-to-expand, and that a portrait-SHAPED desktop
   window is never gated. Gates: tsc clean, lint 0 new warnings, vitest 483/483, `next build`
   clean, both e2e specs green (stable across repeated runs).
+- 🟡 ⬜ **GameShell desktop panels: S/M/L width presets, not free drag-resize** — flagged by the
+  code-quality review pass on the HUD redesign (2026-07-03). The mockup's "drag to resize" callout
+  was implemented as a 3-preset click-to-cycle instead (documented inline as a deliberate
+  simplification, not a bug) — logging it here so it doesn't silently become permanent. Also
+  no e2e coverage yet for the resize cycle itself, a tablet-in-landscape viewport (confirm
+  `isHandheld`'s `≤1024` threshold doesn't wrongly gate a real tablet), or rapid orientation
+  thrashing. Owner call: ship the presets as final, or pick this up as a follow-on.
 - 🎮 ✅ **Route-wide white-screen crash hunt + permanent regression net (2026-07-03 PM)** — a
   client-side-exception sweep across ALL 30 routes × plant states found the same bug class
   repeatedly: pages guarded only `!data` (presence), so a truthy-but-malformed API response (an
