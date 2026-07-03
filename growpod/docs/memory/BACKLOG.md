@@ -229,6 +229,34 @@ once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boos
   architecture ones, and are out of this round's scope. Round 5's architecture (single-leader
   `colaTops` count=1, taper) is untouched and confirmed intact by the same cross-strain spot-check
   above.
+- 🎮 ✅ **Chamber plant round 8 — sugar-leaf sepals: green serrated blades poke through the
+  spiky spear colas (2026-07-03, PR pending)** — the owner's "10/10" hero render's defining
+  feature was bright-green, SERRATED sugar-leaf blades poking OUT through the purple-magenta bud,
+  giving each cola a spiky green star/sunburst outline (purple stays the dominant surface, green
+  spikes radiate out). Prior rounds drew a tiny 2-blade sprig (`ls≈0.4·cw`, mid-green, spiral/
+  hybrid strains only, every 3rd cluster, `yf<0.75`) that was invisible at chamber scale. Two
+  edits, both confined to the sugar-leaf path in `chamberCore.ts` (no pistil/trichome/pod-color/
+  shell code touched, no `strainVisuals.ts`/`apicalDominance.ts` values changed): (1) `buildFlowerSite`
+  `cl.leaf` gate broadened to `i%2===0 && yf<0.94` for ALL patterns (nodal included — the hero
+  shows green sepals on indica colas too), so blades appear along the full length of every cola;
+  (2) the `drawFlowerSite` leaf block rewritten from a short 2-blade sprig into a slender serrated
+  blade out each side (`ls=cw·(0.72+0.42·d)`, thin `wd=ls·0.11·leafW`, up-and-outward angles) in a
+  vivid lime green (`sat+22`, `lit+12..+26` with ±per-blade lightness/hue jitter for natural
+  variation) — drawn before the pods so each blade's base tucks between the calyxes and only the
+  outer serrated tip pokes past the bud silhouette. Iterated 3 rounds against the hero render via a
+  headless mock-API Playwright render (Gelato purple / G13 green / Purple Diddy Punch deep-purple):
+  round 1 (3 wide blades) drowned the purple green-dominant, round 2 (2 thin blades) restored
+  purple-dominance with clear green spikes, round 3 added per-blade jitter. Gates: `tsc --noEmit`
+  clean, `next lint` 0 new errors, vitest 472/472 (change is in the untested DOM-draw path; no
+  pinned values touched), `npm run build` clean, Playwright `care-loop-shot` 4/4 green. **Honest
+  self-score: 8.5/10 against the hero render** — the defining green-sepals-through-spiky-purple-
+  spear cola is landed on all purple strains and the green strain reads as spiky green colas.
+  Remaining gap (out of this round's scope, deliberately not touched to avoid collision with the
+  three concurrent same-file specialists): the whole-plant candelabra is a balanced fir/cone but a
+  touch denser/less airy than the hero's fully-separated radial branch fan — opening it up needs a
+  branch-spacing/node-density layout change (tension with prior rounds' "leaf-rich, near-zero
+  interior" direction). Also noted-not-done: the queued indica/sativa height-spread widening (not
+  needed for the sepal feature).
 - 🎮 ✅ **Chamber ambient glow layer — Phase 1, DOM/CSS only (2026-07-03, PR pending)** — new
   `web/src/components/plant/BoostAmbientLayer.tsx`, mounted as a sibling of `PlantReactionLayer`
   in the chamber stage (`chamber/page.tsx`). Zero `chamberCore.ts` edits — deliberately scoped
