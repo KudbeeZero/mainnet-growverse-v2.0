@@ -9,6 +9,7 @@ import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
 import { ChamberActionBar, BoostsInline } from "@/components/plant/ChamberDock";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
+import { BoostAmbientLayer } from "@/components/plant/BoostAmbientLayer";
 import { useGrowthBoost } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap, usePods } from "@/hooks/queries";
@@ -443,6 +444,8 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         />
         {/* the plant's visible response to care taps (water/feed/prune/train…) */}
         <PlantReactionLayer />
+        {/* rim/backlight pop (always on) + boost-reactive ring pulse/sparkles */}
+        <BoostAmbientLayer />
         {/* Compact top HUD — strain + the four key stats in one strip (design
             punch list item 1). Deeper detail stays on the CLIMATE tab. */}
         <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center gap-1.5 overflow-x-auto">

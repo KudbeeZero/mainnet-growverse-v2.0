@@ -526,6 +526,38 @@ body {
     gpe-arcade-badge-float 2s ease-in-out 300ms infinite;
 }
 
+/* ---- BoostAmbientLayer (chamber) — rim pop + boost-reactive ring/particles ---- */
+/* a) Rim/backlight bloom behind the plant column. Always on (not boost-gated),
+   static — no keyframe. `mix-blend-mode: screen` is required because the chamber
+   canvas beneath is fully opaque; a CSS drop-shadow can't bleed through it, but a
+   screen-blended radial gradient lightens it like a real backlight. */
+.gpe-glow-rim {
+  mix-blend-mode: screen;
+}
+
+/* b) Boost ring pulse over the floor-ring area. Reuses the `gpe-react-aura`
+   keyframe (see above) looped, instead of its one-shot `.gpe-react-aura` class. */
+.gpe-glow-ring-pulse {
+  border: 2px solid var(--gpe-glow-tint, rgba(94, 234, 212, 0.55));
+  box-shadow:
+    0 0 28px var(--gpe-glow-tint, rgba(94, 234, 212, 0.45)),
+    inset 0 0 32px var(--gpe-glow-tint2, rgba(56, 189, 248, 0.3));
+  animation: gpe-react-aura 2.2s ease-in-out infinite;
+}
+/* Reduced-motion fallback for the ring: a static glow, no pulse. */
+.gpe-glow-ring-static {
+  border: 2px solid var(--gpe-glow-tint, rgba(94, 234, 212, 0.4));
+  box-shadow: 0 0 24px var(--gpe-glow-tint, rgba(94, 234, 212, 0.35));
+  opacity: 0.7;
+}
+
+/* c) Drifting sparkle bokeh. Reuses the `gpe-arcade-particle` keyframe (--angle
+   / --dist / --dur custom props) looped + alternated for a slow ambient drift,
+   instead of its one-shot burst `.gpe-arcade-particle` class. */
+.gpe-glow-sparkle {
+  animation: gpe-arcade-particle var(--dur, 4000ms) ease-in-out infinite alternate;
+}
+
 /* ---- Cinematic landing: film-grain "boil" (jitters a tiled noise layer) ---- */
 @keyframes gpe-grain {
   0%, 100% { transform: translate(0, 0); }
@@ -567,6 +599,8 @@ body {
   .gpe-arcade-ring,
   .gpe-arcade-shimmer,
   .gpe-arcade-badge,
+  .gpe-glow-ring-pulse,
+  .gpe-glow-sparkle,
   .gpe-grain,
   .animate-spin,
   .animate-twinkle,
