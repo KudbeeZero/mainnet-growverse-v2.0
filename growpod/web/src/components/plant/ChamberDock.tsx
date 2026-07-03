@@ -22,13 +22,7 @@ import type { CareKind } from "./careFeedbackData";
 import { dispatchCareReaction } from "./careReactionsData";
 import { careAvailability, formatSinceUsed } from "@/lib/careAvailability";
 import { buildTodaysPlan, URGENCY_LABEL, type PlanUrgency } from "@/lib/todaysPlan";
-import {
-  useBoostStore,
-  BOOST_CONFIG,
-  BOOST_TYPES,
-  BOOST_ICONS,
-  OPEN_BOOST_TRAY_EVENT,
-} from "@/lib/arcade/boostEngine";
+import { useBoostStore, BOOST_CONFIG, BOOST_TYPES, BOOST_ICONS } from "@/lib/arcade/boostEngine";
 import { titleCase } from "@/lib/format";
 import type { PlantState, StageForecast, Strain } from "@/lib/types";
 
@@ -346,12 +340,13 @@ export function EncouragementFooter({ health }: { health: number }) {
 }
 
 /**
- * Inline BOOSTS section (design punch list item 2) — compact status row in the
- * GROW sheet: live multiplier, the active boost's remaining time, one
- * "Add Boost" action that expands the in-scene quick tray (ArcadeHUD) via
- * OPEN_BOOST_TRAY_EVENT, and a QUICK BOOSTS row of one-tap chips (one per
- * boost type) that apply directly via the shared store. Reads the existing
- * boostEngine store only — no new boost economy.
+ * Inline BOOSTS section (design punch list item 2) — the SINGLE boost-apply
+ * surface in the chamber: compact status row in the GROW sheet with the live
+ * multiplier, the active boost's remaining time, and a QUICK BOOSTS row of
+ * one-tap chips (one per boost type) that apply directly via the shared
+ * store. (A second, floating tray — ArcadeHUD — used to duplicate this same
+ * apply UI; it was removed, and ArcadeHUD now only owns REWIND + the chain
+ * row.) Reads the existing boostEngine store only — no new boost economy.
  */
 export function BoostsInline() {
   const activeBoost = useBoostStore((s) => s.activeBoost);
@@ -374,12 +369,11 @@ export function BoostsInline() {
   const mult = getMultiplier();
   const active = remaining > 0 && activeBoost;
 
-  // Quick Boosts row (mockup): tap a chip to apply that boost directly —
-  // mirrors ArcadeHUD's onBoostTap (same store call + plant reaction). The
-  // per-type cooldown now lives in the shared boostEngine store, so these
-  // chips show the SAME lockouts as ArcadeHUD's tray and only fire the plant
-  // reaction when the boost actually applied (applyBoost also still rejects
-  // a weaker boost while a stronger one is active).
+  // Quick Boosts row (mockup): tap a chip to apply that boost directly. The
+  // per-type cooldown lives in the shared boostEngine store, so these chips
+  // stay honest across remounts, and only fire the plant reaction when the
+  // boost actually applied (applyBoost also rejects a weaker boost while a
+  // stronger one is active).
   const onQuickBoost = (type: (typeof BOOST_TYPES)[number]) => {
     if (!applyBoost(type)) return;
     dispatchCareReaction("boost");
@@ -411,16 +405,10 @@ export function BoostsInline() {
         ) : (
           <p className="flex-1 text-[10px] text-[#7fa9bf]">No boost active — speed up the grow.</p>
         )}
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_BOOST_TRAY_EVENT))}
-          className="flex min-h-[36px] flex-none items-center gap-1 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 text-[11px] font-bold text-amber-100 hover:bg-amber-300/20"
-        >
-          ⚡ Add Boost
-        </button>
       </div>
       {/* QUICK BOOSTS — one-tap chips for the 4 boost types, sourced from the
-          shared boostEngine config so this stays a single source of truth
-          with ArcadeHUD's full tray. */}
+          shared boostEngine config so this is the single source of truth for
+          applying a boost. */}
       <div className="mt-1.5 flex items-stretch gap-1.5">
         {BOOST_TYPES.map((type) => {
           const cfg = BOOST_CONFIG[type];
