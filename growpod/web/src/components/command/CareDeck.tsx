@@ -1,12 +1,13 @@
 "use client";
 
 // The Care Deck — the things a grower reaches for most, lifted to the top of the
-// Command Center: at-a-glance WATER + NUTRIENT levels and the care action bar
-// (Water / Feed / Prune / Train / Inspect …). Was buried at the bottom before.
+// Command Center: at-a-glance WATER + NUTRIENT levels and the care action bar.
+// The action row IS the chamber's six-tile bar (ChamberDock.ChamberActionBar) —
+// one care surface, one availability/feedback implementation, no duplicate
+// watering UI (owner: "have that in ONE spot").
 
-import { CommandActionBar } from "@/components/command/CommandActionBar";
+import { ChamberActionBar } from "@/components/plant/ChamberDock";
 import { VITAL_BAR, VITAL_TEXT, vitalSeverity } from "@/lib/vitals";
-import { recommendedActionKey } from "@/lib/nextAction";
 import type { PlantState } from "@/lib/types";
 
 function VitalBar({ label, icon, pct }: { label: string; icon: string; pct: number }) {
@@ -37,7 +38,7 @@ export function CareDeck({ plant }: { plant: PlantState }) {
         <VitalBar label="WATER" icon="💧" pct={plant.water_level} />
         <VitalBar label="NUTRIENTS" icon="🧪" pct={plant.nutrient_level} />
       </div>
-      <CommandActionBar plant={plant} recommend={recommendedActionKey(plant)} />
+      <ChamberActionBar plant={plant} />
     </div>
   );
 }

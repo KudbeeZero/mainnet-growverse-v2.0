@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (plant mockup round 3: lower cola mass, interior fill, finer calyx grain, deeper green).
+once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 3 in the parallel lane).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -119,6 +119,24 @@ once they appear here. Last reconciled: **2026-07-03** (plant mockup round 3: lo
   are still chunkier/rounder with painterly airbrushed shading (ours are flatter vector
   gradients), its very bottom tier keeps bud mass where ours is mostly fan skirt, and its
   interior is still a touch denser.
+- 🎮 ✅ **Game-hub restructure — ACTIVE LANE DEFINITION (2026-07-03, owner directive, verbatim
+  intent)** — *"There are too many windows. Everything should be accessible from the main game
+  page. Don't repeat all of the watering everywhere — have that in ONE spot. Anybody should be
+  able to play the ENTIRE game from the main game page. The Grow Chamber should be something
+  different — the ARCADE part of the game: that's where you boost, train, trim. Don't create any
+  new chambers or pages. Merge everything into the main grow panel; the chamber is for the
+  arcade part."* Shipped in place, no new routes: the **main game page** (dashboard →
+  `PodCommandCenter`) now closes the full care loop — the six-tile `ChamberActionBar` replaces
+  the old `CommandActionBar` in `CareDeck` (one care surface; `CommandActionBar.tsx` deleted),
+  and Today's Plan + Plant Insights + Harvest & Sell (`ChamberPanel`), `PlantProgressStrip`,
+  `EncouragementFooter` and `PlantReactionLayer` are imported from the existing tested
+  `ChamberDock.tsx` (not forked). The **chamber** is now the ARCADE layer: stage + HUD strip +
+  reactions + action tiles + boosts tray stay, GROW tab renamed ARCADE and slimmed to
+  BoostsInline + growth boost (Today's Plan / Insights / progress strip / footer removed there —
+  nothing the player NEEDS is chamber-only), header reads "GROW CHAMBER · ARCADE", and the main
+  page links to it via a 🕹 Arcade chip on the stage. `care-loop-shot.spec.ts` re-cut: full loop
+  proven on `/dashboard`, chamber asserted arcade-only. **Future item (owner-named): the parked
+  Clone Room / cloning-lab concept folds into this hub model later — no cloning built now.**
 - 🎮 ⬜ **Bud/flower polish notes (owner, future polish — NOT blockers)** — remaining after the
   round-3 pass above: tighter bract clusters; better embedded sugar leaves; subtle trichome
   sparkle at phone size (current frost is deliberately faint); painterly per-cola shading
