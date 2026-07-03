@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 3 in the parallel lane).
+once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos — in the parallel lane, supersedes round 5's color read; top cola construction v2 — structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) builds on round 6 in the same parallel lane, a sibling layer-order-first attempt is on `design/cola-construction-layers`; round 4 superseded, see below).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -119,6 +119,145 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   are still chunkier/rounder with painterly airbrushed shading (ours are flatter vector
   gradients), its very bottom tier keeps bud mass where ours is mostly fan skirt, and its
   interior is still a touch denser.
+- 🎮 ❄️ **Plant mockup round 4 (2026-07-03, branch `design/plant-mockup-round4`, NOT merged —
+  superseded by round 5 below)** — a canopy-density/silhouette-fill pass (flowering node pack
+  1.42→2.5, cap 20→36, a new mid-branch `midBud`, wider/extra leaf fans, up to 2 bonus
+  branchlets). Independently reviewed twice before merge: the owner's delegate scored it
+  7.5/10 (real density win, but shape read as a two-headed **candelabra, not a cone**,
+  orange/purple busy texture); a specialist botanical+procedural-rendering consultant then
+  reviewed the CODE (not just the render) and scored it 6.0/10 with a precise root-cause
+  diagnosis — Gelato's `apicalDominance: 0.55` yielded 2 co-dominant tops (a straightened,
+  extended second spike), `apexSplay` was actively widening the f≈0.58-0.88 band instead of
+  narrowing it, the branch-length taper was too shallow for a crisp cone, `midBud` added a
+  3rd discrete bud blob botanically inconsistent with a continuous tapering spike, and
+  pistil/purple-accent/frost density read as busy confetti rather than sparse accents. Left
+  queued/unmerged rather than fixed in place, since it needed an independent architecture pass,
+  not more density.
+- 🎮 ✅ **Plant mockup round 5 (2026-07-03, specialist-diagnosed architecture fix)** — branched
+  from `main` (round 3), NOT round 4 (round 4's density work was left queued/unreleased, per
+  above) — implements the specialist's punch list against `chamberCore.ts` +
+  `strainVisuals.ts`'s Gelato record: (1) Gelato `apicalDominance` 0.55→0.82 (verified
+  `colaTops(0.82)` resolves `count=1`, collapsing the second co-dominant top); (2) `apexSplay`
+  spread multiplier 1.8→1.25x and its tilt term scaled proportionally, so the upper-middle
+  stops flaring; (3) branch-length taper `(0.35+0.65·low)`→`(0.24+0.76·low)` + Gelato
+  `upperShorten` 0.3→0.4 for a crisper cone; (4) calmer texture — pistil count ×0.6 + smaller
+  tip balls, per-pod purple-accent gain 2.4→1.4 (the fused-mass gradient carries the purple
+  identity, pods now carry grain only), frost blob count ×0.6 and gated to the top third of
+  each cola (`cl.yf > 0.66`) matching the mockup's subtle top-third frost. Additional restraint
+  beyond the literal list, in the same spirit: a soft dark "under-mass" cone silhouette painted
+  behind the branch loop so residual gaps read as shaded interior, not black background; a
+  wedge-fill pass on the lowest tier (Gelato `lowerSpread` 1.14→1.28, enlarged + a second inner
+  base fan, one low-node branchlet biased toward the stem-facing side); an explicit cone-reach
+  clamp on regular (non-co-dominant) branches as a straight-taper guarantee; and a
+  dominance-scaled taper on near-apex side-bud sizing (`SK.apicalDominance`-scaled) so a
+  single-leader strain's near-apex side nodes stop inflating into competing spikes — gated so
+  low-dominance bush strains (White Rhino, Purple Diddy Punch) keep their candelabra identity.
+  Spot-checked G13 (still a clean single spear), White Rhino (still bushy/candelabra, correctly
+  unaffected), Blue Dream (still a tall open sativa spear) via `gen-stage-pngs.ts` — no
+  cross-strain regression. Gates: `tsc --noEmit` clean, `next lint` 0 errors, vitest 463/463 (no
+  pinned values needed updating), `npm run build` clean, Playwright screenshots at 390×844 +
+  desktop plus the full `care-loop-shot.spec.ts` (4/4) all green. **Honest self-score: 8/10** —
+  single-leader cone architecture and calmer color/texture are a genuine, verified fix over
+  round 4's candelabra/busy-texture read; remaining gap: individual cola shapes still read as
+  separated, somewhat spiky "fingers" rather than the fully smooth, fused, painterly silhouette
+  of the owner's mockup — that's a bud-mass-shape/rendering-style question (spline smoothing,
+  color-fill technique), not an architecture one, and is out of this round's scope
+  (`chamberCore.ts` + Gelato record only, no bud-shape rewrite). This PR's recommendation is to
+  supersede round 4's PR #119 (open, draft, unmerged, base `main`) rather than merge it
+  separately — round 4's density work stays queued on its own branch/PR in case a future round
+  wants to layer it back on top of round 5's architecture; closing #119 is the owner's call, not
+  done unilaterally here.
+- 🎮 ✅ **Plant mockup round 6 (2026-07-03, close-up + full-plant reference photos)** — branched
+  from round 5's commit (`fedc1d6`, single-leader cone architecture — inherited, not redone).
+  Round 5 fixed architecture but over-corrected color: its pistil/purple-accent cut (per an
+  earlier, overly conservative instruction) left the render predominantly GREEN with sparse,
+  faint purple flecks — further from the target on the color axis than round 4, despite the
+  architecture win. This round targets ONLY the color mechanism in `chamberCore.ts`'s
+  `drawFlowerSite` (fused-mass gradient + per-pod accent), against two reference images: a
+  close-up crop (purple as majority cola surface, green as base/edge) and a fuller-render
+  reference supplied mid-round (near-total purple bract coverage, green confined to separate
+  leaf blades, not blended into the bud mass at all) — the second, more extreme reference is
+  treated as the primary bar since it's the more complete/authoritative target. Root cause: the
+  round-5 fused-mass gradient held its purple stop as a single point right at the tip
+  (`accAmt` capped 0.6, transition stop capped at 0.5 of the cola) so it visually washed to pale
+  purple within the top ~20%; and the per-pod accent's tip-weighting curve (`exponent 2.1`,
+  `floor 0.25`) confined accent-hued pods to roughly the top quarter of each cola at a damped
+  `gain 1.4`. Fixes: (1) fused-mass gradient — `accAmt` gain ×2.0 + cap 0.6→0.98, a HELD purple
+  plateau (two same-hue stops before the green transition, not an instant blend), transition
+  point pushed to ~97% down the cola at max strength (was 50%); (2) per-pod accent — tip-weight
+  exponent 2.1→0.65 and floor 0.25→0.02 so accent share ramps up almost from the cola base
+  instead of only the top quarter, gain 1.4→7.0 so accent-hued pods saturate to "almost always"
+  past the first few percent of the cola, accent pod saturation nudged +4→+9 over base (still
+  capped well short of neon) so pods read clearly purple at a glance. Orange/pistil count
+  UNCHANGED (round 5's reduction was correct per this round's brief — deliberately not
+  reintroduced). Secondary, cheap win taken alongside (not the round's main effort): a touch
+  wider per-cola mass envelope (`podW` multiplier 1.25→1.4, `cw` multiplier 0.56→0.62) so
+  individual colas read a shade chunkier/more fused, a partial nudge on round 5's flagged
+  "separated spiky fingers" gap — not a full fix (that needs branch-spacing/whole-plant-layout
+  changes, out of scope here). Mechanism-only change (no strain-specific values touched in
+  `strainVisuals.ts`): only strains with an authored/derived `accentHue` (anthocyanin > 0.05 —
+  Gelato, Wedding Cake, Animal Mints, Purple Diddy Punch) are affected; spot-checked G13, White
+  Rhino, Blue Dream via a headless mock-API Playwright render — all three unaffected, still their
+  own distinct green/teal identities, no purple leakage. Gates: `tsc --noEmit` clean, `next lint`
+  0 errors, vitest 463/463 (no pinned values needed updating), `npm run build` clean, Playwright
+  `care-loop-shot.spec.ts` 4/4 green via a local playwright config (deleted before commit, not
+  tracked) pinned to the sandbox Chromium binary. **Honest self-score: 8/10 against the reference
+  photos** — purple now genuinely reads as the dominant, majority cola color with green correctly
+  relegated to a base/edge/leaflet role and orange staying near-absent, a real fix over round 5's
+  green-dominant read; remaining gap (inherited from round 5, not addressed here beyond the cheap
+  width nudge above): individual cola texture is still a spiky stacked-pod look rather than the
+  references' smooth, fused, diamond-bract silhouette, and the accent hue reads a touch more
+  magenta/saturated than the references' dustier violet — both are bud-mass-shape/rendering-style
+  questions (spline smoothing, color-fill technique, hue calibration), not color-dominance or
+  architecture ones, and are out of this round's scope. Round 5's architecture (single-leader
+  `colaTops` count=1, taper) is untouched and confirmed intact by the same cross-strain spot-check
+  above.
+- 🎮 ✅ **Top cola construction v2 — structure-first (2026-07-03, "GroVerse Anatomy & Construction
+  Guide" reference set — Top Cola / Pistil Hair / Top Cola Tip / Bract-Calyx Scale breakdowns)** —
+  branched from round 6's commit (`9f98c9e`; round 5's single-leader cone architecture + round 6's
+  purple-dominant color are inherited, not redone). Round 6 flagged the remaining gap as "spiky
+  stacked-pod look, not the references' smooth fused diamond-bract silhouette" — this round
+  targets exactly that, scoped to `chamberCore.ts`'s flower-site build/draw functions only. (1)
+  **Bract shape** — `podPath` rewritten from a wide rounded bulb to a pointed elongated
+  teardrop/diamond (narrow base → shoulder ~30% up → sharp needle tip at `-0.86h`), the
+  single highest-leverage change per the reference's "pointed scales, not round berries" goal;
+  `drawPod` gained a faint tip-to-base ridge/vein overlay + a per-bract axial brighten (muted at
+  the base, saturated glow at the tip) for non-flat surface read. (2) **Shingle overlap** — the
+  per-cluster paint loop now iterates tip-to-base instead of base-to-tip (`shingleOrder`), so each
+  lower tier's bracts lay forward over the base of the tier above (roof-shingle read); bract
+  height bumped 1.6→1.85× width to close the dark chamber-background valleys the sharper tip
+  shape initially opened between tiers (verified via cropped screenshot iteration, not asserted).
+  (3) **Purple gradient** — round 6's per-pod colour was a coin-flip between two flat hues
+  (probability-gated by tip position); replaced with a continuous `tipBlend` driven by the pod's
+  tier position, blended in RGB space (`blendHueSat`, new pure helper) rather than HSL hue-degree
+  space — direct hue-angle interpolation swept through a hot saturated red/orange band at ~mid-
+  cola (caught and fixed via the first screenshot round), RGB blending reads as the reference's
+  muted dusty-maroon transition instead. (4) **Pistil hairs** — root points are now grouped
+  per-cluster "seams" (2-4 shared anchors, not one independent random root per hair), density
+  scales with tier position (`tierDensity`, denser near the tip), and the filament is a filled
+  tapered wedge (thick root → fine tip) instead of a constant-width stroke. (5) **Sugar leaves**
+  shrunk/narrowed (2 thin blades vs. the old 3-blade near-full fan) per "small narrow leaves
+  between clusters, not fan leaves." (6) **Frost** anchored to a specific pod's tip/ridge
+  (deterministic pick from the spark's angle) instead of a free polar offset from the cluster
+  centre, and the hard `cl.yf > 0.66` cutoff replaced with a smooth taper so it thins gradually
+  toward the base. Spot-checked G13/White Rhino/Blue Dream (all `accentHue == null` → the new
+  gradient blend is a no-op for them by construction; confirmed visually unchanged aside from the
+  shared structural changes). Gates: `tsc --noEmit` clean, `next lint` 0 errors, vitest 463/463
+  (no pinned values needed updating), `npm run build` clean, `care-loop-shot.spec.ts` 4/4 green
+  via a local playwright config (deleted before commit, not tracked; port 3010 was occupied by a
+  concurrent sibling agent's server on this shared sandbox host, so the local config used 3055
+  instead to avoid colliding with it). **Honest self-score: 7/10** — the bract shape, shingle
+  paint order, RGB-blended gradient, and seam-anchored tapered pistils are genuine, verified fixes
+  directly against the reference breakdowns and close the round-6-flagged gap significantly;
+  remaining shortfalls: (a) node anchor tiers were NOT restructured this round (still the
+  round-5/6 continuous-ish tier spacing, not visually discrete node points) — item 2 of the
+  8-layer guide is only partially addressed; (b) a handful of small dark valleys between tiers
+  persist in places even after the podH increase — "no visible gaps" (bract/calyx reference item
+  3) isn't fully met; (c) trichome frost's anchoring mechanism now correctly follows bract
+  tips/ridges, but its visual weight at chamber scale reads as subtle/light rather than the
+  references' heavy tip frosting — a density/alpha tune, not touched here to stay inside this
+  round's scope. A sibling agent is attempting the same brief with a layer-order-first approach on
+  branch `design/cola-construction-layers` — see that PR for a second read on the same references.
 - 🎮 ✅ **Game-hub restructure — ACTIVE LANE DEFINITION (2026-07-03, owner directive, verbatim
   intent)** — *"There are too many windows. Everything should be accessible from the main game
   page. Don't repeat all of the watering everywhere — have that in ONE spot. Anybody should be
