@@ -8,6 +8,7 @@
 // owns the active-plant selection in local state, not a route param.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoadingBlock } from "@/components/ui/Spinner";
@@ -35,6 +36,12 @@ import { PlantDnaRail } from "@/components/command/PlantDnaRail";
 import { EnvironmentRail } from "@/components/command/EnvironmentRail";
 import { GrowConsole } from "@/components/plant/GrowConsole";
 import { CareDeck } from "@/components/command/CareDeck";
+import {
+  ChamberPanel,
+  PlantProgressStrip,
+  EncouragementFooter,
+} from "@/components/plant/ChamberDock";
+import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { PlantCarousel, type CarouselPlant } from "@/components/command/PlantCarousel";
 import { GrowthScrubber } from "@/components/command/GrowthScrubber";
 import { TimeControls } from "@/components/command/TimeControls";
@@ -270,6 +277,20 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
                     view="chamber"
                   />
                 )}
+                {/* the plant's visible response to care taps (water/feed/prune/
+                    train…) — same overlay the chamber stage mounts */}
+                <PlantReactionLayer />
+                {/* Grow Chamber = the ARCADE layer (boosts, growth boost, rewind).
+                    Everything needed to PLAY stays on this page; the chamber is
+                    the optional fun extra. */}
+                {!ended && (
+                  <Link
+                    href={`/dashboard/plants/${plant.id}/chamber`}
+                    className="absolute left-1/2 top-2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-300/40 bg-ink-900/80 px-3 py-1 text-xs font-semibold text-amber-100 backdrop-blur-sm hover:border-amber-200/70"
+                  >
+                    🕹 Arcade
+                  </Link>
+                )}
                 {canViewBud && (
                   <button
                     type="button"
@@ -348,6 +369,14 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
           )}
           {plant && <NextActionHint plant={plant} />}
           {plant && <CareDeck plant={plant} />}
+
+          {/* The full care loop closes HERE (owner: "anybody should be able to
+              play the ENTIRE game from the main game page"): Today's Plan +
+              Plant Insights + the Harvest CTA — the same tested dock panels the
+              chamber used to carry (ChamberDock), imported, not forked. */}
+          {plant && <ChamberPanel plant={plant} strain={strain} />}
+          {plant && !ended && plant.forecast && <PlantProgressStrip forecast={plant.forecast} />}
+          {plant && !ended && <EncouragementFooter health={health} />}
 
           {/* On mobile the stat chips sit in a clean row under the time strip
               (on desktop they live in the header band) — never over the plant. */}

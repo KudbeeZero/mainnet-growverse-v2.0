@@ -7,13 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
-import {
-  ChamberActionBar,
-  ChamberPanel,
-  BoostsInline,
-  PlantProgressStrip,
-  EncouragementFooter,
-} from "@/components/plant/ChamberDock";
+import { ChamberActionBar, BoostsInline } from "@/components/plant/ChamberDock";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { useGrowthBoost } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
@@ -151,7 +145,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const { data: pods } = usePods();
 
   const reducedMotion = usePrefersReducedMotion();
-  const [tab, setTab] = useState<"grow" | "climate" | "time">("grow");
+  const [tab, setTab] = useState<"arcade" | "climate" | "time">("arcade");
   const [climate, setClimate] = useState<ChamberClimate>(DEFAULT_CLIMATE);
   // Growth-preview scrubber: null = track the real (server) age; a number =
   // preview that day on the cycle. Preview never mutates server state.
@@ -410,7 +404,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           GR<span className="text-grow-400">🌿</span>VERS
         </h1>
         <span className="hidden text-[9px] font-bold tracking-[0.26em] text-cyan-300 sm:inline">
-          GROW CHAMBER
+          GROW CHAMBER · ARCADE
         </span>
       </header>
 
@@ -599,7 +593,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       {/* dashboard — bottom sheet in portrait, side rail in landscape */}
       <div className="max-h-[48dvh] flex-none overflow-y-auto bg-gradient-to-b from-transparent to-[#0a1622] px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 landscape:h-full landscape:max-h-none landscape:w-[clamp(260px,38vw,360px)] landscape:border-l landscape:border-[#11212e] landscape:bg-gradient-to-l landscape:pr-[max(0.75rem,env(safe-area-inset-right))]">
         <div className="mb-2 flex gap-1.5">
-          {(["grow", "climate", "time"] as const).map((t) => (
+          {(["arcade", "climate", "time"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -613,9 +607,12 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           ))}
         </div>
 
-        {tab === "grow" && (
+        {tab === "arcade" && (
           <div className="space-y-2">
-            <ChamberPanel plant={plant} strain={strain} />
+            {/* ARCADE = boosts, growth boost, rewind (via the boost tray). The
+                dashboard-y panels (Today's Plan, Plant Insights, progress strip,
+                encouragement footer) moved to the main game page (Command
+                Center) — the chamber is the fun layer, never required play. */}
             {!ended && <BoostsInline />}
             {/* Purchasable growth boost — fast-forward + revive for in-game GROW.
                 Cost mirrors balance.yaml simulation.actions.growth_boost.cost.
@@ -636,12 +633,6 @@ function ChamberScreen({ plantId }: { plantId: string }) {
                 ? `${strain.name} · ${indicaRatio >= 0.66 ? "indica-dominant" : indicaRatio <= 0.34 ? "sativa-dominant" : "balanced hybrid"} — grown live from your plant's real state.`
                 : "Loading strain…"}
             </p>
-            {/* Stage-progress strip — server forecast only (no invented streak/
-                resin stats: nothing tracks them). Hidden once the grow has ended. */}
-            {!ended && plant.forecast && <PlantProgressStrip forecast={plant.forecast} />}
-            {/* Footer encouragement bar — closes the GROW sheet with the real
-                health dial + copy that adapts honestly to the plant's state. */}
-            {!ended && <EncouragementFooter health={health} />}
           </div>
         )}
 
