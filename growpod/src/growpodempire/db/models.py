@@ -244,10 +244,6 @@ class ResearchProgress(UUIDPrimaryKeyMixin, Base):
 
     player_id: Mapped[str] = mapped_column(ForeignKey("players.id"), nullable=False)
     node_key: Mapped[str] = mapped_column(String(48), nullable=False)
-    unlocked_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
-    )
-
     __table_args__ = (
         Index("ix_research_player_node", "player_id", "node_key", unique=True),
     )
@@ -384,9 +380,7 @@ class GrowthMeasurement(UUIDPrimaryKeyMixin, Base):
         DateTime, default=datetime.utcnow, nullable=False
     )
     height: Mapped[float] = mapped_column(Float, nullable=False)
-    leaf_count: Mapped[Optional[int]] = mapped_column(Integer)
     health: Mapped[float] = mapped_column(Float, nullable=False)
-    growth_rate: Mapped[Optional[float]] = mapped_column(Float)
 
     __table_args__ = (Index("ix_growth_plant_ts", "plant_id", "timestamp"),)
 

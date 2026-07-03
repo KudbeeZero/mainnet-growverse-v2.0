@@ -667,8 +667,10 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   re-billed per delivery. Today `/lecture` can mint a fresh AI lecture *and* fresh TTS per attend
   (content-hash keyed); the produced-once path exists only on `/university/courses/<key>/audio`.
   Unify on produce-once; `ELEVENLABS_API_KEY` stays host-secret-only (never in chat/repo).
-- 🏛️ ⬜ **HERMES memory layer** — `docs/memory/design/HERMES_UNIVERSITY.md`: identity, layer map,
-  wiring truths, lesson-production pipeline, open work (this session starts it).
+- 🏛️ ✅ **HERMES memory layer (2026-07-03)** — created `docs/memory/design/HERMES_UNIVERSITY.md`:
+  identity, layer map (with 2026-07-03 ClaudeAdmissions + ClaudeRoadmap status), lesson-production
+  pipeline, provider table, open-work list, must-not-drift invariants. Updated `10-hermes-university.md`
+  layer map rows to reflect real providers.
 - 🔴 ⬜ **Security follow-ups from PR #104** (before public launch): settlement **deposit** redesign
   (player-signed + indexer-verified inbound transfer) + **withdraw idempotency key** (treasury; owner
   gate); web CSP nonce (drop `'unsafe-inline'`) + move the player key off `localStorage`; TS api-server
@@ -771,9 +773,10 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   lines removed, no functionality lost. ⬜ Remaining: backend `serve_narration` route (superseded
   by produce-once audio); `scripts/build-production.sh` + `start-production.sh` (stale deploy
   scripts — left since they're shell, not tracked by pnpm).
-- 🟡 ⬜ **Dead DB columns** — `ResearchProgress.unlocked_at`, `GrowthMeasurement.leaf_count`/
-  `growth_rate` (drop migration when convenient); `Player.last_active_at` is the wire-in above.
-  `INDEXER_URL` is read but unconsumed — it's needed by the settlement-deposit redesign; keep.
+- 🟡 ✅ **Dead DB columns (2026-07-03)** — dropped `ResearchProgress.unlocked_at`,
+  `GrowthMeasurement.leaf_count`, `GrowthMeasurement.growth_rate` via migration
+  `e5f6a7b8c9d0_drop_unused_columns.py`; model updated; 1117 tests green.
+  `Player.last_active_at` is the wire-in above. `INDEXER_URL` kept (needed for settlement redesign).
 - 🟡 ✅ **Docs hygiene tail (2026-07-03)** — all open ⚠️ items from `docs/memory/DOCS_INDEX.md`
   bannered or closed: `BUILDLOG.md` (FROZEN banner), `CANONICAL_STATE.md` + `STUDIO_AGENT_REGISTRY.md`
   + `AGENT_ORCHESTRATION_LEDGER.md` (SNAPSHOT banners, restamped 🧊), `docs/DEV_BUILD_LOG.md`
@@ -913,11 +916,10 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   HTTP-boundary coverage for the value-bearing routes — withdraw/deposit/mint/nft — landed
   (`tests/test_http_boundary.py`, 13), partially closing RISK #8 (backend side). Report:
   `docs/STEP4_E2E_GROW_LOOP_VALIDATION.md`. Suite 262 green, 83.6% ≥ 79%. **Test-only, no source.**
-- 🚀 ⬜ **STEP 4.5 — GameService on `active_clock()` + cure/auction e2e** (next; owner-approved
-  2026-06-14) — one-line change (`game_service.py:82`, mirroring STEP 3) so the dev clock also
-  fast-forwards harvest/**cure**/sell + auction expiry over HTTP, then extend the e2e loop to the
-  cure step. Prod-behaviour identical (`active_clock()` → `SystemClock` in prod). See Risk #1 in the
-  STEP 4 report.
+- 🚀 ✅ **STEP 4.5 — GameService on `active_clock()` + cure/auction e2e** (2026-07-03) —
+  `game_service.py:87` wired to `active_clock()`; cure start/finish use `self.clock.now()`;
+  `test_cure_advances_under_dev_clock` in `tests/test_e2e_grow_loop.py` proves cure
+  fast-forwards under the dev clock and is guarded against early finish. 1117 green.
 
 ## 🔴 Immediate (do now — correctness, truth, or unblocks others)
 - 🔴 🔨 **Concurrency + idempotency hardening** (RISK #6) — *core landed 2026-06-10*: wallet

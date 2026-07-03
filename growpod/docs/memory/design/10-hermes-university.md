@@ -45,8 +45,8 @@
 | Assessments | `data/assessments/` (**only `bio-101.yaml` exists**) | `assessment_service` (pure grading) → `AssessmentAttempt` → gates `complete_course` | ✅ for bio-101; ⬜ banks for the other 14 courses |
 | Learner model | `LearnerModelService.apply` = the ONLY writer; every mutation audited via `LearnerEvent` | enroll/complete/exam/admissions write; Roadmap reads | ✅ single-writer invariant holds |
 | Mastery | `recompute_mastery`: exam best_scores **+ (2026-07-02 fix) completed courses seed their skills at the 0.7 threshold** | MasteryPanel, Roadmap | ✅ fixed — was dead for 14/15 courses (exam-only) |
-| Admissions agent | `admissions_mock` + `admissions_service` — non-economic, audited | writes `experience_level`+`goals` to profile | ⚠️ recommended department/track land only in the audit row — display-once dead-end (see Open work) |
-| Roadmap agent | `roadmap_mock` + `roadmap_service` — read-only, prereq-ordered | My Path | ✅ read-only; ⚠️ skills-graph prereqs are stricter than curriculum prereqs (known, deliberate for bio-101 — decide before launch) |
+| Admissions agent | `admissions_mock` / `ClaudeAdmissions` (real 2026-07-03) + `admissions_service` | writes `experience_level`+`goals` to profile | ⚠️ recommendation display-once — persist+surface still open (see Open work) |
+| Roadmap agent | `roadmap_mock` / `ClaudeRoadmap` (real 2026-07-03) + `roadmap_service` — read-only | My Path | ✅ real provider shipped; ⚠️ skills-graph prereqs stricter than curriculum prereqs (bio-101, deliberate) |
 | Master Grower bot | `master_grower_service` — read-only tools, no ledger | Coach page | ✅ by design; asking it feeds no engagement/learner events (note) |
 | Audio | see pipeline above | course page player + lecture card | ✅ produce-once after 2026-07-02 fix |
 | Web | `web/src/lib/api/university.ts` → real endpoints; My Path reads `/university/learner` + `/roadmap` | — | ✅ healthy; ⚠️ MasteryPanel labels mastered skills by raw id (metadata comes only from roadmap steps, which omit mastered skills) |
