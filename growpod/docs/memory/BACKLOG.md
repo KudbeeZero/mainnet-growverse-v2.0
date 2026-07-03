@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (plant round 8b — airier, more-separated candelabra branch layout in chamberCore.ts's `buildPlant`, matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
+once they appear here. Last reconciled: **2026-07-03** (plant round 8c — leaf + bract TEXTURE LAYERING (owner: "the layering in the texture"): `drawFan` leaflets now carry deterministic per-leaflet size/angle/tone jitter plus a light↔shadow facet gradient (was one flat hsl() fill repeated identically at every node — the "stamped decal" read); `drawPod` now gives every calyx bract a volumetric gradient (the old `w>4.2` gate meant almost none ever cleared it, since podW's own ceiling is 4.2) plus a new base "undercut" shadow so overlapping bracts read as a physically shingled stack instead of blending into the mass gradient; plant round 8b — airier, more-separated candelabra branch layout in chamberCore.ts's `buildPlant`, matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -249,6 +249,39 @@ once they appear here. Last reconciled: **2026-07-03** (plant round 8b — airie
   1440×900, 2 look-compare-adjust rounds; script cleaned up). Gates: `tsc --noEmit` clean, `next
   lint` 0 new errors, vitest 472/472, `npm run build` clean, `care-loop-shot` 4/4 green.
 =======
+- 🎮 ✅ **Plant round 8c — leaf + bract texture layering (2026-07-03, owner: "the leaves and the
+  actual node clusters... it's more of the layering in the texture")** — the owner flagged the
+  live chamber plant's foliage and cola surface as reading flat/decal-like on close inspection.
+  Two scoped fixes in `chamberCore.ts`, both draw-path-only (no build-time RNG stream touched, no
+  pinned test values changed):
+  1. **`drawFan` (every fan-leaf call site)** — leaflets previously came from one fixed `FAN_A`/
+     `FAN_M` table filled with a single flat `hsl()` colour, so every fan at every node was an
+     identical stamped decal (only the caller's overall size/rotation varied). Added a cheap
+     deterministic hash (`fanJit`, pure function of a stable per-instance seed — `nd.phase`,
+     `bl.phase`, `lf.rot` — and the leaflet index; no new RNG calls, so build-time determinism and
+     every pinned test are untouched) driving per-leaflet length/width/angle/tone jitter, and
+     replaced the flat fill with a light↔shadow linear-gradient "facet" per leaflet (plus a second
+     shadow-crease stroke alongside the existing vein highlight) so each blade reads as a folded
+     surface, not a solid-colour cutout. All ~10 `drawFan` call sites now pass a seed.
+  2. **`drawPod` (per-bract calyx draw)** — the volumetric radial-gradient shading (this file's own
+     comments call it "the single highest-leverage fix" for the bud reading as a scale, not a
+     berry) was gated `w > 4.2`, but `podW` is itself clamped to a 4.2 ceiling — so in practice
+     almost no pod ever cleared the gate and the cola was built almost entirely from the flat-fill
+     branch, which is why the shingled-bract structure (round 7/#127's ring-parity work) read as a
+     smooth blended blob instead of a textured stack. Removed the gate (every pod gets the
+     gradient now), lowered the tip-glow/ridge-vein gate `2.2→1.2` (same problem, smaller pods were
+     silently skipping it), and added a new base "undercut" shadow (a soft dark linear-gradient
+     wash on the lower third of each bract) — independent of the light-direction radial gradient —
+     so overlapping bracts read as physically shingled scales, not a blend.
+  Verified with the same headless mock-API Playwright render (Gelato, `late_flower`) cropped 3× on
+  the foliage/node-cluster region and the top cola, before/after: leaflets now show visible
+  per-blade size/shading variation instead of identical copies; the cola's green/base tiers show
+  clearly separated individual bract highlights+shadows instead of one smooth gradient. The
+  purple/accent-heavy tip band is a smaller remaining gap — the strong `tipBlend` accent wash still
+  dampens per-bract contrast there more than the green base tiers. Gates: `tsc --noEmit` clean,
+  `next lint` 0 new errors, vitest 472/472, `npm run build` clean, `care-loop-shot.spec.ts` 4/4
+  green, `check_memory.py` OK. Owner to re-verify visually; the purple-tip layering gap is a
+  candidate follow-up if it still reads flat there.
 - 🎮 ✅ **Plant mockup round 8 — airier separated candelabra (2026-07-03, owner "10/10" hero
   render)** — whole-plant branch-LAYOUT pass in `chamberCore.ts` only (no `strainVisuals`/
   `apicalDominance`/`morphology` value changes, so no pinned test touched). The owner's new hero
