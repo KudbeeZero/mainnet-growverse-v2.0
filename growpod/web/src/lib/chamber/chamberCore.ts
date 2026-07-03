@@ -65,7 +65,7 @@ interface Cluster {
   // (reference "Pistil Hair Breakdown" items 1-2 — grouped origin points,
   // never floating); several hairs per cluster share the same seam.
   hairs: Array<{ a: number; seam: number; len: number; bend: number; ball: number; k: number }>;
-  tris: Array<{ a: number; len: number; headR: number; k: number; mat: number }>;
+  tris: Array<{ a: number; r: number; v: number; sz: number; k: number; mat: number; spk: number }>;
   ph: number;
   leaf: boolean;
   leafSide: number;
@@ -425,17 +425,27 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // as a fine amber thread, not a bead.
         hairs.push({ a: dir, seam, len: 0.5 + rnd() * 0.45, bend: (rnd() - 0.5) * 1.3, ball: 0.55 + rnd() * 0.25, k: rnd() * 0.85 });
       }
-      // Trichome "frost" — a few CLUSTERED highlight blobs per cluster instead of
-      // a dense field of individual stalk+gland glyphs (owner: "clustered frost
-      // highlights", not fine per-gland detail — that belongs in View Bud/Lab).
-      // Round 5 (specialist code review, 2026-07-03): fewer blobs (2.5 → 1.5×
-      // lush) — frost is also now gated to top-third clusters only at draw time
-      // (see cl.yf gate below), so the mockup's "subtle, top-third" frost read
-      // survives instead of firing on every cluster top to bottom.
+      // Trichome "frost" — the crystalline "sugar coat" of a real bud is
+      // THOUSANDS of fine resin glands (owner macro reference: "the trichomes
+      // are tiny — there's thousands of them"), not a handful of soft blobs.
+      // Round 8 (macro-photo reference, 2026-07-03): rounds 5/7 read as sparse
+      // sparkles because the count was tiny (~1.5×lush) and each spark was a
+      // big soft glow. We now carry MANY MORE, much FINER glint points per
+      // cluster — each drawn as a ~1px solid dot anchored to a bract's own face
+      // (see draw block) so the surface reads caked in frost rather than dotted.
+      // Cost stays phone-safe: bulk glints are cheap solid fills (no per-glint
+      // gradient); only a rare `spk` catch-light and one soft per-cluster sheen
+      // wash use a gradient. Tip-concentration still comes from the draw-time
+      // `frostGate`; `r`/`v` scatter each glint across a bract face, `sz` gives
+      // size variety, `spk` flags the few brightest sparkles.
       const tris = [];
-      const nT = Math.max(1, Math.round(1.5 * lush));
+      // Density budget: ~18×lush glints/cluster reads as the dense sugar-coat
+      // while keeping the per-frame fill cost modest — each is a sub-pixel solid
+      // arc, and the draw-time frostGate skips most on lower (base) clusters, so
+      // the literal glint count on screen is a few hundred, not thousands.
+      const nT = Math.max(8, Math.round(18 * lush));
       for (let j = 0; j < nT; j++)
-        tris.push({ a: rnd() * TAU, len: 0.5 + rnd() * 0.5, headR: 0.7 + rnd() * 0.5, k: rnd(), mat: rnd() });
+        tris.push({ a: rnd() * TAU, r: rnd(), v: rnd(), sz: rnd(), k: rnd(), mat: rnd(), spk: rnd() });
       clusters.push({
         yf, along, lateral, fat: fat * opt.fatMul, tipTaper, centerBias, pods, hairs, tris,
         ph: rnd() * TAU,
@@ -774,36 +784,76 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
           const purple = clamp(live.current.budColor?.anthocyanin ?? 0, 0, 1);
           const mix = maturityMix(clamp(P.ripe * 0.7 + P.brown * 0.6, 0, 1), purple * 0.4);
           const dens = P.trich * clamp(trichScale, 0, 1) * frostGate;
+          // (A) Frost SHEEN wash — the macro reference reads as a CONTINUOUS
+          // crystalline coating catching the light, which a field of discrete
+          // glints alone can't convey. One cool milky radial per cluster,
+          // biased to the upper (tip) face and kept very low-alpha, lays down
+          // that sheen for the cost of a single gradient fill.
+          const shy = cy - podH * 0.5;
+          const shR = Math.max(4, cw * 1.35);
+          const sa = 0.07 * dens;
+          if (sa > 0.006) {
+            const sheen = ctx!.createRadialGradient(cx, shy, 0, cx, shy, shR);
+            sheen.addColorStop(0, `rgba(233,245,247,${sa})`);
+            sheen.addColorStop(0.4, `rgba(226,241,240,${sa * 0.4})`);
+            sheen.addColorStop(1, "rgba(220,238,236,0)");
+            ctx!.fillStyle = sheen;
+            ctx!.beginPath();
+            ctx!.arc(cx, shy, shR, 0, TAU);
+            ctx!.fill();
+          }
+          // (B) Dense fine glint field — each is a tiny solid dot anchored to a
+          // bract's own face and scattered across it (tr.r across the width,
+          // tr.v from mid-bract up toward the tip), so the whole surface reads
+          // sugar-coated. Solid fills keep the bulk cheap; only the rare `spk`
+          // sparkle spends a gradient on a hot catch-light.
           for (const tr of cl.tris) {
             if (tr.k > dens) continue;
-            const srcPod = cl.pods.length ? cl.pods[Math.floor(((tr.a % TAU) / TAU) * cl.pods.length) % cl.pods.length] : null;
+            // Pick the source bract from a hash DECORRELATED from tr.a (which
+            // drives the scatter angle + shimmer phase below) so glints don't
+            // pile onto the same few pods — they spread evenly over the surface.
+            const srcPod = cl.pods.length
+              ? cl.pods[Math.floor((((tr.r * 5.0 + tr.sz * 2.7) % 1) + 1) % 1 * cl.pods.length) % cl.pods.length]
+              : null;
             let bx: number, by: number;
             if (srcPod) {
               const ppx = cx + Math.cos(srcPod.a) * srcPod.rad * cw * 0.55;
               const ppy = cy + Math.sin(srcPod.a) * srcPod.rad * cw * 0.35 + srcPod.ring * podH * 0.18;
-              bx = ppx + Math.cos(tr.a) * cw * 0.05;
-              by = ppy - podH * (0.34 + 0.12 * tr.k); // biased toward the bract TIP, not its base
+              // Scatter across the bract face in a small upward-biased disc so
+              // frost dusts the whole raised scale (heavier toward its tip),
+              // matching the macro's continuous coat rather than dotting centres.
+              const spread = podW * srcPod.sz;
+              bx = ppx + Math.cos(tr.a) * spread * (0.2 + 0.75 * tr.sz);
+              by = ppy - podH * (0.02 + 0.52 * tr.v) + Math.sin(tr.a) * spread * 0.35;
             } else {
-              const rad = cw * (0.1 + 0.5 * tr.k);
+              const rad = cw * (0.1 + 0.5 * tr.r);
               bx = cx + Math.cos(tr.a) * rad;
               by = cy + Math.sin(tr.a) * rad - podH * 0.14;
             }
             const m = maturityFor(tr.mat, mix);
             const sh = motionOK
-              ? shimmer(tt, tr.a * 7.13, 0.6 + tr.len * 1.2, SHIMMER_MAX_AMP * 0.5)
+              ? shimmer(tt, tr.a * 7.13, 0.6 + tr.sz * 1.2, SHIMMER_MAX_AMP * 0.6)
               : 1;
-            // Round 2 (owner mockup): smaller, fainter frost sparks — the old
-            // 1.8/0.16 radius at 0.6 alpha read as grey smoke balls hovering over
-            // the bud, not resin glints on its surface.
-            const br = tr.headR * Math.max(1.1, cw * 0.09);
-            const glow = ctx!.createRadialGradient(bx, by, 0, bx, by, br);
-            const core = trichHeadColor(m, clamp(0.32 * sh, 0, 1), purple);
-            glow.addColorStop(0, core);
-            glow.addColorStop(1, "rgba(220,238,236,0)");
-            ctx!.fillStyle = glow;
+            // Fine grain: most glints sit near a pixel — a fine crystalline dust,
+            // not beads. Slightly brighter so each catches the light like resin.
+            const gr = Math.max(0.6, cw * (0.008 + 0.013 * tr.sz));
+            ctx!.fillStyle = trichHeadColor(m, clamp(0.5 * sh, 0, 0.9), purple);
             ctx!.beginPath();
-            ctx!.arc(bx, by, br, 0, TAU);
+            ctx!.arc(bx, by, gr, 0, TAU);
             ctx!.fill();
+            // The brightest ~6% of glints get a hot white catch-light + halo —
+            // this is the "sparkle" that sells wet resin without gilding the
+            // whole field with expensive gradients.
+            if (tr.spk > 0.95) {
+              const hr = gr * 1.9;
+              const halo = ctx!.createRadialGradient(bx, by, 0, bx, by, hr);
+              halo.addColorStop(0, `rgba(255,255,255,${clamp(0.42 * sh, 0, 0.8)})`);
+              halo.addColorStop(1, "rgba(240,250,250,0)");
+              ctx!.fillStyle = halo;
+              ctx!.beginPath();
+              ctx!.arc(bx, by, hr, 0, TAU);
+              ctx!.fill();
+            }
           }
         }
       }

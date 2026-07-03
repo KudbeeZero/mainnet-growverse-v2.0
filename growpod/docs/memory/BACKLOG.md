@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; mint metadata server-truth fix).
+once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; mint metadata server-truth fix; trichome frost density round 8 — sub-pixel glint field at 18×lush + per-cluster frost sheen, closing round 7's deferred density/alpha tune so the frost reads as the macro's crystalline sugar-coat).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -260,6 +260,28 @@ once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boos
   `chamberCore.ts` itself** (matching the reference image's radiating tech-ring spokes more
   directly than a DOM overlay can) — intentionally deferred until the two cola-construction
   branches land, to avoid a three-way collision on the same file's draw functions.
+- 🎮 ✅ **Trichome frost density round 8 — the crystalline "sugar coat" (2026-07-03, owner macro
+  bud photo: "the trichomes are tiny — there's thousands of them, we have to make it better")** —
+  closes item (c) flagged by round 7 below (frost anchoring was correct but read subtle/light, not
+  the reference's heavy tip frosting — an explicit density/alpha tune deferred from that round).
+  Scoped to the `tris` build block + frost draw block in `chamberCore.ts` only (pistils, bracts,
+  color, morphology untouched — owned by sibling lanes). Technique reads as "thousands without
+  being thousands": (1) glint count per cluster ~1.5×lush → **18×lush** but each spark is now a
+  **sub-pixel solid arc** (cheap fill) instead of a big soft radial-gradient blob; (2) placement
+  decorrelated from the shimmer angle and scattered across each bract's face in an upward-biased
+  disc so the whole raised scale dusts (heaviest toward its tip), not just its centre; (3) one
+  faint broad **frost-sheen** radial per cluster lays down the continuous light-catch a discrete
+  field can't; (4) only the brightest ~5% of glints spend a gradient on a hot white **catch-light**
+  halo. Tip-concentration still comes from the round-5/7 `frostGate` (unchanged). Verified via
+  cropped 3× screenshot iteration against the macro (own playwright script, deleted before commit).
+  Gates: `tsc --noEmit` clean, `next lint` 0 new, vitest **472/472**, `npm run build` clean,
+  `care-loop-shot` 4/4. **Perf note:** the frost is hundreds of tiny solid arcs + one gradient/
+  cluster + rare gradient sparkle — GPU-cheap; the CPU-only software-render dev box (`--disable-gpu`)
+  showed ~6 vs ~7 fps against a stashed baseline, but that path over-weights fills vs a real phone
+  GPU and the sample was too noisy to trust the delta. On-device FPS is an owner re-verify item.
+  **Honest self-score: 8/10** — density now reads as a genuine tip-heavy crystalline coat matching
+  the macro; remaining nits: a couple of catch-light halos can still read a touch bead-like on
+  close zoom, and true on-phone perf is unconfirmed from this sandbox.
 - 🎮 ✅ **Top cola construction v2 — structure-first (2026-07-03, "GroVerse Anatomy & Construction
   Guide" reference set — Top Cola / Pistil Hair / Top Cola Tip / Bract-Calyx Scale breakdowns)** —
   branched from round 6's commit (`9f98c9e`; round 5's single-leader cone architecture + round 6's
