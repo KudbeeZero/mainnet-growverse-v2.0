@@ -816,3 +816,83 @@ class MarketListing(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     __mapper_args__ = {"version_id_col": version}
+
+
+class NFTAsset(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """On-chain minting record for seeds and harvests as Algorand ASAs."""
+
+    __tablename__ = "nft_assets"
+
+    asset_id: Mapped[int] = mapped_column(Integer, nullable=False, unique=True, index=True)
+    asset_type: Mapped[str] = mapped_column(String(16), nullable=False)  # SEED, HARVEST
+    owner_address: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    # Reference to game entity (Harvest or PlantSeed); type determined by asset_type
+    game_item_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    mint_txid: Mapped[str] = mapped_column(String(80), nullable=False)
+    ipfs_hash: Mapped[Optional[str]] = mapped_column(String(64))  # QmXxx...
+    metadata_snapshot: Mapped[Optional[dict]] = mapped_column(JSON)  # name, traits, etc.
+    status: Mapped[str] = mapped_column(String(16), default="minted", nullable=False)  # minted, listed, staking, traded
+    synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    __table_args__ = (Index("ix_nft_assets_owner", "owner_address"),)
+
+
+class NFTListing(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Marketplace listing for an NFT asset."""
+
+    __tablename__ = "nft_listings"
+
+    nft_asset_id: Mapped[int] = mapped_column(
+        ForeignKey("nft_assets.asset_id"), nullable=False, index=True
+    )
+    seller_address: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    price_ualgos: Mapped[Decimal] = mapped_column(MONEY, nullable=False)  # in microAlgos
+    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)  # active, sold, cancelled, expired
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    sold_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    __mapper_args__ = {"version_id_col": version}
+    __table_args__ = (Index("ix_nft_listings_status", "status", "seller_address"),)
+
+
+class NFTTrade(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Settlement record for a completed trade."""
+
+    __tablename__ = "nft_trades"
+
+    listing_id: Mapped[str] = mapped_column(ForeignKey("nft_listings.id"), nullable=False)
+    nft_asset_id: Mapped[int] = mapped_column(
+        ForeignKey("nft_assets.asset_id"), nullable=False, index=True
+    )
+    buyer_address: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    seller_address: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    price_ualgos: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    txid: Mapped[Optional[str]] = mapped_column(String(80))  # on-chain txid
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False)  # pending, confirmed, failed
+    confirmed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    error_message: Mapped[Optional[str]] = mapped_column(String(512))
+
+    __table_args__ = (Index("ix_nft_trades_status", "status", "created_at"),)
+
+
+class StakingLock(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Curing room lock: NFT locked for specified duration to earn rewards."""
+
+    __tablename__ = "staking_locks"
+
+    nft_asset_id: Mapped[int] = mapped_column(
+        ForeignKey("nft_assets.asset_id"), nullable=False, index=True
+    )
+    player_id: Mapped[str] = mapped_column(ForeignKey("players.id"), nullable=False)
+    cure_start_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    cure_end_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    cure_target_hours: Mapped[float] = mapped_column(Float, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)  # active, complete, withdrawn
+    rewards_amount: Mapped[Optional[Decimal]] = mapped_column(MONEY)  # bonus GC earned post-cure
+    rewards_claimed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    __table_args__ = (
+        Index("ix_staking_locks_player", "player_id", "status"),
+        Index("ix_staking_locks_end", "cure_end_at"),
+    )
