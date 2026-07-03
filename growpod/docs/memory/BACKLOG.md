@@ -14,6 +14,20 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
 > supersedes the 3D/Lab tracks below until the owner reopens them. Loop verified end-to-end by
 > `web/e2e/care-loop-shot.spec.ts` (button states → plant reaction → harvest-ready CTA →
 > post-harvest next-actions), 2026-07-03.
+- 🎮 ✅ **Route-wide white-screen crash hunt + permanent regression net (2026-07-03 PM)** — a
+  client-side-exception sweep across ALL 30 routes × plant states found the same bug class
+  repeatedly: pages guarded only `!data` (presence), so a truthy-but-malformed API response (an
+  empty array, a list where an object was expected, a partial body) slipped through and
+  white-screened on the first field access — surfacing as a full-page "Application error" and, in
+  CI, as an opaque Playwright timeout. Four fatal crashes found + fixed with shape guards:
+  `/university` (`t.courses.filter`), `/lab/strains/[id]` (`s.lineage_type` on a list-shaped
+  response — fixture also gained an explicit `/strains/str1` route shadowed by `/strains`),
+  `/university/learner` (RoadmapPanel `plan.skipped_mastered.length`), `/admin/economy`
+  (`setEntries(data.strains)` → `entries.length`; sibling loaders + ledger-summary hardened too).
+  Locked in with a permanent opt-in regression spec `web/e2e/route-crash-sweep.spec.ts` (loads
+  every route under the shared fixture, fails on any pageerror or the Next error boundary) — 29
+  routes green. This is the root-cause fix for the recurring "unexpected API shape crashes the
+  page" class (seen 6× this session incl. the events/seasonal fixture misroutes).
 - 🎮 ✅ **/university white-screen crash guarded (2026-07-03 PM)** — a client-side-exception
   sweep across routes × plant states (default/harvested/dead/veg) found `/university` throwing
   `Cannot read properties of undefined (reading 'filter')` → full-page "Application error". The
