@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (plant round 8 combined "10/10 hero render" push — four parallel specialists integrated into one branch and combined-verified against the reference: pistil hairs (9-rule breakdown — curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat, tip-heaviest), green sugar-leaf sepals (tuned to peek not stab — purple stays dominant), chamber glow Phase 2 (in-canvas green rim/back glow + bright green pot-base ring in `drawChamberShell`); dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color — merged; top cola construction v2 structure-first — merged; mint metadata server-truth fix).
+once they appear here. Last reconciled: **2026-07-03** (top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack, rebased onto and layered atop the round-8 combined push; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -324,6 +324,33 @@ once they appear here. Last reconciled: **2026-07-03** (plant round 8 combined "
   references' heavy tip frosting — a density/alpha tune, not touched here to stay inside this
   round's scope. A sibling agent is attempting the same brief with a layer-order-first approach on
   branch `design/cola-construction-layers` — see that PR for a second read on the same references.
+- 🎮 ✅ **Top cola construction round 8 — deterministic ring-parity "stacking" alternation
+  (2026-07-03, owner verbatim: "each area has to be populated with a stacking pattern — 12 in one
+  ring, 8 stacked inside, every other one purple, then the top stacks with a different colour... is
+  there a numerical/algorithmic way to structure the bud, instead of just a blob?")** — a dispatched
+  botanical/procedural-generation research pass (WebSearch + full codebase read) confirmed real cola
+  bract growth IS nodal/whorled, that the file's own golden-angle constant (`j * 2.399` ≈ 137.5°,
+  already used for pod placement here) is the correct real-world pattern (pinecone/sunflower
+  phyllotaxis), and — critically — that `buildMacro` ("Detailed Bud View," ~line 1252, not yet a
+  live route: "Coming soon") already implements a proper deterministic golden-angle ring-pack; this
+  round ported the missing piece (deterministic colour, not the already-correct placement) down into
+  the LIVE view, `buildFlowerSite`. Scope, in `chamberCore.ts`: (1) `Cluster.pods` gained a
+  `parity` field — a pod's position (odd/even) within its own ring (`ringCounts` tracked per-ring
+  during generation), deterministic, not random; (2) placement/ring-size math (2/3/3/rest,
+  continuous golden-angle spiral) is UNCHANGED — round 7 tuned that across several passes, no reason
+  to re-litigate it; (3) colour: `parity`/`ring` now drive a deterministic hue/lightness/saturation
+  offset applied AFTER the existing base→tip `tipBlend` gradient (folding the alternation INTO
+  `tipBlend` was tried first and was nearly invisible — that fraction clamps to 1.0 well before the
+  tip, swallowing any additive term exactly where the pattern most needs to show). Verified with a
+  same-session before/after screenshot comparison (not just self-report): the "before" render read
+  as a smooth purple gradient with only faint random mottling; "after" shows a clearly legible
+  alternating diamond-scale texture up each cola, checked on both a purple-accent strain (Purple
+  Diddy Punch) and a pure-green strain (G13), at both desktop crop and mobile (390×844) scale — still
+  reads as a cohesive cone silhouette, not speckle/noise. Gates: `tsc --noEmit` clean, `next lint` 0
+  new errors, `vitest run` 463/463 (no pinned-value regressions), `npm run build` clean,
+  `care-loop-shot` 4/4 green unmodified. Left untouched: `buildMacro` itself (not a live route yet —
+  a natural follow-up once "View Bud" ships), hair/pistil/frost logic, silhouette/mass-gradient
+  drawing.
 - 🎮 ✅ **Game-hub restructure — ACTIVE LANE DEFINITION (2026-07-03, owner directive, verbatim
   intent)** — *"There are too many windows. Everything should be accessible from the main game
   page. Don't repeat all of the watering everywhere — have that in ONE spot. Anybody should be

@@ -60,7 +60,7 @@ interface Cluster {
   fat: number;
   tipTaper: number;
   centerBias: number;
-  pods: Array<{ ring: number; a: number; rad: number; k: number; sz: number; dl: number; dh: number; blushK: number }>;
+  pods: Array<{ ring: number; a: number; rad: number; k: number; sz: number; dl: number; dh: number; blushK: number; parity: number }>;
   // `seam`: the grouped calyx-seam root angle this hair emerges from
   // (reference "Pistil Hair Breakdown" items 1-2 — grouped origin points,
   // never floating); several hairs per cluster share the same seam.
@@ -393,17 +393,42 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // whole-pod marks (no per-gland noise) so phone readability holds.
       const nPods = Math.max(7, Math.round((opt.bracts + 8) * 0.62 + baseW * 0.15));
       const pods = [];
+      // Round 8 (owner: "each area has to be populated with a stacking
+      // pattern — 12 in one ring, 8 stacked inside, every other one purple,
+      // then the top stacks with a different colour"). A botanical-research
+      // pass confirmed real cola bract growth IS nodal/whorled (not a free
+      // scatter) and that this file's own `buildMacro` — the "Detailed Bud
+      // View" a few hundred lines down — already implements a proper
+      // deterministic golden-angle ring-pack for exactly this. The angle/
+      // radius placement below is that same golden-angle idea in its purer
+      // continuous form (`j * 2.399` ≈ 137.5°/step across the WHOLE pod set,
+      // not just within one ring), which already avoids the "column-up"
+      // problem ring-local resets need an offset trick to fix — round 7
+      // tuned that placement/ring-size split (2/3/3/rest) across several
+      // passes, so it's left untouched here to avoid re-litigating it.
+      // What WAS still missing: colour was a random `blushK` roll per pod,
+      // not the deterministic "every other one" alternation the owner
+      // described. `ringIdx` (a pod's position within its own ring, tracked
+      // via `ringCounts` below) now drives that: pods sitting at odd ringIdx
+      // within a ring differ from even ones, layered under the existing
+      // base→tip gradient in the colour block below.
+      const ringCounts = [0, 0, 0, 0];
       for (let j = 0; j < nPods; j++) {
         const ring = j < 2 ? 0 : j < 5 ? 1 : j < 8 ? 2 : 3;
+        const ringIdx = ringCounts[ring]++;
         const a = (j * 2.399) % TAU;
         const rad = ring * 0.27 + rnd() * 0.1;
         pods.push({
           ring, a, rad,
+          parity: ringIdx % 2,
           k: ring / 3 + rnd() * 0.26,
           sz: (ring === 0 ? 1.02 : ring === 1 ? 0.92 : ring === 2 ? 0.82 : 0.72) * (0.85 + rnd() * 0.25),
           // Round 2 (owner mockup): calmer per-pod lightness/hue jitter (±12/±8 →
           // ±7/±5) — the old spread made neighbouring calyxes read as separate
           // polka dots instead of one layered bud surface.
+          // Round 8: blushK's role is now secondary texture jitter, not the
+          // primary colour driver — see `parity` above for the deterministic
+          // "every other one" alternation itself.
           dl: (rnd() - 0.5) * 7, dh: (rnd() - 0.5) * 5, blushK: rnd(),
         });
       }
@@ -780,19 +805,40 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // RGB space (blendHueSat) so the middle of the transition reads as a
         // muted dusty maroon, not a hot saturated red/blue passthrough.
         const tipW = smooth(clamp((cl.yf - 0.02) / 0.98, 0, 1));
-        const tipBlend = accHue != null ? clamp(tipW * accFrac * accGate * 2.6 + (p.blushK - 0.5) * 0.24, 0, 1) : 0;
+        const active = tipW * accFrac * accGate;
+        const tipBlend = accHue != null ? clamp(active * 2.6 + (p.blushK - 0.5) * 0.12, 0, 1) : 0;
         const [hueP0, satP0] =
           accHue != null
             ? blendHueSat(calyxHue, calyxSat, accHue, Math.min(70, calyxSat + 18), tipBlend)
             : [calyxHue, calyxSat];
-        const hueP = hueP0 + p.dh + (accHue == null && p.blushK < P.blush ? 18 : 0);
-        const satP = satP0;
+        // Round 8: deterministic "every other one" stacking alternation
+        // (owner: "12 in one ring, 8 stacked inside, every other one purple,
+        // then the top stacks with a different colour"). Folding this into
+        // `tipBlend` above didn't work — that fraction clamps to 1.0 well
+        // before the tip (fully accent-coloured), swallowing any additive
+        // term exactly where the pattern needs to stay visible. Instead it's
+        // a direct hue/lightness/saturation offset applied AFTER the blend,
+        // so it reads even at full saturation: `parityHue`/`parityLit`
+        // alternate WITHIN a ring, `ringLit` gives a whole ring a distinct
+        // step from its neighbour ("the one that stacks inside"). A same-run
+        // side-by-side screenshot check (before this pass, the alternation
+        // was folded into `tipBlend` and was nearly invisible against the
+        // fully-ripe cola's existing vein/frost/pistil texture) is why the
+        // hue term and the amplitudes below exist — lit/sat alone at a
+        // subtler amplitude didn't read. Lit alternation is unconditional
+        // (reads as a light/dark stacking texture on green-only strains
+        // too); hue/extra-saturation only swing once there's an accent hue.
+        const parityHue = accHue != null ? (p.parity ? 1 : -1) * 7 : 0;
+        const parityLit = (p.parity ? 1 : -1) * 6;
+        const ringLit = (p.ring % 2 ? 1 : -1) * 3;
+        const satP = accHue != null ? clamp(satP0 + (p.parity ? 1 : -1) * 9 * (0.3 + 0.7 * active), 0, 100) : satP0;
+        const hueP = hueP0 + p.dh + parityHue + (accHue == null && p.blushK < P.blush ? 18 : 0);
         // Pods splay outward from the cola axis (rotation follows their ring
         // position) so the surface reads as layered bract scales rather than
         // loose bubbles.
         drawPod(
           px, py, Math.cos(p.a) * (0.32 + p.rad * 0.45), podW * p.sz * g, podH * p.sz * g,
-          hueP, satP, baseLit + p.dl + (2 - p.ring) * 2 - tipBlend * 3, 0.42,
+          hueP, satP, baseLit + p.dl + (2 - p.ring) * 2 - tipBlend * 3 + parityLit + ringLit, 0.42,
         );
         drawn++;
       }
