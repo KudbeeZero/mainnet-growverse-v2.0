@@ -90,6 +90,12 @@ export async function setup(
     // were PlantEvents and crashes on the missing event_type field.
     "/plants/plant1/events": [],
     "/plants": [plant(stateOver)],
+    // Must precede "/strains" in intent (longest-needle-first sorting handles
+    // the ordering): the seasonal-drops endpoint is `/seasonal/strains`, which
+    // otherwise substring-matches "/strains" and returns the CATALOG (whose
+    // objects have `name`, not `strain_name`) — surfacing a bogus
+    // "undefined — Seasonal genetics" card in the store.
+    "/seasonal/strains": [],
     "/strains": [STRAIN],
     "/turbo": { enabled: false, multiplier: 10, offset_hours: 0, effective_now: new Date().toISOString(), wall_now: new Date().toISOString(), synced_pods: 0 },
     ...extraOverrides,
