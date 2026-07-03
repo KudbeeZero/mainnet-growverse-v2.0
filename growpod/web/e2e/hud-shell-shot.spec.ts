@@ -95,16 +95,36 @@ test.describe("mobile — landscape lock + swipe HUD", () => {
     await page.goto("/dashboard/plants/plant1/chamber");
     await expect(page.getByRole("alertdialog")).toHaveCount(0);
 
-    const swipe = (dx: number) =>
-      page.evaluate((dx) => {
-        const root = document.querySelector('[data-testid="game-shell-root"]')!;
-        function fire(type: string, x: number) {
-          root.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: "touch", clientX: x, clientY: 200, bubbles: true, cancelable: true }));
+    // Under CI's default 2-worker CPU contention, a single `document.querySelector`
+    // read can occasionally catch the root mid a React re-render tick and see null
+    // for a moment (reproduced: flaked at 2 workers, 100% reliable at 1 worker,
+    // same result against the pre-polish commit — a scheduling-sensitivity of a
+    // one-shot synchronous DOM read, not app or product breakage). A single
+    // `waitForSelector` beforehand narrows but doesn't fully close that window, so
+    // retry the dispatch itself a few times rather than accept a flaky assertion.
+    const swipe = async (dx: number) => {
+      let lastErr: unknown;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          await page.waitForSelector('[data-testid="game-shell-root"]', { state: "attached" });
+          await page.evaluate((dx) => {
+            const root = document.querySelector('[data-testid="game-shell-root"]');
+            if (!root) throw new Error("game-shell-root not found");
+            function fire(type: string, x: number) {
+              root.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: "touch", clientX: x, clientY: 200, bubbles: true, cancelable: true }));
+            }
+            fire("pointerdown", dx > 0 ? 4 : 200);
+            fire("pointermove", dx > 0 ? 60 : 140);
+            fire("pointerup", dx > 0 ? 60 : 140);
+          }, dx);
+          return;
+        } catch (err) {
+          lastErr = err;
+          await page.waitForTimeout(50);
         }
-        fire("pointerdown", dx > 0 ? 4 : 200);
-        fire("pointermove", dx > 0 ? 60 : 140);
-        fire("pointerup", dx > 0 ? 60 : 140);
-      }, dx);
+      }
+      throw lastErr;
+    };
 
     await swipe(1); // open from the left edge
     await expect(page.getByTestId("actions-panel")).toBeVisible();

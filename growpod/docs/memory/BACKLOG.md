@@ -115,13 +115,13 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   alongside this were closed by the mobile HUD polish pass (2026-07-03 PM): `hud-shell-shot.spec.ts`
   now covers a 768x1024/1024x768 (portrait/landscape) tablet-sized viewport at `isHandheld`'s own
   `≤1024` boundary, plus a rapid portrait↔landscape thrash sequence confirming the gate re-engages
-  cleanly with no stuck state or duplicate shell mount. Independently reconfirmed (2026-07-03 PM):
-  `hud-shell-shot.spec.ts`'s reopen-race test flakes under Playwright's default 2 workers (a
-  `document.querySelector` returning null mid-gesture, almost certainly CPU/timing contention
-  against the test's own artificial 600ms mutation delay) but passes reliably 11/11 with
-  `--workers=1` — pre-existing test-infra timing sensitivity, not a product bug (same flake
-  reproduces against the pre-polish commit too). Worth a `--workers=1` pin for this spec file in
-  CI if it trips there, rather than chasing it as a code defect.
+  cleanly with no stuck state or duplicate shell mount. The 2-worker flake predicted above **did**
+  trip PR #139's CI (2026-07-03 PM, commit f909d64) — root cause confirmed as the test's own
+  one-shot `document.querySelector` inside `page.evaluate` having no retry, not app/product
+  breakage: under CPU contention it can catch the root mid a React re-render tick. Fixed for real
+  (not just worked around) by wrapping the swipe helper's dispatch in a short retry loop
+  (`page.waitForSelector` + up to 5 attempts with a 50ms backoff) — stress-tested 21/21 passes
+  across 3 repeats at the default 2 workers post-fix, where it previously failed reliably.
 - 🎮 ✅ **Route-wide white-screen crash hunt + permanent regression net (2026-07-03 PM)** — a
   client-side-exception sweep across ALL 30 routes × plant states found the same bug class
   repeatedly: pages guarded only `!data` (presence), so a truthy-but-malformed API response (an
