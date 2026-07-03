@@ -14,6 +14,36 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
 > supersedes the 3D/Lab tracks below until the owner reopens them. Loop verified end-to-end by
 > `web/e2e/care-loop-shot.spec.ts` (button states → plant reaction → harvest-ready CTA →
 > post-harvest next-actions), 2026-07-03.
+- 🎮 ✅ **Store panelized + seasonal "undefined" drop fixed (2026-07-03 PM, owner: "redo the
+  store... some sort of panel or tile type of look")** — all 7 store shelves now sit in a
+  consistent elevated panel (`STORE_PANEL`, `store/page.tsx`) so the page reads as distinct
+  tiles instead of loose headers on the bare bg; presentation-only, no purchase/data logic
+  touched, section spacing tightened. Also fixed a real render defect: "This Week's Drops"
+  showed "undefined — Seasonal genetics" because (a) the store didn't guard a missing
+  `strain_name` (now falls back to "Seasonal strain") and (b) the mock fixture's
+  `/seasonal/strains` route substring-matched the `/strains` catalog (objects carry `name`,
+  not `strain_name`) — added an explicit fixture route. Verified 390px + 1440px; full gate green.
+  Honest note: a full visual-identity rewrite of the store (bespoke layout, hero art) remains a
+  larger owner-taste call — this is the safe paneling pass, not that.
+- 🎮 ✅ **Mobile chamber HUD chip no longer clips off-screen (2026-07-03 PM, owner: "text and
+  stuff off of the screen" on mobile)** — the chamber top stat strip used a `flex-1` spacer to
+  push the 4 chips right, but the strip is `pointer-events-none` so its `overflow-x-auto` could
+  never be scrolled; on a 390px phone the last chip (CO₂) sat ~26px past the right edge,
+  unreachable. Now wraps on mobile (spacer hidden), desktop keeps the single-line
+  strain-left/stats-right layout via `sm:` variants (`chamber/page.tsx`). Found + verified with a
+  horizontal-overflow audit across all key mobile routes (chamber offenders 3→0); the only other
+  root overflow is /profile's ledger table inside its intended `overflow-x-auto`, and an 8px
+  phantom on the plant-detail page with no element actually off-screen (nothing lost — left
+  alone). Full gate green.
+- 🎮 ✅ **E2E fixture events-route crash fixed + memory conflict-marker gate (2026-07-03 PM)** —
+  (1) `pod-cleanup-shot.spec.ts` was failing in CI (looked like a flake): the mock had no
+  `/plants/:id/events` route so it substring-matched the `/plants` LIST, `EventLog` rendered
+  plant objects as events and crashed on `titleCase(undefined)`, taking the whole page down.
+  Added the explicit fixture route; recorded in INCIDENTS.md (incl. correcting a wrong
+  "CI contention" first guess). (2) BACKLOG.md had shipped three unresolved git conflict markers
+  from a two-branch merge with no gate catching it — resolved (kept both sides' ✅ entries, it's
+  append-mostly) and added `check_memory.py` check #6 (fails on any committed conflict marker in
+  a memory doc), teeth-tested.
 - 🎮 ✅ **Dedupe the floating boost tray (2026-07-03)** — the chamber had two boost-apply UIs
   reading the same `useBoostStore` state: the floating `ArcadeHUD` tray (4 boost buttons + its
   own grow-speed/countdown readout, absolutely-positioned over the 3D stage) and the inline
