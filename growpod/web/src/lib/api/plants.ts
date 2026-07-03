@@ -13,10 +13,13 @@ export const plants = {
   events: (plantId: string, limit = 50) =>
     apiFetch<PlantEvent[]>(`/plants/${plantId}/events`, { query: { limit } }),
 
-  plant: (playerId: string, seedId: string, podId: string) =>
+  // `soilKey` is a `shop.gear` soil catalog key (e.g. "coco_coir") the player
+  // already owns — chosen once, for this plant's whole life (see
+  // GameService.plant_seed / simulation/engine._soil_effects).
+  plant: (playerId: string, seedId: string, podId: string, soilKey?: string) =>
     apiFetch<Plant>(`/players/${playerId}/plant`, {
       method: "POST",
-      body: { seed_id: seedId, pod_id: podId },
+      body: { seed_id: seedId, pod_id: podId, soil_key: soilKey },
     }),
 
   water: (playerId: string, plantId: string, amount?: number) =>

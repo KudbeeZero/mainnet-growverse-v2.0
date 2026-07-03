@@ -42,6 +42,7 @@ export const queryKeys = {
   storeFeatured: () => ["store", "featured"] as const,
   storeBundles: () => ["store", "bundles"] as const,
   consumables: (id: string) => ["consumables", id] as const,
+  gear: (id: string) => ["gear", id] as const,
   nftCollection: (playerId: string) => ["nft", "collection", playerId] as const,
   marketListings: (offset: number, limit: number, sort: string) =>
     ["nft", "market", "listings", offset, limit, sort] as const,

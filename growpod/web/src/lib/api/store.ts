@@ -74,6 +74,16 @@ export interface GearItem {
   specs: Record<string, string | number>;
   owned: number;
   equipped_pod_id: string | null;
+  // Present only for owned lights/fans (soils don't wear — they're consumed
+  // once per plant instead). Equipment depreciates with use: condition_pct
+  // scales its effective output, servicing restores it but the achievable
+  // ceiling drops each time, and it can be resold for a condition-scaled cut
+  // of its original price.
+  condition_pct?: number;
+  times_serviced?: number;
+  service_cost?: number;
+  service_ceiling_pct?: number;
+  resale_value?: number;
 }
 
 export const store = {
@@ -98,6 +108,27 @@ export const store = {
       method: "POST",
       body: { gear_key: gearKey },
     }),
+
+  equipFan: (playerId: string, podId: string, gearKey: string) =>
+    apiFetch<unknown>(`/players/${playerId}/pods/${podId}/equip-fan`, {
+      method: "POST",
+      body: { gear_key: gearKey },
+    }),
+
+  // Restore a worn light/fan's condition (never quite back to 100 — the
+  // achievable ceiling drops with each service).
+  serviceGear: (playerId: string, gearKey: string) =>
+    apiFetch<GearItem[]>(`/players/${playerId}/store/gear/${gearKey}/service`, {
+      method: "POST",
+    }),
+
+  // Resell owned (unequipped) light/fan gear for a condition-scaled fraction
+  // of its original price.
+  sellGear: (playerId: string, gearKey: string, quantity = 1) =>
+    apiFetch<{ proceeds: number; gear: GearItem[] }>(
+      `/players/${playerId}/store/gear/${gearKey}/sell`,
+      { method: "POST", body: { quantity } },
+    ),
 
   featured: () =>
     apiFetch<FeaturedItem[]>("/store/featured"),

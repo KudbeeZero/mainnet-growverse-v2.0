@@ -639,21 +639,33 @@ function gearSpecLine(item: GearItem): string {
   return `NPK ${s.npk} · ${s.base}`;
 }
 
+function conditionColor(pct: number): string {
+  if (pct >= 80) return "bg-grow-500";
+  if (pct >= 60) return "bg-yellow-500";
+  return "bg-red-500";
+}
+
 function GearCard({
   item,
   pods,
   onBuy,
   onEquip,
+  onService,
+  onSell,
   busy,
 }: {
   item: GearItem;
   pods: Pod[];
   onBuy: (key: string) => void;
-  onEquip: (key: string, podId: string) => void;
+  onEquip: (key: string, podId: string, category: GearCategory) => void;
+  onService: (key: string) => void;
+  onSell: (key: string) => void;
   busy: string | null;
 }) {
   const [podId, setPodId] = useState<string>("");
   const equippedPod = pods.find((p) => p.id === item.equipped_pod_id);
+  const equippable = item.category === "light" || item.category === "fan";
+  const condition = item.condition_pct;
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-ink-700 bg-ink-900/70 p-4">
       <div className="relative flex h-28 items-center justify-center overflow-hidden rounded-lg bg-ink-950/60">
@@ -689,10 +701,44 @@ function GearCard({
           {busy === item.key ? "…" : "Buy"}
         </button>
       </div>
-      {item.category === "light" && item.owned > 0 && (
+      {item.owned > 0 && condition !== undefined && (
+        <div className="mt-1 border-t border-ink-700 pt-2">
+          <div className="mb-1 flex items-center justify-between text-[10px] text-gray-500">
+            <span>Condition</span>
+            <span className="font-mono">{condition.toFixed(0)}%</span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-ink-800">
+            <div
+              className={`h-full ${conditionColor(condition)}`}
+              style={{ width: `${Math.max(0, Math.min(100, condition))}%` }}
+            />
+          </div>
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <button
+              onClick={() => onService(item.key)}
+              disabled={busy === item.key || condition >= (item.service_ceiling_pct ?? 100)}
+              title={`Restore up to ${item.service_ceiling_pct?.toFixed(0)}% for ${gcFmt(item.service_cost ?? 0)}`}
+              className="flex-1 rounded bg-accent-700 px-2 py-1 text-[11px] text-white hover:bg-accent-600 disabled:opacity-40"
+            >
+              🔧 Service ({gcFmt(item.service_cost ?? 0)})
+            </button>
+            <button
+              onClick={() => onSell(item.key)}
+              disabled={busy === item.key}
+              title="Sell for a condition-scaled price"
+              className="flex-1 rounded bg-ink-700 px-2 py-1 text-[11px] text-gray-200 hover:bg-ink-600 disabled:opacity-40"
+            >
+              💰 Sell ({gcFmt(item.resale_value ?? 0)})
+            </button>
+          </div>
+        </div>
+      )}
+      {equippable && item.owned > 0 && (
         <div className="mt-1 border-t border-ink-700 pt-2">
           {equippedPod ? (
-            <p className="text-[11px] text-grow-400">✓ Powering “{equippedPod.name}”</p>
+            <p className="text-[11px] text-grow-400">
+              ✓ {item.category === "light" ? "Powering" : "Ventilating"} “{equippedPod.name}”
+            </p>
           ) : (
             <p className="text-[11px] text-gray-500">Not equipped</p>
           )}
@@ -711,7 +757,7 @@ function GearCard({
                 ))}
               </select>
               <button
-                onClick={() => podId && onEquip(item.key, podId)}
+                onClick={() => podId && onEquip(item.key, podId, item.category)}
                 disabled={!podId || busy === item.key}
                 className="rounded bg-accent-700 px-2 py-1 text-[11px] text-white hover:bg-accent-600 disabled:opacity-40"
               >
@@ -769,16 +815,50 @@ function GrowRoomGearSection() {
     }
   }
 
-  async function equip(key: string, podId: string) {
+  async function equip(key: string, podId: string, category: GearCategory) {
     if (!playerId) return;
     setBusy(key);
     setMsg(null);
     try {
-      await storeApi.equipLight(playerId, podId, key);
+      if (category === "fan") {
+        await storeApi.equipFan(playerId, podId, key);
+        setMsg("✓ Fan equipped — it now ventilates that pod (lower mold/mildew risk)");
+      } else {
+        await storeApi.equipLight(playerId, podId, key);
+        setMsg("✓ Light equipped — it now drives that pod's light level");
+      }
       setItems(await storeApi.gear(playerId));
-      setMsg("✓ Light equipped — it now drives that pod's light level");
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Equip failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function service(key: string) {
+    if (!playerId) return;
+    setBusy(key);
+    setMsg(null);
+    try {
+      setItems(await storeApi.serviceGear(playerId, key));
+      setMsg("✓ Serviced — condition restored (never quite back to new)");
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : "Service failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function sell(key: string) {
+    if (!playerId) return;
+    setBusy(key);
+    setMsg(null);
+    try {
+      const res = await storeApi.sellGear(playerId, key, 1);
+      setItems(res.gear);
+      setMsg(`✓ Sold for ${gcFmt(res.proceeds)}`);
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : "Sell failed");
     } finally {
       setBusy(null);
     }
@@ -791,7 +871,7 @@ function GrowRoomGearSection() {
       <SectionHeader
         icon="🛠️"
         title="Grow Room Gear"
-        subtitle="Lights, fans, and soil — equip a light to a pod to power its canopy"
+        subtitle="Lights and fans equip to a pod; soil is chosen when you plant. All three actually affect your grow."
       />
       {!isAuthed ? (
         <p className="text-sm text-gray-500">Sign in to browse grow-room gear.</p>
@@ -813,6 +893,8 @@ function GrowRoomGearSection() {
                 pods={pods}
                 onBuy={buy}
                 onEquip={equip}
+                onService={service}
+                onSell={sell}
                 busy={busy}
               />
             ))}
