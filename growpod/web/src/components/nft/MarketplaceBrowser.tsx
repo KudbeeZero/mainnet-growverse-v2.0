@@ -54,14 +54,14 @@ export function MarketplaceBrowser() {
         <div className="flex gap-2">
           <Button
             size="sm"
-            variant={sortBy === "created_at" ? "default" : "secondary"}
+            variant={sortBy === "created_at" ? "primary" : "secondary"}
             onClick={() => setSortBy("created_at")}
           >
             Recent
           </Button>
           <Button
             size="sm"
-            variant={sortBy === "price_ualgos" ? "default" : "secondary"}
+            variant={sortBy === "price_ualgos" ? "primary" : "secondary"}
             onClick={() => setSortBy("price_ualgos")}
           >
             Price ↓
@@ -102,7 +102,9 @@ export function MarketplaceBrowser() {
                       {parseFloat(listing.price_ualgos).toLocaleString()} µA
                     </div>
                   </div>
-                  <Badge variant="outline">{listing.seller.slice(0, 10)}…</Badge>
+                  <Badge className="border-ink-600 bg-ink-700/40">
+                    {listing.seller.slice(0, 10)}…
+                  </Badge>
                 </div>
 
                 <div className="text-[10px] text-gray-600">
@@ -147,7 +149,7 @@ export function MarketplaceBrowser() {
                 <Button
                   onClick={() => handleBuy(selectedListing.listing_id)}
                   className="w-full"
-                  size="lg"
+                  size="md"
                 >
                   🛒 Buy Now
                 </Button>

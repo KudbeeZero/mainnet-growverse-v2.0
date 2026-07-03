@@ -790,3 +790,46 @@ export interface WaitlistSignup {
   source: string;
   created_at: string | null;
 }
+
+// ---- NFT Marketplace & Staking ----
+
+export type NFTAssetStatus = "pending" | "minted" | "failed" | "listed" | "staking" | "traded";
+export type NFTListingStatus = "active" | "sold" | "cancelled" | "expired";
+export type StakingStatus = "active" | "complete" | "withdrawn";
+
+export interface NFTAsset {
+  asset_id: number;
+  owner_address: string;
+  game_item_id: string;
+  ipfs_hash: string;
+  status: NFTAssetStatus;
+  metadata?: {
+    name?: string;
+    description?: string;
+    attributes?: Array<{ trait_type: string; value: string | number }>;
+    [k: string]: unknown;
+  } | null;
+  minted_at?: string;
+}
+
+export interface NFTListing {
+  listing_id: string;
+  asset_id: number;
+  seller: string;
+  price_ualgos: string;
+  created_at: string;
+  expires_at: string | null;
+  status?: NFTListingStatus;
+}
+
+export interface StakingLock {
+  lock_id: string;
+  asset_id: number;
+  status: StakingStatus;
+  cure_started_at: string;
+  cure_ends_at: string;
+  progress_pct: number;
+  time_remaining_seconds: number;
+  rewards_amount: string;
+  can_claim: boolean;
+}

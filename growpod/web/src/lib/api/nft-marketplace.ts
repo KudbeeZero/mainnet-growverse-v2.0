@@ -1,13 +1,5 @@
 import { apiFetch } from "./client";
-
-interface NFTListing {
-  listing_id: string;
-  asset_id: number;
-  seller: string;
-  price_ualgos: string;
-  created_at: string;
-  expires_at?: string;
-}
+import type { NFTListing } from "@/lib/types";
 
 interface NFTTrade {
   trade_id: string;
@@ -22,7 +14,7 @@ export const market = {
     apiFetch<{ listings: NFTListing[]; total: number; limit: number; offset: number }>(
       `/api/market/listings`,
       {
-        params: {
+        query: {
           limit: params.limit ?? 20,
           offset: params.offset ?? 0,
           sort: params.sort ?? "created_at",
@@ -39,6 +31,7 @@ export const market = {
       {
         method: "POST",
         body: { asset_id: assetId, price_ualgos: priceUalgos },
+        auth: true,
         headers: { "X-Player-ID": playerId },
       },
     ),
@@ -46,6 +39,7 @@ export const market = {
   cancelListing: (playerId: string, listingId: string) =>
     apiFetch<{ status: string }>(`/api/market/listings/${listingId}`, {
       method: "DELETE",
+      auth: true,
       headers: { "X-Player-ID": playerId },
     }),
 
@@ -54,6 +48,7 @@ export const market = {
       `/api/market/execute/${listingId}`,
       {
         method: "POST",
+        auth: true,
         headers: { "X-Player-ID": playerId },
       },
     ),

@@ -1,18 +1,10 @@
 import { apiFetch } from "./client";
-
-interface NFTAsset {
-  asset_id: number;
-  type: "SEED" | "HARVEST";
-  status: "minted" | "listed" | "staking" | "traded";
-  game_item_id: string;
-  ipfs_hash?: string;
-  metadata?: Record<string, any>;
-  minted_at: string;
-}
+import type { NFTAsset } from "@/lib/types";
 
 export const nft = {
   getCollection: (playerId: string) =>
     apiFetch<NFTAsset[]>(`/api/nft/collection`, {
+      auth: true,
       headers: { "X-Player-ID": playerId },
     }),
 
@@ -22,6 +14,7 @@ export const nft = {
       {
         method: "POST",
         body: { harvest_id: harvestId },
+        auth: true,
         headers: { "X-Player-ID": playerId },
       },
     ),

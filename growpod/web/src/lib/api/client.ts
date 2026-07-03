@@ -60,6 +60,8 @@ interface FetchOptions {
   /** Treat `path` as an absolute path under the API host (skip /api/game). */
   raw?: boolean;
   query?: Record<string, string | number | boolean | null | undefined>;
+  /** Custom headers to merge with auto-generated ones. */
+  headers?: Record<string, string>;
 }
 
 function buildUrl(path: string, raw: boolean, query?: FetchOptions["query"]): string {
@@ -82,7 +84,7 @@ export async function apiFetch<T>(path: string, opts: FetchOptions = {}): Promis
   const isWrite = method !== "GET";
   const auth = opts.auth ?? isWrite;
 
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...opts.headers };
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
 
   if (auth || opts.apiKey) {

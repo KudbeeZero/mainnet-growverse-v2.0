@@ -11,10 +11,6 @@ import { useSession } from "@/lib/session";
 import { queryKeys } from "@/lib/queryKeys";
 import type { NFTAsset } from "@/lib/types";
 
-interface NFTAssetWithUI extends NFTAsset {
-  status: "minted" | "listed" | "staking" | "traded";
-}
-
 export function NFTCollection() {
   const { playerId } = useSession();
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
@@ -30,7 +26,7 @@ export function NFTCollection() {
     return <LoadingBlock label="Loading NFTs…" />;
   }
 
-  const assets = (collection.data as NFTAssetWithUI[]) ?? [];
+  const assets = (collection.data as NFTAsset[]) ?? [];
 
   if (assets.length === 0) {
     return (
@@ -103,9 +99,11 @@ export function NFTCollection() {
             )}
 
             {/* Minted at */}
-            <div className="mt-2 text-[10px] text-gray-600">
-              {new Date(asset.minted_at).toLocaleDateString()}
-            </div>
+            {asset.minted_at && (
+              <div className="mt-2 text-[10px] text-gray-600">
+                {new Date(asset.minted_at).toLocaleDateString()}
+              </div>
+            )}
           </div>
         ))}
       </div>

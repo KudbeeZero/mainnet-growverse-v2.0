@@ -1,16 +1,5 @@
 import { apiFetch } from "./client";
-
-interface StakingLock {
-  lock_id: string;
-  asset_id: number;
-  status: "active" | "complete" | "withdrawn";
-  cure_started_at: string;
-  cure_ends_at: string;
-  progress_pct: number;
-  time_remaining_seconds: number;
-  rewards_amount: string;
-  can_claim: boolean;
-}
+import type { StakingLock } from "@/lib/types";
 
 export const stakes = {
   createLock: (playerId: string, assetId: number, harvestId: string) =>
@@ -23,11 +12,13 @@ export const stakes = {
     }>(`/api/stakes`, {
       method: "POST",
       body: { asset_id: assetId, harvest_id: harvestId },
+      auth: true,
       headers: { "X-Player-ID": playerId },
     }),
 
   getLocks: (playerId: string) =>
     apiFetch<StakingLock[]>(`/api/stakes`, {
+      auth: true,
       headers: { "X-Player-ID": playerId },
     }),
 
@@ -40,6 +31,7 @@ export const stakes = {
       can_claim: boolean;
       rewards_amount: string;
     }>(`/api/stakes/${lockId}`, {
+      auth: true,
       headers: { "X-Player-ID": playerId },
     }),
 
@@ -48,6 +40,7 @@ export const stakes = {
       `/api/stakes/${lockId}/claim`,
       {
         method: "POST",
+        auth: true,
         headers: { "X-Player-ID": playerId },
       },
     ),

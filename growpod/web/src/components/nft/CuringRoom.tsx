@@ -11,18 +11,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { queryKeys } from "@/lib/queryKeys";
 import { grow } from "@/lib/format";
-
-interface StakingLock {
-  lock_id: string;
-  asset_id: number;
-  status: "active" | "complete" | "withdrawn";
-  cure_started_at: string;
-  cure_ends_at: string;
-  progress_pct: number;
-  time_remaining_seconds: number;
-  rewards_amount: string;
-  can_claim: boolean;
-}
+import type { StakingLock } from "@/lib/types";
 
 export function CuringRoom() {
   const { playerId } = useSession();
@@ -113,7 +102,7 @@ export function CuringRoom() {
         <div className="bg-ink-800/50 rounded p-2 mb-3">
           <div className="text-[10px] text-gray-500">Post-cure bonus</div>
           <div className="text-sm font-mono text-grow-300">
-            +{grow(lock.rewards_amount)} GC
+            +{grow(parseFloat(lock.rewards_amount))} GC
           </div>
         </div>
 
@@ -124,7 +113,7 @@ export function CuringRoom() {
             className="w-full"
             onClick={() => console.log("Claim reward for lock:", lock.lock_id)}
           >
-            🎁 Claim {grow(lock.rewards_amount)} + NFT
+            🎁 Claim {grow(parseFloat(lock.rewards_amount))} + NFT
           </Button>
         )}
       </div>
