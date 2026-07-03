@@ -65,7 +65,7 @@ test("PROOF: 'Skip onboarding' on /ftue lands on a clean dashboard with no tour 
   await mockApi(page, "welcome");
 
   await page.goto("/ftue");
-  await page.getByRole("button", { name: /Skip onboarding/ }).click();
+  await page.getByRole("button", { name: /^Skip/ }).click();
 
   await page.waitForURL("**/dashboard");
   // The dashboard guided tour must NOT auto-start — skipping /ftue dismissed it.
