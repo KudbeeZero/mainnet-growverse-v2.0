@@ -424,7 +424,14 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // Per-cluster half-width and centreline, 3-tap smoothed across neighbours
       // so fat/lateral jitter can't lobe the outline into a peanut. The jitter
       // still lives in the calyx texture — only the envelope is calmed.
-      const raw = mass.map((m) => Math.max(m.podW * 1.25, m.cw * 0.56) * (0.66 + 0.34 * m.d));
+      // Round 6 (secondary, cheap win): a touch wider per-cola envelope
+      // (1.25→1.4, 0.56→0.62) — round 5 flagged individual colas still
+      // reading as separated, spiky "fingers" rather than the reference's
+      // chunkier, more fused stacked-diamond mass. Widening the mass outline
+      // itself (not branch spacing — that's a bigger whole-plant layout
+      // change, out of scope for this round) plumps each cola without
+      // touching the taper/single-leader architecture from round 5.
+      const raw = mass.map((m) => Math.max(m.podW * 1.4, m.cw * 0.62) * (0.66 + 0.34 * m.d));
       const hw = raw.map((r, i) => (raw[Math.max(0, i - 1)] + 2 * r + raw[Math.min(n - 1, i + 1)]) / 4);
       // Clean spear taper: width may only shrink toward the tip (a wide bulge
       // above a waist is what made the old outline read as stacked lobes).
@@ -454,10 +461,28 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // the accent cap rises to 0.6 and the blend reaches further down the cola,
       // and the tip stop is a mid-dark dusty violet (massLit+4, not +10) so the
       // purple reads as pigment in the calyxes, not a lavender glow.
-      const accAmt = accHue != null ? clamp(accFrac * accGate, 0, 0.6) : 0;
+      // Round 6 (close-up + full-plant reference photos): round 5's single
+      // point-stop at the very tip meant the gradient interpolated hue
+      // accHue→calyxHue over a short span near the apex only — at chamber
+      // scale that read as a pale purple kiss, not the references'
+      // purple-DOMINANT cola (purple is the majority surface colour; green is
+      // a minority base/edge role, mostly carried by separate leaf blades —
+      // see cl.leaf below — not blended into the bud mass itself). Three
+      // changes vs round 5: (1) accAmt's gain raised ×2.0 and its cap raised
+      // 0.6→0.98 so accent-capable strains (Gelato accentFrac 0.5) push much
+      // further down the cola; (2) a HELD purple plateau — two stops at the
+      // same hue before the transition to green — so the top of the cola
+      // stays solidly violet instead of instantly blending toward green;
+      // (3) the transition point itself now reaches up to ~97% down the cola
+      // at max strength (was capped at 50%), so only a thin base band stays
+      // green. Saturation/lightness kept modest (not neon) to stay a dusty
+      // violet like the references, not a bright magenta glow.
+      const accAmt = accHue != null ? clamp(accFrac * accGate * 2.0, 0, 0.98) : 0;
       if (accHue != null && accAmt > 0.06) {
-        mg.addColorStop(0, `hsl(${accHue}, ${Math.min(72, bc.calyxSat + 16)}%, ${massLit + 4}%)`);
-        mg.addColorStop(clamp(0.2 + accAmt * 0.55, 0.2, 0.5), `hsl(${bc.calyxHue + 4}, ${bc.calyxSat}%, ${massLit + 7}%)`);
+        const purpleEnd = clamp(0.42 + accAmt * 0.58, 0.42, 0.97);
+        mg.addColorStop(0, `hsl(${accHue}, ${Math.min(74, bc.calyxSat + 18)}%, ${massLit + 6}%)`);
+        mg.addColorStop(clamp(purpleEnd * 0.55, 0.15, 0.5), `hsl(${accHue}, ${Math.min(70, bc.calyxSat + 12)}%, ${massLit + 1}%)`);
+        mg.addColorStop(purpleEnd, `hsl(${bc.calyxHue + 4}, ${bc.calyxSat}%, ${massLit + 7}%)`);
       } else {
         mg.addColorStop(0, `hsl(${bc.calyxHue + 4}, ${bc.calyxSat}%, ${massLit + 7}%)`);
       }
@@ -525,14 +550,29 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // Round 3 (owner mockup): steeper tip concentration (exp 1.4 → 2.1,
         // gain 1.7 → 2.4) — near the tip most pods flip to the accent hue so
         // the purple reads as a continuous cap, not dots sprinkled mid-bud.
-        const tipW = Math.pow(clamp((cl.yf - 0.25) / 0.75, 0, 1), 2.1);
         // Round 5 (specialist code review, 2026-07-03): gain 2.4 → 1.4 — the
         // fused-mass gradient cap (drawn above, unchanged) already carries the
         // purple identity; per-pod accents on top of it at 2.4x read as violet
         // confetti sprinkled over an already-purple tip. 1.4x keeps a handful of
         // accent pods as texture without fighting the mass gradient for the
         // "where's the purple" read.
-        const accent = accHue != null && p.blushK < accFrac * accGate * tipW * 1.4;
+        // Round 6 (close-up + full-plant reference photos): round 5
+        // over-corrected — the references show the calyx PODS themselves
+        // (not just the mass gradient underneath) reading purple across
+        // nearly all of the cola, with green confined to a thin base band and
+        // to separate leaf blades (drawn above via cl.leaf, not these pods),
+        // not "sparse purple flecks on green". The pods sit ON TOP of the
+        // fused-mass gradient and cover most of its visible area, so
+        // pod-level accent density is what the eye actually reads as the
+        // dominant colour. Widened the tip-weighting curve a long way from
+        // round 5 (exponent 2.1 → 0.65, floor 0.25 → 0.02) so accent share
+        // ramps up starting almost immediately off the cola base instead of
+        // only the top quarter, and raised the gain (1.4 → 7.0) so it
+        // saturates to "almost always accent" past the first few percent of
+        // the cola — matching the references' dense, near-total purple
+        // diamond-segment stacking.
+        const tipW = Math.pow(clamp((cl.yf - 0.02) / 0.98, 0, 1), 0.65);
+        const accent = accHue != null && p.blushK < accFrac * accGate * tipW * 7.0;
         const baseHueP = accent ? accHue : calyxHue;
         // Accent calyxes are already a distinct hue — don't also apply the
         // ripeness blush shift, which would push violet toward pink.
@@ -540,11 +580,14 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // Accent pods render slightly deeper/dustier (mockup purple is a dark
         // dusty violet, not bright magenta); pods splay outward from the cola
         // axis (rotation follows their ring position) so the surface reads as
-        // layered bract scales rather than loose bubbles.
+        // layered bract scales rather than loose bubbles. Round 6: saturation
+        // bumped a touch further (+4 → +9) so accent pods read clearly as
+        // purple against the green base at a glance, still capped well short
+        // of neon.
         drawPod(
           px, py, Math.cos(p.a) * (0.32 + p.rad * 0.45), podW * p.sz * g, podH * p.sz * g,
-          hueP, accent ? Math.min(58, calyxSat + 4) : calyxSat,
-          baseLit + p.dl + (2 - p.ring) * 2 - (accent ? 3 : 0), 0.42,
+          hueP, accent ? Math.min(62, calyxSat + 9) : calyxSat,
+          baseLit + p.dl + (2 - p.ring) * 2 - (accent ? 2 : 0), 0.42,
         );
         drawn++;
       }

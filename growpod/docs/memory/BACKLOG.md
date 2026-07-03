@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 5 — single-leader cone architecture — in the parallel lane; round 4 superseded, see below).
+once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos — in the parallel lane, supersedes round 5's color read; round 4 superseded, see below).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -167,6 +167,51 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   separately — round 4's density work stays queued on its own branch/PR in case a future round
   wants to layer it back on top of round 5's architecture; closing #119 is the owner's call, not
   done unilaterally here.
+- 🎮 ✅ **Plant mockup round 6 (2026-07-03, close-up + full-plant reference photos)** — branched
+  from round 5's commit (`fedc1d6`, single-leader cone architecture — inherited, not redone).
+  Round 5 fixed architecture but over-corrected color: its pistil/purple-accent cut (per an
+  earlier, overly conservative instruction) left the render predominantly GREEN with sparse,
+  faint purple flecks — further from the target on the color axis than round 4, despite the
+  architecture win. This round targets ONLY the color mechanism in `chamberCore.ts`'s
+  `drawFlowerSite` (fused-mass gradient + per-pod accent), against two reference images: a
+  close-up crop (purple as majority cola surface, green as base/edge) and a fuller-render
+  reference supplied mid-round (near-total purple bract coverage, green confined to separate
+  leaf blades, not blended into the bud mass at all) — the second, more extreme reference is
+  treated as the primary bar since it's the more complete/authoritative target. Root cause: the
+  round-5 fused-mass gradient held its purple stop as a single point right at the tip
+  (`accAmt` capped 0.6, transition stop capped at 0.5 of the cola) so it visually washed to pale
+  purple within the top ~20%; and the per-pod accent's tip-weighting curve (`exponent 2.1`,
+  `floor 0.25`) confined accent-hued pods to roughly the top quarter of each cola at a damped
+  `gain 1.4`. Fixes: (1) fused-mass gradient — `accAmt` gain ×2.0 + cap 0.6→0.98, a HELD purple
+  plateau (two same-hue stops before the green transition, not an instant blend), transition
+  point pushed to ~97% down the cola at max strength (was 50%); (2) per-pod accent — tip-weight
+  exponent 2.1→0.65 and floor 0.25→0.02 so accent share ramps up almost from the cola base
+  instead of only the top quarter, gain 1.4→7.0 so accent-hued pods saturate to "almost always"
+  past the first few percent of the cola, accent pod saturation nudged +4→+9 over base (still
+  capped well short of neon) so pods read clearly purple at a glance. Orange/pistil count
+  UNCHANGED (round 5's reduction was correct per this round's brief — deliberately not
+  reintroduced). Secondary, cheap win taken alongside (not the round's main effort): a touch
+  wider per-cola mass envelope (`podW` multiplier 1.25→1.4, `cw` multiplier 0.56→0.62) so
+  individual colas read a shade chunkier/more fused, a partial nudge on round 5's flagged
+  "separated spiky fingers" gap — not a full fix (that needs branch-spacing/whole-plant-layout
+  changes, out of scope here). Mechanism-only change (no strain-specific values touched in
+  `strainVisuals.ts`): only strains with an authored/derived `accentHue` (anthocyanin > 0.05 —
+  Gelato, Wedding Cake, Animal Mints, Purple Diddy Punch) are affected; spot-checked G13, White
+  Rhino, Blue Dream via a headless mock-API Playwright render — all three unaffected, still their
+  own distinct green/teal identities, no purple leakage. Gates: `tsc --noEmit` clean, `next lint`
+  0 errors, vitest 463/463 (no pinned values needed updating), `npm run build` clean, Playwright
+  `care-loop-shot.spec.ts` 4/4 green via a local playwright config (deleted before commit, not
+  tracked) pinned to the sandbox Chromium binary. **Honest self-score: 8/10 against the reference
+  photos** — purple now genuinely reads as the dominant, majority cola color with green correctly
+  relegated to a base/edge/leaflet role and orange staying near-absent, a real fix over round 5's
+  green-dominant read; remaining gap (inherited from round 5, not addressed here beyond the cheap
+  width nudge above): individual cola texture is still a spiky stacked-pod look rather than the
+  references' smooth, fused, diamond-bract silhouette, and the accent hue reads a touch more
+  magenta/saturated than the references' dustier violet — both are bud-mass-shape/rendering-style
+  questions (spline smoothing, color-fill technique, hue calibration), not color-dominance or
+  architecture ones, and are out of this round's scope. Round 5's architecture (single-leader
+  `colaTops` count=1, taper) is untouched and confirmed intact by the same cross-strain spot-check
+  above.
 - 🎮 ✅ **Game-hub restructure — ACTIVE LANE DEFINITION (2026-07-03, owner directive, verbatim
   intent)** — *"There are too many windows. Everything should be accessible from the main game
   page. Don't repeat all of the watering everywhere — have that in ONE spot. Anybody should be
