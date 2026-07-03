@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; mint metadata server-truth fix; Lab 3D bud viewer reference prototype (owner-authored Three.js grow chamber) saved to docs/prototypes/ with the furrier-pistils / denser-trichomes / more-lighting punch list — parked under the 3D freeze).
+once they appear here. Last reconciled: **2026-07-03** (round-8 chamber richness — furrier pistils + denser trichome frost via offscreen-canvas stamp caching + a Perlin-ish flow field, in `chamberCore.ts` + new `chamber/stamps.ts`, pistil/frost subsystems only; dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; mint metadata server-truth fix; Lab 3D bud viewer reference prototype (owner-authored Three.js grow chamber) saved to docs/prototypes/ with the furrier-pistils / denser-trichomes / more-lighting punch list — parked under the 3D freeze).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -14,6 +14,22 @@ once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boos
 > supersedes the 3D/Lab tracks below until the owner reopens them. Loop verified end-to-end by
 > `web/e2e/care-loop-shot.spec.ts` (button states → plant reaction → harvest-ready CTA →
 > post-harvest next-actions), 2026-07-03.
+- 🎮 ✅ **Round-8 chamber richness: furrier pistils + denser frost (2026-07-03)** — applied the
+  deep-research findings (offscreen-canvas stamp caching + Perlin-ish flow field) to raise pistil
+  + trichome density on the live 2D chamber plant toward the owner's "furrier hairs / thousands of
+  trichomes" hero target, WITHOUT costing more per frame. New `web/src/lib/chamber/stamps.ts`:
+  module-level lazy cache that pre-renders ONE tapered pistil-filament sprite and ONE frost-glint
+  sprite per (visual key, dpr) to snug offscreen canvases, then `drawImage`-blits them many times
+  (a GPU texture copy vs. the old per-frame `createRadialGradient`/path-fill per element); plus a
+  seeded value-noise `makeFlowField` so pistils curl in coherent local directions, not confetti.
+  `chamberCore.ts` (pistil `hairs` + trichome `tris` build/draw blocks ONLY): a dense tuft of fine
+  curling filaments per cluster and a large frost-glint POOL (draw-time density gate unchanged, so
+  it stays top-cola-weighted and purple-dominant), both blitted from the cache with a direct-draw
+  fallback for the headless `@napi-rs` PNG-gen path. The extra detail uses an INDEPENDENT per-site
+  PRNG so the main RNG stream — and every pod/calyx/bract + leaf — is byte-for-byte unchanged.
+  Verified with browser Playwright shots (Purple Diddy Punch + G13, mature late-flower): pistils
+  read furrier/abundant/curling, frost reads as a denser crystalline coat, purple stays the
+  dominant surface. Gates green: tsc, lint (0 new), vitest 472, build, care-loop-shot 4/4.
 - 🎮 ✅ **Dedupe the floating boost tray (2026-07-03)** — the chamber had two boost-apply UIs
   reading the same `useBoostStore` state: the floating `ArcadeHUD` tray (4 boost buttons + its
   own grow-speed/countdown readout, absolutely-positioned over the 3D stage) and the inline

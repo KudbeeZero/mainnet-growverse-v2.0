@@ -31,6 +31,7 @@ import {
   SHIMMER_MAX_AMP,
 } from "./trichomes";
 import { colaTops } from "./apicalDominance";
+import { blitFilament, blitFrost, makeFlowField } from "./stamps";
 import { calyxShapeFor } from "./calyxShape";
 import { earlyStageBoost } from "./earlyStage";
 import { CONDITION_VISUALS, SEVERITY_SCALE, dominantFlag } from "../conditionVisuals";
@@ -350,6 +351,17 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     const nClusters = opt.nClusters;
     const lush = opt.lush ?? 1;
     const clusters: Cluster[] = [];
+    // Round 8 (furrier pistils + denser frost): an INDEPENDENT per-site PRNG for
+    // the extra pistil/frost detail + the coherence flow field. Seeded only from
+    // site geometry (NOT the main `rnd`), so the main stream — which drives the
+    // pod/calyx/bract layout and leaf phase — is byte-for-byte unchanged; the
+    // original hair/frost loops still consume `rnd` exactly as before, and the
+    // richer detail is layered on top via `prnd`. See stamps.ts for the field.
+    const prnd = mulberry32((Math.round(axisLen * 131.1 + baseW * 17.7 + nClusters * 101) >>> 0) || 1);
+    // Perlin-ish value-noise flow field: pistils emerging from nearby seams
+    // curl in coherent LOCAL directions (natural continuous growth) instead of
+    // confetti. Deterministic per site → no frame-to-frame shimmer.
+    const flow = makeFlowField(prnd);
     for (let i = 0; i < nClusters; i++) {
       const yf = nClusters === 1 ? 0.5 : i / (nClusters - 1);
       let along: number, lateral: number, fat: number;
@@ -419,11 +431,40 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       for (let j = 0; j < nH; j++) {
         const seam = seams[j % seams.length];
         // Directional fan: mostly upward, biased slightly toward the seam's
-        // own outward direction, with slight per-hair randomness (item 5).
-        const dir = seam * 0.3 + -Math.PI / 2 * 0.7 + (rnd() - 0.5) * 0.95;
+        // own outward direction (item 5) — Round 8 blends the coherence flow
+        // field in as the dominant organic term so neighbouring hairs curl the
+        // same local way (the per-hair `rnd` jitter is kept, just weighted
+        // down, so the main PRNG stream — and every downstream pod — is
+        // unchanged).
+        const dir = seam * 0.3 + -Math.PI / 2 * 0.7 + flow(seam) * 0.7 + (rnd() - 0.5) * 0.35;
         // Round 5: smaller tip balls (0.9+0.4 → 0.65+0.3) so each pistil reads
         // as a fine amber thread, not a bead.
         hairs.push({ a: dir, seam, len: 0.5 + rnd() * 0.45, bend: (rnd() - 0.5) * 1.3, ball: 0.55 + rnd() * 0.25, k: rnd() * 0.85 });
+      }
+      // Round 8 (owner: "furrier / more abundant pistil hairs", reference
+      // "Pistil Hair Breakdown"): a denser tuft of FINE curling filaments per
+      // cluster, emitted from the SAME grouped seam root points (items 1/2/9 —
+      // never floating), oriented along the flow field so they read as a coat
+      // of coherent hairs, not confetti. Length-tiered (item 6) and thinner/
+      // finer than the primaries. Cheap because the draw blits a cached
+      // filament sprite (see stamps.ts) instead of filling a path each frame.
+      // Density still follows tier position (more up top, fewer at the base).
+      const extraH = Math.max(0, Math.round((pat === "spiral" ? 11 : 13) * lush * tierDensity) - nH);
+      for (let j = 0; j < extraH; j++) {
+        const seam = seams[j % seams.length];
+        const fdir = seam * 0.3 + -Math.PI / 2 * 0.7 + flow(seam + j * 0.19) * 0.85 + (prnd() - 0.5) * 0.4;
+        // curl side + amount driven mostly by the flow field so a local patch
+        // of hairs bends together (coherent), with a little per-hair variance.
+        const bend = (flow(seam + 0.5) + (prnd() - 0.5) * 0.6) * 1.15;
+        const tier = prnd();
+        hairs.push({
+          a: fdir,
+          seam,
+          len: 0.38 + tier * tier * 0.6, // length tiers: many short, a few long
+          bend,
+          ball: 0.34 + prnd() * 0.22, // finer tips than the primaries
+          k: prnd() * 0.92,
+        });
       }
       // Trichome "frost" — a few CLUSTERED highlight blobs per cluster instead of
       // a dense field of individual stalk+gland glyphs (owner: "clustered frost
@@ -436,6 +477,18 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const nT = Math.max(1, Math.round(1.5 * lush));
       for (let j = 0; j < nT; j++)
         tris.push({ a: rnd() * TAU, len: 0.5 + rnd() * 0.5, headR: 0.7 + rnd() * 0.5, k: rnd(), mat: rnd() });
+      // Round 8 (owner: "denser trichome frost — thousands of them", reference
+      // macro crystalline coat): a large POOL of fine sub-pixel resin glints per
+      // cluster. This is a CEILING, not a fixed count — the draw gates by
+      // `tr.k > dens` (dens = P.trich · trichScale · frostGate), so only a
+      // fraction actually paints: near-full on the top cola, thinning down the
+      // cola and on lower/inner sites. Affordable only because each glint blits
+      // a cached radial sprite (stamps.ts) instead of rebuilding a gradient per
+      // spark per frame. Finer heads (smaller headR) than the old blobs so the
+      // dense field reads as a crystalline sugar-coat, not smoke.
+      const extraT = Math.max(0, Math.round(50 * lush) - nT);
+      for (let j = 0; j < extraT; j++)
+        tris.push({ a: prnd() * TAU, len: 0.3 + prnd() * 0.6, headR: 0.26 + prnd() * 0.5, k: prnd(), mat: prnd() });
       clusters.push({
         yf, along, lateral, fat: fat * opt.fatMul, tipTaper, centerBias, pods, hairs, tris,
         ph: rnd() * TAU,
@@ -477,6 +530,19 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     const accHue = bcA.accentHue ?? (anth > 0.05 ? 288 : null);
     const accFrac = bcA.accentFrac ?? (anth > 0.05 ? clamp(0.12 + anth * 0.4, 0, 0.5) : 0);
     const accGate = 0.55 + 0.45 * P.ripe; // mid-flower subtle → late-flower full
+
+    // Device-pixel-ratio for the offscreen stamp sprites (pistil filaments +
+    // frost glints). The plant draws under translate+rotate only (no non-uniform
+    // scale), so the current transform is dpr·rotation — |(a,b)| recovers dpr
+    // robustly under any branch-sway rotation. Sprites are built once at this
+    // dpr and blitted crisp; the cache keys on it so a dpr change just rebuilds.
+    let stampDpr = 1;
+    try {
+      const tf = ctx!.getTransform();
+      stampDpr = Math.hypot(tf.a, tf.b) || 1;
+    } catch {
+      stampDpr = 1;
+    }
 
     // Per-cluster placement, computed once so the continuous bud-mass
     // silhouette and the calyx texture that rides on it stay in lock-step.
@@ -731,25 +797,35 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       for (const h of cl.hairs) {
         if (h.k > d) continue;
         const stretch = clamp((d - h.k * 0.5) / 0.6, 0.35, 1);
-        const L = cw * 0.24 * h.len * stretch;
+        // Round 8: longer filaments (0.24 → 0.4) so the abundant hairs extend
+        // BEYOND the calyx surface and read as a furry curling coat (reference
+        // "Pistil Hair Breakdown"), not amber flecks pinned to the bud.
+        const L = cw * 0.4 * h.len * stretch;
         const seamR = 0.6 + 0.22 * Math.sin(h.seam * 3.1);
         const x0 = cx + Math.cos(h.seam) * seamR * cw * 0.5, y0 = cy + Math.sin(h.seam) * seamR * cw * 0.32 - podH * 0.22;
-        const x1 = x0 + Math.cos(h.a) * L, y1 = y0 + Math.sin(h.a) * L;
-        const mx = (x0 + x1) / 2 + h.bend * (1.6 + P.ripe * 2.2), my = (y0 + y1) / 2 - 2;
-        const dx = x1 - x0, dy = y1 - y0, dlen = Math.max(0.001, Math.hypot(dx, dy));
-        const bw0 = Math.max(0.9, cw * 0.021); // root half-width
-        const perpX = (-dy / dlen) * bw0, perpY = (dx / dlen) * bw0;
-        ctx!.fillStyle = fiberCol;
-        ctx!.beginPath();
-        ctx!.moveTo(x0 - perpX, y0 - perpY);
-        ctx!.quadraticCurveTo(mx - perpX * 0.35, my - perpY * 0.35, x1, y1);
-        ctx!.quadraticCurveTo(mx + perpX * 0.35, my + perpY * 0.35, x0 + perpX, y0 + perpY);
-        ctx!.closePath();
-        ctx!.fill();
-        ctx!.fillStyle = ballCol;
-        ctx!.beginPath();
-        ctx!.arc(x1, y1, h.ball * Math.max(0.6, cw * 0.014), 0, TAU);
-        ctx!.fill();
+        // Round 8: blit the cached tapered-filament sprite (a GPU texture copy)
+        // — this is what lets us afford the much denser hair count. Falls back
+        // to the original per-frame tapered-wedge path fill when no offscreen
+        // surface exists (headless @napi-rs PNG-gen), so both paths render the
+        // same abundant, curling coat.
+        if (!blitFilament(ctx!, x0, y0, h.a, L, h.bend, fiberCol, ballCol, stampDpr)) {
+          const x1 = x0 + Math.cos(h.a) * L, y1 = y0 + Math.sin(h.a) * L;
+          const mx = (x0 + x1) / 2 + h.bend * (1.6 + P.ripe * 2.2), my = (y0 + y1) / 2 - 2;
+          const dx = x1 - x0, dy = y1 - y0, dlen = Math.max(0.001, Math.hypot(dx, dy));
+          const bw0 = Math.max(0.9, cw * 0.021); // root half-width
+          const perpX = (-dy / dlen) * bw0, perpY = (dx / dlen) * bw0;
+          ctx!.fillStyle = fiberCol;
+          ctx!.beginPath();
+          ctx!.moveTo(x0 - perpX, y0 - perpY);
+          ctx!.quadraticCurveTo(mx - perpX * 0.35, my - perpY * 0.35, x1, y1);
+          ctx!.quadraticCurveTo(mx + perpX * 0.35, my + perpY * 0.35, x0 + perpX, y0 + perpY);
+          ctx!.closePath();
+          ctx!.fill();
+          ctx!.fillStyle = ballCol;
+          ctx!.beginPath();
+          ctx!.arc(x1, y1, h.ball * Math.max(0.6, cw * 0.014), 0, TAU);
+          ctx!.fill();
+        }
       }
       // Trichome frost (Engine 7, simplified for chamber scale) — a few CLUSTERED
       // soft mint/blue-white glow blobs near the cluster's outer face, instead of
@@ -796,14 +872,22 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
             // 1.8/0.16 radius at 0.6 alpha read as grey smoke balls hovering over
             // the bud, not resin glints on its surface.
             const br = tr.headR * Math.max(1.1, cw * 0.09);
-            const glow = ctx!.createRadialGradient(bx, by, 0, bx, by, br);
-            const core = trichHeadColor(m, clamp(0.32 * sh, 0, 1), purple);
-            glow.addColorStop(0, core);
-            glow.addColorStop(1, "rgba(220,238,236,0)");
-            ctx!.fillStyle = glow;
-            ctx!.beginPath();
-            ctx!.arc(bx, by, br, 0, TAU);
-            ctx!.fill();
+            // Round 8: lower per-glint alpha (0.32 → 0.22) — the field is now
+            // MANY finer glints, so each must be faint or the dense coat turns
+            // milky and buries the purple. Blit the cached radial-glint sprite
+            // (a texture copy); fall back to the original per-frame gradient
+            // fill only when no offscreen surface exists (headless PNG-gen).
+            const frostA = clamp(0.24 * sh, 0, 1);
+            const core = trichHeadColor(m, 1, purple);
+            if (!blitFrost(ctx!, bx, by, br, frostA, core, stampDpr)) {
+              const glow = ctx!.createRadialGradient(bx, by, 0, bx, by, br);
+              glow.addColorStop(0, trichHeadColor(m, frostA, purple));
+              glow.addColorStop(1, "rgba(220,238,236,0)");
+              ctx!.fillStyle = glow;
+              ctx!.beginPath();
+              ctx!.arc(bx, by, br, 0, TAU);
+              ctx!.fill();
+            }
           }
         }
       }
