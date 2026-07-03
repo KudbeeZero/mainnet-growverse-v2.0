@@ -82,6 +82,55 @@ test.describe("mobile — landscape lock + swipe HUD", () => {
     await page.getByTestId("actions-panel").getByRole("button", { name: /WATER/ }).first().click();
     await expect(page.getByTestId("actions-panel")).toHaveCount(0, { timeout: 2000 });
   });
+
+  test("PROOF: reopening the panel before a pending action resolves is NOT stomped by the stale auto-compact", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await setup(page);
+    // Delay the water mutation so its onSuccess fires well after we've closed
+    // and reopened the panel — the race GameShell's openGeneration guards.
+    await page.route("**/api/game/**/plants/plant1/water", async (route) => {
+      await new Promise((r) => setTimeout(r, 600));
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true }) });
+    });
+    await page.goto("/dashboard/plants/plant1/chamber");
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+
+    const swipe = (dx: number) =>
+      page.evaluate((dx) => {
+        const root = document.querySelector('[data-testid="game-shell-root"]')!;
+        function fire(type: string, x: number) {
+          root.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: "touch", clientX: x, clientY: 200, bubbles: true, cancelable: true }));
+        }
+        fire("pointerdown", dx > 0 ? 4 : 200);
+        fire("pointermove", dx > 0 ? 60 : 140);
+        fire("pointerup", dx > 0 ? 60 : 140);
+      }, dx);
+
+    await swipe(1); // open from the left edge
+    await expect(page.getByTestId("actions-panel")).toBeVisible();
+
+    // Fire the (slow) Water action, then immediately swipe-close the panel
+    // manually — before the mutation's onSuccess has a chance to run. (A
+    // swipe-close, not the header ✕ button: at some S/M/L width presets the
+    // header can sit outside this narrow 390px-tall landscape viewport —
+    // the swipe gesture the panel already primarily supports is the robust
+    // interaction here, matching how the "opens + auto-compacts" test above
+    // drives the panel.)
+    await page.getByTestId("actions-panel").getByRole("button", { name: /WATER/ }).first().click();
+    await page.waitForTimeout(100);
+    await swipe(-1);
+    await expect(page.getByTestId("actions-panel")).toHaveCount(0);
+    await page.waitForTimeout(100);
+
+    // Reopen before the 600ms mutation resolves.
+    await swipe(1);
+    await expect(page.getByTestId("actions-panel")).toBeVisible();
+
+    // Wait past the mutation's resolution — the stale onSuccess must NOT
+    // auto-compact this freshly reopened panel out from under the player.
+    await page.waitForTimeout(800);
+    await expect(page.getByTestId("actions-panel")).toBeVisible();
+  });
 });
 
 test.describe("desktop — docked panels, no orientation gate", () => {

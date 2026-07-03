@@ -71,6 +71,10 @@ export function GameShell({
   const [openSide, setOpenSide] = useState<EdgeSide | null>(null);
   const [widthIdx, setWidthIdx] = useState<Record<PanelSide, number>>({ left: 1, right: 1 });
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // Bumped on every open() so panel content can detect "was closed and
+  // reopened since I fired an async action" and skip a stale auto-compact —
+  // a ref (not state) so reading it never sees a closure-stale value.
+  const openGenRef = useRef<Record<EdgeSide, number>>({ left: 0, right: 0 });
 
   useEffect(() => {
     setWidthIdx({ left: readWidthIndex("left"), right: readWidthIndex("right") });
@@ -85,6 +89,7 @@ export function GameShell({
   }, []);
 
   const open = useCallback((side: EdgeSide) => {
+    openGenRef.current = { ...openGenRef.current, [side]: openGenRef.current[side] + 1 };
     setOpenSide(side);
   }, []);
   const close = useCallback((side: EdgeSide) => {
@@ -149,7 +154,13 @@ export function GameShell({
     touchState.current = null;
   };
 
-  const shellApi = useMemo(() => ({ collapse: (side: EdgeSide) => close(side) }), [close]);
+  const shellApi = useMemo(
+    () => ({
+      collapse: (side: EdgeSide) => close(side),
+      openGeneration: (side: EdgeSide) => openGenRef.current[side],
+    }),
+    [close],
+  );
 
   return (
     <GameShellProvider value={shellApi}>

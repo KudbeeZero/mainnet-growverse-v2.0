@@ -29,7 +29,7 @@ const ACTIONS: { kind: ActionKind; icon: string; label: string; benefit: string;
 export function ActionsPanel({ plant }: { plant: PlantState }) {
   const { care } = useCareActions(plant.id);
   const { fire, layer } = useCareFeedback();
-  const { collapse } = useGameShell();
+  const { collapse, openGeneration } = useGameShell();
   const disabled = !plant.is_alive || plant.harvested;
   const pending = care.isPending ? care.variables : null;
   const avail = careAvailability(plant, plant.recent_events ?? []);
@@ -37,7 +37,14 @@ export function ActionsPanel({ plant }: { plant: PlantState }) {
   const doCare = (kind: ActionKind) => {
     fire(kind);
     dispatchCareReaction(kind); // the plant itself reacts (PlantReactionLayer)
-    care.mutate(kind, { onSuccess: () => collapse("left") }); // auto-compact after the action lands
+    // Snapshot the panel's open-generation so a close-then-reopen while this
+    // mutation is still in flight isn't stomped by this stale success handler.
+    const gen = openGeneration("left");
+    care.mutate(kind, {
+      onSuccess: () => {
+        if (openGeneration("left") === gen) collapse("left"); // auto-compact, unless reopened since
+      },
+    });
   };
 
   return (

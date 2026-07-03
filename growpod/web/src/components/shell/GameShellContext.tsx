@@ -12,6 +12,14 @@ export type EdgeSide = "left" | "right";
 export interface GameShellApi {
   /** Slide the given panel back to its slim compact edge tab. */
   collapse: (side: EdgeSide) => void;
+  /**
+   * A counter that increments every time `side` transitions to open. Panel
+   * content that auto-compacts after an async action resolves (e.g. a care
+   * mutation) should capture this at fire-time and only collapse if it's
+   * unchanged in `onSuccess` — otherwise a close-then-reopen while the
+   * mutation is still in flight gets stomped by the stale success handler.
+   */
+  openGeneration: (side: EdgeSide) => number;
 }
 
 const GameShellContext = createContext<GameShellApi | null>(null);
@@ -22,5 +30,5 @@ export function GameShellProvider({ value, children }: { value: GameShellApi; ch
 
 /** Safe to call outside a GameShell (e.g. in Storybook/tests) — no-ops instead of throwing. */
 export function useGameShell(): GameShellApi {
-  return useContext(GameShellContext) ?? { collapse: () => {} };
+  return useContext(GameShellContext) ?? { collapse: () => {}, openGeneration: () => 0 };
 }
