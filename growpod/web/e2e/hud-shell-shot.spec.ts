@@ -116,7 +116,13 @@ test.describe("desktop — docked panels, no orientation gate", () => {
     await expect(page.locator("canvas").first()).toBeVisible();
     await page.screenshot({ path: "e2e-output/hud-desktop-insights-open.png", fullPage: true });
 
+    // Focus was on the ✕ button when it closed; `inert` (applied to the whole
+    // closed panel so its now off-screen controls drop out of the tab order —
+    // see EdgePanel.tsx) would otherwise strand focus on <body>. It should
+    // land back on this panel's own edge tab instead — a sensible landing
+    // spot for a keyboard/screen-reader user, not a silently vanished focus.
     await page.getByRole("button", { name: /Close Insights & Management/i }).click();
     await expect(page.getByTestId("insights-panel")).toHaveCount(0, { timeout: 2000 });
+    await expect(page.getByTestId("edge-tab-right")).toBeFocused();
   });
 });

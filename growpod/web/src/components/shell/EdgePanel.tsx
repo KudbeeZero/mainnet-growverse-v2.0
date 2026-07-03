@@ -4,7 +4,7 @@
 // expands into the full panel. Never pushes/resizes the hero (chamber) view —
 // it slides on top, matching the mockups' "always in focus" chamber.
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export type PanelSide = "left" | "right";
 
@@ -51,6 +51,20 @@ export function EdgePanel({
   const panelEdgeCls = side === "left" ? "left-0 border-r" : "right-0 border-l";
   const tabRounded = side === "left" ? "rounded-r-xl" : "rounded-l-xl";
 
+  const tabRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  // Set during render (before this update commits `inert` to the DOM below) so
+  // we capture "was focus inside the panel" from the LAST committed DOM state,
+  // before the browser's own inert-driven force-blur can run. Checking this in
+  // an effect instead would be too late: per spec, applying `inert` to a
+  // subtree that contains the focused element blurs it synchronously as part
+  // of that same DOM mutation — by the time any effect runs, activeElement has
+  // already moved to <body> and the "was it in here" signal is gone.
+  const pendingFocusRestoreRef = useRef(false);
+  if (!open) {
+    pendingFocusRestoreRef.current = panelRef.current?.contains(document.activeElement) ?? false;
+  }
+
   // Mount content the instant it opens; keep it mounted through the close
   // transition, then unmount — so a compacted panel has no content in the DOM.
   const [mounted, setMounted] = useState(open);
@@ -58,6 +72,18 @@ export function EdgePanel({
     if (open) {
       setMounted(true);
       return;
+    }
+    // Focus restoration: if focus was inside this panel when it closed (e.g.
+    // the ✕ button, or a control the player was just using), `inert` below
+    // would otherwise strand it — the browser force-blurs an inert subtree's
+    // focus to <body>, which is a jarring "focus vanished" experience for a
+    // keyboard/screen-reader user. Send it back to this panel's own edge tab
+    // instead, which is a sensible, always-visible landing spot. Don't steal
+    // focus if the close happened some other way (swipe gesture, clicking the
+    // backdrop) — only reclaim focus that was actually about to be orphaned.
+    if (pendingFocusRestoreRef.current) {
+      pendingFocusRestoreRef.current = false;
+      tabRef.current?.focus();
     }
     const t = setTimeout(() => setMounted(false), CLOSE_UNMOUNT_MS);
     return () => clearTimeout(t);
@@ -69,6 +95,7 @@ export function EdgePanel({
           side indicate more tools are just a swipe away"), even when the
           panel is fully closed. */}
       <button
+        ref={tabRef}
         type="button"
         data-testid={`edge-tab-${side}`}
         aria-expanded={open}
@@ -88,8 +115,13 @@ export function EdgePanel({
         </span>
       </button>
 
-      {/* Expanded overlay panel. */}
+      {/* Expanded overlay panel. `inert` (not just `aria-hidden`) while closed —
+          otherwise the header's resize/close buttons stay in the tab order and
+          keyboard-focusable while translated off-screen and hidden from
+          assistive tech, which is both an ARIA violation (focusable content
+          inside an aria-hidden subtree) and a confusing keyboard-focus trap. */}
       <div
+        ref={panelRef}
         data-testid={`edge-panel-${side}`}
         className={`absolute inset-y-0 z-40 flex flex-col border-white/10 bg-[#050d15]/92 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-out ${panelEdgeCls} ${
           open
@@ -100,6 +132,7 @@ export function EdgePanel({
         }`}
         style={{ width: widthPx, boxShadow: `0 0 40px rgba(${accent},0.12)` }}
         aria-hidden={!open}
+        inert={!open}
       >
         <div className="flex flex-none items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
           <h2 className="flex items-center gap-1.5 text-[11px] font-extrabold tracking-[0.16em]" style={{ color: `rgb(${accent})` }}>
