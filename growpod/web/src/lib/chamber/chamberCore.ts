@@ -1488,6 +1488,18 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     const cap = scene!.cap;
     const fan = live.current.climate.fan;
     const co2 = live.current.climate.co2;
+    // Arcade layer (Phase 2) glow intensity. Always-on baseline so the plant
+    // separates from the dark panel even in veg; ramps as the plant flowers so
+    // mature colas "pop" hardest (matches the hero render). budDev is server
+    // truth from the live dev params.
+    // TODO(arcade): modulate this by the active boost multiplier once the
+    // boostEngine store is threaded into the renderer. That is out of scope
+    // here — it would require plumbing new React state through
+    // createChamberCore, and the DOM BoostAmbientLayer (PR #124) already
+    // reacts to boosts on the overlay. Keep this always-on baseline.
+    const arcBudDev = clamp(live.current.dev.budDev, 0, 1);
+    const arcBloom = 0.5 + 0.5 * arcBudDev; // canopy back-glow strength
+    const arcRing = 0.55 + 0.45 * arcBudDev; // pot-ring / soil-pad strength
     let g = ctx!.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, "#060d16");
     g.addColorStop(1, "#04080e");
@@ -1553,25 +1565,92 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     ctx!.ellipse(hx, hy, hr * 0.55, hr * 0.13, 0, 0.4, Math.PI - 0.4);
     ctx!.stroke();
 
+    // ── Arcade layer (Phase 2): in-canvas rim / back glow behind the plant ──
+    // The chamber panel is fully OPAQUE, so a green backlight cannot bleed
+    // through via a CSS drop-shadow (that is why PR #124's rim pop is a DOM
+    // screen-blend overlay). Here we paint the same "pop" INSIDE the canvas,
+    // behind the canopy, with additive ("lighter") compositing so it reads as
+    // LIGHT, not a flat shape — each cola separates from the dark panel and
+    // glows. drawChamberShell runs before drawPlant, so this always lands
+    // behind the plant.
+    if (plant) {
+      const gx = plant.cx;
+      const canopyTop = plant.baseY - plant.stemH;
+      // Wide soft green column halo hugging the whole canopy.
+      ctx!.save();
+      ctx!.globalCompositeOperation = "lighter";
+      const gy = canopyTop + plant.stemH * 0.4;
+      const gw = cap.w * 0.46;
+      const gh = plant.stemH * 0.62;
+      ctx!.translate(gx, gy);
+      ctx!.scale(1, gh / gw);
+      const halo = ctx!.createRadialGradient(0, 0, 0, 0, 0, gw);
+      halo.addColorStop(0, `rgba(102,230,124,${0.24 * arcBloom})`);
+      halo.addColorStop(0.42, `rgba(74,200,110,${0.12 * arcBloom})`);
+      halo.addColorStop(1, "rgba(60,170,95,0)");
+      ctx!.fillStyle = halo;
+      ctx!.beginPath();
+      ctx!.arc(0, 0, gw, 0, TAU);
+      ctx!.fill();
+      ctx!.restore();
+      // Brighter apical core bloom hugging the top colas.
+      ctx!.save();
+      ctx!.globalCompositeOperation = "lighter";
+      const coreY = canopyTop + plant.stemH * 0.24;
+      const coreR = cap.w * 0.27;
+      const core = ctx!.createRadialGradient(gx, coreY, 0, gx, coreY, coreR);
+      core.addColorStop(0, `rgba(156,255,156,${0.18 * arcBloom})`);
+      core.addColorStop(0.55, `rgba(102,230,124,${0.07 * arcBloom})`);
+      core.addColorStop(1, "rgba(96,224,120,0)");
+      ctx!.fillStyle = core;
+      ctx!.beginPath();
+      ctx!.arc(gx, coreY, coreR, 0, TAU);
+      ctx!.fill();
+      ctx!.restore();
+    }
+
     const fy = cap.floorY;
     ctx!.fillStyle = "#0b1d2b";
     ctx!.beginPath();
     ctx!.ellipse(hx, fy + 8, cap.w * 0.4, 18, 0, 0, TAU);
     ctx!.fill();
+    // ── Arcade layer (Phase 2): bright green energy ring around the pot base ─
+    // A wide additive green bloom seated under the ring, then a bright green
+    // ring stroke with a strong glow — the teal tech-ring reads as the hero
+    // render's glowing green energy ring.
     ctx!.save();
-    ctx!.shadowColor = "rgba(127,212,240,0.6)";
-    ctx!.shadowBlur = 14;
-    ctx!.strokeStyle = "rgba(127,212,240,0.65)";
-    ctx!.lineWidth = 2.5;
+    ctx!.globalCompositeOperation = "lighter";
+    const ringGlow = ctx!.createRadialGradient(
+      hx, fy + 6, scene!.ringR * 0.2,
+      hx, fy + 6, scene!.ringR * 1.18,
+    );
+    ringGlow.addColorStop(0, `rgba(96,232,124,${0.15 * arcRing})`);
+    ringGlow.addColorStop(0.6, `rgba(74,200,110,${0.07 * arcRing})`);
+    ringGlow.addColorStop(1, "rgba(74,200,110,0)");
+    ctx!.fillStyle = ringGlow;
+    ctx!.beginPath();
+    ctx!.ellipse(hx, fy + 6, scene!.ringR * 1.18, scene!.ringR * 0.3, 0, 0, TAU);
+    ctx!.fill();
+    ctx!.restore();
+    ctx!.save();
+    ctx!.shadowColor = `rgba(120,255,140,${0.7 * arcRing})`;
+    ctx!.shadowBlur = 22;
+    ctx!.strokeStyle = `rgba(150,255,162,${0.5 + 0.4 * arcRing})`;
+    ctx!.lineWidth = 3;
     ctx!.beginPath();
     ctx!.ellipse(hx, fy + 6, scene!.ringR, scene!.ringR * 0.24, 0, 0, TAU);
     ctx!.stroke();
     ctx!.restore();
-    ctx!.strokeStyle = "rgba(127,212,240,1)";
+    // Clean white-green radiating spokes/tick-marks (hero render), with a soft
+    // glow so they read as light rather than hairline scratches.
+    ctx!.save();
+    ctx!.shadowColor = "rgba(150,255,170,0.55)";
+    ctx!.shadowBlur = 5;
+    ctx!.strokeStyle = "rgba(214,255,222,1)";
     ctx!.lineCap = "round";
     for (const cr of scene!.cracks) {
-      ctx!.globalAlpha = cr.al;
-      ctx!.lineWidth = 1;
+      ctx!.globalAlpha = Math.min(1, cr.al + 0.2);
+      ctx!.lineWidth = 1.1;
       const a = cr.a;
       ctx!.beginPath();
       ctx!.moveTo(hx + Math.cos(a) * cr.r0, fy + 6 + Math.sin(a) * cr.r0 * 0.24);
@@ -1582,6 +1661,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.stroke();
     }
     ctx!.globalAlpha = 1;
+    ctx!.restore();
     ctx!.fillStyle = "#33421f";
     ctx!.beginPath();
     ctx!.ellipse(hx, fy + 4, scene!.soilR, scene!.soilR * 0.26, 0, 0, TAU);
@@ -1590,6 +1670,22 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     ctx!.beginPath();
     ctx!.ellipse(hx, fy + 2.5, scene!.soilR * 0.92, scene!.soilR * 0.22, 0, 0, TAU);
     ctx!.fill();
+    // ── Arcade layer (Phase 2): green glowing soil pad where the stem meets
+    // the base — the bright green pad under the plant in the hero render.
+    ctx!.save();
+    ctx!.globalCompositeOperation = "lighter";
+    const padGlow = ctx!.createRadialGradient(
+      hx, fy + 3, 0,
+      hx, fy + 3, scene!.soilR * 1.28,
+    );
+    padGlow.addColorStop(0, `rgba(150,242,120,${0.22 * arcRing})`);
+    padGlow.addColorStop(0.55, `rgba(110,210,90,${0.1 * arcRing})`);
+    padGlow.addColorStop(1, "rgba(110,210,90,0)");
+    ctx!.fillStyle = padGlow;
+    ctx!.beginPath();
+    ctx!.ellipse(hx, fy + 3, scene!.soilR * 1.28, scene!.soilR * 0.36, 0, 0, TAU);
+    ctx!.fill();
+    ctx!.restore();
 
     // CO2 rig — glow scales with co2 level
     const tx = cap.x + cap.w * 0.085, ty = cap.y + cap.h * 0.135, tw = cap.w * 0.1, th = cap.h * 0.19;

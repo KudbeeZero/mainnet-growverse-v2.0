@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; mint metadata server-truth fix; Lab 3D bud viewer reference prototype (owner-authored Three.js grow chamber) saved to docs/prototypes/ with the furrier-pistils / denser-trichomes / more-lighting punch list — parked under the 3D freeze).
+once they appear here. Last reconciled: **2026-07-03** (chamber glow layer Phase 2 — in-canvas green rim/back glow + bright green pot-base energy ring in `chamberCore.ts` `drawChamberShell`; dedupe the floating boost tray — ArcadeHUD slimmed to rewind + chain row only; chamber ambient glow layer Phase 1 (DOM-only); game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 6 — purple-dominant cola color, matching the close-up + full-plant reference photos, superseding round 5's color read — merged; top cola construction v2 structure-first (shingled diamond bracts, seam-anchored tapered pistils, RGB-blended purple gradient) — merged, chosen over the sibling layer-order-first attempt; mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -229,6 +229,24 @@ once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boos
   architecture ones, and are out of this round's scope. Round 5's architecture (single-leader
   `colaTops` count=1, taper) is untouched and confirmed intact by the same cross-strain spot-check
   above.
+- 🎮 ✅ **Chamber glow layer — Phase 2, in-canvas "arcade layer" (2026-07-03, PR pending)** — the
+  in-canvas counterpart to Phase 1's DOM overlay, painted directly inside `drawChamberShell` in
+  `web/src/lib/chamber/chamberCore.ts` (environment-only; the plant draw functions were untouched
+  to merge cleanly alongside the cola-construction branches). Three additive-light pieces matching
+  the owner's "10/10" hero render: (a) a soft GREEN rim/back glow behind the plant column — a wide
+  scaled radial "column halo" plus a brighter apical "core bloom" over the top colas, both drawn
+  with `globalCompositeOperation = "lighter"` so they read as backlight, not flat shapes (the
+  panel is fully opaque — same reason Phase 1 needed a screen-blend DOM overlay); (b) the pot-base
+  tech-ring upgraded to a bright green energy ring — a wide additive green bloom seated under it +
+  a green ring stroke with a strong `shadowBlur` glow; (c) a green glowing soil pad where the stem
+  meets the base, and the radiating spokes recolored to clean white-green ticks with a soft glow.
+  Glow intensity is gated on `live.current.dev.budDev` (always-on baseline `0.5`/`0.55`, ramping
+  to full as the plant flowers) so mature colas pop hardest. Boost-reactivity left as a clean
+  `TODO(arcade)` — wiring the `boostEngine` zustand store into the plain-module renderer is
+  non-trivial plumbing and out of scope; the DOM `BoostAmbientLayer` already handles boost tint.
+  Verified with a standalone Playwright script (flowering Gelato fixture, mobile 390×844 + desktop
+  1440×900, 2 look-compare-adjust rounds; script cleaned up). Gates: `tsc --noEmit` clean, `next
+  lint` 0 new errors, vitest 472/472, `npm run build` clean, `care-loop-shot` 4/4 green.
 - 🎮 ✅ **Chamber ambient glow layer — Phase 1, DOM/CSS only (2026-07-03, PR pending)** — new
   `web/src/components/plant/BoostAmbientLayer.tsx`, mounted as a sibling of `PlantReactionLayer`
   in the chamber stage (`chamber/page.tsx`). Zero `chamberCore.ts` edits — deliberately scoped
@@ -256,10 +274,10 @@ once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boos
   ring found buried under the action tiles and repositioned → reduced-motion collapse verified
   via a `reducedMotion: 'reduce'` Playwright context). Gates: `tsc --noEmit` clean, `next lint` 0
   errors, vitest 463/463 (no new/changed pinned values), `npm run build` clean, `care-loop-shot`
-  4/4 green unmodified. **Phase 2 (queued, not started): in-canvas ring/soil glow modulation in
+  4/4 green unmodified. **Phase 2 (DONE — see entry above): in-canvas ring/soil glow modulation in
   `chamberCore.ts` itself** (matching the reference image's radiating tech-ring spokes more
-  directly than a DOM overlay can) — intentionally deferred until the two cola-construction
-  branches land, to avoid a three-way collision on the same file's draw functions.
+  directly than a DOM overlay can) — was intentionally deferred until the two cola-construction
+  branches landed, to avoid a three-way collision on the same file's draw functions.
 - 🎮 ✅ **Top cola construction v2 — structure-first (2026-07-03, "GroVerse Anatomy & Construction
   Guide" reference set — Top Cola / Pistil Hair / Top Cola Tip / Bract-Calyx Scale breakdowns)** —
   branched from round 6's commit (`9f98c9e`; round 5's single-leader cone architecture + round 6's
@@ -426,22 +444,6 @@ once they appear here. Last reconciled: **2026-07-03** (dedupe the floating boos
   visually checked in 3D. All parked alongside the photoreal bud viewer / full 3D cola
   inspection / trichome particle macro mode / scientific Lab breakdown / university model /
   advanced morphology layer toggles — see "Core Game Loop" section below.
-- 🎨 ❄️ **Lab 3D bud viewer — reference prototype saved (2026-07-03, owner-authored)** — the owner
-  built a full single-file Three.js grow-chamber prototype in a separate chat (procedural seed→
-  harvest plant: phyllotaxy-spiralled nodes, lathe-teardrop bracts green→purple, curved tube
-  pistils cream→orange, additive frost point-clouds, ring light + light cone + glowing platform +
-  motes; growth driven statelessly by `g ∈ [0,1]`). Saved verbatim as the **north-star reference
-  for the Lab's "3D Model" tab** (`web/src/app/lab/strains/[strainId]/page.tsx` → `StrainBud3D` +
-  `PlantGL`) at `docs/prototypes/grow-chamber-3d-reference.html` (+ `docs/prototypes/README.md`
-  with the full mapping to existing `bud3d/` code). **Owner punch list for the next 3D pass**
-  (verbatim intent): (1) **furrier pistil hairs** — currently smooth `TubeGeometry` tubes, need to
-  read as fine fuzzy filaments (more, thinner, fibrous); (2) **better/denser trichomes** — "there's
-  thousands of them"; today ~3 sparse additive points per calyx, needs a real sugar-coating over
-  the whole cola surface (perf is the challenge — belongs in the zoomed Lab view, not the live
-  phone chamber); (3) **a little more lighting** — push the pop/rim glow, same direction as the 2D
-  arcade-glow layer (PR #124). Still ❄️ **parked** under the owner's 2026-07-02 "freeze advanced 3D
-  bud/model work, ship the core loop first" directive — this entry records the target + gap list so
-  the work is ready to pick up the moment the owner reopens the 3D lane; not started.
 - 🎨 ⬜ **Chamber mobile-readability follow-ups (deferred from PR #111)** — (a) "shorten
   exaggerated curved wire branches" was only partially addressed (stroke width bumped; branch
   *curve amplitude* — `nd.curve`, `0.14–0.36` — was left untouched as lower-risk); revisit if
