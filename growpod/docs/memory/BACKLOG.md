@@ -1,7 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 3 in the parallel lane).
+once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: main page = the full game, chamber = the arcade layer; plant mockup round 3 in the parallel lane; mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -146,6 +146,21 @@ once they appear here. Last reconciled: **2026-07-03** (game-hub restructure: ma
   bud viewer, full 3D cola inspection, trichome particle macro mode, scientific Lab breakdown,
   university 3D model, advanced morphology layer toggles. See the ❄️ items under "HERMES
   University + hardening" below for the specific backlog rows this covers.
+- 🎮 ✅ **Mint metadata server-truth fix (2026-07-03)** — fixed — mint metadata now sources
+  grow_day/bud_dev from server truth, not boosted/preview display values, matching
+  trich_density/grow_stage. `chamber/page.tsx` was passing the boosted/previewed visual `day`
+  and `budScalars.budDev` into `ChainRow`'s `mintOptions`, so minting mid-boost or mid-scrub
+  could permanently write an internally inconsistent ARC-69 snapshot: grow_day/bud_dev reading
+  a fictional advanced state while trich_density/grow_stage (already read straight off `plant`
+  in `buildPlantMetadata`) read the real one. Added `mintTruthMetadata()` (pure, in
+  `lib/chamber/morphology.ts`) that derives grow_day/bud_dev from `liveNominalDay` — the
+  authoritative (stage, stage_progress_pct) day, before any boost offset or preview override —
+  and wired the chamber page to feed it into `mintOptions` instead. On-screen rendering
+  (`day`/`dev`/`budScalars`) is untouched; only what gets minted changed. No change to
+  `mintPlantNFT`/`updatePlantMetadata`/`harvestAtomicGroup` signatures or transaction-building.
+  Tests: `morphology.test.ts` (boost-only, preview-only, and boost+preview-simultaneously cases)
+  + new `chain/algorand/__tests__/plantNFT.test.ts` locking `buildPlantMetadata`'s
+  server-truth contract.
 - 🎮 **Do-not-touch (owner-named, unrelated to this track, restated for visibility):** wallet/funds
   path, staking, claim logic, Algorand production token flows, market purchases (unless required
   for button state), Cup logic (unless required for harvest handoff).

@@ -323,6 +323,29 @@ export function previewDev(day: number, floweringDays = 60): DevParams {
 }
 
 /**
+ * Server-truth grow-day + bud-dev for permanent on-chain mint metadata
+ * (ARC-69). Always derived from `liveNominalDay` — the authoritative
+ * (stage, stage_progress_pct) mapping — never from a growth-boost offset or
+ * the time-preview scrubber, both of which are transient, client-only visual
+ * overlays. Mirrors how `grow_stage`/`trich_density` already read straight
+ * off server state in `buildPlantMetadata`: a mint is a one-time snapshot, so
+ * every field in it must describe the real plant, not a momentary look.
+ *
+ * Reuses `previewDev`, the same pure day→dev mapper the live/preview render
+ * already uses (see `nominalGrowDay`'s doc comment) — this just feeds it the
+ * unboosted, unpreviewed day instead of the boosted/previewed one.
+ */
+export function mintTruthMetadata(
+  liveNominalDay: number,
+  floweringDays = 60,
+): { growDay: number; budDev: number } {
+  return {
+    growDay: Math.round(liveNominalDay),
+    budDev: previewDev(liveNominalDay, floweringDays).budDev,
+  };
+}
+
+/**
  * Per-strain bud colouring (client-side, deterministic from the strain seed).
  * Cannabis colas range from frosty green→amber to deep anthocyanin purple; which
  * a strain expresses is a stable genetic trait. We roll it per strain so the

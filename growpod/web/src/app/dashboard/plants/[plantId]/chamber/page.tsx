@@ -29,6 +29,7 @@ import {
   previewDev,
   nominalGrowDay,
   cycleDays,
+  mintTruthMetadata,
 } from "@/lib/chamber/morphology";
 import { budColorForStrain, silhouetteFor } from "@/lib/chamber/strainVisuals";
 import { budDnaFor, applyEnvironmentToBudDNA } from "@/lib/chamber/budDna";
@@ -337,6 +338,12 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const liveNominalDay = plant.forecast
     ? nominalGrowDay(plant.growth_stage, plant.forecast.stage_progress_pct, flMid)
     : ageDays(plant.planted_at);
+  // Server-truth snapshot for permanent on-chain mint metadata — always off
+  // liveNominalDay, so an active growth boost or an engaged time-preview
+  // scrubber (below) can never leak a transient visual state into the ARC-69
+  // note field. Matches how grow_stage/trich_density already read straight
+  // off `plant` in buildPlantMetadata. Do NOT swap this for `day`/`budScalars`.
+  const mintTruth = mintTruthMetadata(liveNominalDay, flMid);
   const previewing = previewDay !== null;
   const maxPreviewDay = Math.round(cycleDays(flMid) + 8);
   // Fold the Arcade boost offset into the LIVE look only (clamped); the time-preview
@@ -517,7 +524,10 @@ function ChamberScreen({ plantId }: { plantId: string }) {
               ALGO_ENABLED ? (
                 <ChainRow
                   plant={plant}
-                  mintOptions={{ strainName: strain?.name, growDay: Math.round(day), budDev: budScalars.budDev }}
+                  // Server truth, not the boosted/previewed display values (`day`,
+                  // `budScalars.budDev`) — see `mintTruth` above. The on-screen
+                  // stage below still renders `day`/`budScalars` unchanged.
+                  mintOptions={{ strainName: strain?.name, growDay: mintTruth.growDay, budDev: mintTruth.budDev }}
                 />
               ) : undefined
             }
