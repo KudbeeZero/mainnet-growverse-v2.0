@@ -699,8 +699,14 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // pods so each blade's base tucks between the calyxes (botanically the
         // sepals emerge from the bract seams) and only the outer serrated tip
         // pokes through — keeping the bud purple-DOMINANT with green spikes.
-        const ls = cw * (0.72 + 0.42 * d);
-        const wd = ls * 0.11 * S.leafW;
+        // Round 8b (owner combined-preview verify): the first pass overshot —
+        // long neon-lime blades read as a spiky cactus/thistle and fought the
+        // purple. The hero shows green sepal TIPS peeking through a
+        // purple-DOMINANT bud, not green spikes dominating it. Shortened so
+        // only the tips clear the silhouette (0.72+0.42 → 0.40+0.26) and
+        // thinned slightly.
+        const ls = cw * (0.40 + 0.26 * d);
+        const wd = ls * 0.10 * S.leafW;
         const base = cl.leafSide;
         // One slender serrated blade out each side (up-and-outward) — alternating
         // tiers build a symmetric spiky outline up the cola while the purple
@@ -714,10 +720,12 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         ctx!.save();
         ctx!.translate(cx, cy);
         for (const [ang, sc, jit] of blades) {
-          // Vivid lime sugar-leaf green, lifted well above the fan-leaf tone so
-          // the sepals pop against the purple calyx mass; ±7% lightness / ±5°
-          // hue per blade for organic variation.
-          ctx!.fillStyle = `hsl(${S.hue - 8 + jit * 10}, ${clamp(S.sat + 22, 0, 82)}%, ${clamp(S.lit + 12 + jit * 14, 0, 60)}%)`;
+          // Muted natural sugar-leaf green (round 8b): a notch above the
+          // fan-leaf tone so the tips read as green against the purple, but
+          // NOT the neon lime that fought the bud in the first pass. Hue nudged
+          // back toward true green (was -8, which pushed yellow-lime), sat/lit
+          // pulled in so purple stays the dominant surface.
+          ctx!.fillStyle = `hsl(${S.hue + 2 + jit * 8}, ${clamp(S.sat + 12, 0, 70)}%, ${clamp(S.lit + 6 + jit * 10, 0, 50)}%)`;
           ctx!.save();
           ctx!.rotate(ang);
           leafletPath(ls * sc, wd * sc, 0.14);
