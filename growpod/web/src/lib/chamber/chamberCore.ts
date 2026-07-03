@@ -1329,10 +1329,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const skirt = clamp(low + midFill * 0.55, 0, 1) * clamp((SK.nodeLeaf - 1) / 0.2, 0, 1);
       const nd: Node = {
         x: p.x, y: p.y, f, side, tilt, len, spread,
-        // Round 2 (owner mockup): flowering keeps most of its fan-leaf mass
-        // (shrink 0.4 → 0.25 of budDev·f) — the mockup canopy is leaf-RICH in
-        // full flower, with fans filling every gap between colas.
-        leafSize: A * (0.08 + 0.05 * low) * (0.55 + 0.45 * grow) * (1 - 0.25 * P.budDev * f) * depthSize * (1 + skirt * 0.4),
+        // Pass 10 (plant render): fan-leaf demotion — raise budDev suppression
+        // 0.25→0.40 and trim skirt bonus 0.40→0.28 so leaves recede behind
+        // buds in full flower instead of competing for the same visual real estate.
+        leafSize: A * (0.08 + 0.05 * low) * (0.55 + 0.45 * grow) * (1 - 0.40 * P.budDev * f) * depthSize * (1 + skirt * 0.28),
         leaflets: Math.min(S.leafletMax, 3 + 2 * Math.floor(d / 14)),
         phase: rnd() * TAU,
         tipX: 0, tipY: 0, site: null, budRot: 0,
@@ -1342,7 +1342,8 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         curve: 0.1 + rnd() * 0.14, // upward bend
         weight: 0,
         branchlets: [],
-        nodeLeafSize: A * (0.055 + 0.045 * low) * (0.55 + 0.45 * grow) * SK.nodeLeaf * (1 - 0.22 * P.budDev * f) * (1 + skirt * 0.5),
+        // Pass 10: node leaf suppression up 0.22→0.35, skirt bonus trimmed 0.5→0.35.
+        nodeLeafSize: A * (0.055 + 0.045 * low) * (0.55 + 0.45 * grow) * SK.nodeLeaf * (1 - 0.35 * P.budDev * f) * (1 + skirt * 0.35),
         nodeBud: null,
         depth: az.depth,
         litAdj: depthShade(az.depth),
@@ -1365,10 +1366,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // *edge* of the canopy is always a clean cone regardless of any one
       // node's random tilt/spread roll.
       if (topK < 0) {
-        // Round 8 (hero render): clamp opened up (0.1→0.14 apex, 0.5→0.62 base)
-        // so the longer/more-angled branches above aren't clipped back into the
-        // spine — the cone edge stays clean but sits wider, holding colas out.
-        const maxReach = A * lerp(0.14, 0.62 * SK.lowerSpread, low);
+        // Pass 8 (plant render): true triangular silhouette — linear taper (1-f)
+        // replaces the convex (1-f)^0.75 that made the canopy flare sideways at
+        // mid-height. Apex narrowed 0.14→0.10, base widened 0.62→0.70 so the
+        // cone sits wider at the skirt while the top stays tight.
+        const maxReach = A * lerp(0.10, 0.70 * SK.lowerSpread, 1 - f);
         if (Math.abs(nd.tipX) > maxReach) nd.tipX = Math.sign(nd.tipX) * maxReach;
       }
       if (P.budDev > 0 && topK >= 0) {
@@ -1524,7 +1526,9 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const baseW = axis * (S.pattern === "spiral" ? 0.26 : 0.34) * S.clusterFat * (0.92 + 0.12 * P.ripe);
       // Pack more, smaller clusters up the spine so the cola reads as one dense
       // textured column rather than a handful of big teardrops.
-      const nC = Math.round(S.bracts * (S.pattern === "spiral" ? 2.1 : 1.5));
+      // Pass 9: raise hybrid/nodal multiplier 1.5→1.85 to hit 17-21 anchor
+      // clusters (Gelato bracts=10 → nC=19; indica bracts=11 → nC=20).
+      const nC = Math.round(S.bracts * (S.pattern === "spiral" ? 2.1 : 1.85));
       cola = {
         site: buildFlowerSite(rnd, axis, baseW, { pattern: S.pattern, nClusters: nC, bracts: S.bracts, fatMul: 1.18 }),
         x: spine[24].x, y: spine[24].y + axis * 0.06,
