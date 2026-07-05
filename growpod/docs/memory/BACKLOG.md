@@ -1,7 +1,18 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landing-particle perf/scale fix — GameService.cleanup_plant now ARCHIVES (not deletes) a harvested/dead plant so Harvest/CupEntry rows survive, and the missing UI got wired into all 3 screens (dashboard, plant detail, chamber); Constellation.tsx particle glow now scales with viewport + blits a cached sprite instead of a per-frame gradient, fixing both the mobile "huge blob" look and the slow frame rate; Lab microscope rework phase 1 — purple-hue fix via authored strainVisuals BudColor (calyxTint), live-plant deep-link ?plantId= seeded from server trichome telemetry (maturityFromTelemetry), chamber 🔬 Inspect-trichomes chip replacing the dead View-Bud placeholder, terpene-label collision skip + µm scale bar; visual-verification archive — `docs/memory/VERIFIED_RENDERS.md` chapter list + `verification/golden/` + shared e2e fixtures (`web/e2e/fixtures/mockGame.ts`) + parameterized `capture.spec.ts` + sandbox-Chromium auto-detect in `playwright.config.ts` + `capture-shots` skill, ending the per-session throwaway-rig ritual; plant round 8c — leaf + bract TEXTURE LAYERING (owner: "the layering in the texture"): `drawFan` leaflets now carry deterministic per-leaflet size/angle/tone jitter plus a light↔shadow facet gradient (was one flat hsl() fill repeated identically at every node — the "stamped decal" read); `drawPod` now gives every calyx bract a volumetric gradient (the old `w>4.2` gate meant almost none ever cleared it, since podW's own ceiling is 4.2) plus a new base "undercut" shadow so overlapping bracts read as a physically shingled stack instead of blending into the mass gradient; plant round 8b — airier, more-separated candelabra branch layout in chamberCore.ts's `buildPlant`, matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
+once they appear here. Last reconciled: **2026-07-05** (chamber round 10 — pod shape variety,
+size/lightness rebalance, branch/leaf color separation (PR #142); security audit + fixes closing
+withdraw double-payout and mint double-mint races via commit-before-external-call + optimistic
+locking on Harvest/Strain (PR #144); simulated-player playtest found and fixed the harvest
+force-sell bug that made cure/mint/Enter-Cup unreachable from the UI, plus a dead onboarding
+token-claim tutorial wire (PR #145); a follow-up store/seed/market purchase-flow playtest found
+and fixed a dead Consumables/Research shop (unauthenticated GET), stale header balance after
+purchase, a client-stricter-than-server auction bid-minimum, an unguarded auction Settle button,
+and a latent float/Decimal bundle-pricing bug for strain components (PR #146); a University
+playtest (see new 🏛️ items below) found the dev-clock doesn't reach University study-time, course
+completion isn't celebrated (only a full degree grants a title), bio-101 is a non-credentialing
+dead-end elective, and University is invisible to onboarding/mobile-nav; pod-recycle fix + landing-particle perf/scale fix — GameService.cleanup_plant now ARCHIVES (not deletes) a harvested/dead plant so Harvest/CupEntry rows survive, and the missing UI got wired into all 3 screens (dashboard, plant detail, chamber); Constellation.tsx particle glow now scales with viewport + blits a cached sprite instead of a per-frame gradient, fixing both the mobile "huge blob" look and the slow frame rate; Lab microscope rework phase 1 — purple-hue fix via authored strainVisuals BudColor (calyxTint), live-plant deep-link ?plantId= seeded from server trichome telemetry (maturityFromTelemetry), chamber 🔬 Inspect-trichomes chip replacing the dead View-Bud placeholder, terpene-label collision skip + µm scale bar; visual-verification archive — `docs/memory/VERIFIED_RENDERS.md` chapter list + `verification/golden/` + shared e2e fixtures (`web/e2e/fixtures/mockGame.ts`) + parameterized `capture.spec.ts` + sandbox-Chromium auto-detect in `playwright.config.ts` + `capture-shots` skill, ending the per-session throwaway-rig ritual; plant round 8c — leaf + bract TEXTURE LAYERING (owner: "the layering in the texture"): `drawFan` leaflets now carry deterministic per-leaflet size/angle/tone jitter plus a light↔shadow facet gradient (was one flat hsl() fill repeated identically at every node — the "stamped decal" read); `drawPod` now gives every calyx bract a volumetric gradient (the old `w>4.2` gate meant almost none ever cleared it, since podW's own ceiling is 4.2) plus a new base "undercut" shadow so overlapping bracts read as a physically shingled stack instead of blending into the mass gradient; plant round 8b — airier, more-separated candelabra branch layout in chamberCore.ts's `buildPlant`, matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
 
 > **Reconciliation note (REC-004, 2026-06-14):** the Graphics Phase + Dashboard wiring are done and
 > signed off; the studio is on the **New-Player / Launch-Readiness** track below. The full ledger of
@@ -745,6 +756,40 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   Grower; P3 `search_global_knowledge` retrieval tool (the teacher gets smarter from every
   player); P4 `global_insights` rollups + class-stats surface. Spec:
   `docs/memory/design/11-global-learning-memory.md`.
+- 🏛️ ⬜ **University dev-clock doesn't reach study-time (playtest finding, 2026-07-05, confirmed
+  by two independent playtest agents)** — `UniversityService`/`LecturerService`/
+  `LearnerModelService` all hardcode `SystemClock()` instead of `active_clock()` (contrast
+  `GameService`/`SimulationService`, which both correctly default to `active_clock()` — the
+  thing `/api/dev/clock/advance` actually works through). Confirmed empirically both times: a
+  48h dev-clock advance leaves `study_hours_remaining` completely unchanged. Every course is
+  gated on genuine wall-clock time (12h–192h) with **no dev/QA affordance** — one playtest could
+  only reach an exam by directly backdating a DB row. Files: `services/university_service.py:119`,
+  `services/lecturer_service.py:29`, `services/learner_model_service.py:43`.
+- 🏛️ ⬜ **Course completion isn't celebrated; only a whole degree grants a title (playtest
+  finding, 2026-07-05)** — `complete_course()` awards XP/KXP/streak only (no badge/title/moment);
+  the UI flips a status pill from amber "Enrolled" to green "Completed" plus a toast, full stop.
+  Profile's "Lifetime titles" card explicitly requires "win a Cannabis Cup **or earn a degree**"
+  — individual courses never count, and a degree is 2-6 courses each gated on a real-gameplay
+  practical, so "get a degree" (the headline framing) is many real-time days away with no visible
+  intermediate waypoint. `services/university_service.py:195-254` (course) vs `:345-373` (degree,
+  the only title-granting path).
+- 🏛️ ⬜ **bio-101 is a non-credentialing dead-end for the first-steered course (playtest finding,
+  2026-07-05)** — extends the existing "Reconcile prerequisite graphs" open-work item above:
+  bio-101 is the course the catalog points a new player at first (no prereqs, "Available" badge,
+  the only course with a real exam bank today) and can be fully completed + aced, but it isn't
+  required by any of the 5 degrees and doesn't appear in the Learner roadmap either — the most
+  polished, most-discoverable slice of the feature doesn't connect to the credentialing structure
+  it's ostensibly part of. `data/curriculum.yaml` (no degree lists `bio-101`).
+- 🏛️ ⬜ **University is invisible to onboarding and demoted on mobile (playtest finding,
+  2026-07-05)** — `web/src/components/layout/navLinks.ts`: University lacks `primary: true` (so
+  it's desktop-nav-only; mobile tab bar omits it, one tap deeper in "More") and has no entry in
+  `ONBOARDING_NAV_IDS` (the guided FTUE tour spotlights Grow/Lab/Market/Cup/Guide/Profile, never
+  University). A new player who doesn't manually scan the nav will never learn the feature exists.
+- 🏛️ ⬜ (informational, not a confirmed bug) **Mock-provider lecture text is repetitive without
+  an AI key; ElevenLabs-less dev envs hide the marquee audio feature entirely** (playtest finding,
+  2026-07-05) — expected behavior of the deterministic mock `LecturerProvider`/no-`ELEVENLABS_API_KEY`
+  dev config (audio route returns 204, `CourseAudioPlayer` renders nothing), not a bug — flagging
+  so a future pass doesn't mistake environment artifacts for product defects.
 - 🎨 ❄️ **Per-strain procedural fidelity pass — PARKED (owner freeze directive 2026-07-02)** —
   `GrowChamber`/`BudGL` morphology + bud shape/color coverage across all 29 strains (the
   follow-up track from the 2026-07-02 revert ADR). Pilot strain Blue Dream is 4 rounds deep
