@@ -69,7 +69,7 @@ export function ChamberActionBar({ plant }: { plant: PlantState }) {
           const enabled = !dead && (isInspect || !!state?.available);
           const reason = !isInspect && !dead && state && !state.available ? state.reason : null;
           const lastUsed = state ? formatSinceUsed(state.hoursSinceUsed) : null;
-          const cls = `flex min-h-[64px] flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 py-1.5 text-center transition-all ${
+          const cls = `relative flex min-h-[64px] flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 py-1.5 text-center transition-all ${
             tapped === t.kind ? "gpe-tile-tap" : ""
           } ${succeeded === t.kind ? "ring-2 ring-grow-400/80" : ""} ${
             enabled
@@ -81,6 +81,12 @@ export function ChamberActionBar({ plant }: { plant: PlantState }) {
             : undefined;
           const inner = (
             <>
+              <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: enabled ? (lastUsed && lastUsed !== "Just now" ? "#f59e0b" : "#22c55e") : "#ef4444" }} />
+              {succeeded === t.kind && plant.care_streak && (
+                <div className="absolute inset-0 flex items-center justify-center gpe-streak-pop pointer-events-none">
+                  <span className="text-sm font-bold text-grow-300">+{plant.care_streak}</span>
+                </div>
+              )}
               <span className="text-lg leading-none drop-shadow-[0_0_6px_rgba(255,255,255,0.25)]">{t.icon}</span>
               <span className="text-[10px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
                 {t.label.toUpperCase()}
