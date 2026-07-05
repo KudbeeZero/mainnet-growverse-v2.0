@@ -9,10 +9,7 @@ import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
 import { ChamberActionBar, BoostsInline } from "@/components/plant/ChamberDock";
-import { GearPanel } from "@/components/plant/GearPanel";
-import { ConsumablesPanel } from "@/components/plant/ConsumablesPanel";
-import { BundlePanel } from "@/components/plant/BundlePanel";
-import { PartnerPanel } from "@/components/plant/PartnerPanel";
+import { ArcadeToolbar } from "@/components/plant/ArcadeToolbar";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { BoostAmbientLayer } from "@/components/plant/BoostAmbientLayer";
 import { usePlantBounce } from "@/hooks/usePlantBounce";
@@ -155,7 +152,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const { data: pods } = usePods();
 
   const reducedMotion = usePrefersReducedMotion();
-  const [tab, setTab] = useState<"arcade" | "climate" | "time">("arcade");
+  const [tab, setTab] = useState<"climate" | "time">("climate");
   const [climate, setClimate] = useState<ChamberClimate>(DEFAULT_CLIMATE);
   // Growth-preview scrubber: null = track the real (server) age; a number =
   // preview that day on the cycle. Preview never mutates server state.
@@ -648,7 +645,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       {/* dashboard — bottom sheet in portrait, side rail in landscape */}
       <div className="max-h-[48dvh] flex-none overflow-y-auto bg-gradient-to-b from-transparent to-[#0a1622] px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 landscape:h-full landscape:max-h-none landscape:w-[clamp(260px,38vw,360px)] landscape:border-l landscape:border-[#11212e] landscape:bg-gradient-to-l landscape:pr-[max(0.75rem,env(safe-area-inset-right))]">
         <div className="mb-2 flex gap-1.5">
-          {(["arcade", "climate", "time"] as const).map((t) => (
+          {(["climate", "time"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -662,38 +659,9 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           ))}
         </div>
 
-        {tab === "arcade" && (
-          <div className="space-y-2">
-            {/* ARCADE = boosts, growth boost, rewind (via the boost tray). The
-                dashboard-y panels (Today's Plan, Plant Insights, progress strip,
-                encouragement footer) moved to the main game page (Command
-                Center) — the chamber is the fun layer, never required play. */}
-            {!ended && <BoostsInline />}
-            {/* Purchasable growth boost — fast-forward + revive for in-game GROW.
-                Cost mirrors balance.yaml simulation.actions.growth_boost.cost.
-                Hidden at the harvest window: the server rejects it (nothing left
-                to fast-forward), so don't tempt a no-op spend — cut it down. */}
-            {!ended && plant.growth_stage !== "harvest" && (
-              <button
-                onClick={() => growthBoost.mutate()}
-                disabled={growthBoost.isPending}
-                data-testid="growth-boost"
-                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/50 bg-gradient-to-r from-cyan-500/15 to-grow-500/15 px-3 text-xs font-bold tracking-[0.06em] text-cyan-100 transition-all hover:border-cyan-300 hover:from-cyan-500/25 hover:to-grow-500/25 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {growthBoost.isPending ? "Boosting…" : "⚡ Boost Growth · 60 🌿"}
-              </button>
-            )}
-            {!ended && <GearPanel podId={plant.pod_id} />}
-            {!ended && <ConsumablesPanel plant={plant} />}
-            {!ended && <BundlePanel />}
-            {!ended && <PartnerPanel />}
-            <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
-              {strain
-                ? `${strain.name} · ${indicaRatio >= 0.66 ? "indica-dominant" : indicaRatio <= 0.34 ? "sativa-dominant" : "balanced hybrid"} — grown live from your plant's real state.`
-                : "Loading strain…"}
-            </p>
-          </div>
-        )}
+        {/* Arcade toolbar - always visible above climate/time tabs */}
+        {!ended && <ArcadeToolbar plant={plant} ended={ended} />}
+
 
         {tab === "climate" && (
           <div className="space-y-1.5">
