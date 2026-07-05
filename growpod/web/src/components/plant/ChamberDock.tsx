@@ -220,13 +220,13 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
             icon="🔥"
             label="Care streak"
             value={plant.care_streak ? `${plant.care_streak}d` : "—"}
-            strong={plant.care_streak && plant.care_streak >= 5}
+            strong={!!(plant.care_streak && plant.care_streak >= 5)}
           />
           <InsightChip
             icon="💎"
             label="Resin score"
             value={plant.resin_score ? `${Math.round(plant.resin_score)}/100` : "—"}
-            strong={plant.resin_score && plant.resin_score >= 70}
+            strong={!!(plant.resin_score && plant.resin_score >= 70)}
           />
         </div>
         <Link href={`/dashboard/plants/${plant.id}#journal`} className="mt-2 block text-[10px] font-semibold text-cyan-300 hover:underline">
