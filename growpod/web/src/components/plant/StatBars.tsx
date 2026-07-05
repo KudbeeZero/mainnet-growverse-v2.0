@@ -4,7 +4,7 @@ import type { Plant } from "@/lib/types";
 export function StatBars({ plant }: { plant: Plant }) {
   return (
     <div className="grid grid-cols-1 gap-2">
-      <Bar label="Health" value={plant.health} />
+      <Bar label="Health" value={plant.health} danger={plant.health < 30} />
       <Bar label="Water" value={plant.water_level} />
       <Bar label="Nutrients" value={plant.nutrient_level} />
       {plant.pest_level > 0 && (

@@ -325,7 +325,7 @@ export function EncouragementFooter({ health }: { health: number }) {
   // SVG ring: r=15 → circumference ≈ 94.25; offset the gap for the missing %.
   const C = 2 * Math.PI * 15;
   return (
-    <div className="flex w-full items-center gap-2.5 rounded-xl border border-[#1c3447] bg-[#0d1d2b] px-2.5 py-2">
+    <div className={`flex w-full items-center gap-2.5 rounded-xl border border-[#1c3447] bg-[#0d1d2b] px-2.5 py-2 ${pct < 30 ? "gpe-health-danger" : ""}`}>
       <svg width="36" height="36" viewBox="0 0 36 36" className="flex-none -rotate-90" aria-hidden>
         <circle cx="18" cy="18" r="15" fill="none" stroke="#11212e" strokeWidth="3.5" />
         <circle
@@ -333,7 +333,7 @@ export function EncouragementFooter({ health }: { health: number }) {
           cy="18"
           r="15"
           fill="none"
-          stroke={ring}
+          stroke={pct < 30 ? "#dc2626" : ring}
           strokeWidth="3.5"
           strokeLinecap="round"
           strokeDasharray={C}
@@ -344,7 +344,7 @@ export function EncouragementFooter({ health }: { health: number }) {
         <p className="text-[11px] font-bold text-gray-100">Your actions make a difference</p>
         <p className="text-[10px] text-[#7fa9bf]">{line}</p>
       </div>
-      <span className="flex-none font-mono text-[11px] font-bold" style={{ color: ring }}>
+      <span className="flex-none font-mono text-[11px] font-bold" style={{ color: pct < 30 ? "#dc2626" : ring }}>
         {pct}%
       </span>
     </div>

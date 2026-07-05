@@ -56,6 +56,20 @@ export function useCareActions(plantId: string) {
     },
     onSuccess: (_data, kind) => {
       toast.success(LABELS[kind]);
+      // Check for care-streak milestones (5d, 10d, 15d, 20d, 25d, etc.)
+      if (_data.care_streak && _data.care_streak % 5 === 0 && _data.care_streak >= 5) {
+        const milestoneEmojis: Record<number, string> = {
+          5: "🔥",
+          10: "⭐",
+          15: "🏆",
+          20: "👑",
+        };
+        const emoji = milestoneEmojis[_data.care_streak] || "✨";
+        setTimeout(
+          () => toast.success(`${emoji} ${_data.care_streak}-day care streak!`),
+          800,
+        );
+      }
       invalidate();
     },
     onError: (e) => toast.error(e.message),
