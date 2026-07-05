@@ -66,7 +66,7 @@ class MockChainProvider(ChainProvider):
         self.balances.pop(asset_id, None)
         return self._txid()
 
-    def transfer_asset(self, asset_id, receiver, amount, sender_mnemonic=None) -> str:
+    def transfer_asset(self, asset_id, receiver, amount) -> str:
         if asset_id not in self.assets:
             raise ChainError(f"asset {asset_id} does not exist")
         book = self.balances.setdefault(asset_id, {})

@@ -16,7 +16,7 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
 ### 🔴 Now — correctness / risk / security (must close before public launch)
 1. 🔨 **Concurrency hardening** — remaining: `Idempotency-Key` header + one-shot-grant uniqueness → `## 🔴 Immediate`
 2. ⬜ **Chain settlement verification (RISK #7)** — deposit txid verify, replay protection, reconciliation job → `## 🔴 Immediate`
-3. ⬜ **Security follow-ups PR #104** — deposit redesign, CSP nonce, CORS allowlist, player key off localStorage, CODEOWNERS → `## 🏛️ HERMES`
+3. ⬜ **Security follow-ups PR #104** — deposit redesign, CSP nonce, CORS allowlist, player key off localStorage → `## 🏛️ HERMES`
 4. ⬜ **5 of 12 feature flags gate nothing** — `ftue_tutorial`/`grow_chamber`/`master_grower_advisor`/`breeding_lab`/`daily_stipend` off does nothing (owner OK needed) → `### 🕵️ Dormant investments`
 5. ⬜ **Web gating never reads `GET /api/game/flags`** — `features.ts` is env-var default-ON; land the re-point → `### 🕵️ Dormant investments`
 6. ⬜ **Reconcile `docs/ROADMAP.md`** — Sprints 1–3 still show ⬜/🔨 → `## 🔴 Immediate`
@@ -734,9 +734,11 @@ once they appear here. Last reconciled: **2026-07-03** (pod-recycle fix + landin
   (player-signed + indexer-verified inbound transfer) + **withdraw idempotency key** (treasury; owner
   gate); web CSP nonce (drop `'unsafe-inline'`) + move the player key off `localStorage`; TS api-server
   CORS allowlist; client-supplied `blockHash` / time-seeded `storyEngine` RNG hardening; add the
-  missing `snapshot.yml` backup workflow (or correct SECURITY.md); enforce CODEOWNERS on protected
-  surfaces; replace post-merge `drizzle-kit push` with generated migrations; delete the stale nested
+  missing `snapshot.yml` backup workflow (or correct SECURITY.md); replace post-merge
+  `drizzle-kit push` with generated migrations; delete the stale nested
   `growpod/artifacts/api-server` copy; dev-bypass explicit opt-in for previews.
+  (Security audit 2026-07-05: **CODEOWNERS is done** — `.github/CODEOWNERS` exists, added
+  2026-06-25, predating this bullet's last edit; struck from the open list.)
 - 🏛️ ⬜ **Global Learning Memory + personalization (design/11, owner directive 2026-07-02)** —
   P1 `knowledge_events` capture (append-only, anonymized-on-read, single-writer) at the 4
   generative call sites; P2 admissions persistence + `personal_context` into lecture/Master
