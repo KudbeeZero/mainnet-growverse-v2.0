@@ -43,4 +43,5 @@ export const queryKeys = {
   storeBundles: () => ["store", "bundles"] as const,
   consumables: (id: string) => ["consumables", id] as const,
   gear: (id: string) => ["gear", id] as const,
+  bundles: (id: string) => ["bundles", id] as const,
 };
