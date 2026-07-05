@@ -119,6 +119,20 @@ export interface ChamberCore {
   pointerUp(): void;
 }
 
+// Pure, exported so the "black blob" clamp fix (2026-07-04) has a real
+// regression test — see __tests__/chamberCore.test.ts. Pods and leaf fans
+// each sum several independent darkening terms (ring depth/tip-blend/parity
+// for pods; litBias/topBoost/depth for leaves) that can land in the same
+// direction at once and push lightness at or below 0, which canvas silently
+// clips to solid black instead of a dark shade. These bound the final sum to
+// a safe range before it reaches any hsl() call.
+export function clampPodLightness(raw: number): number {
+  return clamp(raw, 20, 58);
+}
+export function clampLeafLightness(raw: number): number {
+  return clamp(raw, 10, 78);
+}
+
 export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
   const ctx = opts.ctx;
   const motionOK = opts.motionOK;
@@ -226,7 +240,14 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     }
     podPath(w, h); // teardrop (0) and foxtail (3, already elongated via h)
   }
-  function drawPod(x: number, y: number, rot: number, w: number, h: number, hue: number, sat: number, lit: number, capA: number) {
+  function drawPod(x: number, y: number, rot: number, w: number, h: number, hue: number, sat: number, litIn: number, capA: number) {
+    // Enforced here, not just at the call site (code-review fix, 2026-07-04):
+    // the gradient stops below push lit further in both directions (+8/-16 at
+    // the 0/1 stops), so a caller passing an already-safe value can still get
+    // crushed toward black by this function's own math. Clamping the input
+    // once, right where the unguarded hsl() calls actually live, means any
+    // future caller is protected by construction instead of by convention.
+    const lit = clampPodLightness(litIn);
     ctx!.save();
     ctx!.translate(x, y);
     ctx!.rotate(rot);
@@ -362,6 +383,76 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     const [r0, g0, b0] = hsl2rgb(h0, s0, 50);
     const [r1, g1, b1] = hsl2rgb(h1, s1, 50);
     return rgb2hueSat(lerp(r0, r1, t), lerp(g0, g1, t), lerp(b0, b1, t));
+  }
+  // ---- tapered branch stroke (round 9 pass 2, "branches render as flat,
+  // uniform-width ribbons" complaint) ----
+  // Canvas has no native variable-width stroke; the main STEM already fakes
+  // one by walking its pre-built multi-point spine and giving each short
+  // segment its own interpolated lineWidth (see the p.spine loop in
+  // drawPlant). Branches aren't a pre-built polyline, though — each is one
+  // cubic bezier evaluated fresh every frame — so this samples that same
+  // bezier into short straight segments and applies the same "own lineWidth
+  // per segment" trick, thick at the trunk-facing root (t=0) easing down to a
+  // thin bud-facing tip (t=1). Width is lerp(w0,w1,t^exp) with w0>w1, so the
+  // *rate* of narrowing follows t^exp's derivative: an exponent >1 is shallow
+  // near t=0 and steep near t=1 (code-review fix, 2026-07-04 — the original
+  // 0.72 exponent was <1, which does the opposite: steep near the root, flat
+  // near the tip, thinning out immediately after the trunk instead of
+  // holding width through the middle). 1.4 keeps most of the width through
+  // the branch's middle, narrowing hardest only in the last stretch, so it
+  // reads as a tapering woody limb rather than thinning evenly like a
+  // deflating balloon.
+  // Shared with the STEM's own segment-taper loop below (code-review fix,
+  // 2026-07-04 — both used to hand-roll the identical lerp(w0,w1,t^exp)
+  // one-liner independently, which could silently drift out of sync on a
+  // future retune). Each site keeps its own exponent/width inputs; only the
+  // formula itself is shared.
+  function taperWidth(t: number, w0: number, w1: number, exp: number): number {
+    return lerp(w0, w1, Math.pow(t, exp));
+  }
+  function bezierAt(
+    p0x: number, p0y: number, p1x: number, p1y: number,
+    p2x: number, p2y: number, p3x: number, p3y: number, t: number,
+  ): [number, number] {
+    const mt = 1 - t;
+    const a = mt * mt * mt, b = 3 * mt * mt * t, c = 3 * mt * t * t, d = t * t * t;
+    return [a * p0x + b * p1x + c * p2x + d * p3x, a * p0y + b * p1y + c * p2y + d * p3y];
+  }
+  // Samples a bezier into `steps+1` points (including the start point) so a
+  // caller that needs the SAME curve twice (e.g. a branch and its rim, offset
+  // by a constant) can sample once and reuse the points, instead of
+  // re-evaluating the cubic formula a second time (code-review fix,
+  // 2026-07-04 — the rim previously called strokeTaperedBezier fresh with
+  // control points that were just the body's shifted by (0,-ro); since a
+  // bezier is an affine combination of its control points, its sampled
+  // points are exactly the body's points shifted the same way, so the rim
+  // can reuse them for free instead of recomputing).
+  function sampleBezier(
+    p0x: number, p0y: number, p1x: number, p1y: number,
+    p2x: number, p2y: number, p3x: number, p3y: number, steps = 8,
+  ): Array<[number, number]> {
+    const pts: Array<[number, number]> = [[p0x, p0y]];
+    for (let s = 1; s <= steps; s++) pts.push(bezierAt(p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y, s / steps));
+    return pts;
+  }
+  function strokeTaperedPoints(pts: Array<[number, number]>, w0: number, w1: number) {
+    const steps = pts.length - 1;
+    for (let s = 1; s <= steps; s++) {
+      const t = s / steps;
+      const tMid = (t + (s - 1) / steps) / 2;
+      ctx!.lineWidth = taperWidth(tMid, w0, w1, 1.4);
+      ctx!.beginPath();
+      ctx!.moveTo(pts[s - 1][0], pts[s - 1][1]);
+      ctx!.lineTo(pts[s][0], pts[s][1]);
+      ctx!.stroke();
+    }
+  }
+  function strokeTaperedBezier(
+    p0x: number, p0y: number, p1x: number, p1y: number,
+    p2x: number, p2y: number, p3x: number, p3y: number,
+    w0: number, w1: number, steps = 8,
+  ) {
+    strokeTaperedPoints(sampleBezier(p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y, steps), w0, w1);
   }
   function buildFlowerSite(
     rnd: () => number,
@@ -914,9 +1005,28 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // Pods splay outward from the cola axis (rotation follows their ring
         // position) so the surface reads as layered bract scales rather than
         // loose bubbles.
+        // Bug fix (2026-07-04, "black blob" glitch — Gelato late-flower):
+        // ring depth (-2), tipBlend (-3), parityLit (±6) and ringLit (±3) are
+        // all independent per-pod darkening terms that can land in the SAME
+        // direction at once (worst case ring 2, odd parity, full tip-accent:
+        // -2-3-6-3 ≈ -14 on top of dl's own -3.5). On strains with a high
+        // accentFrac + anthocyanin (Gelato 0.5/0.6 — the highest of any
+        // authored strain), that pushes a whole neighbourhood of adjacent
+        // pods near the cola tip to ~L10 at once; drawPod's own gradient then
+        // darkens its outer stop by a further -16 (undercut -22), crushing
+        // the shared corner of many overlapping pods to near-black
+        // simultaneously — the fused mass reads as a solid black clump
+        // instead of individually-shaded dark-violet bracts. `drawPod` itself
+        // clamps its `lit` input to [20,58] (code-review fix, 2026-07-04 —
+        // that floor/ceiling now lives in the one place with the unguarded
+        // hsl() calls, not just here), so this sum is passed through raw; the
+        // per-pod ring/parity/tip texture (the "every other one" stacking +
+        // shingle read this round built) still comes through unclamped up to
+        // that point.
+        const podLit = baseLit + p.dl + (2 - p.ring) * 2 - tipBlend * 3 + parityLit + ringLit;
         drawPod(
           px, py, Math.cos(p.a) * (0.32 + p.rad * 0.45), podW * p.sz * g, podH * p.sz * g,
-          hueP, satP, baseLit + p.dl + (2 - p.ring) * 2 - tipBlend * 3 + parityLit + ringLit, 0.42,
+          hueP, satP, podLit, 0.42,
         );
         drawn++;
       }
@@ -1346,6 +1456,12 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         nodeLeafSize: A * (0.055 + 0.045 * low) * (0.55 + 0.45 * grow) * SK.nodeLeaf * (1 - 0.35 * P.budDev * f) * (1 + skirt * 0.35),
         nodeBud: null,
         depth: az.depth,
+        // Round 9 pass 2 (owner: "flat stacked tiers, no front/mid/rear
+        // depth"): the paint order already sorts back→front by depth (see
+        // `order` in drawPlant), but the ±7 default lightness swing was too
+        // subtle to actually read as depth once branches/leaves were also
+        // getting individually jittered — bumped to ±10, paired with the new
+        // rear-branch desaturation (see drawPlant's branch strokeStyle).
         litAdj: depthShade(az.depth),
         // A camera-facing branch (lateral≈0) shows its fan nearly edge-on; a
         // side-facing one shows it broad — so leaves no longer all billboard.
@@ -1697,8 +1813,41 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     // above 9 would otherwise index past the arrays → undefined → NaN geometry.
     const leaflets = Math.min(n, FAN_A.length);
     const hue = leafTone.hue, sat = leafTone.sat;
-    const lit = S.lit + leafTone.litBias + topBoost * 6 + litAdj;
+    // Bug fix (2026-07-04, "black blob" glitch — found on White Rhino/Blue
+    // Dream late-flower renders): this sum has no floor. `leafTone.litBias`
+    // alone can reach -18 to -21 (mature -3-9 always-on, teal strains like
+    // Blue Dream −9 more), and callers stack further per-fan "recede" darkening
+    // on top (skirt/inner/node fans pass litAdj down to nd.litAdj-6, minus up
+    // to -8 more for skirt) — so on a rear (litAdj<0), fully-mature, skirt/
+    // interior fan the pre-jitter lightness already lands at or below 0. The
+    // per-leaflet gradient below (litJ ± jitter) then feeds a NEGATIVE
+    // lightness into hsl(), which canvas clamps to 0% — pure black — instead
+    // of a dark shaded green. Clamping here keeps every fan's darkest
+    // recede/depth/skirt combination visibly dark-green instead of crushing
+    // to black, without touching any strain's base hue/sat identity.
+    const lit = clampLeafLightness(S.lit + leafTone.litBias + topBoost * 6 + litAdj);
     const arch = leafTone.arch;
+    // Round 9 pass 2 (owner: "leaf fans... hover near a bud rather than
+    // clearly emerging from a branch joint"). Every fan call site already
+    // translates to a real point ON the branch/node before drawing (this
+    // function only ever sees its own local origin), but with nothing drawn
+    // AT that origin besides the leaflets' own short, thin petioles, a small
+    // fan can read as a free-floating cluster rather than something rooted in
+    // woody material. A short branch-toned nub at the origin — drawn first,
+    // so the leaflets layer over its tip — gives every fan a visible peg it
+    // plugs into, independent of bud/cola draw order.
+    {
+      const nubW = Math.max(1, size * 0.05);
+      ctx!.save();
+      ctx!.strokeStyle = `hsl(${S.hue - 8}, 30%, ${clamp(26 + litAdj, 14, 40)}%)`;
+      ctx!.lineWidth = nubW;
+      ctx!.lineCap = "round";
+      ctx!.beginPath();
+      ctx!.moveTo(0, size * 0.05);
+      ctx!.lineTo(0, -size * 0.14);
+      ctx!.stroke();
+      ctx!.restore();
+    }
     const yawed = yaw < 0.999;
     if (yawed) {
       ctx!.save();
@@ -1716,7 +1865,12 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       const curl = arch * (0.5 + Math.abs(FAN_A[i]) * 0.7);
       // Per-leaflet tone jitter (±3 lit / ±4 sat) so a fan isn't 7 identical
       // swatches — real foliage has this much natural variation leaflet to leaflet.
-      const litJ = lit + (jT - 0.5) * 6, satJ = clamp(sat + (fanJit(seed, i, 5) - 0.5) * 8, 0, 100);
+      // Clamped again here, not just on `lit` above (code-review fix,
+      // 2026-07-04): this ±3 jitter is applied AFTER `lit`'s floor, so it can
+      // still push the per-leaflet value below the floor `lit` itself
+      // enforces (e.g. lit=10, jT=0 -> litJ=7). `lit`'s clamp guards the fan
+      // as a whole; this one guards the actual value that reaches hsl().
+      const litJ = clampLeafLightness(lit + (jT - 0.5) * 6), satJ = clamp(sat + (fanJit(seed, i, 5) - 0.5) * 8, 0, 100);
       ctx!.save();
       ctx!.rotate(a);
       ctx!.strokeStyle = `hsl(${hue}, ${satJ * 0.7}%, ${litJ * 0.8}%)`;
@@ -2247,7 +2401,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // CLEAR taper"). Thicker base (×1.4) with a sharper power-curve taper so the
       // spine reads as a strong tapering trunk that visibly supports the colas,
       // not a thin wire. Branch widths are unchanged (they key off sw0 directly).
-      ctx!.lineWidth = lerp(sw0 * 1.4, sw0 * 0.3, Math.pow(a.t, 0.8));
+      ctx!.lineWidth = taperWidth(a.t, sw0 * 1.4, sw0 * 0.3, 0.8);
       ctx!.lineCap = "round";
       ctx!.beginPath();
       ctx!.moveTo(a.x, a.y);
@@ -2258,7 +2412,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // (blueprint: "increase material definition", "lighting sculpts the plant").
       if (a.t < 0.5) {
         ctx!.strokeStyle = `hsla(${hueS + 4}, ${satS + 6}%, ${litS + 16}%, ${0.5 * (1 - a.t * 2)})`;
-        ctx!.lineWidth = lerp(sw0 * 0.5, sw0 * 0.16, Math.pow(a.t, 0.8));
+        ctx!.lineWidth = taperWidth(a.t, sw0 * 0.5, sw0 * 0.16, 0.8);
         ctx!.beginPath();
         ctx!.moveTo(a.x - lerp(sw0 * 0.42, 0, a.t * 2), a.y);
         ctx!.lineTo(b.x - lerp(sw0 * 0.42, 0, b.t * 2), b.y);
@@ -2370,38 +2524,42 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // The whole branch rotates downward under load (nd.side keeps the sign so
       // both sides droop toward the floor), then sways/springs around that.
       ctx!.rotate(sway + spring + nd.side * droopRot + nd.side * condClaw * 0.4);
-      ctx!.strokeStyle = `hsl(${S.hue - 10}, 32%, ${clamp(30 + nd.litAdj, 18, 46)}%)`;
+      // Round 9 pass 2 (owner: "branches render as flat, uniform-width
+      // ribbons... no front/mid/rear depth"). Rear branches (depth<0, winding
+      // away from the camera) lose a little saturation on top of the existing
+      // litAdj darkening — a cheap, standard aerial-perspective cue that makes
+      // the depth-sorted paint order (`order`, above) actually READ as depth
+      // instead of every tier looking like the same flat green at every layer.
+      const depthSat = clamp(32 - Math.max(0, -nd.depth) * 9, 20, 32);
+      ctx!.strokeStyle = `hsl(${S.hue - 10}, ${depthSat}%, ${clamp(30 + nd.litAdj, 18, 46)}%)`;
       // Bolder branches, less thinning toward the apex — the upper branches carry
       // the flower sites, so a "wire" up there is the worst place for it.
-      ctx!.lineWidth = clamp(sw0 * 0.7 * (1 - nd.f * 0.26), 2.1, 6);
+      const branchW = clamp(sw0 * 0.7 * (1 - nd.f * 0.26), 2.1, 6);
       ctx!.lineCap = "round";
       // Curved branch: arcs upward (nd.curve) then sags at the tip under weight.
-      ctx!.beginPath();
-      ctx!.moveTo(0, 0);
-      ctx!.bezierCurveTo(
-        nd.tipX * 0.35, nd.tipY * 0.4 - nd.len * nd.curve,
-        nd.tipX * 0.72, nd.tipY * 0.7 - nd.len * nd.curve * 0.4 + sag * 0.5,
-        endX, endY,
-      );
-      ctx!.stroke();
+      // Tapered thick→thin (trunk-facing root → bud-facing tip, see
+      // strokeTaperedBezier above) instead of one constant lineWidth — the
+      // single highest-leverage fix for the "flat ribbon, no woody taper" read.
+      const bc1x = nd.tipX * 0.35, bc1y = nd.tipY * 0.4 - nd.len * nd.curve;
+      const bc2x = nd.tipX * 0.72, bc2y = nd.tipY * 0.7 - nd.len * nd.curve * 0.4 + sag * 0.5;
+      const branchPts = sampleBezier(0, 0, bc1x, bc1y, bc2x, bc2y, endX, endY);
+      strokeTaperedPoints(branchPts, branchW * 1.35, branchW * 0.32);
       // Plant rework pass 5 (owner blueprint: "increase material definition";
       // "branches visibly support each bud"). A thin lighter rim along the top of
       // each branch so it reads as a rounded, lit supporting branch instead of a
       // flat line — the visible support structure the blueprint repeatedly asks
       // for. Same bezier, offset up by the rim width. Additive, draw-path only.
+      // Tapered in lock-step with the branch body above.
       {
         const rw = clamp(sw0 * 0.28 * (1 - nd.f * 0.26), 0.9, 2.4);
         const ro = rw * 0.5 + 0.6;
-        ctx!.strokeStyle = `hsl(${S.hue - 6}, 42%, ${clamp(48 + nd.litAdj, 30, 64)}%)`;
-        ctx!.lineWidth = rw;
-        ctx!.beginPath();
-        ctx!.moveTo(0, -ro);
-        ctx!.bezierCurveTo(
-          nd.tipX * 0.35, nd.tipY * 0.4 - nd.len * nd.curve - ro,
-          nd.tipX * 0.72, nd.tipY * 0.7 - nd.len * nd.curve * 0.4 + sag * 0.5 - ro,
-          endX, endY - ro,
-        );
-        ctx!.stroke();
+        ctx!.strokeStyle = `hsl(${S.hue - 6}, ${depthSat + 10}%, ${clamp(48 + nd.litAdj, 30, 64)}%)`;
+        // Reuses branchPts (offset by -ro in y) instead of re-sampling the
+        // bezier — valid because a cubic bezier is an affine combination of
+        // its control points, so shifting every control point by (0,-ro)
+        // shifts every sampled point on the curve by that same constant.
+        const rimPts: Array<[number, number]> = branchPts.map(([x, y]) => [x, y - ro]);
+        strokeTaperedPoints(rimPts, rw * 1.3, rw * 0.3);
       }
       ctx!.save();
       ctx!.translate(endX, endY);
@@ -2486,13 +2644,22 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         const bey = -Math.cos(bl.tilt) * bl.len * 0.5 + sag * 0.25;
         ctx!.save();
         ctx!.translate(bx, by);
-        ctx!.strokeStyle = `hsl(${S.hue - 8}, 30%, 32%)`;
-        ctx!.lineWidth = clamp(sw0 * 0.48 * (1 - nd.f * 0.3), 1.4, 3.6);
+        // Shares the parent branch's depthSat (code-review fix, 2026-07-04):
+        // was hardcoded 30% regardless of depth, so a branchlet forking off a
+        // rear-facing (desaturated) branch stayed brighter than the branch it
+        // grows from — a visible mismatch right at the fork.
+        ctx!.strokeStyle = `hsl(${S.hue - 8}, ${depthSat}%, 32%)`;
+        const blW = clamp(sw0 * 0.48 * (1 - nd.f * 0.3), 1.4, 3.6);
         ctx!.lineCap = "round";
-        ctx!.beginPath();
-        ctx!.moveTo(0, 0);
-        ctx!.quadraticCurveTo(bex * 0.5, bey * 0.5 - bl.len * bl.curve, bex, bey);
-        ctx!.stroke();
+        // Tapered to match the parent branch (round 9 pass 2) — quadratic
+        // control point converted to its equivalent cubic pair so it can share
+        // strokeTaperedBezier's segmented-width trick.
+        {
+          const qx = bex * 0.5, qy = bey * 0.5 - bl.len * bl.curve;
+          const c1x = qx * (2 / 3), c1y = qy * (2 / 3);
+          const c2x = bex + (qx - bex) * (2 / 3), c2y = bey + (qy - bey) * (2 / 3);
+          strokeTaperedBezier(0, 0, c1x, c1y, c2x, c2y, bex, bey, blW * 1.25, blW * 0.35);
+        }
         ctx!.save();
         ctx!.translate(bex, bey);
         ctx!.rotate(bl.side * (0.4 + bl.tilt * 0.2) + nd.leafRoll * 0.6);

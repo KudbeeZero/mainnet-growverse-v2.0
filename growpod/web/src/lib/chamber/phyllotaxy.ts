@@ -82,6 +82,6 @@ export function foreshorten(lateral: number, floor = 0.42): number {
  * given depth: front (+1) reads a touch brighter, back (−1) a touch darker, so the
  * canopy gains volume. Bounded and gentle — depth cue, not a spotlight.
  */
-export function depthShade(depth: number, amount = 7): number {
+export function depthShade(depth: number, amount = 10): number {
   return clamp(depth, -1, 1) * amount;
 }
