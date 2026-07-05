@@ -27,7 +27,7 @@ from ..services.waitlist_service import WaitlistService
 from ..services.factions import load_factions
 from ..services import leveling_service
 from ..services.badge_service import BadgeService, rank_for_level
-from ..economy.ledger import InsufficientFundsError
+from ..economy.ledger import InsufficientFundsError, to_money
 from ..feature_flags import (
     all_flags,
     FeatureDisabledError,
@@ -2040,6 +2040,45 @@ def admin_delete_featured(item_id):
     return jsonify({"deleted": True})
 
 
+def _bundle_full_price(cfg, session, components):
+    """Sum a bundle's component costs in Decimal.
+
+    Money must never touch `float` (CLAUDE.md: "Money is Decimal... No floats
+    for money") -- every intermediate value is coerced via `to_money()`
+    instead of `float()`, so the arithmetic stays exact regardless of the
+    magnitudes involved.
+    """
+    from decimal import Decimal
+    from ..db.models import Strain
+
+    full_price = Decimal("0")
+    for c in (components or []):
+        ctype = c.get("type", "consumable")
+        qty = int(c.get("qty", 1))
+        if ctype == "consumable":
+            cost = to_money((cfg.shop_consumables.get(c.get("key", "")) or {}).get("cost", 0))
+            full_price += cost * qty
+        elif ctype == "strain":
+            # Strain component: use the strain's catalog seed price.
+            strain_id = c.get("strain_id", "")
+            if strain_id and session is not None:
+                strain = session.get(Strain, strain_id)
+                if strain:
+                    from ..economy import pricing as _pricing
+                    try:
+                        full_price += _pricing.seed_price(strain.rarity, cfg) * qty
+                    except Exception:
+                        pass
+    return full_price
+
+
+def _bundle_price_with_discount(full_price, discount_pct):
+    """Apply a bundle discount, staying in the Decimal domain throughout."""
+    from decimal import Decimal
+    discount = to_money(discount_pct)
+    return to_money(full_price * (Decimal("1") - discount))
+
+
 @game_bp.get("/store/bundles")
 def store_bundles():
     from ..db.models import Bundle
@@ -2068,36 +2107,20 @@ def store_bundles():
 @game_bp.post("/players/<player_id>/store/bundles/<bundle_id>/purchase")
 @require_player
 def purchase_bundle(player_id, bundle_id):
-    from ..db.models import Bundle, ConsumableInventory, SeedInventory, Strain
+    from ..db.models import Bundle, ConsumableInventory, SeedInventory
     from ..economy.ledger import post as _post
     from ..economy.config import get_economy_config as _cfg
     from ..enums import LedgerEntryType
-    from decimal import Decimal as _Dec
     try:
         with session_scope() as s:
             b = s.get(Bundle, bundle_id)
             if b is None or not b.active:
                 return _error("Bundle not found or inactive", 404)
             cfg = _cfg()
-            # Compute full price across consumable + strain components
-            full_price = 0.0
-            for c in (b.components or []):
-                ctype = c.get("type", "consumable")
-                qty = int(c.get("qty", 1))
-                if ctype == "consumable":
-                    full_price += float((cfg.shop_consumables.get(c.get("key", "")) or {}).get("cost", 0)) * qty
-                elif ctype == "strain":
-                    # Strain component: use the strain's catalog seed price
-                    strain_id = c.get("strain_id", "")
-                    if strain_id:
-                        strain = s.get(Strain, strain_id)
-                        if strain:
-                            from ..economy import pricing as _pricing
-                            try:
-                                full_price += float(_pricing.seed_price(strain.rarity, cfg)) * qty
-                            except Exception:
-                                full_price += 0.0
-            bundle_price = _Dec(str(round(full_price * (1 - float(b.discount_pct)), 6)))
+            # Compute full price across consumable + strain components -- Decimal
+            # throughout, no float() on money (CLAUDE.md invariant).
+            full_price = _bundle_full_price(cfg, s, b.components)
+            bundle_price = _bundle_price_with_discount(full_price, b.discount_pct)
             _post(s, player_id, -bundle_price, LedgerEntryType.SHOP_PURCHASE,
                   ref_type="bundle", ref_id=bundle_id)
             # Deliver components

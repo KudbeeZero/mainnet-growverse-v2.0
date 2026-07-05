@@ -3,16 +3,21 @@ MintingService — turns eligible in-game assets into Algorand NFTs.
 
 Flow is DB-first / chain-second and idempotent:
   1. validate ownership + eligibility,
-  2. mark the row PENDING,
+  2. mark the row PENDING and COMMIT (Harvest/Strain carry version_id_col, so
+     this commit is the concurrency serialization point -- a losing concurrent
+     caller hits StaleDataError here and never reaches the chain call),
   3. create the ASA via the chain provider,
   4. persist the returned asset id + MINTED status.
-If the chain call fails the row is marked FAILED and a GameError is raised. An
-already-MINTED asset is returned unchanged (no double-mint).
+If the chain call fails, the row is rolled back to "none" (a compensating
+action -- the PENDING commit already happened but no asset was minted) and a
+GameError is raised; the item remains mintable for a retry. An already-MINTED
+asset is returned unchanged (no double-mint).
 """
 
 from typing import Optional
 
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.exc import StaleDataError
 
 from ..config import get_settings
 from ..economy.config import get_economy_config, EconomyConfig
@@ -57,6 +62,11 @@ class MintingService:
             raise GameError("Harvest not found")
         if harvest.nft_status == NFTStatus.MINTED.value:
             return harvest  # idempotent
+        if harvest.nft_status == NFTStatus.PENDING.value:
+            # A mint for this harvest already committed PENDING and is (or
+            # was) mid-flight to the chain -- don't let a second, sequential
+            # request race the same in-flight create_asset() call.
+            raise GameError("Mint already in progress for this harvest; please retry shortly")
 
         if rarity_index(harvest.rarity_snapshot) < self._min_rarity_index():
             raise GameError(
@@ -84,6 +94,10 @@ class MintingService:
             raise GameError("Only the breeder can mint this strain")
         if strain.nft_status == NFTStatus.MINTED.value:
             return strain
+        if strain.nft_status == NFTStatus.PENDING.value:
+            # See mint_harvest(): don't let a second, sequential request race
+            # an already in-flight create_asset() call for this strain.
+            raise GameError("Mint already in progress for this strain; please retry shortly")
 
         min_stability = float(self._nft_cfg.get("strain_min_stability", 0.85))
         if strain.stability < min_stability:
@@ -109,7 +123,22 @@ class MintingService:
     # ----- shared mint path ----------------------------------------------
     def _mint(self, row, asset_name: str, url: str, metadata: dict):
         row.nft_status = NFTStatus.PENDING.value
-        self.session.flush()
+
+        # SECURITY (double-mint, 2026-07-05 review): commit the PENDING status
+        # BEFORE calling the chain. Harvest/Strain now carry version_id_col
+        # (same optimistic-lock pattern as Wallet), so this commit is the
+        # serialization point for the race: two concurrent callers that both
+        # observed nft_status == "none" can't both commit PENDING for the same
+        # row -- the loser hits StaleDataError here and must NEVER reach
+        # create_asset() (a real on-chain mint in prod).
+        try:
+            self.session.commit()
+        except StaleDataError:
+            self.session.rollback()
+            raise GameError(
+                "Mint conflicted with a concurrent request; please retry."
+            )
+
         try:
             asset_id = self.provider.create_asset(
                 unit_name="GPNFT",
@@ -120,11 +149,17 @@ class MintingService:
                 metadata_hash=md.metadata_hash(metadata),
             )
         except ChainError as exc:
-            row.nft_status = NFTStatus.FAILED.value
+            # The PENDING status already committed but no asset was minted.
+            # Roll the row back to "none" (a compensating action, mirroring
+            # withdraw()'s reversal credit) so it remains mintable instead of
+            # getting stuck at PENDING -- or permanently FAILED -- forever.
+            row.nft_status = NFTStatus.NONE.value
+            self.session.commit()
             raise GameError(f"On-chain mint failed: {exc}") from exc
 
         row.nft_asset_id = asset_id
         row.nft_status = NFTStatus.MINTED.value
+        self.session.commit()
         return row
 
     def metadata_for(self, kind: str, obj_id: str) -> dict:

@@ -231,14 +231,21 @@ def test_mint_strain_stable_but_low_rarity_rejected(db):
 
 
 def test_mint_chain_failure_marks_failed(db):
-    """minting_service.py:122-124 — ChainError in _mint -> status FAILED + raise."""
+    """minting_service.py — ChainError in _mint -> status rolled back + raise.
+
+    2026-07-05 security fix: PENDING now commits *before* the chain call (the
+    concurrency fix's serialization point), so a ChainError after that commit
+    is a compensating action, not a first write -- the row is rolled back to
+    "none" (retryable) rather than left at a terminal "failed" state, mirroring
+    withdraw()'s reversal-credit pattern for the same class of bug.
+    """
     with session_scope() as s:
         p = GameService(s).create_player("mintfail")
         strain = _stable_strain(s, p.id, Rarity.EPIC.value, slug="mint-fail-line")
         with pytest.raises(GameError, match="On-chain mint failed"):
             MintingService(s, provider=_BoomMintProvider()).mint_strain(p.id, strain.id)
         s.flush()
-        assert s.get(Strain, strain.id).nft_status == NFTStatus.FAILED.value
+        assert s.get(Strain, strain.id).nft_status == NFTStatus.NONE.value
 
 
 def test_metadata_for_harvest_not_found(db):
