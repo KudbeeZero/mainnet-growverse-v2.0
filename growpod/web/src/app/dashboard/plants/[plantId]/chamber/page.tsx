@@ -11,6 +11,8 @@ import { ErrorState } from "@/components/ui/States";
 import { ChamberActionBar, BoostsInline } from "@/components/plant/ChamberDock";
 import { GearPanel } from "@/components/plant/GearPanel";
 import { ConsumablesPanel } from "@/components/plant/ConsumablesPanel";
+import { BundlePanel } from "@/components/plant/BundlePanel";
+import { PartnerPanel } from "@/components/plant/PartnerPanel";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { BoostAmbientLayer } from "@/components/plant/BoostAmbientLayer";
 import { usePlantBounce } from "@/hooks/usePlantBounce";
@@ -683,6 +685,8 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             )}
             {!ended && <GearPanel podId={plant.pod_id} />}
             {!ended && <ConsumablesPanel plant={plant} />}
+            {!ended && <BundlePanel />}
+            {!ended && <PartnerPanel />}
             <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
               {strain
                 ? `${strain.name} · ${indicaRatio >= 0.66 ? "indica-dominant" : indicaRatio <= 0.34 ? "sativa-dominant" : "balanced hybrid"} — grown live from your plant's real state.`
