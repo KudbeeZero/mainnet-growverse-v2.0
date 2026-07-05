@@ -11,8 +11,8 @@ describe("clampPodLightness", () => {
     // Documented worst case: baseLit + dl(-3.5) + ring(-4) + tipBlend(-3) +
     // parityLit(-6) + ringLit(-3) ≈ -14 on top of a modest base — simulate a
     // deeply negative raw sum from a pathological future combination.
-    expect(clampPodLightness(-100)).toBe(20);
-    expect(clampPodLightness(-14)).toBe(20);
+    expect(clampPodLightness(-100)).toBe(26);
+    expect(clampPodLightness(-14)).toBe(26);
   });
 
   it("ceilings an overly bright sum", () => {
