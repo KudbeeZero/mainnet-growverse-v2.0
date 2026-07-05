@@ -43,7 +43,7 @@ export function BlockchainTestPanel() {
       addResult(
         "Algorand Connection",
         "success",
-        `Connected to ${network} | Round: ${status["last-round"]} | Version: ${status["version"]}`,
+        `Connected to ${network} | Round: ${status.lastRound}`,
       );
     } catch (e) {
       addResult(
