@@ -39,7 +39,7 @@ export function Modal({
           <h2 className="text-lg font-semibold">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded p-1 text-gray-400 hover:bg-ink-700 hover:text-gray-100"
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded p-2.5 text-gray-400 hover:bg-ink-700 hover:text-gray-100 focus-visible:ring-2 focus-visible:ring-grow-400/50"
             aria-label="Close dialog"
           >
             ✕

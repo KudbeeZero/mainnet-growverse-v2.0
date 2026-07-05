@@ -659,12 +659,10 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           ))}
         </div>
 
-        {/* Arcade toolbar - always visible above climate/time tabs */}
-        {!ended && <ArcadeToolbar plant={plant} ended={ended} growthStage={plant.growth_stage} growthBoost={growthBoost} />}
-
-
         {tab === "climate" && (
           <div className="space-y-1.5">
+            {/* Arcade toolbar inside climate tab */}
+            {!ended && <ArcadeToolbar plant={plant} ended={ended} growthStage={plant.growth_stage} growthBoost={growthBoost} />}
             {SLIDERS.map((s) => {
               const val = climate[s.key as keyof ChamberClimate];
               const outOfBand = val < s.optimal[0] || val > s.optimal[1];
