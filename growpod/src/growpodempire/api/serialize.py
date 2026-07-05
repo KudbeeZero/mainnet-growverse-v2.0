@@ -123,6 +123,8 @@ def plant_dict(plant, metrics=None) -> dict:
         "condition_flags": plant.condition_flags,
         "is_alive": plant.is_alive,
         "harvested": plant.harvested,
+        "care_streak": getattr(plant, "care_streak", 0),
+        "resin_score": getattr(plant, "resin_score", 0.0),
     }
     # Scientist-grade derived readouts (VPD, DLI, PPFD) when the caller supplies
     # them — additive, so existing consumers are unaffected.

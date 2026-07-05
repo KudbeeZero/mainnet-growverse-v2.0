@@ -35,6 +35,7 @@ from ..feature_flags import (
     require_feature as require_feature_guard,
 )
 from .auth import require_player, require_admin
+from .idempotency import require_idempotency
 from .ratelimit import limiter
 from .validation import positive_int, bounded_int, positive_money, number
 from . import serialize as S
@@ -474,6 +475,7 @@ def upgrade_pod(player_id, pod_id):
 
 
 @game_bp.post("/players/<player_id>/plant")
+@require_idempotency
 @require_player
 def plant_seed(player_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -529,6 +531,7 @@ def stabilize_strain(player_id, strain_id):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/harvest")
+@require_idempotency
 @require_player
 def harvest(player_id, plant_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -572,6 +575,7 @@ def list_harvests(player_id):
 
 
 @game_bp.post("/players/<player_id>/harvests/<harvest_id>/cure")
+@require_idempotency
 @require_player
 def start_cure(player_id, harvest_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -587,6 +591,7 @@ def start_cure(player_id, harvest_id):
 
 
 @game_bp.post("/players/<player_id>/harvests/<harvest_id>/cure/finish")
+@require_idempotency
 @require_player
 def finish_cure(player_id, harvest_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -602,6 +607,7 @@ def finish_cure(player_id, harvest_id):
 
 
 @game_bp.post("/players/<player_id>/harvests/<harvest_id>/sell")
+@require_idempotency
 @require_player
 def sell_harvest(player_id, harvest_id):
     try:
@@ -644,6 +650,7 @@ def shop_list(player_id):
 
 
 @game_bp.post("/players/<player_id>/shop/buy")
+@require_idempotency
 @require_player
 def shop_buy(player_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -748,6 +755,7 @@ def ftue_coaching(player_id, step):
 
 
 @game_bp.post("/players/<player_id>/ftue/advance")
+@require_idempotency
 @require_player
 @limiter.limit("60 per minute")
 def ftue_advance(player_id):
@@ -839,6 +847,7 @@ def _optional_amount(data):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/water")
+@require_idempotency
 @require_player
 def water_plant(player_id, plant_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -850,6 +859,7 @@ def water_plant(player_id, plant_id):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/feed")
+@require_idempotency
 @require_player
 def feed_plant(player_id, plant_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -861,6 +871,7 @@ def feed_plant(player_id, plant_id):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/treat-pests")
+@require_idempotency
 @require_player
 def treat_pests(player_id, plant_id):
     try:
@@ -875,30 +886,35 @@ def treat_pests(player_id, plant_id):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/treat-disease")
+@require_idempotency
 @require_player
 def treat_disease(player_id, plant_id):
     return _care_action(player_id, plant_id, "treat_disease")
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/prune")
+@require_idempotency
 @require_player
 def prune_plant(player_id, plant_id):
     return _care_action(player_id, plant_id, "prune")
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/train")
+@require_idempotency
 @require_player
 def train_plant(player_id, plant_id):
     return _care_action(player_id, plant_id, "train")
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/boost")
+@require_idempotency
 @require_player
 def boost_plant(player_id, plant_id):
     return _care_action(player_id, plant_id, "boost")
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/growth-boost")
+@require_idempotency
 @require_player
 def growth_boost_plant(player_id, plant_id):
     # Simulated purchase: spends in-game GROW to fast-forward + revive the plant.
@@ -907,6 +923,7 @@ def growth_boost_plant(player_id, plant_id):
 
 
 @game_bp.post("/players/<player_id>/plants/<plant_id>/advance")
+@require_idempotency
 @require_player
 @limiter.limit("60 per minute")
 def advance_plant(player_id, plant_id):
@@ -972,6 +989,7 @@ def market():
 
 
 @game_bp.post("/players/<player_id>/market/list")
+@require_idempotency
 @require_feature("marketplace")
 @require_player
 def create_listing(player_id):
@@ -996,6 +1014,7 @@ def create_listing(player_id):
 
 
 @game_bp.post("/players/<player_id>/market/auction")
+@require_idempotency
 @require_feature("marketplace")
 @require_player
 def create_auction(player_id):
@@ -1021,6 +1040,7 @@ def create_auction(player_id):
 
 
 @game_bp.post("/players/<player_id>/market/<listing_id>/bid")
+@require_idempotency
 @require_feature("marketplace")
 @require_player
 def place_bid(player_id, listing_id):
@@ -1038,6 +1058,7 @@ def place_bid(player_id, listing_id):
 
 
 @game_bp.post("/players/<player_id>/market/<listing_id>/settle")
+@require_idempotency
 @require_feature("marketplace")
 @require_player
 def settle_auction(player_id, listing_id):
@@ -1051,6 +1072,7 @@ def settle_auction(player_id, listing_id):
 
 
 @game_bp.post("/players/<player_id>/market/<listing_id>/buy")
+@require_idempotency
 @require_feature("marketplace")
 @require_player
 def buy_listing(player_id, listing_id):
@@ -2263,6 +2285,7 @@ def equip_light(player_id, pod_id):
 
 
 @game_bp.post("/players/<player_id>/harvests/<harvest_id>/mint")
+@require_idempotency
 @require_feature("chain")
 @require_player
 def mint_harvest(player_id, harvest_id):

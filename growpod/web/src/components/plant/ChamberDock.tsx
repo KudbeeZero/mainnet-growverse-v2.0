@@ -194,9 +194,9 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
       {/* PLANT INSIGHTS */}
       <div className="rounded-xl border border-[#1c3447] bg-[#0d1d2b] p-2.5">
         <h3 className="mb-1.5 text-[10px] font-extrabold tracking-[0.18em] text-cyan-300">PLANT INSIGHTS</h3>
-        {/* 4-chip glanceable row (design punch list item 3): honest fallbacks,
+        {/* 6-chip glanceable row (design punch list items 3 + 10): honest fallbacks,
             no dense paragraphs. Deeper science stays on Inspect / the journal. */}
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
           <InsightChip icon="🌸" label="Top cola" value={topCola} strong={topCola === "Strong"} />
           <InsightChip
             icon="❤️"
@@ -215,6 +215,18 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
             icon="❄️"
             label="Trichomes"
             value={tr?.active ? `${Math.round(tr.cloudy_pct)}% cloudy · ${Math.round(tr.amber_pct)}% amber` : "Not yet"}
+          />
+          <InsightChip
+            icon="🔥"
+            label="Care streak"
+            value={plant.care_streak ? `${plant.care_streak}d` : "—"}
+            strong={!!(plant.care_streak && plant.care_streak >= 5)}
+          />
+          <InsightChip
+            icon="💎"
+            label="Resin score"
+            value={plant.resin_score ? `${Math.round(plant.resin_score)}/100` : "—"}
+            strong={!!(plant.resin_score && plant.resin_score >= 70)}
           />
         </div>
         <Link href={`/dashboard/plants/${plant.id}#journal`} className="mt-2 block text-[10px] font-semibold text-cyan-300 hover:underline">

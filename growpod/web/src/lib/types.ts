@@ -183,6 +183,8 @@ export interface Plant {
   condition_flags: ConditionFlag[];
   is_alive: boolean;
   harvested: boolean;
+  care_streak?: number;
+  resin_score?: number;
 }
 
 export interface PlantEvent {
