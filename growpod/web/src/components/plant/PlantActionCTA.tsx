@@ -8,6 +8,7 @@
 
 import Link from "next/link";
 import { useCareActions, useCleanupPlant } from "@/hooks/useCareActions";
+import { Button } from "@/components/ui/Button";
 import { useCareFeedback } from "./CareFeedback";
 import { nextPlantAction } from "@/lib/plantAction";
 import type { CareKind } from "./careFeedbackData";
@@ -97,11 +98,11 @@ export function PlantActionCTA({
         {action.label}
       </Link>
     ) : (
-      <button
-        type="button"
+      <Button
+        size="md"
         onClick={onClick ?? undefined}
         disabled={pending}
-        className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-grow-500 bg-grow-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-grow-500 disabled:cursor-not-allowed disabled:opacity-70 ${pulse}`}
+        className={`shrink-0 ${pulse}`}
       >
         {pending ? (
           <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -109,7 +110,7 @@ export function PlantActionCTA({
           <span aria-hidden>{action.emoji}</span>
         )}
         {action.label}
-      </button>
+      </Button>
     );
 
   // ---- Compact (inside PlantCard): a single full-width primary action. ----
