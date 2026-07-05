@@ -234,12 +234,6 @@ def all_items(course_key: str) -> list:
     return items
 
 
-def module_items(course_key: str, module_id: str) -> list:
-    """Items for one module (its knowledge check)."""
-    module = (load_bank(course_key).get("modules") or {}).get(module_id) or {}
-    return list(module.get("items") or [])
-
-
 def exam(course_key: str, exam_id: str) -> dict:
     """Resolve a named exam into ``{title, pass, items: [...]}``.
 

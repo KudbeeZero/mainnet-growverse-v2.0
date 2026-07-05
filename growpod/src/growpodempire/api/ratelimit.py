@@ -3,8 +3,8 @@ Shared rate limiter (Flask-Limiter).
 
 A single `limiter` instance is created here and initialised in the app factory.
 Routes import it to attach tighter, per-endpoint limits (e.g. faucet/auth
-routes). Requests are keyed by API key when present (so a single account can't
-spread abuse across IPs) and fall back to the client IP otherwise.
+routes). Requests are keyed by client IP only — see `_rate_key` below for why
+keying by API key would defeat the limit for a brute-forcer.
 
 Defaults to in-memory storage for dev/test; set RATELIMIT_STORAGE_URI to a Redis
 URL in production so limits hold across workers.

@@ -20,6 +20,20 @@ API_KEY_HEADER = "X-API-Key"
 logger = logging.getLogger(__name__)
 
 
+def _keys_match(provided: str, expected: str) -> bool:
+    """Constant-time key comparison that never raises.
+
+    `hmac.compare_digest` raises `TypeError` on non-ASCII `str` input (2026-07-05
+    audit) — Flask decodes headers as latin-1, so a stray byte >= 0x80 in
+    `X-API-Key` would otherwise surface as a generic 500 instead of a 403.
+    Encoding both sides first keeps the comparison constant-time and total.
+    """
+    return hmac.compare_digest(
+        provided.encode("utf-8", "surrogateescape"),
+        expected.encode("utf-8", "surrogateescape"),
+    )
+
+
 def require_player(view):
     """Guard a `<player_id>`-scoped route with the player's API key."""
 
@@ -36,7 +50,7 @@ def require_player(view):
                 return jsonify({"error": "Player not found"}), 404
             expected = player.api_key or ""
 
-        if not expected or not hmac.compare_digest(provided, expected):
+        if not expected or not _keys_match(provided, expected):
             return jsonify({"error": "Invalid API key"}), 403
         return view(*args, **kwargs)
 
@@ -71,7 +85,7 @@ def require_admin(view):
 
         if settings.admin_secret:
             # Path 1 — production with explicit secret (constant-time compare).
-            if not hmac.compare_digest(provided, settings.admin_secret):
+            if not _keys_match(provided, settings.admin_secret):
                 return jsonify({"error": "Admin access denied"}), 403
 
         elif not settings.is_production:

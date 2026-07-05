@@ -41,8 +41,27 @@ class SettlementService:
         self.settings = settings or get_settings()
         self.provider = provider or shared_provider(self.settings)
         self._decimals = int(self.cfg.raw.get("chain", {}).get("token", {}).get("decimals", 6))
-        # Resolve the GROW ASA id: configured, explicit, or freshly created.
-        self.asset_id = asset_id or self.settings.asa_id or create_token_asa(self.provider, self.cfg)
+        # Resolve the GROW ASA id: configured, explicit, or (mock-only) freshly created.
+        #
+        # SECURITY (implicit treasury mint, 2026-07-05 audit): on a REAL chain provider,
+        # falling through to create_token_asa() here would sign and submit an
+        # AssetCreateTxn with the treasury key on the FIRST withdraw/deposit request that
+        # finds ASA_ID unset — an operator config gap, not an operator decision. The
+        # created id is also never persisted, so every worker (and every construction
+        # after a config reload) would mint yet another ASA. Provisioning a real GROW ASA
+        # is an explicit, one-time operator action (`scripts/reset_asa.py`), so fail
+        # closed here instead — mirrors the deposit fail-closed guard below.
+        if asset_id is not None:
+            self.asset_id = asset_id
+        elif self.settings.asa_id is not None:
+            self.asset_id = self.settings.asa_id
+        elif isinstance(self.provider, MockChainProvider):
+            self.asset_id = create_token_asa(self.provider, self.cfg)
+        else:
+            raise GameError(
+                "GROW ASA is not provisioned (ASA_ID unset): on-chain settlement is "
+                "unavailable until an operator runs scripts/reset_asa.py and sets ASA_ID."
+            )
 
     def _base_units(self, amount: Decimal) -> int:
         return int(amount * (10 ** self._decimals))

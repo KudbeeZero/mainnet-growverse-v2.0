@@ -62,6 +62,30 @@ class _BoomMintProvider(MockChainProvider):
         raise ChainError("mint boom")
 
 
+class _FakeRealProvider(ChainProvider):
+    """A non-Mock ChainProvider stand-in for "a real chain is configured" —
+    exercises the settlement fail-closed guards without needing algosdk/network.
+    """
+
+    def network(self) -> str:
+        return "testnet"
+
+    def create_account(self):
+        return ("FAKEADDR", "fake mnemonic")
+
+    def create_asset(self, **kwargs) -> int:
+        raise AssertionError("should never be called off-mock without ASA_ID")
+
+    def destroy_asset(self, asset_id: int) -> str:
+        raise AssertionError("not exercised")
+
+    def transfer_asset(self, asset_id, receiver, amount) -> str:
+        return "FAKETX"
+
+    def asset_info(self, asset_id: int):
+        raise AssertionError("not exercised")
+
+
 def _svc(s, provider=None):
     # Let the service create its GROW token ASA on the given provider so the
     # mock's balance book knows the asset (matches test_settlement.py).
@@ -145,6 +169,33 @@ def test_deposit_chain_failure_maps_to_game_error(db):
         _svc(s).withdraw(p.id, 50)
         with pytest.raises(GameError, match="On-chain transfer failed"):
             _svc(s, provider=_BoomProvider()).deposit(p.id, 20)
+
+
+def test_settlement_fails_closed_when_asa_unprovisioned_off_mock(db):
+    """settlement_service.py — SECURITY (implicit treasury mint, 2026-07-05 audit):
+    with a real (non-Mock) provider and no ASA_ID configured, construction must
+    raise instead of silently signing a treasury AssetCreateTxn."""
+    with session_scope() as s:
+        with pytest.raises(GameError, match="not provisioned"):
+            SettlementService(s, provider=_FakeRealProvider())
+
+
+def test_deposit_fails_closed_off_mock(db):
+    """settlement_service.py:163-167 — deposit refuses to run against a real
+    provider (no on-chain-verified inbound transfer support yet), even when an
+    explicit asset_id sidesteps the provisioning guard above."""
+    with session_scope() as s:
+        gs = GameService(s)
+        p = gs.create_player("depoffmock")
+        gs.link_wallet(p.id, _VALID_ADDR)
+        svc = SettlementService(s, provider=_FakeRealProvider(), asset_id=1)
+        # Give the wallet on-chain ASA balance to withdraw against, bypassing the
+        # "insufficient ASA balance" guard so the fail-closed check is what fires.
+        from growpodempire.economy.ledger import get_wallet, to_money
+        wallet = get_wallet(s, p.id)
+        wallet.asa_balance = to_money("50")
+        with pytest.raises(GameError, match="temporarily unavailable"):
+            svc.deposit(p.id, 20)
 
 
 # --------------------------------------------------------------------------- #

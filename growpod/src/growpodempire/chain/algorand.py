@@ -16,6 +16,15 @@ from .provider import ChainProvider, AssetInfo, AssetMint, ChainError, TREASURY
 
 _CONFIRM_ROUNDS = 6
 
+# Algorand's well-known network genesis ids (the node-reported ground truth of
+# which chain it's actually on). Used to verify ALGOD_URL and ALGORAND_NETWORK
+# actually agree — see _suggested_params below.
+_KNOWN_GENESIS_IDS = {
+    "mainnet": "mainnet-v1.0",
+    "testnet": "testnet-v1.0",
+    "betanet": "betanet-v1.0",
+}
+
 
 class AlgorandProvider(ChainProvider):
     def __init__(
@@ -79,7 +88,7 @@ class AlgorandProvider(ChainProvider):
     ) -> dict:
         from algosdk import transaction
 
-        sp = self.client.suggested_params()
+        sp = self._suggested_params()
         txn = transaction.AssetCreateTxn(
             sender=self.treasury_addr,
             sp=sp,
@@ -98,7 +107,7 @@ class AlgorandProvider(ChainProvider):
     def destroy_asset(self, asset_id: int) -> str:
         from algosdk import transaction
 
-        sp = self.client.suggested_params()
+        sp = self._suggested_params()
         txn = transaction.AssetDestroyTxn(
             sender=self.treasury_addr, sp=sp, index=asset_id
         )
@@ -115,7 +124,7 @@ class AlgorandProvider(ChainProvider):
         # can use the provider-agnostic constant without leaking it on-chain.
         if receiver == TREASURY:
             receiver = self.treasury_addr
-        sp = self.client.suggested_params()
+        sp = self._suggested_params()
         txn = transaction.AssetTransferTxn(
             sender=sender_addr, sp=sp, receiver=receiver, amt=amount, index=asset_id
         )
@@ -134,6 +143,30 @@ class AlgorandProvider(ChainProvider):
         )
 
     # ----- internals ------------------------------------------------------
+    def _suggested_params(self):
+        """Fetch suggested params, verifying the node's genesis id agrees with
+        the configured network (2026-07-05 audit finding).
+
+        `network_name` was previously just a config label — nothing ever
+        checked it against the node ALGOD_URL actually points at, so a
+        misconfigured URL (typo, copied env block) would sign and submit real
+        transactions on the wrong chain while every response/log kept
+        reporting the configured (wrong) label. Checked here — not in
+        `__init__` — so construction stays a pure, offline operation (see
+        `tests/test_algorand_guard.py`); the guard instead fires before the
+        first real on-chain write, which is every caller of this helper.
+        """
+        sp = self.client.suggested_params()
+        expected_gen = _KNOWN_GENESIS_IDS.get(self._network.lower())
+        if expected_gen is not None and sp.gen != expected_gen:
+            raise ChainError(
+                f"Algod node genesis id {sp.gen!r} does not match configured "
+                f"network {self._network!r} (expected {expected_gen!r}); "
+                "refusing to sign a treasury transaction against a mismatched "
+                "node. Check ALGOD_URL against ALGORAND_NETWORK."
+            )
+        return sp
+
     def _send(self, txn, signer_sk: Optional[str] = None) -> dict:
         from algosdk import transaction
 

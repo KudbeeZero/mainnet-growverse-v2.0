@@ -53,6 +53,12 @@ def get_engine() -> Engine:
             echo=settings.sql_echo,
             future=True,
             connect_args=connect_args,
+            # pool_pre_ping (2026-07-05 audit): Postgres/Fly recycle idle
+            # connections; without this the first request after a quiet period
+            # draws a dead connection from the pool and 500s. Pinging on
+            # checkout is a no-op for SQLite's single file connection, so this
+            # is safe to set unconditionally.
+            pool_pre_ping=True,
         )
         if is_sqlite:
             _apply_sqlite_pragmas(_engine)

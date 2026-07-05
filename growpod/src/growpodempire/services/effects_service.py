@@ -66,13 +66,6 @@ def canonical_terpene(name: str) -> Optional[str]:
     return _alias_map().get(str(name).strip().lower())
 
 
-def _reset_caches() -> None:
-    """Test hook — drop cached palette/alias maps (used when the file is swapped)."""
-    global _PALETTE_CACHE, _ALIAS_CACHE
-    _PALETTE_CACHE = None
-    _ALIAS_CACHE = None
-
-
 def intensities_from_tags(
     terpene_tags: Optional[List[str]],
     genome: Optional[Mapping] = None,

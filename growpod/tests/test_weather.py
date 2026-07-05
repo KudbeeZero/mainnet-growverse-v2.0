@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from growpodempire.db.session import session_scope
 from growpodempire.db.models import GrowPod
+from growpodempire.economy.config import EconomyConfig
 from growpodempire.services.game_service import GameService
 from growpodempire.services.weather_service import WeatherService
 
@@ -50,3 +51,33 @@ def test_clamps_keep_humidity_in_range(db):
         s.flush()
         WeatherService(s).roll(pid, pod.id, event="humidity_spike")  # +20 -> clamp 95
         assert s.get(GrowPod, pod.id).humidity == 95
+
+
+def test_one_sided_clamp_bounds_dont_raise(db):
+    """2026-07-05 audit: `_apply`'s clamp step must handle a lower-only or
+    upper-only bound independently — the prior `if lo is not None: min(hi, ...)`
+    raised TypeError comparing a float against None on a [lo, null] clamp."""
+    with session_scope() as s:
+        pid, pod = _pod(s)
+        weather_cfg = EconomyConfig(raw={
+            "simulation": {
+                "weather": {
+                    "events": {
+                        "cold_snap": {"temperature": -50, "weight": 1},
+                        "warm_snap": {"temperature": 50, "weight": 1},
+                    },
+                    # lower-only and upper-only bounds, deliberately asymmetric.
+                    "clamps": {"temperature": [0, None], "humidity": [None, 100]},
+                },
+                "environment": {"defaults": {"temperature": 24, "humidity": 50, "ph_level": 6.5}},
+            },
+        })
+        svc = WeatherService(s, config=weather_cfg)
+
+        result = svc.roll(pid, pod.id, event="cold_snap")
+        assert result["environment"]["temperature"] == 0  # floored, not raised
+
+        pod.temperature = 24
+        s.flush()
+        result = svc.roll(pid, pod.id, event="warm_snap")
+        assert result["environment"]["temperature"] == 74  # no upper bound configured

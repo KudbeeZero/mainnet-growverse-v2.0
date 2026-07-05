@@ -52,6 +52,9 @@ jobs:
       - name: Apply migrations
         run: alembic upgrade head
 
+      - name: No model <-> migration drift (2026-07-05 audit)
+        run: alembic check
+
       - name: Tests + coverage gate
         run: python -m pytest -q --cov --cov-report=term-missing
 

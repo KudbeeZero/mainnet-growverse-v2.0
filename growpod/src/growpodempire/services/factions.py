@@ -9,7 +9,6 @@ under ``data/``).
 Exposes:
   * ``load_factions()`` -> the full parsed display data ({"factions": [...]}).
   * ``faction_ids()``   -> the set of valid faction ids.
-  * ``reset_cache()``   -> drop the cache (tests pointing FACTIONS_FILE elsewhere).
 
 NON-ECONOMIC: pure data; imports nothing from ``economy``/``ledger``/wallet.
 """
@@ -30,12 +29,6 @@ def load_factions() -> dict:
         with open(get_settings().factions_file, "r", encoding="utf-8") as fh:
             _FACTIONS_CACHE = yaml.safe_load(fh) or {}
     return _FACTIONS_CACHE
-
-
-def reset_cache() -> None:
-    """Drop the cached catalog (tests that point ``FACTIONS_FILE`` elsewhere)."""
-    global _FACTIONS_CACHE
-    _FACTIONS_CACHE = None
 
 
 def faction_ids() -> set[str]:
