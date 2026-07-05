@@ -41,7 +41,7 @@ export function CoursePresenterVideo({ courseKey }: { courseKey: string }) {
   // While the browser voice is speaking, the active line is the one being spoken;
   // otherwise it tracks the audio player's time.
   const speaking = speechState !== "idle";
-  const active = !q.data ? -1 : speaking ? spokenCue : activeCueIndex(q.data.captions, t);
+  const active = !q.data ? -1 : speaking ? spokenCue : activeCueIndex(q.data.captions ?? [], t);
 
   // Keep the active caption scrolled into view as narration advances.
   useEffect(() => {
@@ -118,7 +118,7 @@ export function CoursePresenterVideo({ courseKey }: { courseKey: string }) {
 
             {/* FREE browser-voice narration — the professor reads the lecture aloud,
                 no API key needed. Hidden where speech synthesis is unavailable. */}
-            {canSpeak && video.captions.length > 0 && (
+            {canSpeak && (video.captions?.length ?? 0) > 0 && (
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 {speechState === "idle" ? (
                   <button
@@ -159,7 +159,7 @@ export function CoursePresenterVideo({ courseKey }: { courseKey: string }) {
         </div>
       )}
 
-      {video.captions.length > 0 && (
+      {(video.captions?.length ?? 0) > 0 && (
         <ol className="mt-3 max-h-56 space-y-0.5 overflow-y-auto pr-1 text-sm" aria-label="Lecture transcript">
           {video.captions.map((cue, i) => (
             <li
