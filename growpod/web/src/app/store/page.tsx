@@ -117,6 +117,10 @@ function FeaturedShelf() {
       if (item.source === "seasonal") {
         await api.seasonal.purchase(playerId, item.item_id);
         await qc.invalidateQueries({ queryKey: queryKeys.seeds(playerId) });
+      await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+      await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
+        await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+        await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
         setMsg(item.id, "✓ Seed added to inventory");
       } else if (item.item_type === "consumable") {
         const { apiFetch } = await import("@/lib/api/client");
@@ -132,6 +136,10 @@ function FeaturedShelf() {
           body: { strain_id: item.item_id, quantity: 1 },
         });
         await qc.invalidateQueries({ queryKey: queryKeys.seeds(playerId) });
+      await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+      await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
+        await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+        await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
         setMsg(item.id, "✓ Seed added to inventory");
       }
     } catch (e: unknown) {
@@ -196,6 +204,8 @@ function PartnerCard({ partner }: { partner: StorePartner }) {
     try {
       await api.store.purchasePartner(playerId, partner.id);
       await qc.invalidateQueries({ queryKey: queryKeys.seeds(playerId) });
+      await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+      await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
       setMsg(`✓ Added to your inventory`);
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Purchase failed");
@@ -274,6 +284,8 @@ function BundleCard({ bundle }: { bundle: StoreBundle }) {
     try {
       const res = await api.store.purchaseBundle(playerId, bundle.id);
       await qc.invalidateQueries({ queryKey: queryKeys.seeds(playerId) });
+      await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+      await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
       setMsg(`✓ ${res.purchased} purchased — ${res.items_delivered.length} items delivered`);
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Purchase failed");
@@ -353,6 +365,7 @@ interface ConsumableItem {
 
 function ConsumablesSection() {
   const { playerId, isAuthed } = useSession();
+  const queryClient = useQueryClient();
   const [items, setItems] = useState<ConsumableItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [buying, setBuying] = useState<string | null>(null);
@@ -361,10 +374,12 @@ function ConsumablesSection() {
   async function load() {
     if (!isAuthed || !playerId) return;
     setLoading(true);
+    setMsg(null);
     try {
-      const { apiFetch } = await import("@/lib/api/client");
-      const data = await apiFetch<ConsumableItem[]>(`/players/${playerId}/shop`);
+      const data = await storeApi.consumables(playerId);
       setItems(data);
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : "Couldn't load consumables");
     } finally {
       setLoading(false);
     }
@@ -382,6 +397,8 @@ function ConsumablesSection() {
       });
       setItems(updated);
       setMsg(`✓ Purchased`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Purchase failed");
     } finally {
@@ -475,6 +492,8 @@ function SeedsSection() {
         body: { strain_id: strainId, quantity: 1 },
       });
       await qc.invalidateQueries({ queryKey: queryKeys.seeds(playerId) });
+      await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+      await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
       setMsg("✓ Seed added to inventory");
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Purchase failed");
@@ -536,6 +555,7 @@ interface ResearchNode {
 
 function ResearchSection() {
   const { playerId, isAuthed } = useSession();
+  const queryClient = useQueryClient();
   const [nodes, setNodes] = useState<ResearchNode[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [unlocking, setUnlocking] = useState<string | null>(null);
@@ -544,10 +564,13 @@ function ResearchSection() {
   async function load() {
     if (!isAuthed || !playerId) return;
     setLoading(true);
+    setMsg(null);
     try {
       const { apiFetch } = await import("@/lib/api/client");
-      const data = await apiFetch<ResearchNode[]>(`/players/${playerId}/research`);
+      const data = await apiFetch<ResearchNode[]>(`/players/${playerId}/research`, { auth: true });
       setNodes(data);
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : "Couldn't load research");
     } finally {
       setLoading(false);
     }
@@ -564,6 +587,8 @@ function ResearchSection() {
       });
       setNodes(updated);
       setMsg("✓ Research unlocked");
+      queryClient.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Unlock failed");
     } finally {
@@ -727,6 +752,7 @@ function GearCard({
 
 function GrowRoomGearSection() {
   const { playerId, isAuthed } = useSession();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<GearCategory>("light");
   const [items, setItems] = useState<GearItem[] | null>(null);
   const [pods, setPods] = useState<Pod[]>([]);
@@ -762,6 +788,8 @@ function GrowRoomGearSection() {
     try {
       setItems(await storeApi.purchaseGear(playerId, key));
       setMsg("✓ Purchased");
+      queryClient.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Purchase failed");
     } finally {

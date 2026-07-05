@@ -51,7 +51,11 @@ function SeasonalSection() {
   const purchase = useApiMutation(
     (seasonalId: string) => api.seasonal.purchase(playerId!, seasonalId),
     {
-      invalidate: [queryKeys.seeds(playerId ?? ""), queryKeys.wallet(playerId ?? "")],
+      invalidate: [
+        queryKeys.seeds(playerId ?? ""),
+        queryKeys.wallet(playerId ?? ""),
+        queryKeys.player(playerId ?? ""),
+      ],
       successMessage: "Seed added to your inventory!",
     },
   );

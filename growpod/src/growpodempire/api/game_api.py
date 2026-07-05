@@ -2081,26 +2081,37 @@ def _bundle_price_with_discount(full_price, discount_pct):
 
 @game_bp.get("/store/bundles")
 def store_bundles():
-    from ..db.models import Bundle
+    from ..db.models import Bundle, Strain
     from ..economy.config import get_economy_config as _cfg
+    from ..economy import pricing as _pricing
     cfg = _cfg()
     with session_scope() as s:
         bundles = s.query(Bundle).filter(Bundle.active.is_(True)).all()
         out = []
         for b in bundles:
-            full_price = 0.0
+            # Reuse the same Decimal-safe pricing helpers purchase_bundle() uses,
+            # so a strain component (and the price actually charged) can never
+            # drift from what this display endpoint shows.
+            full_price = _bundle_full_price(cfg, s, b.components)
+            bundle_price = _bundle_price_with_discount(full_price, b.discount_pct)
             enriched = []
             for comp in (b.components or []):
-                key = comp.get("key", "")
+                ctype = comp.get("type", "consumable")
                 qty = int(comp.get("qty", 1))
-                item_cfg = cfg.shop_consumables.get(key) or {}
-                cost = float(item_cfg.get("cost", 0)) * qty
-                full_price += cost
-                enriched.append({**comp, "name": item_cfg.get("name", key), "cost": cost})
-            bundle_price = round(full_price * (1 - float(b.discount_pct)), 2)
+                if ctype == "strain":
+                    strain = s.get(Strain, comp.get("strain_id", "")) if comp.get("strain_id") else None
+                    name = strain.name if strain else comp.get("key", "")
+                    cost = to_money(_pricing.seed_price(strain.rarity, cfg)) * qty if strain else to_money(0)
+                else:
+                    key = comp.get("key", "")
+                    item_cfg = cfg.shop_consumables.get(key) or {}
+                    name = item_cfg.get("name", key)
+                    cost = to_money(item_cfg.get("cost", 0)) * qty
+                enriched.append({**comp, "name": name, "cost": float(cost)})
             out.append({"id": b.id, "name": b.name, "description": b.description,
                         "discount_pct": float(b.discount_pct), "components": enriched,
-                        "full_price": full_price, "bundle_price": bundle_price, "active": b.active})
+                        "full_price": float(full_price), "bundle_price": float(bundle_price),
+                        "active": b.active})
     return jsonify(out)
 
 
