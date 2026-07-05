@@ -61,7 +61,7 @@ function ConsoleRowView({ row }: { row: ConsoleRow }) {
               onClick={() => setHelpOpen((o) => !o)}
               aria-expanded={helpOpen}
               aria-label={`What is ${row.label}?`}
-              className="flex h-3.5 w-3.5 flex-none items-center justify-center rounded-full border border-ink-600 text-[8px] font-bold text-cyan-200/50 hover:border-cyan-400/50 hover:text-cyan-200"
+              className="flex h-9 w-9 flex-none items-center justify-center rounded-full border border-ink-600 text-[10px] font-bold text-cyan-200/50 hover:border-cyan-400/50 hover:text-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-400/50"
             >
               ?
             </button>

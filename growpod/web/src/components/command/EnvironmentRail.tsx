@@ -93,7 +93,7 @@ function EnvRow({
               title="Snap to ideal"
               disabled={disabled}
               onClick={() => onChange(optimalMidpoint(def.band, step))}
-              className="flex h-5 w-5 flex-none items-center justify-center rounded border border-grow-700/50 bg-[#0a1722] text-[11px] leading-none text-grow-300/80 hover:border-grow-500/60 hover:text-grow-200 disabled:opacity-40"
+              className="flex h-9 w-9 flex-none items-center justify-center rounded border border-grow-700/50 bg-[#0a1722] text-[11px] leading-none text-grow-300/80 hover:border-grow-500/60 hover:text-grow-200 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-grow-400/50"
             >
               ⌖
             </button>
@@ -103,7 +103,7 @@ function EnvRow({
               aria-label={`Decrease ${def.label}`}
               disabled={disabled}
               onClick={() => onChange(nudge(value, -1, step, rLo, rHi))}
-              className="flex h-5 w-5 flex-none items-center justify-center rounded border border-[#15303f] bg-[#0a1722] font-mono text-xs leading-none text-cyan-200/60 hover:border-cyan-400/50 hover:text-cyan-200 disabled:opacity-40"
+              className="flex h-9 w-9 flex-none items-center justify-center rounded border border-[#15303f] bg-[#0a1722] font-mono text-xs leading-none text-cyan-200/60 hover:border-cyan-400/50 hover:text-cyan-200 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-cyan-400/50"
             >
               −
             </button>
@@ -112,7 +112,7 @@ function EnvRow({
               aria-label={`Increase ${def.label}`}
               disabled={disabled}
               onClick={() => onChange(nudge(value, 1, step, rLo, rHi))}
-              className="flex h-5 w-5 flex-none items-center justify-center rounded border border-[#15303f] bg-[#0a1722] font-mono text-xs leading-none text-cyan-200/60 hover:border-cyan-400/50 hover:text-cyan-200 disabled:opacity-40"
+              className="flex h-9 w-9 flex-none items-center justify-center rounded border border-[#15303f] bg-[#0a1722] font-mono text-xs leading-none text-cyan-200/60 hover:border-cyan-400/50 hover:text-cyan-200 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-cyan-400/50"
             >
               +
             </button>
@@ -137,10 +137,10 @@ function EnvRow({
             onClick={() => setHelpOpen((o) => !o)}
             aria-expanded={helpOpen}
             aria-label={`Help with ${def.label}`}
-            className={`flex items-center gap-0.5 rounded-full border px-1.5 py-px font-mono text-[8px] font-bold tracking-wide transition-colors ${
+            className={`flex min-h-[36px] items-center gap-0.5 rounded-full border px-2.5 py-1.5 font-mono text-[9px] font-bold tracking-wide transition-colors focus-visible:ring-2 ${
               sev === 1
-                ? "border-amber-400/40 text-amber-300/90 hover:bg-amber-400/10"
-                : "border-red-500/40 text-red-300/90 hover:bg-red-500/10"
+                ? "border-amber-400/40 text-amber-300/90 hover:bg-amber-400/10 focus-visible:ring-amber-400/50"
+                : "border-red-500/40 text-red-300/90 hover:bg-red-500/10 focus-visible:ring-red-400/50"
             }`}
           >
             <span aria-hidden>{helpOpen ? "▾" : "?"}</span> NEED HELP

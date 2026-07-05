@@ -49,54 +49,54 @@ export function ArcadeToolbar({ plant, ended, growthStage, growthBoost }: Arcade
       )}
 
       {/* Compact professional toolbar */}
-      <div className="space-y-1.5">
-        <div className="grid grid-cols-4 gap-1">
+      <div className="space-y-2">
+        <div className="grid grid-cols-4 gap-1.5">
           <button
             onClick={() => setOpenPanel(openPanel === "gear" ? null : "gear")}
-            className={`flex flex-col items-center justify-center min-h-[36px] rounded-lg border text-[9px] font-bold transition-all px-1 py-1.5 ${
+            className={`flex flex-col items-center justify-center min-h-[40px] rounded-lg border text-[10px] font-bold transition-all px-2 py-2 focus-visible:ring-2 focus-visible:ring-cyan-400/50 ${
               openPanel === "gear"
                 ? "border-cyan-400/50 bg-cyan-400/15 text-cyan-200"
                 : "border-cyan-400/20 bg-cyan-400/5 text-cyan-300/80 hover:bg-cyan-400/10"
             }`}
             title="Equipment & Gear"
           >
-            <span className="text-sm">⚙️</span>
+            <span className="text-lg">⚙️</span>
             <span>Gear</span>
           </button>
           <button
             onClick={() => setOpenPanel(openPanel === "consumables" ? null : "consumables")}
-            className={`flex flex-col items-center justify-center min-h-[36px] rounded-lg border text-[9px] font-bold transition-all px-1 py-1.5 ${
+            className={`flex flex-col items-center justify-center min-h-[40px] rounded-lg border text-[10px] font-bold transition-all px-2 py-2 focus-visible:ring-2 focus-visible:ring-grow-400/50 ${
               openPanel === "consumables"
                 ? "border-grow-400/50 bg-grow-400/15 text-grow-200"
                 : "border-grow-400/20 bg-grow-400/5 text-grow-300/80 hover:bg-grow-400/10"
             }`}
             title="Consumables & Items"
           >
-            <span className="text-sm">💧</span>
+            <span className="text-lg">💧</span>
             <span>Items</span>
           </button>
           <button
             onClick={() => setOpenPanel(openPanel === "bundles" ? null : "bundles")}
-            className={`flex flex-col items-center justify-center min-h-[36px] rounded-lg border text-[9px] font-bold transition-all px-1 py-1.5 ${
+            className={`flex flex-col items-center justify-center min-h-[40px] rounded-lg border text-[10px] font-bold transition-all px-2 py-2 focus-visible:ring-2 focus-visible:ring-purple-400/50 ${
               openPanel === "bundles"
                 ? "border-purple-400/50 bg-purple-400/15 text-purple-200"
                 : "border-purple-400/20 bg-purple-400/5 text-purple-300/80 hover:bg-purple-400/10"
             }`}
             title="Bundle Packages"
           >
-            <span className="text-sm">📦</span>
+            <span className="text-lg">📦</span>
             <span>Bundles</span>
           </button>
           <button
             onClick={() => setOpenPanel(openPanel === "partners" ? null : "partners")}
-            className={`flex flex-col items-center justify-center min-h-[36px] rounded-lg border text-[9px] font-bold transition-all px-1 py-1.5 ${
+            className={`flex flex-col items-center justify-center min-h-[40px] rounded-lg border text-[10px] font-bold transition-all px-2 py-2 focus-visible:ring-2 focus-visible:ring-pink-400/50 ${
               openPanel === "partners"
                 ? "border-pink-400/50 bg-pink-400/15 text-pink-200"
                 : "border-pink-400/20 bg-pink-400/5 text-pink-300/80 hover:bg-pink-400/10"
             }`}
             title="Partner Drops"
           >
-            <span className="text-sm">🤝</span>
+            <span className="text-lg">🤝</span>
             <span>Partners</span>
           </button>
         </div>
