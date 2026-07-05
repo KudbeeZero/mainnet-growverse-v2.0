@@ -9,7 +9,8 @@ import { setup } from "./fixtures/mockGame";
 //      care tiles, Today's Plan, Plant Insights, journal link — and tapping
 //      Water makes the PLANT react (targeted reaction overlay);
 //   2. a harvest-ready plant shows an unmissable next action ON THE MAIN PAGE
-//      (Harvest now plan row + Harvest & Sell button);
+//      (Harvest now plan row + Harvest button — harvesting no longer force-sells,
+//      so cure/mint/Enter Cup stay reachable from the Harvests panel afterward);
 //   3. the CHAMBER reads as the arcade layer: action tiles + BOOSTS + growth
 //      boost stay, the dashboard-y panels (Today's Plan / Plant Insights) are
 //      gone from it;
@@ -44,8 +45,11 @@ test("PROOF: harvest-ready plant shows an unmissable next action on the MAIN PAG
   await page.goto("/dashboard");
   // Today's Plan resolves to harvest as the top Do-Now row...
   await expect(page.getByText(/Harvest now/i).first()).toBeVisible();
-  // ...and the primary harvest button is right there.
-  await expect(page.getByRole("button", { name: /Harvest & Sell/i })).toBeVisible();
+  // ...and the primary harvest button is right there. Harvesting no longer
+  // force-sells (that used to make cure/mint/Enter Cup unreachable from the
+  // UI) — it now just harvests, landing the crop in the Harvests panel where
+  // sell/cure/mint/Enter-Cup are all offered explicitly.
+  await expect(page.getByRole("button", { name: "✂️ Harvest" })).toBeVisible();
 });
 
 test("PROOF: the CHAMBER is the arcade layer — boosts stay, dashboard panels are gone", async ({ page }) => {

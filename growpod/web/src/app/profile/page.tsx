@@ -313,6 +313,7 @@ function ProfileInner() {
             <Button
               className="mt-2"
               size="sm"
+              data-onboarding="claim-tokens"
               loading={daily.isPending}
               onClick={() => daily.mutate()}
             >

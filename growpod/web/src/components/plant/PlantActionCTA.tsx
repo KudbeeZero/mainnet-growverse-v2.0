@@ -43,7 +43,7 @@ export function PlantActionCTA({
   if (action.kind === "harvest") {
     onClick = () => {
       fire("harvest");
-      harvest.mutate({ sell: true });
+      harvest.mutate({ sell: false });
     };
     pending = harvest.isPending;
   } else if (action.kind === "cleanup") {

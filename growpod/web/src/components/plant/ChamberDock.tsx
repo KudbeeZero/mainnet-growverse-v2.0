@@ -135,7 +135,7 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
   const act = (kind: NonNullable<(typeof plan)[number]["kind"]>) => {
     if (kind === "harvest") {
       dispatchCareReaction("harvest");
-      harvest.mutate({ sell: true });
+      harvest.mutate({ sell: false });
     } else {
       dispatchCareReaction(kind);
       care.mutate(kind);
@@ -186,7 +186,7 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
             disabled={harvest.isPending}
             className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-lg border border-grow-500 bg-grow-600/80 text-sm font-extrabold text-white hover:bg-grow-500"
           >
-            ✂️ Harvest &amp; Sell
+            ✂️ Harvest
           </button>
         )}
       </div>
