@@ -607,6 +607,22 @@ body {
   will-change: transform;
 }
 
+/* Health danger pulse: red glow + opacity flicker when health < 30%. */
+@keyframes gpe-health-danger-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: none;
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.6), inset 0 0 8px rgba(239, 68, 68, 0.3);
+  }
+}
+.gpe-health-danger {
+  animation: gpe-health-danger-pulse 1.5s ease-in-out infinite;
+  background: linear-gradient(90deg, #dc2626, #f87171) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gpe-plant-bounce,
   .gpe-plant-trim,
@@ -639,6 +655,7 @@ body {
   .gpe-arcade-badge,
   .gpe-glow-ring-pulse,
   .gpe-glow-sparkle,
+  .gpe-health-danger,
   .gpe-grain,
   .animate-spin,
   .animate-twinkle,

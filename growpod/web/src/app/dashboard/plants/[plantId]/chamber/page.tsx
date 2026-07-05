@@ -486,6 +486,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </span>
           <span className="hidden flex-1 sm:block" />
           <HudChip k="TO HARVEST" v={harvestDays ?? "—"} unit="d" />
+          <HudChip k="GROWTH" v={Math.round(plant.forecast?.stage_progress_pct ?? 0)} unit="%" />
           <HudChip k="TEMP" v={climate.temperature} unit="°C" alert={Math.abs(climate.temperature - 24) > 5} />
           <HudChip k="HUM" v={climate.humidity} unit="%" alert={Math.abs(climate.humidity - 50) > 15} />
           <HudChip k="CO₂" v={climate.co2_level} />
@@ -501,12 +502,12 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         )}
 
         {/* health meter — rides just above the embedded action bar */}
-        <div className="pointer-events-none absolute inset-x-2.5 bottom-[86px] h-[5px] overflow-hidden rounded-full bg-[#11212e]">
+        <div className={`pointer-events-none absolute inset-x-2.5 bottom-[86px] h-[5px] overflow-hidden rounded-full bg-[#11212e] ${health < 30 ? "gpe-health-danger" : ""}`}>
           <div
             className="h-full rounded-full transition-[width] duration-500"
             style={{
               width: `${health}%`,
-              background: "linear-gradient(90deg,#e88a5c,#62d99a)",
+              background: health < 30 ? "linear-gradient(90deg, #dc2626, #f87171)" : "linear-gradient(90deg,#e88a5c,#62d99a)",
               opacity: health < 60 ? 1 : 0.7,
             }}
           />

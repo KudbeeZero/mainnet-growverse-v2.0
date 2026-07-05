@@ -5,9 +5,11 @@ interface BarProps {
   color?: string;
   /** When true, a higher value is bad (pests/disease) — flips default color. */
   invert?: boolean;
+  /** When true, applies danger pulse animation (used for health < 30). */
+  danger?: boolean;
 }
 
-export function Bar({ label, value, color, invert = false }: BarProps) {
+export function Bar({ label, value, color, invert = false, danger = false }: BarProps) {
   const pct = Math.max(0, Math.min(100, value));
   const fill =
     color ??
@@ -24,7 +26,7 @@ export function Bar({ label, value, color, invert = false }: BarProps) {
           : "bg-grow-500");
 
   return (
-    <div>
+    <div className={danger ? "gpe-health-danger rounded-full p-1" : ""}>
       <div className="mb-0.5 flex justify-between text-[11px] text-gray-400">
         <span>{label}</span>
         <span className="tabular-nums">{Math.round(pct)}</span>
