@@ -23,7 +23,8 @@ export function GearPanel({ podId }: { podId: string }) {
 
   if (isLoading || allGear.length === 0) return null;
 
-  const categories: GearCategory[] = ["light", "fan", "soil"];
+  // Only show light gear (fan/soil sim hooks pending Phase 2)
+  const categories: GearCategory[] = ["light"];
   const gearByCategory = categories.reduce(
     (acc, cat) => {
       acc[cat] = allGear.filter((g) => g.category === cat);
