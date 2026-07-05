@@ -28,7 +28,7 @@ prior note follows.) (pod-recycle fix + landing-particle perf/scale fix — Game
 
 ### 🎮 Core Game Loop — active (owner-freeze directive 2026-07-02, PR #111)
 9. 🔨 **Onboarding AI-guide rework** — remaining: landing-page scroll + 3-panel FTUE coach wiring → `## 🎮`
-10. ⬜ **Design punch list remaining** — care-streak / resin-score stats polish → `## 🎮`
+10. ✅ **Design punch list remaining** — care-streak / resin-score stats (shipped PR #149) → `## 🎮`
 11. ⬜ **Bud/flower polish** (NOT launch-blocking) — bract clusters, sugar leaves, trichome sparkle at phone size → `## 🎮`
 12. ⬜ **Chamber mobile follow-ups** — branch curve amplitude untouched; sativa + bushy spot-check → `## 🎮`
 
@@ -250,9 +250,8 @@ prior note follows.) (pod-recycle fix + landing-particle perf/scale fix — Game
   days-to-harvest). Shipped: plant fullness/color pass (chamberCore: denser canopy,
   purple-pink bud accents, dominant top cola), mood chip (health/flag-derived pill on the
   stage), quick-boost chips (one-tap per-type row in `BoostsInline`) 2026-07-03.
-- 🎮 ⬜ **Design punch list — remaining** — care-streak / resin-score stats (later: needs
-  backend tracking; no server field exists, and we never invent numbers); (6) ambient
-  in-scene care glyphs (floating ✂️/💧/❤️ accents).
+- 🎮 ✅ **Design punch list — remaining** — care-streak / resin-score stats (shipped PR #149); (6) ambient
+  in-scene care glyphs (floating ✂️/💧/❤️ accents, parked for future round).
 - 🎮 ✅ **Plant mockup round 2 (2026-07-03, owner mockup image)** — "master one bud, then repeat
   it" pass on `chamberCore`: template bud now reads purple-TIPPED over green (tip-weighted
   accent pods + deeper mass-tip gradient, calmer per-pod jitter, sparser/shorter pistils,
