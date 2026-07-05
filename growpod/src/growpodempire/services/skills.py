@@ -35,12 +35,6 @@ def load_skills() -> dict:
     return _SKILLS_CACHE
 
 
-def reset_cache() -> None:
-    """Drop the cached graph (tests that point ``SKILLS_FILE`` elsewhere)."""
-    global _SKILLS_CACHE
-    _SKILLS_CACHE = None
-
-
 def skills_for_course(course_key: str) -> list[str]:
     """The skill_ids a course teaches (empty list if the course is unknown)."""
     course_skills = load_skills().get("course_skills", {}) or {}

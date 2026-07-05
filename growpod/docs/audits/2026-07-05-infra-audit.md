@@ -25,20 +25,20 @@ the only thing standing between "testnet" config and mainnet transactions is a U
 
 ## Severity roll-up
 
-| # | Finding | Area | Sev |
-|---|---------|------|-----|
-| 1 | 4 ORM tables + 1 type mismatch have no alembic migration (masked by boot `create_all`) | db/migrations | HIGH |
-| 2 | `SettlementService.__init__` implicitly creates a real ASA when `ASA_ID` unset | chain/settlement | HIGH |
-| 3 | No genesis-ID guard: `ALGORAND_NETWORK` is a label, never checked against the node | chain | MEDIUM |
-| 4 | Postgres engine has no `pool_pre_ping`/`pool_recycle` → stale-connection 500s | db | MEDIUM |
-| 5 | Contract expiry status write is rolled back by the accompanying raise | services | MEDIUM |
-| 6 | `MAX_WITHDRAWAL_PER_DAY=""` silently disables the treasury cap (fail-open) | config | MEDIUM |
-| 7 | Non-ASCII `X-API-Key` → `TypeError` → 500 instead of 403 | api/auth | LOW |
-| 8 | `ratelimit.py` docstring contradicts its own key function | api | LOW |
-| 9 | Clone Room mints anchor a metadata hash for a document that is never published | chain | LOW |
-| 10 | Weather clamp with a one-sided bound raises `TypeError` / silently skips | services | LOW |
-| 11 | Dead code: 1 orphan helper + 3 never-used test hooks | services | LOW |
-| 12 | Broad `except Exception` swallows genome-expression failures | services | LOW (flag) |
+| # | Finding | Area | Sev | Status |
+|---|---------|------|-----|--------|
+| 1 | 4 ORM tables + 1 type mismatch have no alembic migration (masked by boot `create_all`) | db/migrations | HIGH | ✅ Fixed |
+| 2 | `SettlementService.__init__` implicitly creates a real ASA when `ASA_ID` unset | chain/settlement | HIGH | ✅ Fixed |
+| 3 | No genesis-ID guard: `ALGORAND_NETWORK` is a label, never checked against the node | chain | MEDIUM | ✅ Fixed |
+| 4 | Postgres engine has no `pool_pre_ping`/`pool_recycle` → stale-connection 500s | db | MEDIUM | ✅ Fixed |
+| 5 | Contract expiry status write is rolled back by the accompanying raise | services | MEDIUM | ✅ Fixed |
+| 6 | `MAX_WITHDRAWAL_PER_DAY=""` silently disables the treasury cap (fail-open) | config | MEDIUM | ✅ Fixed |
+| 7 | Non-ASCII `X-API-Key` → `TypeError` → 500 instead of 403 | api/auth | LOW | ✅ Fixed |
+| 8 | `ratelimit.py` docstring contradicts its own key function | api | LOW | ✅ Fixed |
+| 9 | Clone Room mints anchor a metadata hash for a document that is never published | chain | LOW | ⬜ Not fixed (see note) |
+| 10 | Weather clamp with a one-sided bound raises `TypeError` / silently skips | services | LOW | ✅ Fixed |
+| 11 | Dead code: 1 orphan helper + 3 never-used test hooks | services | LOW | ✅ Fixed |
+| 12 | Broad `except Exception` swallows genome-expression failures | services | LOW (flag) | ⬜ Deferred to domain-layer session |
 
 ---
 
@@ -204,7 +204,7 @@ on a real-money boundary should fail closed.
   services; every swept service has real test coverage (weakest: `factions.py`, incidental
   only); no float-money violations — every posting flows through `ledger.to_money()`.
 
-## Gates
+## Gates (at time of audit, before fixes)
 
 - `make test` → 1122 passed, 6 skipped; coverage 93.64% (floor 79%) — green
 - `make check-memory` → OK (37 files)
@@ -220,3 +220,60 @@ on a real-money boundary should fail closed.
 4. **Sweep PR** for the LOWs (#7, #8, #10, #11) — mechanical.
 
 Finding #12 hands off to the domain-layer audit session (needs `genetics/` context).
+
+---
+
+## Resolution (2026-07-05, same PR/session — owner pre-authorized all fixes)
+
+All findings except #9 and #12 were fixed in this PR rather than queued, per explicit owner
+authorization to proceed on protected surfaces (migrations, settlement/treasury) without a
+separate stop-and-ask round. Each fix has a regression test that was verified to fail against
+the pre-fix code (git-stashed and re-run) before the fix landed, not just pass after it.
+
+- **#1 (migration drift):** `alembic/versions/cf72176d4eff_*.py` — idempotent catch-up
+  migration (existence-guarded `create_table` for the 4 tables, matching the established
+  pattern in `fa3e2b1c9d07`) + unconditional `seasonal_strains.price_gc` rescale to
+  `Numeric(18,6)`. Verified against three scenarios: (a) a fully fresh DB migrated from
+  scratch, (b) a `create_all`-bootstrapped DB (simulating current prod) migrated forward, and
+  (c) a downgrade/upgrade round trip — `alembic check` passes clean in all three. CI gains a
+  permanent `alembic check` step (`.github/workflows/ci.yml`) right after `alembic upgrade
+  head` so this class of drift can't silently regrow.
+- **#2 (implicit ASA creation):** `settlement_service.py` now raises `GameError` instead of
+  minting when `ASA_ID` is unset off-mock, mirroring the existing deposit fail-closed guard.
+  Tests: `test_settlement_fails_closed_when_asa_unprovisioned_off_mock`,
+  `test_deposit_fails_closed_off_mock` (the latter covers a pre-existing untested guard while
+  in the area).
+- **#3 (genesis-ID guard):** `AlgorandProvider` now verifies the node's genesis id against the
+  configured network before every real on-chain write (in a new `_suggested_params()` helper
+  shared by create/destroy/transfer), not in `__init__` — construction stays offline, per the
+  documented contract in `test_algorand_guard.py`. Unrecognized network labels (private
+  devnets) skip the check rather than false-positive.
+- **#4 (pool liveness):** `db/session.py` engine now sets `pool_pre_ping=True` unconditionally
+  (a no-op for SQLite's single connection).
+- **#5 (contract expiry):** `contract_service.py` now commits the `"expired"` status flip
+  before raising. New regression test reproduces the real call shape (exception propagating
+  out of `session_scope()`, not caught inside it like the pre-existing test) — confirmed to
+  fail on the old code (`AssertionError: assert 'open' == 'expired'`).
+- **#6 (withdrawal cap fail-open):** `config.py` now falls back to the `10000` default on an
+  empty/unset `MAX_WITHDRAWAL_PER_DAY`; only an explicit `"0"` disables the cap.
+- **#7 (non-ASCII key → 500):** new `_keys_match()` helper in `api/auth.py` encodes both sides
+  before `hmac.compare_digest`, used by all three call sites (player key, admin secret).
+- **#8 (docstring drift):** `ratelimit.py` module docstring corrected to match `_rate_key`.
+- **#10 (weather clamp):** `weather_service.py` now applies `lo` and `hi` bounds independently.
+- **#11 (dead code):** removed `assessment_service.module_items` and the three unused
+  `reset_cache`/`_reset_caches` test hooks (`effects_service.py`, `factions.py`, `skills.py`).
+- **#9 (unpublished metadata hash) — not fixed.** Serving the ARC-3 metadata document is a
+  small feature addition (a route + storage), not a bug fix, and out of scope for an audit-fix
+  pass; left open for a deliberate follow-up.
+- **#12 (genome-expression swallow) — deferred**, unchanged from the original recommendation:
+  confirming the right behavior needs `genetics/` context, which is out of this session's
+  scope by design.
+
+### Gates after fixes
+- `make test` → 1134 passed, 6 skipped; coverage 93.72% (floor 79%) — green
+- `make lint` → clean
+- `make check-memory` → OK (37 files)
+- `scripts/check_single_head.py` → OK, single head `cf72176d4eff`
+- `alembic upgrade head` + `alembic check` (fresh DB, matching CI's exact sequence) → clean
+- `alembic check` also verified clean against a simulated prod DB (create_all-bootstrapped,
+  then migrated forward) and after a downgrade/upgrade round trip

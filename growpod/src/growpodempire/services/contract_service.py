@@ -72,6 +72,13 @@ class ContractService:
         now = self.clock.now()
         if now > contract.deadline_at:
             contract.status = "expired"
+            # Commit the status flip before raising (2026-07-05 audit finding):
+            # the caller's session_scope() rolls back on the GameError below,
+            # which would otherwise silently discard this write and leave the
+            # contract "open" forever — only re-flipping (and re-discarding) on
+            # each subsequent fulfill attempt. No other writes are pending at
+            # this point in the method, so committing here is safe.
+            self.session.commit()
             raise GameError("Contract deadline has passed")
 
         # Eligible deliveries: the player's unsold harvests of matching rarity.

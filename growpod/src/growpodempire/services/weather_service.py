@@ -87,7 +87,12 @@ class WeatherService:
                 env[key] = float(spec[f"set_{key}"])
             elif key in spec:
                 env[key] = env[key] + float(spec[key])
+            # Each bound is applied independently (2026-07-05 audit): the prior
+            # `if lo is not None: max(lo, min(hi, ...))` raised TypeError on a
+            # one-sided [lo, null] clamp and silently no-opped on [null, hi].
             lo, hi = clamps.get(key, [None, None])
             if lo is not None:
-                env[key] = max(lo, min(hi, env[key]))
+                env[key] = max(lo, env[key])
+            if hi is not None:
+                env[key] = min(hi, env[key])
         return env

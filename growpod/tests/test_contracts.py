@@ -78,3 +78,30 @@ def test_deadline_expiry(db):
         with pytest.raises(GameError):
             cs.fulfill(p.id, contract.id)
         assert s.get(type(contract), contract.id).status == "expired"
+
+
+def test_deadline_expiry_persists_across_the_failing_transaction(db):
+    """2026-07-05 audit finding: the API always calls fulfill() inside its own
+    `with session_scope()`, which rolls back on the GameError this branch
+    raises. The prior test above catches the error *inside* the same open
+    session/transaction (never triggering that rollback), so it couldn't have
+    caught the bug — this test reproduces the real call shape: the exception
+    must propagate OUT of session_scope, and a fresh session must still read
+    "expired" afterward."""
+    with session_scope() as s:
+        p = GameService(s).create_player("late2")
+        player_id = p.id
+
+    clock = FrozenClock(BASE)
+    with session_scope() as s:
+        contract = ContractService(s, clock=clock).offer(player_id, rng_seed=1)
+        contract_id = contract.id
+    clock.advance(days=30)  # well past the 7-day deadline
+
+    with pytest.raises(GameError):
+        with session_scope() as s:
+            ContractService(s, clock=clock).fulfill(player_id, contract_id)
+
+    with session_scope() as s:
+        from growpodempire.db.models import Contract
+        assert s.get(Contract, contract_id).status == "expired"

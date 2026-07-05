@@ -16,7 +16,7 @@ prior note follows.) (pod-recycle fix + landing-particle perf/scale fix — Game
 > ✅ done and ❄️ parked items are in their track sections below and are NOT listed here.
 
 ### 🔴 Now — correctness / risk / security (must close before public launch)
-0. ⬜ **Infra-audit 2026-07-05 findings** — migration drift (4 unmanaged tables) + implicit treasury ASA create + 4 MEDIUMs → `## 🔴 Immediate`
+0. ✅ **Infra-audit 2026-07-05 findings** — migration drift + implicit treasury ASA create + 4 MEDIUMs, all fixed → `## 🔴 Immediate`
 1. 🔨 **Concurrency hardening** — remaining: `Idempotency-Key` header + one-shot-grant uniqueness → `## 🔴 Immediate`
 2. ⬜ **Chain settlement verification (RISK #7)** — deposit txid verify, replay protection, reconciliation job → `## 🔴 Immediate`
 3. ⬜ **Security follow-ups PR #104** — deposit redesign, CSP nonce, CORS allowlist, player key off localStorage → `## 🏛️ HERMES`
@@ -986,14 +986,17 @@ prior note follows.) (pod-recycle fix + landing-particle perf/scale fix — Game
   fast-forwards under the dev clock and is guarded against early finish. 1117 green.
 
 ## 🔴 Immediate (do now — correctness, truth, or unblocks others)
-- 🔴 ⬜ **Infra-audit 2026-07-05 findings** (`docs/audits/2026-07-05-infra-audit.md`) — 2 HIGH:
-  (1) model↔migration drift is back — `bundles`/`featured_items`/`store_partners`/`player_badges`
-  exist only via boot `create_all`, `alembic check` FAILS; needs a catch-up migration + an
-  `alembic check` CI gate; (2) `SettlementService.__init__` implicitly fires a treasury-signed
-  ASA create when `ASA_ID` is unset off-mock — fail closed instead. Plus 4 MEDIUM (no
-  genesis-ID guard on `AlgorandProvider`; no `pool_pre_ping` on the Postgres engine; contract
-  expiry write rolled back by its own raise; empty `MAX_WITHDRAWAL_PER_DAY` disables the
-  treasury cap) and a LOW sweep list. Suggested PR queue is in the report.
+- 🔴 ✅ **Infra-audit 2026-07-05 findings** (`docs/audits/2026-07-05-infra-audit.md`, owner
+  pre-authorized fix-in-place) — both HIGH fixed: (1) catch-up migration `cf72176d4eff` +
+  permanent `alembic check` CI gate closes the model↔migration drift (`bundles`/
+  `featured_items`/`store_partners`/`player_badges` + `seasonal_strains.price_gc` rescale);
+  (2) `SettlementService` now fails closed instead of implicitly minting a treasury ASA when
+  `ASA_ID` is unset off-mock. All 4 MEDIUM fixed (genesis-ID guard on `AlgorandProvider`;
+  `pool_pre_ping` on the Postgres engine; contract-expiry persistence; withdrawal-cap
+  fail-open closed) plus 4 of 6 LOW (non-ASCII API key, ratelimit docstring, weather clamp,
+  dead code). Every fix has a regression test confirmed to fail pre-fix. Not fixed: #9
+  (unpublished ARC-3 metadata — a feature add, not a bug) and #12 (genome-expression
+  exception swallow — deferred to the domain-layer audit session, needs `genetics/` context).
 - 🔴 🔨 **Concurrency + idempotency hardening** (RISK #6) — *core landed 2026-06-10*: wallet
   optimistic locking (`version_id_col`) + `CHECK(cached_balance >= 0)` + harvest-once unique index
   (migration `f1a2b3c4d5e6`) + 409-on-conflict + the F5 flaky-limiter-test fix. +4 concurrency

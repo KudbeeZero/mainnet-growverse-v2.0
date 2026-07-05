@@ -55,3 +55,18 @@ def test_write_requires_key(client):
 def test_reads_stay_public(client):
     # Strain catalog needs no key.
     assert client.get("/api/game/strains").status_code == 200
+
+
+def test_non_ascii_key_rejected_not_500(client):
+    """2026-07-05 audit: a stray non-ASCII byte in X-API-Key must 403, not 500
+    (hmac.compare_digest raises TypeError on non-ASCII str input)."""
+    pid, _key = _new_player(client)
+    strains = client.get("/api/game/strains").get_json()
+    sid = strains[0]["id"]
+
+    r = client.post(
+        f"/api/game/players/{pid}/seeds/buy",
+        json={"strain_id": sid},
+        headers={"X-API-Key": "café-not-a-real-key"},
+    )
+    assert r.status_code == 403

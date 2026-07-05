@@ -71,3 +71,62 @@ def test_network_name_is_passed_through():
         network_name="mainnet",
     )
     assert p.network() == "mainnet"
+
+
+class _FakeSuggestedParams:
+    """Minimal stand-in for algosdk's SuggestedParams — only `.gen` matters
+    to the genesis-id guard under test."""
+
+    def __init__(self, gen: str):
+        self.gen = gen
+
+
+class _FakeAlgodClient:
+    """Swapped in for `provider.client` post-construction so the genesis-id
+    guard (chain/algorand.py:_suggested_params) can be exercised without a
+    live node — construction itself stays offline per the module docstring."""
+
+    def __init__(self, gen: str):
+        self._gen = gen
+
+    def suggested_params(self):
+        return _FakeSuggestedParams(self._gen)
+
+
+def test_suggested_params_rejects_mismatched_genesis_id():
+    """2026-07-05 audit: ALGOD_URL pointing at the wrong chain (e.g. mainnet
+    while ALGORAND_NETWORK=testnet) must be caught before any transaction is
+    signed, not silently trusted."""
+    p = AlgorandProvider(
+        algod_url="http://localhost:0",
+        algod_token="x" * 64,
+        treasury_mnemonic=_fresh_mnemonic(),
+        network_name="testnet",
+    )
+    p.client = _FakeAlgodClient(gen="mainnet-v1.0")  # node disagrees with config
+    with pytest.raises(ChainError, match="does not match configured network"):
+        p._suggested_params()
+
+
+def test_suggested_params_accepts_matching_genesis_id():
+    p = AlgorandProvider(
+        algod_url="http://localhost:0",
+        algod_token="x" * 64,
+        treasury_mnemonic=_fresh_mnemonic(),
+        network_name="testnet",
+    )
+    p.client = _FakeAlgodClient(gen="testnet-v1.0")
+    assert p._suggested_params().gen == "testnet-v1.0"
+
+
+def test_suggested_params_skips_check_for_unrecognized_network_label():
+    """A custom/private network label (e.g. a local devnet) isn't in the
+    known-genesis table — the guard should not false-positive on it."""
+    p = AlgorandProvider(
+        algod_url="http://localhost:0",
+        algod_token="x" * 64,
+        treasury_mnemonic=_fresh_mnemonic(),
+        network_name="my-private-devnet",
+    )
+    p.client = _FakeAlgodClient(gen="anything-goes-v1.0")
+    assert p._suggested_params().gen == "anything-goes-v1.0"

@@ -117,9 +117,13 @@ class Settings:
             os.environ.get("PROXY_TRUSTED_HOPS", "1")
         )
         # Cap on-chain withdrawals per player per rolling 24h (defence in depth
-        # around the treasury). 0 disables the cap.
+        # around the treasury). Explicit "0" disables the cap; unset/empty falls
+        # back to the safe default rather than silently disabling it (security
+        # audit 2026-07-05: `MAX_WITHDRAWAL_PER_DAY=` — an easy way to "unset" a
+        # Fly secret — previously coerced to "0" = cap disabled, a fail-open on a
+        # real-money boundary).
         wd_cap = os.environ.get("MAX_WITHDRAWAL_PER_DAY", "10000")
-        self.max_withdrawal_per_day = wd_cap if wd_cap not in (None, "") else "0"
+        self.max_withdrawal_per_day = wd_cap if wd_cap not in (None, "") else "10000"
 
         # --- Algorand on-chain layer (Phase 3) -----------------------------
         # Default to TestNet via AlgoNode. The treasury mnemonic is a SECRET and
