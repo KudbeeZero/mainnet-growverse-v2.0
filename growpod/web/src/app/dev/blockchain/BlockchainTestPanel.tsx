@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { isFaucetAvailable, requestTestnetAlgo } from "@/lib/chain/algorand/devFaucet";
-import { algoClient, algoNetwork } from "@/lib/chain/algorand/client";
+import { getAlgodClient, algoNetwork } from "@/lib/chain/algorand/client";
 import styles from "./BlockchainTestPanel.module.css";
 
 interface TestResult {
@@ -37,8 +37,8 @@ export function BlockchainTestPanel() {
   const testAlgorandConnection = async () => {
     setIsRunning(true);
     try {
-      const client = algoClient();
-      const status = await client.algod.status().do();
+      const algod = getAlgodClient();
+      const status = await algod.status().do();
       const network = algoNetwork();
       addResult(
         "Algorand Connection",
@@ -131,8 +131,8 @@ export function BlockchainTestPanel() {
 
     setIsRunning(true);
     try {
-      const client = algoClient();
-      const accountInfo = await client.algod.accountInformation(walletAddress).do();
+      const algod = getAlgodClient();
+      const accountInfo = await algod.accountInformation(walletAddress).do();
       addResult(
         "Account Info",
         "success",
