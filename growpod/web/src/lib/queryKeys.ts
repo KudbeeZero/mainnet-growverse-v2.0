@@ -42,4 +42,5 @@ export const queryKeys = {
   storeFeatured: () => ["store", "featured"] as const,
   storeBundles: () => ["store", "bundles"] as const,
   consumables: (id: string) => ["consumables", id] as const,
+  gear: (id: string) => ["gear", id] as const,
 };
