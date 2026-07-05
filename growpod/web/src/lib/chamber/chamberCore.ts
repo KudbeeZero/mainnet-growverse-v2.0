@@ -31,7 +31,7 @@ import {
   SHIMMER_MAX_AMP,
 } from "./trichomes";
 import { colaTops } from "./apicalDominance";
-import { calyxShapeFor } from "./calyxShape";
+import { calyxShapeFor, type CalyxShape } from "./calyxShape";
 import { earlyStageBoost } from "./earlyStage";
 import { CONDITION_VISUALS, SEVERITY_SCALE, dominantFlag } from "../conditionVisuals";
 import {
@@ -60,7 +60,7 @@ interface Cluster {
   fat: number;
   tipTaper: number;
   centerBias: number;
-  pods: Array<{ ring: number; a: number; rad: number; k: number; sz: number; dl: number; dh: number; blushK: number; parity: number }>;
+  pods: Array<{ ring: number; a: number; rad: number; k: number; sz: number; dl: number; dh: number; blushK: number; parity: number; shape: CalyxShape }>;
   // `seam`: the grouped calyx-seam root angle this hair emerges from
   // (reference "Pistil Hair Breakdown" items 1-2 — grouped origin points,
   // never floating); several hairs per cluster share the same seam.
@@ -127,7 +127,7 @@ export interface ChamberCore {
 // clips to solid black instead of a dark shade. These bound the final sum to
 // a safe range before it reaches any hsl() call.
 export function clampPodLightness(raw: number): number {
-  return clamp(raw, 20, 58);
+  return clamp(raw, 26, 58);
 }
 export function clampLeafLightness(raw: number): number {
   return clamp(raw, 10, 78);
@@ -240,7 +240,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     }
     podPath(w, h); // teardrop (0) and foxtail (3, already elongated via h)
   }
-  function drawPod(x: number, y: number, rot: number, w: number, h: number, hue: number, sat: number, litIn: number, capA: number) {
+  function drawPod(x: number, y: number, rot: number, w: number, h: number, hue: number, sat: number, litIn: number, capA: number, shape: CalyxShape = 0) {
     // Enforced here, not just at the call site (code-review fix, 2026-07-04):
     // the gradient stops below push lit further in both directions (+8/-16 at
     // the 0/1 stops), so a caller passing an already-safe value can still get
@@ -263,7 +263,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     g.addColorStop(0.55, `hsl(${hue}, ${sat}%, ${lit}%)`);
     g.addColorStop(1, `hsl(${hue}, ${Math.min(88, sat + 16)}%, ${Math.max(10, lit - 16)}%)`);
     ctx!.fillStyle = g;
-    podPath(w, h);
+    calyxPath(shape, w, h);
     ctx!.fill();
     // Shingle "undercut" shadow — the base third of every bract tucks under
     // the tier above it in the stack (see the tip-first/base-last paint order
@@ -276,7 +276,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     undercut.addColorStop(0, `hsla(${hue}, ${sat}%, ${Math.max(6, lit - 8)}%, 0)`);
     undercut.addColorStop(1, `hsla(${hue}, ${Math.min(90, sat + 10)}%, ${Math.max(4, lit - 22)}%, 0.5)`);
     ctx!.fillStyle = undercut;
-    podPath(w, h);
+    calyxPath(shape, w, h);
     ctx!.fill();
     ctx!.strokeStyle = "rgba(0,0,0,0.24)";
     ctx!.lineWidth = Math.max(0.4, w * 0.05);
@@ -285,7 +285,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     ctx!.translate(0, -h * 0.14);
     ctx!.scale(0.55, 0.48);
     ctx!.fillStyle = `hsla(${hue}, ${sat * 0.9}%, ${Math.min(64, lit + 8)}%, ${capA})`;
-    podPath(w, h);
+    calyxPath(shape, w, h);
     ctx!.fill();
     ctx!.restore();
     // Round 8c: gate lowered 2.2 → 1.2 — podW's own ceiling is 4.2 and most
@@ -307,7 +307,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       tipGlow.addColorStop(0, `hsla(${hue}, ${sat * 0.4}%, ${Math.max(8, lit - 8)}%, 0)`);
       tipGlow.addColorStop(1, `hsla(${hue}, ${Math.min(92, sat + 20)}%, ${Math.min(74, lit + 16)}%, 0.3)`);
       ctx!.fillStyle = tipGlow;
-      podPath(w, h);
+      calyxPath(shape, w, h);
       ctx!.fill();
       ctx!.strokeStyle = `hsla(${hue}, ${Math.max(10, sat - 22)}%, ${Math.max(5, lit - 24)}%, 0.4)`;
       ctx!.lineWidth = Math.max(0.4, w * 0.045);
@@ -495,7 +495,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // cluster in an extra ring, each a notch smaller (podW below), so the bud
       // surface reads as stacked calyxes rather than a few blobby grapes. Still
       // whole-pod marks (no per-gland noise) so phone readability holds.
-      const nPods = Math.max(7, Math.round((opt.bracts + 8) * 0.62 + baseW * 0.15));
+      // Blob-complaint fix (pass 2): trim the baseW contribution so wider colas
+      // don't keep piling on ever more pods on top of the now-bigger podW above
+      // (pass 2's whole point is fewer, bigger, more distinguishable pods).
+      const nPods = Math.max(7, Math.round((opt.bracts + 8) * 0.62 + baseW * 0.08));
       const pods = [];
       // Round 8 (owner: "each area has to be populated with a stacking
       // pattern — 12 in one ring, 8 stacked inside, every other one purple,
@@ -517,6 +520,15 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // within a ring differ from even ones, layered under the existing
       // base→tip gradient in the colour block below.
       const ringCounts = [0, 0, 0, 0];
+      // Pod shape variety (blob-complaint fix, pass 1): every pod used to be an
+      // identical mono-taper capsule (`podPath` unconditionally). Give each pod
+      // a `shape` roll the same way `buildMacro`'s detailed bud view already
+      // does — `topness` mirrors that function's own derivation
+      // (`clamp((0.4-progress)/0.4,0,1)`, progress 0=top→1=bottom) but `yf` runs
+      // the opposite way here (0=base→1=tip), so `1-yf` stands in for `progress`.
+      const topness = clamp((yf - 0.6) / 0.4, 0, 1);
+      const foxCut = 0.85 - (S.foxtail ?? 0) * 0.2 - topness * 0.15;
+      const ovalCut = Math.min(0.7 - topness * 0.2, foxCut - 0.04);
       for (let j = 0; j < nPods; j++) {
         const ring = j < 2 ? 0 : j < 5 ? 1 : j < 8 ? 2 : 3;
         const ringIdx = ringCounts[ring]++;
@@ -534,6 +546,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
           // primary colour driver — see `parity` above for the deterministic
           // "every other one" alternation itself.
           dl: (rnd() - 0.5) * 7, dh: (rnd() - 0.5) * 5, blushK: rnd(),
+          shape: calyxShapeFor(rnd(), ovalCut, foxCut),
         });
       }
       pods.sort((p, q) => p.ring - q.ring);
@@ -689,12 +702,16 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     // depth/readability, additive, removes no foliage. Drawn first so the stem,
     // mass, calyxes and frost all layer on top of it.
     {
-      const bw = site.baseW * 1.45;
-      const bh = site.axisLen * 0.6;
+      // Blob-complaint fix (pass 8): the halo was large/dark enough to read as
+      // its own soft blob behind the cola, adding to the "one repeated blob
+      // shape" complaint. Shrunk and lightened so it still separates the bud
+      // from the foliage without becoming a visible shape of its own.
+      const bw = site.baseW * 1.1;
+      const bh = site.axisLen * 0.42;
       const cy = -site.axisLen * 0.5;
       const halo = ctx!.createRadialGradient(0, cy, 0, 0, cy, Math.max(bw, bh));
-      halo.addColorStop(0, "rgba(3,9,7,0.4)");
-      halo.addColorStop(0.7, "rgba(3,9,7,0.22)");
+      halo.addColorStop(0, "rgba(3,9,7,0.28)");
+      halo.addColorStop(0.7, "rgba(3,9,7,0.14)");
       halo.addColorStop(1, "rgba(3,9,7,0)");
       ctx!.save();
       ctx!.fillStyle = halo;
@@ -747,7 +764,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // Round 3 (owner mockup): finer grain — pods a notch smaller (cap 5.2 →
       // 4.2, floor 1.9 → 1.7) now that each cluster carries MORE of them (see
       // nPods); the mockup's bud surface is a fine calyx stack, not marbles.
-      const podW = clamp(Math.pow(cw, 0.82) * 0.27, 1.7, 4.2);
+      // Blob-complaint fix (pass 2): the old exponent/ceiling made pods scale
+      // down as colas grew, so the biggest cola carried the densest cluster of
+      // tiny beads — backwards. Steeper exponent + higher ceiling let pods grow
+      // more in step with cola width.
+      const podW = clamp(Math.pow(cw, 0.95) * 0.27, 1.7, 6.5);
       geo.push({ cx, cy, cw, podW, d });
     }
 
@@ -761,7 +782,12 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     // texture riding inside it. Width still follows the per-cluster `cw`, so
     // the silhouette stays strain-recognisable (G13 spiral = slim spear cola;
     // PDP/Animal Mints = chunky stacked mass).
-    const mass = geo.filter((g): g is NonNullable<typeof g> => !!g && g.d > 0.06);
+    // `ph` (each cluster's own build-time `rnd() * TAU` phase, already used to
+    // jiggle pod motion elsewhere) is reused here as the per-site seed for the
+    // pass-5 centreline wobble below — deterministic, no new RNG source.
+    const mass = geo
+      .map((g, i) => (g && g.d > 0.06 ? { ...g, ph: site.clusters[i].ph } : null))
+      .filter((g): g is NonNullable<typeof g> => !!g);
     if (mass.length) {
       mass.sort((a, b) => a.cy - b.cy); // tip (most negative cy) → base
       const bc = live.current.budColor;
@@ -778,14 +804,23 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // touching the taper/single-leader architecture from round 5.
       const raw = mass.map((m) => Math.max(m.podW * 1.4, m.cw * 0.62) * (0.66 + 0.34 * m.d));
       const hw = raw.map((r, i) => (raw[Math.max(0, i - 1)] + 2 * r + raw[Math.min(n - 1, i + 1)]) / 4);
-      // Clean spear taper: width may only shrink toward the tip (a wide bulge
-      // above a waist is what made the old outline read as stacked lobes).
-      for (let i = n - 2; i >= 0; i--) hw[i] = Math.min(hw[i], hw[i + 1]);
+      // Clean spear taper: width may mostly only shrink toward the tip (a wide
+      // bulge above a waist is what made the old outline read as stacked
+      // lobes), but pass 5 (blob-complaint fix) loosens the strictly-monotonic
+      // constraint by 10% — a little controlled irregularity per cola instead
+      // of every cola tapering identically smooth.
+      for (let i = n - 2; i >= 0; i--) hw[i] = Math.min(hw[i], hw[i + 1] * 1.1);
       // Centreline: 3-tap smoothed so the envelope leans gently instead of
       // zigzagging cluster-to-cluster (the anchors themselves are already
       // damped toward the axis above, keeping texture and mass in lock-step).
+      // Pass 5 (blob-complaint fix) adds a small deterministic sinusoidal
+      // wobble on top, keyed off each cluster's own build-time `ph` seed, so
+      // colas on the same plant/render lean subtly differently instead of
+      // every cola sharing one identical, perfectly smooth taper curve.
       const cxs = mass.map(
-        (m, i) => (mass[Math.max(0, i - 1)].cx + 2 * m.cx + mass[Math.min(n - 1, i + 1)].cx) / 4,
+        (m, i) =>
+          (mass[Math.max(0, i - 1)].cx + 2 * m.cx + mass[Math.min(n - 1, i + 1)].cx) / 4 +
+          Math.sin(m.ph * 2 + i * 0.9) * hw[i] * 0.15,
       );
       const tipY = mass[0].cy - Math.min(hw[0] * 1.7, hw[n - 1] * 1.1); // spear point (capped so it can't spike)
       const botY = mass[n - 1].cy + hw[n - 1] * 1.05; // rounded base below the last
@@ -1017,16 +1052,23 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // the shared corner of many overlapping pods to near-black
         // simultaneously — the fused mass reads as a solid black clump
         // instead of individually-shaded dark-violet bracts. `drawPod` itself
-        // clamps its `lit` input to [20,58] (code-review fix, 2026-07-04 —
+        // clamps its `lit` input to [26,58] (floor raised from 20, pass 3 —
         // that floor/ceiling now lives in the one place with the unguarded
         // hsl() calls, not just here), so this sum is passed through raw; the
         // per-pod ring/parity/tip texture (the "every other one" stacking +
         // shingle read this round built) still comes through unclamped up to
         // that point.
-        const podLit = baseLit + p.dl + (2 - p.ring) * 2 - tipBlend * 3 + parityLit + ringLit;
+        // Blob-complaint fix (pass 3): the tip used to be the DARKEST part of
+        // the render (the ring-depth bonus was fully subtracted by tipBlend,
+        // and tipBlend itself was a further flat -3), when the cola tip/crown
+        // should read as the frostiest/brightest part of the bud. Tapering the
+        // ring-depth term toward the tip (instead of letting tipBlend cancel
+        // it outright) and flipping tipBlend's own contribution to a small
+        // positive lift makes the tip end up lighter, not darker.
+        const podLit = baseLit + p.dl + (2 - p.ring) * 2 * (1 - tipBlend * 0.6) + tipBlend * 1.2 + parityLit + ringLit;
         drawPod(
           px, py, Math.cos(p.a) * (0.32 + p.rad * 0.45), podW * p.sz * g, podH * p.sz * g,
-          hueP, satP, podLit, 0.42,
+          hueP, satP, podLit, 0.42, p.shape,
         );
         drawn++;
       }
@@ -2530,8 +2572,13 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // litAdj darkening — a cheap, standard aerial-perspective cue that makes
       // the depth-sorted paint order (`order`, above) actually READ as depth
       // instead of every tier looking like the same flat green at every layer.
-      const depthSat = clamp(32 - Math.max(0, -nd.depth) * 9, 20, 32);
-      ctx!.strokeStyle = `hsl(${S.hue - 10}, ${depthSat}%, ${clamp(30 + nd.litAdj, 18, 46)}%)`;
+      // Blob-complaint fix (pass 7): branches previously shared close to the
+      // same hue/saturation neighbourhood as the leaf fans, so branches and
+      // foliage optically fused into one green mass. Pushing the hue further
+      // from S.hue and capping saturation lower (32 → 24) desaturates branches
+      // relative to leaves without touching `leafTone`'s own saturation.
+      const depthSat = clamp(32 - Math.max(0, -nd.depth) * 9, 20, 24);
+      ctx!.strokeStyle = `hsl(${S.hue - 22}, ${depthSat}%, ${clamp(30 + nd.litAdj, 18, 46)}%)`;
       // Bolder branches, less thinning toward the apex — the upper branches carry
       // the flower sites, so a "wire" up there is the worst place for it.
       const branchW = clamp(sw0 * 0.7 * (1 - nd.f * 0.26), 2.1, 6);
@@ -2553,7 +2600,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       {
         const rw = clamp(sw0 * 0.28 * (1 - nd.f * 0.26), 0.9, 2.4);
         const ro = rw * 0.5 + 0.6;
-        ctx!.strokeStyle = `hsl(${S.hue - 6}, ${depthSat + 10}%, ${clamp(48 + nd.litAdj, 30, 64)}%)`;
+        ctx!.strokeStyle = `hsl(${S.hue - 18}, ${depthSat + 10}%, ${clamp(48 + nd.litAdj, 30, 64)}%)`;
         // Reuses branchPts (offset by -ro in y) instead of re-sampling the
         // bezier — valid because a cubic bezier is an affine combination of
         // its control points, so shifting every control point by (0,-ro)
@@ -2648,7 +2695,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         // was hardcoded 30% regardless of depth, so a branchlet forking off a
         // rear-facing (desaturated) branch stayed brighter than the branch it
         // grows from — a visible mismatch right at the fork.
-        ctx!.strokeStyle = `hsl(${S.hue - 8}, ${depthSat}%, 32%)`;
+        ctx!.strokeStyle = `hsl(${S.hue - 20}, ${depthSat}%, 32%)`;
         const blW = clamp(sw0 * 0.48 * (1 - nd.f * 0.3), 1.4, 3.6);
         ctx!.lineCap = "round";
         // Tapered to match the parent branch (round 9 pass 2) — quadratic
