@@ -72,10 +72,14 @@ describe("foreshorten", () => {
 });
 
 describe("depthShade", () => {
-  it("brightens the front and darkens the back, bounded", () => {
-    expect(depthShade(1)).toBeCloseTo(7, 6);
-    expect(depthShade(-1)).toBeCloseTo(-7, 6);
+  it("brightens the front and darkens the back, bounded (default amount)", () => {
+    expect(depthShade(1)).toBeCloseTo(10, 6);
+    expect(depthShade(-1)).toBeCloseTo(-10, 6);
     expect(depthShade(0)).toBe(0);
-    expect(depthShade(5)).toBeCloseTo(7, 6); // clamped
+    expect(depthShade(5)).toBeCloseTo(10, 6); // clamped
+  });
+  it("honors a custom amount", () => {
+    expect(depthShade(1, 7)).toBeCloseTo(7, 6);
+    expect(depthShade(-1, 7)).toBeCloseTo(-7, 6);
   });
 });
