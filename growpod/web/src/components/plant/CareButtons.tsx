@@ -94,19 +94,36 @@ export function CareButtons({ plant }: { plant: PlantState }) {
       </div>
 
       {canHarvest && (
-        <Button
-          size="sm"
-          variant="primary"
-          className="min-h-[44px] w-full text-sm"
-          loading={harvest.isPending}
-          onClick={() => {
-            fire("harvest");
-            dispatchCareReaction("harvest");
-            harvest.mutate({ sell: true });
-          }}
-        >
-          ✂️ Harvest & Sell
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="primary"
+            className="min-h-[44px] flex-1 text-sm"
+            loading={harvest.isPending && harvest.variables?.sell === true}
+            disabled={harvest.isPending}
+            onClick={() => {
+              fire("harvest");
+              dispatchCareReaction("harvest");
+              harvest.mutate({ sell: true });
+            }}
+          >
+            ✂️ Harvest &amp; Sell
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="min-h-[44px] flex-1 text-sm"
+            loading={harvest.isPending && harvest.variables?.sell === false}
+            disabled={harvest.isPending}
+            onClick={() => {
+              fire("harvest");
+              dispatchCareReaction("harvest");
+              harvest.mutate({ sell: false });
+            }}
+          >
+            🌿 Harvest to Cure
+          </Button>
+        </div>
       )}
     </div>
   );
