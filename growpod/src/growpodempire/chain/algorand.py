@@ -104,16 +104,12 @@ class AlgorandProvider(ChainProvider):
         )
         return self._send(txn)["txid"]
 
-    def transfer_asset(self, asset_id, receiver, amount, sender_mnemonic=None) -> str:
-        from algosdk import transaction, mnemonic
+    def transfer_asset(self, asset_id, receiver, amount) -> str:
+        from algosdk import transaction, account
 
-        sk = (
-            mnemonic.to_private_key(sender_mnemonic)
-            if sender_mnemonic
-            else self.treasury_sk
-        )
-        from algosdk import account
-
+        # Always the treasury key — see the ABC docstring for why this never
+        # accepts a caller-supplied signer.
+        sk = self.treasury_sk
         sender_addr = account.address_from_private_key(sk)
         # Resolve the TREASURY sentinel to the real treasury address so callers
         # can use the provider-agnostic constant without leaking it on-chain.

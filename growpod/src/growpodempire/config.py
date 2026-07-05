@@ -105,6 +105,17 @@ class Settings:
         self.ratelimit_default: str = os.environ.get(
             "RATELIMIT_DEFAULT", "240 per minute"
         )
+        # Number of trusted reverse-proxy hops in front of this app, for
+        # ProxyFix's X-Forwarded-For parsing (client-IP-keyed rate limiting +
+        # logging depend on this being right). Defaults to 1 (the prior
+        # Render-only topology's value) so this is a no-op until explicitly
+        # tuned. Security audit 2026-07-05 flagged that the deploy moved to a
+        # Vercel-rewrite -> Fly two-hop topology without updating this — needs
+        # live verification of the actual XFF chain before changing the
+        # default; see docs/memory/INCIDENTS.md.
+        self.proxy_trusted_hops: int = int(
+            os.environ.get("PROXY_TRUSTED_HOPS", "1")
+        )
         # Cap on-chain withdrawals per player per rolling 24h (defence in depth
         # around the treasury). 0 disables the cap.
         wd_cap = os.environ.get("MAX_WITHDRAWAL_PER_DAY", "10000")

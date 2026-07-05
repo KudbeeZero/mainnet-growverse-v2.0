@@ -23,9 +23,16 @@ def create_app(init_database: bool = True):
     app = Flask(__name__)
     settings = get_settings()
 
-    # Behind Render's proxy: trust one hop of X-Forwarded-For/-Proto so client
-    # IPs (used for rate limiting + logging) and scheme are accurate.
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+    # Trust `settings.proxy_trusted_hops` reverse-proxy hops for X-Forwarded-For/
+    # -Proto so client IPs (used for rate limiting + logging) and scheme are
+    # accurate. Was hardcoded to 1 (correct for the old Render-only topology);
+    # now configurable via PROXY_TRUSTED_HOPS since the deploy moved to a
+    # Vercel-rewrite -> Fly two-hop topology (security audit 2026-07-05) — the
+    # right value needs live verification against the actual XFF chain before
+    # changing the default, so this defaults to the old value (1) unchanged.
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app, x_for=settings.proxy_trusted_hops, x_proto=1
+    )
 
     # Restrict CORS to an explicit origin allowlist (no wildcard by default) and
     # only on the API surface. Allow the X-API-Key header used for auth.

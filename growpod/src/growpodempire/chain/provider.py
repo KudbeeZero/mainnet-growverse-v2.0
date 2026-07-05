@@ -94,10 +94,15 @@ class ChainProvider(ABC):
         """Destroy an asset the treasury created. Returns a txid."""
 
     @abstractmethod
-    def transfer_asset(
-        self, asset_id: int, receiver: str, amount: int, sender_mnemonic: Optional[str] = None
-    ) -> str:
-        """Transfer asset units. Returns a txid."""
+    def transfer_asset(self, asset_id: int, receiver: str, amount: int) -> str:
+        """Transfer asset units from the treasury. Returns a txid.
+
+        Always signs with the treasury key — there is deliberately no
+        caller-suppliable signer here (security audit 2026-07-05: an unused
+        `sender_mnemonic` param previously existed with no request path
+        wired to it, but a future refactor could accidentally thread client
+        input into it and let a caller make the treasury sign with an
+        attacker-supplied key)."""
 
     @abstractmethod
     def asset_info(self, asset_id: int) -> AssetInfo:
