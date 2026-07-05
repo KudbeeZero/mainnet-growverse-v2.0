@@ -1,6 +1,7 @@
 "use client";
 
 import { useAvailableBundles, usePurchaseBundle } from "@/hooks/useBundles";
+import { Button } from "@/components/ui/Button";
 import type { StoreBundle } from "@/lib/api/store";
 
 export function BundlePanel() {
@@ -65,13 +66,13 @@ function BundleCard({
           <span className="text-[10px] text-gray-500 line-through">{bundle.full_price}</span>
           <span className="text-[10px] text-gray-500">save {discountSavings}</span>
         </div>
-        <button
+        <Button
+          size="sm"
           onClick={onPurchase}
           disabled={isPending}
-          className="rounded-md border border-grow-400/60 bg-grow-600/40 px-3 py-1.5 text-xs font-semibold text-grow-200 transition-colors hover:bg-grow-600/60 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending ? "Buying…" : "Buy"}
-        </button>
+        </Button>
       </div>
     </div>
   );

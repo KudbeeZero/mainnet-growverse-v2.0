@@ -9,6 +9,7 @@
 
 import { useConsumables, useApplyConsumable } from "@/hooks/useConsumables";
 import { ownedConsumableOptions } from "@/lib/consumableAction";
+import { Button } from "@/components/ui/Button";
 import type { Plant } from "@/lib/types";
 
 export function ConsumablesPanel({ plant }: { plant: Plant }) {
@@ -43,15 +44,14 @@ export function ConsumablesPanel({ plant }: { plant: Plant }) {
                   {it.applicable ? it.description : it.reason}
                 </p>
               </div>
-              <button
-                type="button"
+              <Button
+                size="sm"
                 onClick={() => apply.mutate({ itemKey: it.key, name: it.name })}
                 disabled={disabled}
-                className="shrink-0 rounded-md border border-grow-500 bg-grow-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-grow-500 disabled:cursor-not-allowed disabled:border-ink-600 disabled:bg-ink-700 disabled:text-gray-500"
                 title={it.applicable ? `Use ${it.name}` : it.reason}
               >
                 {pending ? "Using…" : "Use"}
-              </button>
+              </Button>
             </div>
           );
         })}
