@@ -7,9 +7,11 @@ interface BarProps {
   invert?: boolean;
   /** When true, applies danger pulse animation (used for health < 30). */
   danger?: boolean;
+  /** When true, triggers stat-change flash animation. */
+  justChanged?: boolean;
 }
 
-export function Bar({ label, value, color, invert = false, danger = false }: BarProps) {
+export function Bar({ label, value, color, invert = false, danger = false, justChanged = false }: BarProps) {
   const pct = Math.max(0, Math.min(100, value));
   const fill =
     color ??
@@ -31,9 +33,13 @@ export function Bar({ label, value, color, invert = false, danger = false }: Bar
         <span>{label}</span>
         <span className="tabular-nums">{Math.round(pct)}</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-ink-700">
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-ink-700">
+        {/* Danger zone background (0-25%) */}
+        <div className="absolute h-full w-1/4 bg-red-900/20 rounded-full" />
+        {/* Warning zone background (25-50%) */}
+        <div className="absolute h-full left-1/4 w-1/4 bg-amber-900/20 rounded-full" />
         <div
-          className={`h-full rounded-full transition-all duration-500 ${fill}`}
+          className={`h-full rounded-full transition-all duration-500 ${fill} ${justChanged ? "gpe-stat-flash" : ""}`}
           style={{ width: `${pct}%` }}
         />
       </div>

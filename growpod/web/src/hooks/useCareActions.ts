@@ -84,6 +84,14 @@ export function useCareActions(plantId: string) {
           ? `✅ Harvested! Quality ${q}/100 · +${h.sale_value} GC`
           : `✅ Harvested! Quality ${q}/100 — sell it in your profile`,
       );
+      // Quality milestone celebration with emoji rings
+      if (q >= 50) {
+        const qualityEmoji = q >= 90 ? "🏆" : q >= 70 ? "⭐" : q >= 50 ? "✨" : "💚";
+        setTimeout(
+          () => toast.success(`${qualityEmoji} Quality milestone! ${q}/100`),
+          800,
+        );
+      }
       invalidate();
       if (playerId) {
         qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });

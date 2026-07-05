@@ -623,6 +623,40 @@ body {
   background: linear-gradient(90deg, #dc2626, #f87171) !important;
 }
 
+/* Stat change flash: bright glow when stat is updated by care action. */
+@keyframes gpe-stat-flash {
+  0% {
+    filter: brightness(1) drop-shadow(0 0 8px rgba(34, 197, 94, 0.6));
+  }
+  50% {
+    filter: brightness(1.4) drop-shadow(0 0 16px rgba(34, 197, 94, 0.8));
+  }
+  100% {
+    filter: brightness(1) drop-shadow(0 0 0px rgba(34, 197, 94, 0));
+  }
+}
+.gpe-stat-flash {
+  animation: gpe-stat-flash 0.5s ease-out forwards;
+}
+
+/* Streak counter pop: scales up and fades on success. */
+@keyframes gpe-streak-pop {
+  0% {
+    opacity: 1;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+.gpe-streak-pop {
+  animation: gpe-streak-pop 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gpe-plant-bounce,
   .gpe-plant-trim,
@@ -656,6 +690,8 @@ body {
   .gpe-glow-ring-pulse,
   .gpe-glow-sparkle,
   .gpe-health-danger,
+  .gpe-stat-flash,
+  .gpe-streak-pop,
   .gpe-grain,
   .animate-spin,
   .animate-twinkle,
