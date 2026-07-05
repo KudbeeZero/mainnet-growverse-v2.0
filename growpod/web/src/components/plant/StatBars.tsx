@@ -28,10 +28,10 @@ export function StatBars({ plant }: { plant: Plant }) {
       <Bar label="Water" value={plant.water_level} justChanged={changed.water} />
       <Bar label="Nutrients" value={plant.nutrient_level} justChanged={changed.nutrients} />
       {plant.pest_level > 0 && (
-        <Bar label="Pests" value={plant.pest_level} invert color="bg-lime-500" />
+        <Bar label="Pests" value={plant.pest_level} invert color="bg-lime-500" danger={plant.pest_level > 50} />
       )}
       {plant.disease_level > 0 && (
-        <Bar label="Disease" value={plant.disease_level} invert color="bg-slate-400" />
+        <Bar label="Disease" value={plant.disease_level} invert color="bg-slate-400" danger={plant.disease_level > 50} />
       )}
     </div>
   );
