@@ -179,6 +179,16 @@ class Strain(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     nft_asset_id: Mapped[Optional[int]] = mapped_column(Integer)
     nft_status: Mapped[str] = mapped_column(String(16), default="none", nullable=False)
 
+    # Optimistic-lock counter (same pattern as Wallet/MarketListing). Guards
+    # `mint_strain()`'s check-then-act on `nft_status`: two concurrent mint
+    # requests both observing "none" would otherwise both call
+    # provider.create_asset(); this makes the PENDING-status commit the
+    # serialization point -- the loser gets a StaleDataError and never reaches
+    # the chain call.
+    version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    __mapper_args__ = {"version_id_col": version}
+
 
 class StrainFavorite(UUIDPrimaryKeyMixin, Base):
     """A player's bookmark of a strain."""
@@ -449,10 +459,19 @@ class Harvest(UUIDPrimaryKeyMixin, Base):
     nft_asset_id: Mapped[Optional[int]] = mapped_column(Integer)
     nft_status: Mapped[str] = mapped_column(String(16), default="none", nullable=False)
 
+    # Optimistic-lock counter (same pattern as Wallet/MarketListing). Guards
+    # `mint_harvest()`'s check-then-act on `nft_status`: two concurrent mint
+    # requests both observing "none" would otherwise both call
+    # provider.create_asset(); this makes the PENDING-status commit the
+    # serialization point -- the loser gets a StaleDataError and never reaches
+    # the chain call.
+    version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
     # A plant is harvested exactly once; this unique constraint makes a
     # double-harvest (which would mint duplicate currency under a race)
     # impossible at the DB level, not just via the app-side `harvested` check.
     __table_args__ = (Index("uq_harvests_plant", "plant_id", unique=True),)
+    __mapper_args__ = {"version_id_col": version}
 
 
 class Contract(UUIDPrimaryKeyMixin, Base):

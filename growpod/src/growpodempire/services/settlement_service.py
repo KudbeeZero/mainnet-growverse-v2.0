@@ -13,6 +13,7 @@ from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.exc import StaleDataError
 
 from ..config import get_settings
 from ..economy.config import get_economy_config, EconomyConfig
@@ -97,16 +98,44 @@ class SettlementService:
         # flushed yet (autoflush is off), so it isn't double-counted; a violation
         # raises and the surrounding transaction rolls the debit back.
         self._enforce_daily_cap(player_id, amount)
+
+        # SECURITY (double-payout, 2026-07-05 review): commit the debit BEFORE
+        # calling the chain. This is the load-bearing ordering fix -- it makes
+        # Wallet.version_id_col resolve the concurrent-withdraw race *here*,
+        # instead of after an irreversible on-chain transfer has already fired
+        # for both racing requests. If another session already debited and
+        # committed this wallet since we read it, this flush raises
+        # StaleDataError; the loser must NEVER reach transfer_asset(), so we
+        # catch it, roll back, and hand the caller a clean retry error instead
+        # of letting both sides race to the chain call.
+        try:
+            self.session.commit()
+        except StaleDataError:
+            self.session.rollback()
+            raise GameError(
+                "Withdrawal conflicted with a concurrent request; please retry."
+            )
+
         try:
             txid = self.provider.transfer_asset(
                 self.asset_id, player.algorand_address, self._base_units(amount)
             )
         except ChainError as exc:
+            # The debit already committed but the payout never happened. Post
+            # a compensating credit so the player isn't left out of pocket,
+            # then still surface the failure so the caller knows the transfer
+            # didn't go through (even though their funds are safe).
+            post(
+                self.session, player_id, amount, LedgerEntryType.ADJUSTMENT,
+                ref_type="asa_withdrawal_reversal", ref_id=str(self.asset_id),
+            )
+            self.session.commit()
             raise GameError(f"On-chain transfer failed: {exc}") from exc
 
         entry.onchain_txid = txid
         wallet = get_wallet(self.session, player_id)
         wallet.asa_balance = to_money((wallet.asa_balance or Decimal("0")) + amount)
+        self.session.commit()
         return {
             "withdrawn": float(amount),
             "txid": txid,
