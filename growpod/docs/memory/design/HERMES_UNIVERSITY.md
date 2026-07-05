@@ -60,7 +60,12 @@
 2. **Persist + surface admissions recommendation** — store dept/track on profile
    (or a preferences JSON), surface on `/university/learner`, highlight in catalog.
 3. **Reconcile prerequisite graphs** — bio-101 is in `skills.yaml` edges but not in
-   curriculum `prereqs`; enroll() and the roadmap currently disagree.
+   curriculum `prereqs`; enroll() and the roadmap currently disagree. **Player-experience
+   consequence, confirmed by a 2026-07-05 playtest**: bio-101 is also the course the catalog
+   steers a new player toward first (no prereqs, only course with a real exam bank) — so the
+   most polished, most-discoverable course in the whole feature contributes to zero degrees
+   and never appears in the Learner roadmap, with no signposting that it's a non-credentialing
+   elective.
 4. **MasteryPanel metadata** — serve skill name/domain from a skills-catalog endpoint;
    mastered skills render as raw ids under "general" today.
 5. **Retire `serve_narration`** — `/narration/<key>/<level>?h=` still exists; confirm
@@ -69,6 +74,22 @@
 7. **Global Learning Memory** (design/11) — P1 `knowledge_events` capture at 4 generative
    call sites; P2 admissions persistence + personal context into lecture/MasterGrower;
    P3 `search_global_knowledge` tool; P4 `global_insights` rollups.
+8. **Dev-clock doesn't reach University study-time** (2026-07-05 playtest, confirmed by two
+   independent agents) — `UniversityService`/`LecturerService`/`LearnerModelService` all
+   default to `SystemClock()`, not `active_clock()` (unlike `GameService`/`SimulationService`,
+   which is what `/api/dev/clock/advance` actually works through). Every course's study-hours
+   gate is real wall-clock time with zero dev/QA fast-forward path — confirmed empirically (a
+   48h dev-clock advance left `study_hours_remaining` unchanged). `university_service.py:119`,
+   `lecturer_service.py:29`, `learner_model_service.py:43`.
+9. **Course completion has no celebration; only a full degree grants a title** (2026-07-05
+   playtest) — `complete_course()` awards XP/KXP/streak only; the UI is a status-pill flip +
+   toast, nothing more. A degree (the only title-granting path, `claim_degree()`) is 2-6 courses
+   each gated on a real-gameplay practical — a multi-day-to-multi-week commitment with no
+   visible waypoint between enrollment and the final payoff.
+10. **University is invisible to onboarding + demoted on mobile** (2026-07-05 playtest) —
+    `web/src/components/layout/navLinks.ts`: no `primary: true` (mobile tab bar omits it) and
+    absent from `ONBOARDING_NAV_IDS` (the FTUE tour never spotlights it). Nav-only discovery,
+    unprompted.
 
 ## Must-not-drift invariants
 
