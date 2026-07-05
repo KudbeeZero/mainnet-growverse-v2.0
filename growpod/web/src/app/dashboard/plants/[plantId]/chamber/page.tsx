@@ -8,7 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
-import { ChamberActionBar, BoostsInline } from "@/components/plant/ChamberDock";
+import { ChamberActionBar } from "@/components/plant/ChamberDock";
 import { ArcadeToolbar } from "@/components/plant/ArcadeToolbar";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { BoostAmbientLayer } from "@/components/plant/BoostAmbientLayer";
@@ -660,7 +660,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         </div>
 
         {/* Arcade toolbar - always visible above climate/time tabs */}
-        {!ended && <ArcadeToolbar plant={plant} ended={ended} />}
+        {!ended && <ArcadeToolbar plant={plant} ended={ended} growthStage={plant.growth_stage} growthBoost={growthBoost} />}
 
 
         {tab === "climate" && (
