@@ -1,0 +1,297 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.container h1 {
+  color: #1a1a1a;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+}
+
+.section {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.section h2 {
+  color: #333;
+  font-size: 1.3rem;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.inputGroup label {
+  color: #555;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.input {
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-family: monospace;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.inputGroup small {
+  color: #888;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.button {
+  padding: 0.75rem 1.5rem;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.button:hover:not(:disabled) {
+  background: #357abd;
+}
+
+.button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.clearButton {
+  padding: 0.5rem 1rem;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.clearButton:hover {
+  background: #c0392b;
+}
+
+.resultCount {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.resultsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.empty {
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  padding: 2rem;
+}
+
+.result {
+  padding: 1rem;
+  border-left: 4px solid #ddd;
+  background: white;
+  border-radius: 4px;
+}
+
+.result-success {
+  border-left-color: #27ae60;
+  background: #f0fff4;
+}
+
+.result-error {
+  border-left-color: #e74c3c;
+  background: #fff5f5;
+}
+
+.resultHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.resultStatus {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.result-success .resultStatus {
+  color: #27ae60;
+}
+
+.result-error .resultStatus {
+  color: #e74c3c;
+}
+
+.resultMessage {
+  margin: 0.5rem 0;
+  color: #333;
+  word-break: break-word;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.resultTime {
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.info {
+  background: #ecf0f1;
+  border: 1px solid #bdc3c7;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.info h3 {
+  color: #333;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.info li {
+  padding: 0.5rem 0;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.info code {
+  background: white;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: monospace;
+  color: #d63384;
+}
+
+@media (prefers-color-scheme: dark) {
+  .container {
+    background: #1a1a1a;
+    color: #e0e0e0;
+  }
+
+  .container h1 {
+    color: #ffffff;
+  }
+
+  .section {
+    background: #2d2d2d;
+    border-color: #444;
+  }
+
+  .section h2 {
+    color: #e0e0e0;
+  }
+
+  .inputGroup label {
+    color: #b0b0b0;
+  }
+
+  .input {
+    background: #3d3d3d;
+    border-color: #555;
+    color: #e0e0e0;
+  }
+
+  .input:focus {
+    border-color: #4a90e2;
+  }
+
+  .inputGroup small {
+    color: #888;
+  }
+
+  .result {
+    background: #2d2d2d;
+    border-left-color: #555;
+  }
+
+  .result-success {
+    background: #1e3a2f;
+    border-left-color: #27ae60;
+  }
+
+  .result-error {
+    background: #3a1e1e;
+    border-left-color: #e74c3c;
+  }
+
+  .resultMessage {
+    color: #e0e0e0;
+  }
+
+  .resultTime {
+    color: #888;
+  }
+
+  .info {
+    background: #2d2d2d;
+    border-color: #444;
+  }
+
+  .info h3 {
+    color: #e0e0e0;
+  }
+
+  .info li {
+    color: #b0b0b0;
+  }
+
+  .info code {
+    background: #3d3d3d;
+    color: #ff7aa2;
+  }
+
+  .empty {
+    color: #777;
+  }
+
+  .resultCount {
+    color: #888;
+  }
+}
