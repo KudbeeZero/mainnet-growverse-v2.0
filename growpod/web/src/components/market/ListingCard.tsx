@@ -57,7 +57,10 @@ export function ListingCard({ listing }: { listing: Listing }) {
     onError: (e) => toast.error(e.message),
   });
 
-  const minNext = (listing.highest_bid ?? listing.min_bid ?? 0) + 1;
+  // The first bid may equal min_bid exactly; every later bid must strictly
+  // beat the standing high bid (mirrors GameService.place_bid).
+  const minNext =
+    listing.highest_bid != null ? listing.highest_bid + 1 : (listing.min_bid ?? 0);
 
   return (
     <Card className="flex flex-col gap-2">
@@ -114,9 +117,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
                   </Button>
                 </>
               )}
-              <Button size="sm" variant="secondary" loading={settle.isPending} onClick={() => settle.mutate()}>
-                Settle
-              </Button>
+              {mine && (
+                <Button size="sm" variant="secondary" loading={settle.isPending} onClick={() => settle.mutate()}>
+                  Settle
+                </Button>
+              )}
             </>
           ) : (
             !mine && (
