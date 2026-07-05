@@ -247,6 +247,31 @@ class GrantClaim(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class IdempotencyKey(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Idempotency key request log for deduplication.
+
+    When a client sends a mutation with an Idempotency-Key header, we store
+    the response here. On a retry with the same key, we return the cached
+    response without re-executing the mutation. Keyed on the string key itself
+    (unique), indexed by player_id for cleanup and debugging."""
+
+    __tablename__ = "idempotency_keys"
+
+    key: Mapped[str] = mapped_column(String(256), unique=True, nullable=False, index=True)
+    player_id: Mapped[str] = mapped_column(ForeignKey("players.id"), nullable=False)
+    method: Mapped[str] = mapped_column(String(8), nullable=False)
+    endpoint: Mapped[str] = mapped_column(String(256), nullable=False)
+    response_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    status_code: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Optional expiration for cleanup (could be 30 days after creation).
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    __table_args__ = (
+        Index("ix_idempotency_player", "player_id"),
+        Index("ix_idempotency_expires", "expires_at"),
+    )
+
+
 class ResearchProgress(UUIDPrimaryKeyMixin, Base):
     """A research-tree node a player has unlocked (Phase 2 expansion)."""
 
@@ -360,6 +385,10 @@ class Plant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # its Harvest — and any CupEntry.harvest_id referencing it — stay valid;
     # list_plants() excludes archived rows so the pod reads as empty again.
     archived_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    # Care streaks and resin metrics for the design punch list.
+    care_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    resin_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 
 
 class EnvironmentReading(UUIDPrimaryKeyMixin, Base):

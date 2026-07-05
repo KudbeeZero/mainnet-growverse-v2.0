@@ -86,6 +86,10 @@ class SimulationService:
     def get_state(self, player_id: str, plant_id: str):
         plant = self._get_plant(player_id, plant_id)
         self.sync(plant)
+        # Compute care streak and resin score on read
+        plant.care_streak = self.compute_care_streak(plant)
+        plant.resin_score = self.compute_resin_score(plant)
+        self.session.flush()  # Update the in-memory object without committing
         return plant
 
     def trichomes(self, plant: Plant) -> dict:
@@ -515,3 +519,95 @@ class SimulationService:
         if ev is None:
             return None
         return (self.clock.now() - ev.timestamp).total_seconds() / 3600.0
+
+    def compute_care_streak(self, plant: Plant) -> int:
+        """Consecutive days the plant has received care (water or feed).
+
+        A streak resets if a full day passes without any water or feed event.
+        Counts the longest unbroken chain of consecutive days with at least
+        one care event (water, feed, or treatment).
+        """
+        if not plant.is_alive:
+            return 0
+
+        events = (
+            self.session.query(PlantEvent)
+            .filter(PlantEvent.plant_id == plant.id)
+            .filter(
+                PlantEvent.event_type.in_(
+                    ["watered", "fed", "treated_pests", "treated_disease"]
+                )
+            )
+            .order_by(PlantEvent.timestamp.asc())
+            .all()
+        )
+
+        if not events:
+            return 0
+
+        eff_now, _rate = self._player_clock(plant.player_id)
+        days_with_care = set()
+        for ev in events:
+            if ev.timestamp:
+                day = ev.timestamp.date()
+                days_with_care.add(day)
+
+        # Count consecutive days from today backwards
+        today = eff_now.date()
+        streak = 0
+        current_date = today
+        while current_date in days_with_care:
+            streak += 1
+            current_date -= timedelta(days=1)
+
+        return streak
+
+    def compute_resin_score(self, plant: Plant) -> float:
+        """Aggregated resin quality metric (0.0–100.0) based on trichome maturity,
+        plant health, and environment quality.
+
+        Score components:
+        - Trichome maturity (0–40 pts): developed gland heads as % of total
+        - Plant health (0–30 pts): health stat at 100% = 30pts, 0% = 0pts
+        - Care consistency (0–20 pts): recent care streak (5+ days = max)
+        - Environment quality (0–10 pts): VPD + DLI within ideal range
+
+        Only applies to flowering plants (harvested plants score 0).
+        """
+        if not plant.is_alive or plant.harvested:
+            return 0.0
+
+        if plant.growth_stage not in ["flowering", "late_flower"]:
+            return 0.0
+
+        score = 0.0
+
+        # Trichome maturity component (0–40)
+        trichomes_data = self.trichomes(plant)
+        if trichomes_data.get("head_development", 0) > 0:
+            score += min(40.0, trichomes_data.get("head_development", 0) * 40.0)
+
+        # Health component (0–30)
+        health_score = (plant.health / 100.0) * 30.0
+        score += health_score
+
+        # Care consistency (0–20)
+        care_streak = self.compute_care_streak(plant)
+        streak_score = min(20.0, (care_streak / 5.0) * 20.0)
+        score += streak_score
+
+        # Environment quality (0–10)
+        # Ideal VPD: 0.8–1.2 kPa; Ideal DLI: 17–21 mol/m²/day
+        metrics = trichomes_data.get("metrics", {})
+        vpd = metrics.get("vpd_kpa", 0)
+        dli = metrics.get("dli_mol", 0)
+        vpd_ideal = 0.8 <= vpd <= 1.2
+        dli_ideal = 17 <= dli <= 21
+        env_score = 0.0
+        if vpd_ideal:
+            env_score += 5.0
+        if dli_ideal:
+            env_score += 5.0
+        score += env_score
+
+        return min(100.0, score)
