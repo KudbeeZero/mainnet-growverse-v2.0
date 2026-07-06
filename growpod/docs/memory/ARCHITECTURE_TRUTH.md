@@ -32,7 +32,7 @@ passing backend tests **already exist**.
 | `ai/` | ✅ Stronger than expected | **5 Claude-backed agents live + 1 code-ready, behind provider ABCs** (see §5). Structured output via `messages.parse()`; deterministic mocks in CI. |
 | `data/balance.yaml` | ✅ PROTECTED | The tuning surface. Economy changes are data-driven here and owner-gated. |
 | `genetics/` | ✅ Solid | Deterministic Mendelian crossbreeding, stability/rarity progression. |
-| DB | ✅ Solid | SQLAlchemy + Alembic; SQLite dev / Postgres prod; alembic-drift CI gate (added PR #148); 1,140 tests, ≥93% coverage (floor 79%, ratcheted). |
+| DB | ✅ Solid | SQLAlchemy + Alembic; SQLite dev / Postgres prod; alembic-drift CI gate (added PR #148); 1,174 tests, ≥91% coverage (floor 79%, ratcheted). |
 
 ### Plant state engine — `simulation/state/plant_state.py` ✅
 Persistent aggregates: `overall_health` (death at ≤1), `water_level`, `nutrient_level`,
@@ -139,7 +139,7 @@ owner approval.
 
 ## 7. Test / CI / deploy state ✅
 
-- Backend: 1,122 tests, 93.64% coverage (floor 79%, ratcheted). Property/invariant tests guard
+- Backend: 1,174 tests, 91.64% coverage (floor 79%, ratcheted). Property/invariant tests guard
   ledger + genetics.
 - Web: `typecheck · lint · build · vitest · playwright`; a route-crash sweep across 29 routes is a
   permanent regression net.
@@ -166,8 +166,8 @@ owner approval.
    protection** belongs to p07 (Phase 7's own "Do NOT touch" list forbids withdraw/deposit/
    settlement work); treasury/`ASA_ID`/deposit-verification is p13, and the **reconciliation job is
    p22** (see GROVERSE_ROADMAP.md Phase 22). → p07 (replay protection only) / p13 / p22.
-5. **Idempotency-Key header** — infrastructure shipped (commit `7333b86`, 18 mutation endpoints via
-   `@require_idempotency`); confirm full mutation coverage. → p07/p13.
+5. **Idempotency-Key header** — infrastructure shipped (commit `7333b86`, 22 mutation endpoints via
+   `@require_idempotency` as of the #162 NFT/staking routes); confirm full mutation coverage. → p07/p13.
 6. **Assessment banks** — 14 course YAMLs to author. → p06.
 7. **Mood animations + mutation/rarity visuals** — state exists, visuals TBD. → p03.
 8. **Market P2P settlement** — flows exist; web settlement incomplete. → p08/p13.

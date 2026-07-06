@@ -233,6 +233,12 @@ class MarketplaceService:
         trade = self.session.query(NFTTrade).filter_by(id=trade_id).first()
         if not trade:
             raise MarketplaceError(f"Trade {trade_id} not found")
+        # Disruptor-sweep finding #18: only a PENDING trade can be confirmed --
+        # without this, confirming an already-FAILED (and reverted) trade would
+        # leave nft.owner_address/listing state inconsistent with a "confirmed"
+        # trade record.
+        if trade.status != NFTTradeStatus.PENDING.value:
+            raise MarketplaceError(f"Trade {trade_id} is {trade.status}, cannot confirm")
 
         trade.status = NFTTradeStatus.CONFIRMED.value
         trade.txid = txid
@@ -254,6 +260,11 @@ class MarketplaceService:
         trade = self.session.query(NFTTrade).filter_by(id=trade_id).first()
         if not trade:
             raise MarketplaceError(f"Trade {trade_id} not found")
+        # Disruptor-sweep finding #18: only a PENDING trade can be failed --
+        # calling this on an already-CONFIRMED trade would wrongly revert a
+        # settled sale's listing/NFT ownership.
+        if trade.status != NFTTradeStatus.PENDING.value:
+            raise MarketplaceError(f"Trade {trade_id} is {trade.status}, cannot fail")
 
         trade.status = NFTTradeStatus.FAILED.value
         trade.error_message = error_msg

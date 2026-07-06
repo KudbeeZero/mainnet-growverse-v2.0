@@ -156,8 +156,10 @@ in `chain/metadata.py`, don't duplicate. **Security:** sanitize player-provided 
 projection (injection defense at the source). **Sonnet prompt:** "Add projection + expression summary
 as pure functions; add care_history rollup + migration; determinism property tests; closeout."
 **Acceptance:** projection deterministic (same state → same dict + hash); engine purity preserved
-(no DB imports in `simulation/`); migration passes drift check. **Do NOT touch:** genome/breeding
-math, `balance.yaml`, settlement paths.
+(no player-scoped economy/research logic added to `simulation/` — the existing catch-up path already
+imports `db.models` for session-scoped state reads/writes, per `ARCHITECTURE_TRUTH.md`; that's an
+established pattern, not a purity bar this phase needs to newly satisfy); migration passes drift
+check. **Do NOT touch:** genome/breeding math, `balance.yaml`, settlement paths.
 
 ### Phase 5 — AI Plant Analyst / Scout · `claude/gv-p05-scout-reports`
 **Purpose:** ship Scout report cards (frequent, cheap) + Analyst briefings (weekly, deep) on the
