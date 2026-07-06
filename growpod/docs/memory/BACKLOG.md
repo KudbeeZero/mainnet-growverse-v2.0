@@ -30,6 +30,18 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
 0a. 🔨 **GrowVerse 22-phase roadmap execution** — Phase 1 (Architecture Truth) lands this PR; next
     branch tracked live in `docs/memory/EXECUTION_MACHINE.md`'s "Current Position" block (currently
     `claude/gv-p02-game-loop-codex`) → `docs/memory/GROWVERSE_ROADMAP.md`
+0b. ⬜ **Disruptor sweep 2026-07-06 — LIVE core finding: harvest has no stage/alive gate** —
+    `harvest_plant()` (`services/game_service.py:1059`) lets a seed be harvested for full value at t=0;
+    fix mirrors `cleanup_plant`'s `is_alive` check + a `growth_stage == HARVEST` gate. Not economy-tuning,
+    not flag-gated — recommended fix on `main` → `docs/memory/standups/2026-07-06-disruptor-sweep.md` #1
+0c. ⬜ **Disruptor sweep 2026-07-06 — NFT/staking economy security set (keep flags OFF until fixed)** —
+    infinite restake faucet, sell+mint double-spend, wallet-address hijack (no key proof / non-unique
+    address), stake-off-`player_id`, `NFTAsset` missing `version_id_col`; all owner-gated (economy/auth/
+    chain), OFF by default so not live. Batch into one Security-Reviewer-gated PR before enabling
+    `nft_marketplace`/`nft_staking` → disruptor report #2–#8. Plus LIVE frontend items: zero error
+    boundaries (#6), genome hover dead on touch (#5), #161 double-click guard incomplete (#9), chamber
+    per-frame gradients (#10). App-Store: no privacy policy (BLOCKER), "staking" naming, 1.4.3 strain
+    names/THC%.
 0. ✅ **Infra-audit 2026-07-05 findings** — migration drift + implicit treasury ASA create + 4 MEDIUMs, all fixed → `## 🔴 Immediate`
 1. 🔨 **Concurrency hardening** — remaining: `Idempotency-Key` header + one-shot-grant uniqueness → `## 🔴 Immediate`
 2. ⬜ **Chain settlement verification (RISK #7)** — deposit txid verify + treasury/ASA_ID is p13,
@@ -469,8 +481,10 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
   scale with it, so on mobile they overlapped into one solid fused blob (confirmed with a genuine
   before/after screenshot comparison, VER-013 — the before shot shows the leaf's "O" completely
   swallowed); (2) every one of up to 340 particles rebuilt a `createRadialGradient` from scratch
-  EVERY FRAME — the same per-frame-gradient cost the chamber plant round fixed with sprite caching,
-  applied here too. Fix: new `getGlowSprite()` cache (one offscreen glow+core sprite per
+  EVERY FRAME — the same per-frame-gradient cost, fixed HERE (Constellation.tsx) with sprite caching.
+  (Correction 2026-07-06: an earlier version of this note implied the chamber plant round was *also*
+  fixed with sprite caching — it was not; `chamberCore.ts` still allocates ~24 uncached gradients per
+  frame. Tracked as disruptor finding #10 / item 0c below.) Fix: new `getGlowSprite()` cache (one offscreen glow+core sprite per
   color/radius-bucket/lit/dpr, blitted via `drawImage`) plus a `sizeScale` factor
   (`base / REFERENCE_BASE`, clamped) applied at blit time so dots stay proportional to the
   viewport instead of a fixed size; ambient particle counts also cut (340→160 landing backdrop,
