@@ -26,6 +26,7 @@ export function VideoHero({ className = "" }: { className?: string }) {
       className={frame}
       src={VIDEO}
       poster={POSTER}
+      preload="none"
       autoPlay
       muted
       loop

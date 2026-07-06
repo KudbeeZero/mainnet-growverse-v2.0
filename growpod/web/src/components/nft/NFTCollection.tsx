@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { useApiMutation } from "@/hooks/useApiMutation";
-import { useNFTCollection } from "@/hooks/queries";
+import { useNFTCollection, usePlayer } from "@/hooks/queries";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { queryKeys } from "@/lib/queryKeys";
@@ -15,8 +15,11 @@ import type { NFTAsset } from "@/lib/types";
 export function NFTCollection() {
   const { playerId } = useSession();
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
+  const [listPriceDraft, setListPriceDraft] = useState<Record<number, string>>({});
 
   const collection = useNFTCollection();
+  const player = usePlayer();
+  const hasWallet = !!player.data?.algorand_address;
 
   const invalidate = [queryKeys.nftCollection(playerId ?? "")];
 
@@ -49,9 +52,16 @@ export function NFTCollection() {
       <Card>
         <div className="text-center py-8">
           <div className="text-5xl mb-3">🎲</div>
-          <p className="text-sm text-gray-400">
-            No NFTs yet. Harvest and mint your first plant to get started.
-          </p>
+          {hasWallet ? (
+            <p className="text-sm text-gray-400">
+              No NFTs yet. Harvest and mint your first plant to get started.
+            </p>
+          ) : (
+            <p className="text-sm text-gray-400">
+              Connect an Algorand wallet in your profile before minting — an NFT
+              needs a wallet address to belong to.
+            </p>
+          )}
         </div>
       </Card>
     );
@@ -77,8 +87,16 @@ export function NFTCollection() {
         {assets.map((asset) => (
           <div
             key={asset.asset_id}
+            role="button"
+            tabIndex={0}
             onClick={() => setSelectedAsset(asset.asset_id.toString())}
-            className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setSelectedAsset(asset.asset_id.toString());
+              }
+            }}
+            className={`cursor-pointer rounded-lg border-2 p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-grow-400 ${
               statusColors[asset.status] ?? statusColors.minted
             } ${selectedAsset === asset.asset_id.toString() ? "ring-2 ring-offset-2 ring-grow-500" : ""}`}
           >
@@ -158,17 +176,49 @@ export function NFTCollection() {
                 <div className="flex gap-2 pt-2">
                   {asset.status === "minted" && (
                     <>
-                      <Button
-                        size="sm"
-                        className="flex-1"
-                        loading={listMutation.isPending}
-                        onClick={() => {
-                          const price = window.prompt("List price, in microAlgos (µA):", "1000000");
-                          if (price) listMutation.mutate({ assetId: asset.asset_id, priceUalgos: price });
-                        }}
-                      >
-                        🏷️ List for sale
-                      </Button>
+                      <div className="flex flex-1 flex-col gap-1">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            step={1}
+                            placeholder="1000000"
+                            value={listPriceDraft[asset.asset_id] ?? ""}
+                            onChange={(e) =>
+                              setListPriceDraft((prev) => ({ ...prev, [asset.asset_id]: e.target.value }))
+                            }
+                            className="w-full min-h-[36px] rounded-md border border-ink-600 bg-ink-800 px-2 text-xs text-gray-100"
+                            aria-label="List price in microAlgos"
+                          />
+                          <span className="text-[10px] text-gray-500">µA</span>
+                        </div>
+                        {(() => {
+                          const raw = listPriceDraft[asset.asset_id];
+                          const n = raw ? Number(raw) : NaN;
+                          if (!raw || !Number.isFinite(n) || n <= 0) return null;
+                          return (
+                            <div className="text-[10px] text-gray-500">
+                              ≈ {(n / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 6 })} ALGO
+                            </div>
+                          );
+                        })()}
+                        <Button
+                          size="sm"
+                          loading={listMutation.isPending}
+                          disabled={(() => {
+                            const raw = listPriceDraft[asset.asset_id];
+                            const n = raw ? Number(raw) : NaN;
+                            return !raw || !Number.isInteger(n) || n <= 0;
+                          })()}
+                          onClick={() => {
+                            const price = listPriceDraft[asset.asset_id];
+                            if (price) listMutation.mutate({ assetId: asset.asset_id, priceUalgos: price });
+                          }}
+                        >
+                          🏷️ List for sale
+                        </Button>
+                      </div>
                       <Button
                         size="sm"
                         variant="secondary"

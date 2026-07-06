@@ -693,10 +693,20 @@ export function Constellation({
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
+    // Touch has no hover: pointerdown always precedes any pointermove, so the
+    // hover hit-test below (which only runs while `!dragging`) never fires on a
+    // phone. Track whether the pointer actually moved past a small slop so a
+    // plain tap (down→up, no drag) can reveal the hover card in onUp instead.
+    let downX = 0;
+    let downY = 0;
+    let moved = false;
     function onDown(e: PointerEvent) {
       dragging = true;
       lastX = e.clientX;
       lastY = e.clientY;
+      downX = e.clientX;
+      downY = e.clientY;
+      moved = false;
       // lockView never pans, so don't capture — a touch that slides off a
       // locked logo belongs to the page, not to us.
       if (!lockView) canvas!.setPointerCapture(e.pointerId);
@@ -705,6 +715,9 @@ export function Constellation({
       const rect = canvas!.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
+      if (dragging && (Math.abs(e.clientX - downX) > 6 || Math.abs(e.clientY - downY) > 6)) {
+        moved = true;
+      }
       if (dragging && !lockView) {
         panX += e.clientX - lastX;
         panY += e.clientY - lastY;
