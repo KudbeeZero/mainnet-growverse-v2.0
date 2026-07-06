@@ -9,6 +9,7 @@ import { LoadingBlock } from "@/components/ui/Spinner";
 import { Field, Select, TextInput } from "@/components/ui/Field";
 import { RarityChip } from "@/components/ui/Pills";
 import { Constellation } from "@/components/viz/Constellation";
+import { GeneHoverCard, genomeHoverContent } from "@/components/viz/GeneHoverCard";
 import { genomeGraph } from "@/components/viz/graphAdapters";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useStrains } from "@/hooks/queries";
@@ -18,22 +19,49 @@ import { queryKeys } from "@/lib/queryKeys";
 import { num } from "@/lib/format";
 import type { Strain } from "@/lib/types";
 
-function ParentCloud({ strain, tag }: { strain?: Strain; tag: string }) {
+/** A genome constellation with the shared rich hover-card wired in. Used for both
+ *  parent previews AND the bred-offspring result — so a bred strain's dots get the
+ *  same hover pop-up as any other, right where they're created. */
+function GenomeCloud({
+  strain,
+  height,
+  accent,
+  showCount = false,
+  caption,
+  tag,
+}: {
+  strain?: Strain;
+  height: number;
+  accent: string;
+  showCount?: boolean;
+  caption?: string;
+  tag?: string;
+}) {
+  const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
   if (!strain) return null;
   const { nodes, edges } = genomeGraph(strain);
   return (
     <div>
-      <div className="instrument-label mb-1">
-        {tag} · {strain.name}
+      {tag && (
+        <div className="instrument-label mb-1">
+          {tag} · {strain.name}
+        </div>
+      )}
+      <div className="relative">
+        <Constellation
+          mode="graph"
+          nodes={nodes}
+          edges={edges}
+          height={height}
+          showCount={showCount}
+          accent={accent}
+          caption={caption}
+          onHoverNode={setHover}
+        />
+        {hover && (
+          <GeneHoverCard x={hover.x} y={hover.y} content={genomeHoverContent(strain, hover.id)} />
+        )}
       </div>
-      <Constellation
-        mode="graph"
-        nodes={nodes}
-        edges={edges}
-        height={220}
-        showCount={false}
-        accent={tag === "PARENT A" ? "#38bdf8" : "#a78bfa"}
-      />
     </div>
   );
 }
@@ -104,8 +132,8 @@ function BreedInner() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-          <ParentCloud strain={aStrain} tag="PARENT A" />
-          <ParentCloud strain={bStrain} tag="PARENT B" />
+          <GenomeCloud strain={aStrain} tag="PARENT A" height={220} accent="#38bdf8" />
+          <GenomeCloud strain={bStrain} tag="PARENT B" height={220} accent="#a78bfa" />
         </div>
 
         <div className="mt-3">
@@ -127,12 +155,12 @@ function BreedInner() {
               {Math.round(result.stability * 100)}% · A seed was added to your inventory.
             </div>
             {result.genome && (
-              <Constellation
-                mode="graph"
-                {...genomeGraph(result)}
+              <GenomeCloud
+                strain={result}
                 height={240}
                 caption="OFFSPRING GENOME"
                 accent="#76c024"
+                showCount
               />
             )}
             <Link href={`/lab/strains/${result.id}`} className="inline-block text-sm text-grow-300 hover:underline">

@@ -757,6 +757,7 @@ body {
   .gpe-stat-flash,
   .gpe-streak-pop,
   .gpe-grain,
+  .gpe-hovercard,
   .animate-spin,
   .animate-twinkle,
   .animate-pulse-ring,
@@ -800,6 +801,25 @@ body {
   .text-glow-accent {
     text-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
   }
+}
+
+/* ---- Constellation hover-card: rich pop-up over a glowing node ----
+   A soft scale+fade entrance so the card feels like it blooms off the dot.
+   Transform-origin is set inline-ish via the default; motion is dropped under
+   prefers-reduced-motion (the card simply appears — see the reduce block). */
+@keyframes gpe-hovercard-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.gpe-hovercard {
+  animation: gpe-hovercard-in 160ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transform-origin: left center;
 }
 
 /* Near-black canvas with a faint radial vignette — the constellation stage. */

@@ -70,6 +70,13 @@ interface Props {
   /** Disable pan + zoom (view stays centered). Particles still react to the pointer. */
   lockView?: boolean;
   onSelect?: (id: string) => void;
+  /**
+   * Fired (throttled to animation frames) as the pointer hovers graph nodes:
+   * the hovered node's id + its current screen-pixel position within the canvas,
+   * or `null` when nothing is hovered. Hosts use it to render a rich DOM
+   * hover-card over the canvas (graph mode only — leaf mode never hovers a node).
+   */
+  onHoverNode?: (info: { id: string; x: number; y: number } | null) => void;
 }
 
 const TAU = Math.PI * 2;
@@ -272,6 +279,7 @@ export function Constellation({
   frameless = false,
   lockView = false,
   onSelect,
+  onHoverNode,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -283,6 +291,12 @@ export function Constellation({
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
+
+  // Same latch for the hover reporter — the parent re-creates it every render.
+  const onHoverNodeRef = useRef(onHoverNode);
+  useEffect(() => {
+    onHoverNodeRef.current = onHoverNode;
+  }, [onHoverNode]);
 
   // Re-run when the structural inputs OR their content change. Node ids alone
   // aren't enough: a strain's genome graph reuses the same locus ids across
@@ -404,6 +418,36 @@ export function Constellation({
     function fromScreen(sx: number, sy: number) {
       const base = Math.min(w, h) * 0.42 * userScale;
       return { x: (sx - w / 2 - panX) / base, y: -(sy - h / 2 - panY) / base };
+    }
+
+    // ---- hover reporting (drives the host's DOM hover-card) ----
+    // The hovered node drifts frame-to-frame (force layout) and pans with the
+    // view, so we recompute its screen position each frame — but only push to
+    // React when the id changes or it moved a noticeable amount, so a settled
+    // graph stops firing (no per-frame re-render storm). Positions are canvas-
+    // local pixels; the host renders the card in the same coordinate box.
+    let lastHoverId: string | null = null;
+    let lastHoverX = 0;
+    let lastHoverY = 0;
+    function reportHover() {
+      const cb = onHoverNodeRef.current;
+      if (!cb) return;
+      if (hovered) {
+        const { sx, sy } = toScreen(hovered);
+        if (
+          hovered.id !== lastHoverId ||
+          Math.abs(sx - lastHoverX) > 0.75 ||
+          Math.abs(sy - lastHoverY) > 0.75
+        ) {
+          lastHoverId = hovered.id;
+          lastHoverX = sx;
+          lastHoverY = sy;
+          cb({ id: hovered.id, x: sx, y: sy });
+        }
+      } else if (lastHoverId !== null) {
+        lastHoverId = null;
+        cb(null);
+      }
     }
 
     // ---- spatial hash (graph repulsion acceleration) ----
@@ -607,17 +651,23 @@ export function Constellation({
         }
       }
 
-      // hovered label
-      if (hovered?.label) {
+      // hovered node — a bright twin focus ring pulls the eye to the active dot
+      // (the rich detail now lives in the DOM hover-card the host renders over
+      // the canvas, replacing the old baked-in text label). Drawn under the
+      // "lighter" composite so the rings read as a clean additive glow.
+      if (hovered) {
         const { sx, sy } = toScreen(hovered);
-        ctx!.globalCompositeOperation = "source-over";
-        ctx!.font =
-          "11px ui-monospace, SFMono-Regular, Menlo, monospace";
-        const tw = ctx!.measureText(hovered.label).width;
-        ctx!.fillStyle = "rgba(7,10,14,0.9)";
-        ctx!.fillRect(sx + 8, sy - 9, tw + 10, 18);
-        ctx!.fillStyle = "#e5e7eb";
-        ctx!.fillText(hovered.label, sx + 13, sy + 4);
+        const dotR = hovered.r * (hovered.hub ? 1.3 : 1) * 1.5 * 4 * sizeScale;
+        ctx!.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx!.lineWidth = 1.5;
+        ctx!.beginPath();
+        ctx!.arc(sx, sy, dotR + 3, 0, TAU);
+        ctx!.stroke();
+        ctx!.strokeStyle = "rgba(125,211,252,0.5)";
+        ctx!.lineWidth = 1;
+        ctx!.beginPath();
+        ctx!.arc(sx, sy, dotR + 7, 0, TAU);
+        ctx!.stroke();
       }
       ctx!.globalCompositeOperation = "source-over";
     }
@@ -633,6 +683,7 @@ export function Constellation({
       const loop = () => {
         step();
         draw();
+        reportHover();
         raf = requestAnimationFrame(loop);
       };
       raf = requestAnimationFrame(loop);
@@ -688,6 +739,9 @@ export function Constellation({
         }
         hovered = best;
         canvas!.style.cursor = best ? "pointer" : "grab";
+        // Report immediately so the card appears on the first hover even in
+        // reduced-motion mode (no RAF loop to pick it up next frame).
+        reportHover();
       }
     }
     function onUp(e: PointerEvent) {
@@ -697,6 +751,12 @@ export function Constellation({
       } catch {
         /* ignore */
       }
+    }
+    function onLeave(e: PointerEvent) {
+      // Leaving the canvas ends any drag AND dismisses the hover-card.
+      onUp(e);
+      hovered = null;
+      reportHover();
     }
     function onClick(e: MouseEvent) {
       if (!onSelectRef.current || mode !== "graph") return;
@@ -727,7 +787,7 @@ export function Constellation({
     canvas.addEventListener("pointerdown", onDown);
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);
-    canvas.addEventListener("pointerleave", onUp);
+    canvas.addEventListener("pointerleave", onLeave);
     // pointercancel: the browser hijacked the pointer mid-drag (touch scroll
     // takeover, system gesture, pen out of range). Spec-compliant engines fire
     // pointerleave afterwards, but engines have skipped it under active
@@ -744,7 +804,7 @@ export function Constellation({
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);
-      canvas.removeEventListener("pointerleave", onUp);
+      canvas.removeEventListener("pointerleave", onLeave);
       canvas.removeEventListener("pointercancel", onUp);
       canvas.removeEventListener("click", onClick);
       canvas.removeEventListener("wheel", onWheel);
