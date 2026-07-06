@@ -76,7 +76,8 @@ async function setup(page: Page) {
 test("PROOF: growth boost button + electric surge", async ({ page }) => {
   await setup(page);
   await page.goto("/dashboard/plants/plant1/chamber");
-  // The "grow" tab is default — the purchasable boost button is visible.
+  // The CLIMATE tab is default and folds in the arcade toolbar — the
+  // purchasable boost button is visible without switching tabs.
   const boost = page.getByTestId("growth-boost");
   await boost.waitFor({ timeout: 20_000 });
   await page.screenshot({ path: "e2e-output/growth-boost-button.png", fullPage: true });
