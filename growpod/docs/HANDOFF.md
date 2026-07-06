@@ -4,9 +4,14 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-07-03 · **By:** the PR #137 session (multi-slice hardening + feature batch).
-**Active branch:** `claude/research-pr-review-1whd6v` — **open PR #137**, CI green on each push.
-**`main`:** unchanged this session (all work is on #137, not yet merged).
+**Last rewritten:** 2026-07-06 · **By:** the GrowVerse roadmap session (memory-layer docs only).
+**Active branch:** `claude/growverse-audit-split-8qrehy` — **open PR #157** (docs only), gates green.
+**NEXT CHAT STARTS HERE:** when the owner says "go", the first build branch is
+`claude/gv-p02-game-loop-codex` (Phase 2). Read `docs/memory/EXECUTION_MACHINE.md` — its "Current
+Position" block is the live next-branch pointer; `docs/memory/GROWVERSE_ROADMAP.md` has the full
+22-phase plan; `docs/memory/ARCHITECTURE_TRUTH.md` is the verified baseline. Build one
+`claude/gv-pNN-slug` branch at a time.
+**`main`:** unchanged by PR #157 until it merges (docs only; no code/protected surfaces touched).
 **Production:** `growverse-api` on Fly is LIVE on current code (verified 2026-07-02: bio-101 +
 factions flag present, `/health` OK, lecture audio cache-hit **and** the Haiku adaptive-thinking
 fallback is live — see Incident below). Deploys are AUTOMATIC on merge
