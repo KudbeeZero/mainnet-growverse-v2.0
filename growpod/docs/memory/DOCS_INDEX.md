@@ -27,6 +27,7 @@ Roles: **living** (must stay true) · **historical** (frozen record) · **spec**
 
 | Doc | Note |
 |---|---|
+| `docs/memory/GROWVERSE_ROADMAP.md` + `docs/memory/ARCHITECTURE_TRUTH.md` + `docs/memory/EXECUTION_MACHINE.md` | living — the GrowVerse 22-phase plan, verified baseline, and dynamic build loop (adopted 2026-07-06); MAP-indexed |
 | `docs/memory/design/00–10` (Design Codex, 12 files) | ✅ MAP-enforced |
 | `docs/product/` (6 GROWVERSE_* packages) | ✅ status-labeled, MAP-indexed |
 | `docs/research/` (12 dated docs) + `docs/research/university/` (8) | 🧊 inputs to the codex; MASTER_BIBLE freeze banner superseded 2026-07-02 (University shipped) |
