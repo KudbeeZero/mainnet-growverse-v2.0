@@ -90,11 +90,15 @@ function safeHex(color: string | undefined, fallback: string): string {
 // ---- glow sprite cache -------------------------------------------------
 // Each particle used to rebuild a `createRadialGradient` EVERY FRAME (up to
 // ~340 of them for the leaf-mode landing backdrop) — a `drawImage` blit of a
-// pre-rendered sprite is a GPU texture copy instead, the same technique that
-// fixed the chamber plant's per-frame gradient cost. A particle's own
-// color/radius/lit state is static across its lifetime (only screen position
-// drifts frame to frame), so one sprite per (color, radius bucket, lit,
-// dpr) covers every particle of that kind for the whole animation.
+// pre-rendered sprite is a GPU texture copy instead. (Correction: an earlier
+// version of this comment claimed this was "the same technique that fixed the
+// chamber plant's per-frame gradient cost" — chamberCore.ts's fix, added
+// later, is a related but distinct approach: it caches the CanvasGradient
+// OBJECT itself rather than a rasterized sprite, since its fills are bound to
+// a procedural bract/leaflet PATH rather than a simple circle.) A particle's
+// own color/radius/lit state is static across its lifetime (only screen
+// position drifts frame to frame), so one sprite per (color, radius bucket,
+// lit, dpr) covers every particle of that kind for the whole animation.
 type AnyCanvas = OffscreenCanvas | HTMLCanvasElement;
 const glowSpriteCache = new Map<string, { cv: AnyCanvas; half: number } | null>();
 
