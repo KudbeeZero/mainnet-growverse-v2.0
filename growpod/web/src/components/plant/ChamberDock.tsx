@@ -37,7 +37,17 @@ const TILES: { kind: BarKind | "inspect"; icon: string; label: string; benefit: 
   { kind: "boost", icon: "⚡", label: "Boost", benefit: "Apply boost", accent: "253,224,71" },
 ];
 
-export function ChamberActionBar({ plant }: { plant: PlantState }) {
+export function ChamberActionBar({
+  plant,
+  vertical = false,
+  onAction,
+}: {
+  plant: PlantState;
+  /** Landscape slide-out HUD layout: full-width labeled rows instead of the 6-tile bar. */
+  vertical?: boolean;
+  /** Fires after a care tap lands — the landscape HUD uses it to auto-compact. */
+  onAction?: () => void;
+}) {
   const { care } = useCareActions(plant.id);
   const { fire, layer } = useCareFeedback();
   const [tapped, setTapped] = useState<string | null>(null);
@@ -55,6 +65,7 @@ export function ChamberActionBar({ plant }: { plant: PlantState }) {
       onSuccess: () => {
         setSucceeded(kind);
         window.setTimeout(() => setSucceeded((k) => (k === kind ? null : k)), 1100);
+        onAction?.();
       },
     });
   };
@@ -62,38 +73,69 @@ export function ChamberActionBar({ plant }: { plant: PlantState }) {
   return (
     <div className="relative">
       {layer}
-      <div className="grid grid-cols-6 gap-1.5 rounded-2xl border border-cyan-400/15 bg-[#08141e]/80 p-1.5 backdrop-blur-md">
+      <div
+        className={`${
+          vertical ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-6 gap-1.5 rounded-2xl border border-cyan-400/15 bg-[#08141e]/80 p-1.5 backdrop-blur-md"
+        }`}
+      >
         {TILES.map((t) => {
           const isInspect = t.kind === "inspect";
           const state = isInspect ? null : avail[t.kind as BarKind];
           const enabled = !dead && (isInspect || !!state?.available);
           const reason = !isInspect && !dead && state && !state.available ? state.reason : null;
           const lastUsed = state ? formatSinceUsed(state.hoursSinceUsed) : null;
-          const cls = `relative flex min-h-[64px] flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 py-1.5 text-center transition-all ${
-            tapped === t.kind ? "gpe-tile-tap" : ""
-          } ${succeeded === t.kind ? "ring-2 ring-grow-400/80" : ""} ${
+          const cls = `relative rounded-xl border transition-all ${
+            vertical
+              ? "flex min-h-[48px] flex-row items-center gap-2.5 px-2.5 py-1.5 text-left"
+              : "flex min-h-[64px] flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-center"
+          } ${tapped === t.kind ? "gpe-tile-tap" : ""} ${succeeded === t.kind ? "ring-2 ring-grow-400/80" : ""} ${
             enabled
-              ? "cursor-pointer border-[var(--tile)]/50 bg-gradient-to-b from-white/[0.06] to-transparent hover:from-white/[0.12]"
+              ? "gpe-tile cursor-pointer border-[var(--tile)]/50 bg-gradient-to-b from-white/[0.06] to-transparent hover:from-white/[0.12]"
               : "cursor-not-allowed border-white/10 opacity-45"
           }`;
           const style = enabled
-            ? ({ "--tile": `rgb(${t.accent})`, boxShadow: `0 0 14px rgba(${t.accent},0.28), inset 0 1px 0 rgba(255,255,255,0.08)`, borderColor: `rgba(${t.accent},0.45)` } as React.CSSProperties)
+            ? ({ "--tile": `rgb(${t.accent})`, "--gpe-glow": t.accent.replace(/,/g, " "), borderColor: `rgba(${t.accent},0.45)` } as React.CSSProperties)
             : undefined;
+          const dotColor = enabled ? (lastUsed && lastUsed !== "Just now" ? "#f59e0b" : "#22c55e") : "#ef4444";
+          const statusWord = !enabled ? "Wait" : lastUsed && lastUsed !== "Just now" ? "Ready" : "Optimal";
           const inner = (
             <>
-              <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: enabled ? (lastUsed && lastUsed !== "Just now" ? "#f59e0b" : "#22c55e") : "#ef4444" }} />
+              {!vertical && (
+                <div className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor }} />
+              )}
               {succeeded === t.kind && plant.care_streak && (
                 <div className="absolute inset-0 flex items-center justify-center gpe-streak-pop pointer-events-none">
                   <span className="text-sm font-bold text-grow-300">+{plant.care_streak}</span>
                 </div>
               )}
-              <span className="text-lg leading-none drop-shadow-[0_0_6px_rgba(255,255,255,0.25)]">{t.icon}</span>
-              <span className="text-[10px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
-                {t.label.toUpperCase()}
-              </span>
-              <span className="text-[9px] leading-tight text-[#7fa9bf]">
-                {reason ? "Unavailable" : (lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit)}
-              </span>
+              <span className="flex-none text-lg leading-none drop-shadow-[0_0_6px_rgba(255,255,255,0.25)]">{t.icon}</span>
+              {vertical ? (
+                <>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-[11px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
+                      {t.label.toUpperCase()}
+                    </span>
+                    <span className="truncate text-[9px] leading-tight text-[#7fa9bf]">
+                      {reason ?? (lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit)}
+                    </span>
+                  </span>
+                  <span className="flex flex-none items-center gap-1 pl-1">
+                    <span className="h-1.5 w-1.5 flex-none rounded-full" style={{ backgroundColor: dotColor }} />
+                    <span className="text-[9px] font-bold uppercase tracking-[0.08em]" style={{ color: dotColor }}>
+                      {statusWord}
+                    </span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="w-full truncate text-center text-[10px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
+                    {t.label.toUpperCase()}
+                  </span>
+                  <span className="w-full truncate text-center text-[9px] leading-tight text-[#7fa9bf]">
+                    {reason ? "Unavailable" : (lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit)}
+                  </span>
+                </>
+              )}
             </>
           );
           return isInspect ? (
@@ -137,6 +179,9 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
       : tr.head_development > 0.3
         ? "Swelling"
         : "Forming";
+  // Cola progress → the metric card's accent bar (categorical, so mapped to a
+  // representative fill rather than an invented number).
+  const colaPct = !tr?.active ? 8 : tr.head_development > 0.6 ? 100 : tr.head_development > 0.3 ? 60 : 30;
 
   const act = (kind: NonNullable<(typeof plan)[number]["kind"]>) => {
     if (kind === "harvest") {
@@ -166,7 +211,7 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
               <li key={i} className="flex min-h-[36px] items-center gap-2 border-b border-white/5 pb-1 last:border-0 last:pb-0">
                 <span className="text-sm">{e.icon}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-bold text-gray-100">{e.title}</p>
+                  <p className="truncate text-[11px] font-bold text-gray-100">{e.title}</p>
                   <p className="truncate text-[9px] text-[#7fa9bf]">{e.why}</p>
                 </div>
                 {e.kind ? (
@@ -200,39 +245,52 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
       {/* PLANT INSIGHTS */}
       <div className="rounded-xl border border-[#1c3447] bg-[#0d1d2b] p-2.5">
         <h3 className="mb-1.5 text-[10px] font-extrabold tracking-[0.18em] text-cyan-300">PLANT INSIGHTS</h3>
-        {/* 6-chip glanceable row (design punch list items 3 + 10): honest fallbacks,
-            no dense paragraphs. Deeper science stays on Inspect / the journal. */}
-        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-          <InsightChip icon="🌸" label="Top cola" value={topCola} strong={topCola === "Strong"} />
-          <InsightChip
+        {/* Roomy metric cards (design punch list items 3 + 10) — icon + label +
+            a big value + a thin accent progress bar. Replaces the old cramped
+            6-chip row so long honest values (e.g. "73% cloudy · 8% amber") get
+            room to breathe and can never spill their box. Deeper science stays
+            on Inspect / the journal. */}
+        <div className="grid grid-cols-3 gap-1.5">
+          <MetricCard
+            icon="🌸"
+            label="Top cola"
+            value={topCola}
+            pct={colaPct}
+            tone={topCola === "Strong" ? "good" : "default"}
+          />
+          <MetricCard
             icon="❤️"
             label="Health"
             value={`${Math.round(plant.health)}%`}
-            strong={plant.health >= 70}
-            warn={plant.health < 40}
+            pct={plant.health}
+            tone={plant.health >= 70 ? "good" : plant.health < 40 ? "warn" : "default"}
           />
-          <InsightChip
+          <MetricCard
             icon="👃"
             label="Aroma"
             value={strain?.terpenes?.length ? strain.terpenes[0] : "Not scanned"}
             cap
+            truncateValue
           />
-          <InsightChip
+          <MetricCard
             icon="❄️"
             label="Trichomes"
             value={tr?.active ? `${Math.round(tr.cloudy_pct)}% cloudy · ${Math.round(tr.amber_pct)}% amber` : "Not yet"}
+            pct={tr?.active ? tr.cloudy_pct : undefined}
           />
-          <InsightChip
+          <MetricCard
             icon="🔥"
             label="Care streak"
             value={plant.care_streak ? `${plant.care_streak}d` : "—"}
-            strong={!!(plant.care_streak && plant.care_streak >= 5)}
+            pct={plant.care_streak ? Math.min(100, (plant.care_streak / 7) * 100) : undefined}
+            tone={plant.care_streak && plant.care_streak >= 5 ? "good" : "default"}
           />
-          <InsightChip
+          <MetricCard
             icon="💎"
             label="Resin score"
             value={plant.resin_score ? `${Math.round(plant.resin_score)}/100` : "—"}
-            strong={!!(plant.resin_score && plant.resin_score >= 70)}
+            pct={plant.resin_score ?? undefined}
+            tone={plant.resin_score && plant.resin_score >= 70 ? "good" : "default"}
           />
         </div>
         <Link href={`/dashboard/plants/${plant.id}#journal`} className="mt-2 block text-[10px] font-semibold text-cyan-300 hover:underline">
@@ -243,34 +301,52 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
   );
 }
 
-function InsightChip({
+/**
+ * Roomy plant-metric card — icon + label, a big honest value, and a thin
+ * accent progress bar. Replaces the old cramped InsightChip: the value gets two
+ * full lines before it clamps (with a title tooltip), so long readouts like
+ * "73% cloudy · 8% amber" never spill their box.
+ */
+function MetricCard({
   icon,
   label,
   value,
-  strong,
-  warn,
+  pct,
+  tone = "default",
   cap,
+  truncateValue,
 }: {
   icon: string;
   label: string;
   value: string;
-  strong?: boolean;
-  warn?: boolean;
+  /** 0–100 fill for the accent bar; omit for non-numeric metrics (bar stays empty). */
+  pct?: number;
+  tone?: "good" | "warn" | "default";
   cap?: boolean;
+  /** Single-word readouts (e.g. a terpene name) truncate on one line with an
+   *  ellipsis instead of breaking mid-word; the full value stays in the tooltip. */
+  truncateValue?: boolean;
 }) {
+  const num = tone === "warn" ? "text-red-400" : tone === "good" ? "text-grow-300" : "text-gray-100";
+  const bar = tone === "warn" ? "bg-red-400" : tone === "good" ? "bg-grow-400" : "bg-cyan-400/80";
+  const fill = pct === undefined ? 0 : Math.max(0, Math.min(100, pct));
   return (
-    <div className="flex min-h-[46px] flex-col justify-center rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1">
-      <span className="text-[9px] text-[#7fa9bf]">
-        {icon} {label}
+    <div className="flex min-h-[68px] flex-col justify-between gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5">
+      <span className="flex items-center gap-1 text-[9px] font-medium text-[#7fa9bf]">
+        <span className="flex-none" aria-hidden>{icon}</span>
+        <span className="truncate">{label}</span>
       </span>
       <span
-        className={`truncate text-[11px] font-bold ${cap ? "capitalize" : ""} ${
-          warn ? "text-red-400" : strong ? "text-grow-300" : "text-gray-100"
-        }`}
+        className={`text-[15px] font-extrabold leading-tight ${
+          truncateValue ? "truncate" : "line-clamp-2 break-words"
+        } ${cap ? "capitalize" : ""} ${num}`}
         title={value}
       >
         {value}
       </span>
+      <div className="h-1 overflow-hidden rounded-full bg-white/10">
+        <div className={`h-full rounded-full ${bar} transition-[width] duration-500`} style={{ width: `${fill}%` }} />
+      </div>
     </div>
   );
 }
@@ -448,12 +524,13 @@ export function BoostsInline() {
                   ? `${cfg.label} on cooldown, ready in ${Math.ceil(cdLeft / 1000)} seconds`
                   : `Quick-apply ${cfg.label}, ${cfg.multiplier} times multiplier`
               }
-              className={`flex min-h-[36px] flex-1 items-center justify-center gap-1 rounded-lg border font-mono text-[11px] font-bold transition-colors ${
+              style={{ ["--gpe-glow" as string]: isActive ? "118 192 36" : "253 224 71" } as React.CSSProperties}
+              className={`flex min-h-[36px] flex-1 items-center justify-center gap-1 rounded-lg border font-mono text-[11px] font-bold ${
                 onCooldown
-                  ? "cursor-not-allowed border-[#1c3447] bg-[#0a1722] text-cyan-200/40"
+                  ? "cursor-not-allowed border-[#1c3447] bg-[#0a1722] text-cyan-200/40 transition-colors"
                   : isActive
-                    ? "border-grow-400/60 bg-grow-500/15 text-grow-200"
-                    : "border-white/10 bg-white/[0.04] text-cyan-100 hover:border-amber-300/40 hover:bg-amber-300/10"
+                    ? "gpe-glow gpe-active border-grow-400/60 bg-grow-500/15 text-grow-200"
+                    : "gpe-glow border-white/10 bg-white/[0.04] text-cyan-100 hover:border-amber-300/40 hover:bg-amber-300/10"
               }`}
             >
               <span className={`text-sm leading-none ${onCooldown ? "opacity-50" : ""}`}>{BOOST_ICONS[type]}</span>

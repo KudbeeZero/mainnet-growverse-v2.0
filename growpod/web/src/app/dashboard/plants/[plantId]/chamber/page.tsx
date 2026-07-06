@@ -8,11 +8,18 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
-import { ChamberActionBar } from "@/components/plant/ChamberDock";
+import {
+  ChamberActionBar,
+  ChamberPanel,
+  PlantProgressStrip,
+  EncouragementFooter,
+  BoostsInline,
+} from "@/components/plant/ChamberDock";
 import { ArcadeToolbar } from "@/components/plant/ArcadeToolbar";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { BoostAmbientLayer } from "@/components/plant/BoostAmbientLayer";
 import { usePlantBounce } from "@/hooks/usePlantBounce";
+import { usePhoneLandscape } from "@/hooks/usePhoneLandscape";
 import { useGrowthBoost, useCleanupPlant } from "@/hooks/useCareActions";
 import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap, usePods } from "@/hooks/queries";
@@ -51,16 +58,10 @@ const GrowChamber = dynamic(
   { ssr: false, loading: () => null },
 );
 
-// Arcade Mode HUD (rewind + chain row only) — lazy so it's tree-shaken from
-// every non-chamber route. Boost-apply UI lives in BoostsInline (ChamberDock)
-// so it isn't duplicated here.
-const ArcadeHUD = dynamic(
-  () => import("@/components/arcade/ArcadeHUD").then((m) => m.ArcadeHUD),
-  { ssr: false, loading: () => null },
-);
-
 // Chain row (wallet + mint). Lazy + only mounted when ALGO is enabled, so algosdk
-// stays out of the chamber bundle otherwise.
+// stays out of the chamber bundle otherwise. Rendered at the bottom of the GROW
+// tab dock (never floating over the plant — the old ArcadeHUD that used to carry
+// it, plus its ⏪ REWIND control, was removed for blocking the plant).
 const ChainRow = dynamic(
   () => import("@/components/arcade/ChainRow").then((m) => m.ChainRow),
   { ssr: false, loading: () => null },
@@ -152,7 +153,15 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const { data: pods } = usePods();
 
   const reducedMotion = usePrefersReducedMotion();
-  const [tab, setTab] = useState<"climate" | "time">("climate");
+  // GROW is the default hub tab (owner mockup): Today's Plan + Plant Insights +
+  // progress + boosts live ON the chamber — everything without leaving the screen.
+  const [tab, setTab] = useState<"grow" | "climate" | "time">("grow");
+  // Portrait bottom sheet pop-up/down (the chevron the owner likes on the nav).
+  const [sheetOpen, setSheetOpen] = useState(true);
+  // Phone-landscape slide-out HUDs (owner mockup: "Landscape Mobile Overlay
+  // System") — left = grow controls, right = insights & management, null = compact.
+  const phoneLandscape = usePhoneLandscape();
+  const [hudSide, setHudSide] = useState<"left" | "right" | null>(null);
   const [climate, setClimate] = useState<ChamberClimate>(DEFAULT_CLIMATE);
   // Growth-preview scrubber: null = track the real (server) age; a number =
   // preview that day on the cycle. Preview never mutates server state.
@@ -417,6 +426,147 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     struggling: { icon: "🚨", label: "Struggling", cls: "border-red-400/40 bg-red-400/10 text-red-300" },
   } as const;
 
+  // The tabbed dock body — rendered in the docked rail (portrait bottom sheet /
+  // desktop side rail) OR inside the right slide-out HUD on phone landscape.
+  // Only ever mounted once, so BoostsInline stays the single boost surface.
+  const dockBody = (
+    <>
+      <div className="mb-2 flex gap-1.5">
+        {(["grow", "climate", "time"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            aria-pressed={tab === t}
+            style={{ ["--gpe-glow" as string]: "56 189 248" } as React.CSSProperties}
+            className={`gpe-glow flex min-h-[44px] flex-1 items-center justify-center whitespace-nowrap rounded-lg border px-1 text-xs font-bold tracking-[0.08em] ${
+              tab === t ? "gpe-active border-[#3a6a86] bg-[#16364c] text-[#eaf7ff]" : "border-[#1c3447] bg-[#0d1d2b] text-[#7fa9bf]"
+            }`}
+          >
+            {t.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {tab === "grow" && (
+        <div className="space-y-2">
+          {/* The mockup's game hub, in one scroll: plan → insights (incl. care
+              streak + resin score) → progress → quick boosts → growth boost. */}
+          <ChamberPanel plant={plant} strain={strain} />
+          {plant.forecast && <PlantProgressStrip forecast={plant.forecast} />}
+          {!ended && <BoostsInline />}
+          {/* Purchasable growth boost — fast-forward + revive for in-game GROW.
+              Hidden at the harvest window: the server rejects it (nothing left
+              to fast-forward), so don't tempt a no-op spend. */}
+          {!ended && plant.growth_stage !== "harvest" && (
+            <button
+              onClick={() => growthBoost.mutate()}
+              disabled={growthBoost.isPending}
+              data-testid="growth-boost"
+              style={{ ["--gpe-glow" as string]: "56 189 248" } as React.CSSProperties}
+              className="gpe-glow flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/50 bg-gradient-to-r from-cyan-500/15 to-grow-500/15 px-3 text-xs font-bold tracking-[0.06em] text-cyan-100 transition-all hover:border-cyan-300 hover:from-cyan-500/25 hover:to-grow-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {growthBoost.isPending ? "Boosting…" : "⚡ Boost Growth · 60 🌿"}
+            </button>
+          )}
+          {!ended && <EncouragementFooter health={health} />}
+          {/* Chain row (wallet + mint) — only when ALGO is enabled. Docked here
+              at the bottom of the GROW tab instead of the removed floating HUD,
+              so the mint/wallet path never covers the plant. Server-truth mint
+              options (see `mintTruth`), not the boosted/previewed display values. */}
+          {ALGO_ENABLED && !ended && (
+            <ChainRow
+              plant={plant}
+              mintOptions={{ strainName: strain?.name, growDay: mintTruth.growDay, budDev: mintTruth.budDev }}
+            />
+          )}
+        </div>
+      )}
+
+      {tab === "climate" && (
+        <div className="space-y-1.5">
+          {/* Store/equipment shelf (gear · items · bundles · partners) */}
+          {!ended && <ArcadeToolbar plant={plant} ended={ended} />}
+          {SLIDERS.map((s) => {
+            const val = climate[s.key as keyof ChamberClimate];
+            const outOfBand = val < s.optimal[0] || val > s.optimal[1];
+            return (
+              <div key={s.key} className="flex min-h-[44px] items-center gap-2.5 rounded-lg border border-[#1c3447] bg-[#0d1d2b] px-2.5 py-2">
+                <span className="w-[66px] flex-none font-mono text-[11px] tracking-[0.06em] text-[#7fa9bf]">
+                  {s.label}
+                  {"local" in s && s.local && <span className="ml-1 text-[9px] text-[#3a6a86]">(local)</span>}
+                </span>
+                <input
+                  type="range"
+                  min={s.min}
+                  max={s.max}
+                  step={s.step}
+                  value={val}
+                  onChange={(e) => onSlide(s.key as keyof ChamberClimate, Number(e.target.value))}
+                  disabled={ended}
+                  aria-label={s.label}
+                  className="h-2 flex-1 cursor-pointer accent-cyan-400"
+                />
+                {/* ± micro-nudge: one exact step per tap for fine dial-in. */}
+                <NudgeBtn label={`Decrease ${s.label}`} disabled={ended} onClick={() => onSlide(s.key as keyof ChamberClimate, nudge(val, -1, s.step, s.min, s.max))}>−</NudgeBtn>
+                <NudgeBtn label={`Increase ${s.label}`} disabled={ended} onClick={() => onSlide(s.key as keyof ChamberClimate, nudge(val, 1, s.step, s.min, s.max))}>+</NudgeBtn>
+                <span className={`w-[52px] flex-none text-right font-mono text-xs font-bold ${outOfBand ? "text-orange-300" : "text-white"}`}>
+                  {val}
+                  {s.unit && <span className="text-[10px] text-[#7fa9bf]">{s.unit}</span>}
+                </span>
+              </div>
+            );
+          })}
+          <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
+            {c.fanNote}
+            {c.co2Boost > 0.05 ? " · CO₂ boosting growth." : ""}
+            {sharedPod ? " · Affects all plants in this pod." : ""}
+            {setEnv.isPending ? " · saving…" : ""}
+          </p>
+        </div>
+      )}
+
+      {tab === "time" && (
+        <div className="space-y-2">
+          <div className="flex min-h-[44px] items-center gap-2.5 rounded-lg border border-[#1c3447] bg-[#0d1d2b] px-2.5 py-2">
+            <span className="w-[66px] flex-none font-mono text-[11px] tracking-[0.06em] text-[#7fa9bf]">GROW DAY</span>
+            <input
+              type="range"
+              min={0}
+              max={maxPreviewDay}
+              step={0.5}
+              value={Math.min(day, maxPreviewDay)}
+              onChange={(e) => setPreviewDay(Number(e.target.value))}
+              className="h-2 flex-1 cursor-pointer accent-grow-400"
+              aria-label="Preview growth day"
+            />
+            <span className="w-[52px] flex-none text-right font-mono text-[11px] font-bold text-white">
+              d{Math.round(day)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2 px-1">
+            <span className="text-[10px] leading-relaxed text-[#7fa9bf]">
+              {previewing
+                ? `Previewing ${titleCase(renderStage)} — not this plant's real age.`
+                : `Tracking live growth · ${titleCase(renderStage)}, day ${Math.round(day)}.`}
+            </span>
+            {previewing && (
+              <button
+                onClick={() => setPreviewDay(null)}
+                className="flex-none rounded-md border border-[#3a6a86] bg-[#16364c] px-2 py-1 text-[10px] font-bold text-[#eaf7ff]"
+              >
+                Back to live
+              </button>
+            )}
+          </div>
+          <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
+            Scrub to watch this strain grow seed → harvest. Buds swell, pistils colour and
+            trichome frost builds in as it matures.
+          </p>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="fixed inset-0 z-30 flex flex-col bg-[#050b12] text-[#cfeeff]">
       {/* header — clears the status-bar / notch on top and the landscape side notch */}
@@ -437,8 +587,9 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       </header>
 
       {/* body — stacks portrait (stage over controls); splits to a stage + side
-          rail in landscape so the plant stays tall on short/foldable screens */}
-      <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
+          rail in landscape so the plant stays tall on short/foldable screens.
+          `relative` anchors the phone-landscape slide-out HUD overlays. */}
+      <div className="relative flex min-h-0 flex-1 flex-col landscape:flex-row">
       {/* stage */}
       <div
         ref={stageRef}
@@ -541,33 +692,42 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </Link>
         )}
 
-        {/* embedded action bar — glassy tiles built into the chamber base */}
-        {!ended && (
+        {/* embedded action bar — glassy tiles built into the chamber base.
+            On phone-landscape the actions move into the LEFT slide-out HUD so
+            the plant stays the unobstructed center of the stage (owner mockup),
+            so the base bar is hidden there. */}
+        {!ended && !phoneLandscape && (
           <div className="absolute inset-x-2 bottom-2 z-10">
             <ChamberActionBar plant={plant} />
           </div>
         )}
 
-        {/* REWIND control + chain row — floating button anchored in the chamber
-            scene, so it can only ever overlap the stage, never the plan/insights.
-            Boost-APPLY UI lives only in the inline BoostsInline (GROW/ARCADE
-            sheet below) — this no longer duplicates it. */}
-        {!ended && (
-          <ArcadeHUD
-            reducedMotion={reducedMotion}
-            chainSlot={
-              ALGO_ENABLED ? (
-                <ChainRow
-                  plant={plant}
-                  // Server truth, not the boosted/previewed display values (`day`,
-                  // `budScalars.budDev`) — see `mintTruth` above. The on-screen
-                  // stage below still renders `day`/`budScalars` unchanged.
-                  mintOptions={{ strainName: strain?.name, growDay: mintTruth.growDay, budDev: mintTruth.budDev }}
-                />
-              ) : undefined
-            }
-          />
+        {/* Phone-landscape edge tabs — tap to reveal the slide-out HUDs. Hidden
+            when a HUD is already open (the HUD's own Close/backdrop dismisses). */}
+        {!ended && phoneLandscape && hudSide === null && (
+          <>
+            <button
+              onClick={() => setHudSide("left")}
+              aria-label="Open grow controls"
+              className="absolute left-0 top-1/2 z-20 -translate-y-1/2 rounded-r-xl border border-l-0 border-cyan-400/40 bg-[#08141e]/85 px-1.5 py-4 text-cyan-200 backdrop-blur transition hover:bg-[#0c1e2c]/90"
+            >
+              ▸
+            </button>
+            <button
+              onClick={() => setHudSide("right")}
+              aria-label="Open plant insights"
+              className="absolute right-0 top-1/2 z-20 -translate-y-1/2 rounded-l-xl border border-r-0 border-cyan-400/40 bg-[#08141e]/85 px-1.5 py-4 text-cyan-200 backdrop-blur transition hover:bg-[#0c1e2c]/90"
+            >
+              ◂
+            </button>
+          </>
         )}
+
+        {/* The floating REWIND HUD that used to live here was removed — it
+            covered the plant and its ⏪ time-rewind control was a cosmetic
+            gimmick outside the core loop. Boost-APPLY UI lives only in the
+            inline BoostsInline (GROW sheet); the ALGO-gated ChainRow (wallet +
+            mint) now docks at the bottom of the GROW tab, never over the stage. */}
 
         {ended && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#050b12]/85 text-center">
@@ -642,106 +802,80 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         )}
       </div>
 
-      {/* dashboard — bottom sheet in portrait, side rail in landscape */}
-      <div className="max-h-[48dvh] flex-none overflow-y-auto bg-gradient-to-b from-transparent to-[#0a1622] px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 landscape:h-full landscape:max-h-none landscape:w-[clamp(260px,38vw,360px)] landscape:border-l landscape:border-[#11212e] landscape:bg-gradient-to-l landscape:pr-[max(0.75rem,env(safe-area-inset-right))]">
-        <div className="mb-2 flex gap-1.5">
-          {(["climate", "time"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              aria-pressed={tab === t}
-              className={`flex min-h-[44px] flex-1 items-center justify-center rounded-lg border px-1 text-xs font-bold tracking-[0.08em] transition-colors ${
-                tab === t ? "border-[#3a6a86] bg-[#16364c] text-[#eaf7ff]" : "border-[#1c3447] bg-[#0d1d2b] text-[#7fa9bf]"
-              }`}
-            >
-              {t.toUpperCase()}
-            </button>
-          ))}
-        </div>
-
-        {tab === "climate" && (
-          <div className="space-y-1.5">
-            {/* Arcade toolbar inside climate tab */}
-            {!ended && <ArcadeToolbar plant={plant} ended={ended} growthStage={plant.growth_stage} growthBoost={growthBoost} />}
-            {SLIDERS.map((s) => {
-              const val = climate[s.key as keyof ChamberClimate];
-              const outOfBand = val < s.optimal[0] || val > s.optimal[1];
-              return (
-                <div key={s.key} className="flex min-h-[44px] items-center gap-2.5 rounded-lg border border-[#1c3447] bg-[#0d1d2b] px-2.5 py-2">
-                  <span className="w-[66px] flex-none font-mono text-[11px] tracking-[0.06em] text-[#7fa9bf]">
-                    {s.label}
-                    {"local" in s && s.local && <span className="ml-1 text-[9px] text-[#3a6a86]">(local)</span>}
-                  </span>
-                  <input
-                    type="range"
-                    min={s.min}
-                    max={s.max}
-                    step={s.step}
-                    value={val}
-                    onChange={(e) => onSlide(s.key as keyof ChamberClimate, Number(e.target.value))}
-                    disabled={ended}
-                    aria-label={s.label}
-                    className="h-2 flex-1 cursor-pointer accent-cyan-400"
-                  />
-                  {/* ± micro-nudge: one exact step per tap for fine dial-in. */}
-                  <NudgeBtn label={`Decrease ${s.label}`} disabled={ended} onClick={() => onSlide(s.key as keyof ChamberClimate, nudge(val, -1, s.step, s.min, s.max))}>−</NudgeBtn>
-                  <NudgeBtn label={`Increase ${s.label}`} disabled={ended} onClick={() => onSlide(s.key as keyof ChamberClimate, nudge(val, 1, s.step, s.min, s.max))}>+</NudgeBtn>
-                  <span className={`w-[52px] flex-none text-right font-mono text-xs font-bold ${outOfBand ? "text-orange-300" : "text-white"}`}>
-                    {val}
-                    {s.unit && <span className="text-[10px] text-[#7fa9bf]">{s.unit}</span>}
-                  </span>
-                </div>
-              );
-            })}
-            <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
-              {c.fanNote}
-              {c.co2Boost > 0.05 ? " · CO₂ boosting growth." : ""}
-              {sharedPod ? " · Affects all plants in this pod." : ""}
-              {setEnv.isPending ? " · saving…" : ""}
-            </p>
+      {/* DOCKED RAIL — portrait bottom sheet (with the pop-up/down chevron the
+          owner likes) + desktop/tablet landscape side rail. Hidden on
+          phone-landscape, which uses the slide-out HUD overlays instead. */}
+      {!phoneLandscape && (
+        <>
+          {/* Portrait/desktop: the chevron toggle rides the top of the sheet so
+              players can pop the dashboard down and see the full plant, then
+              pop it back up — mirrors the bottom-nav arrow the owner likes. */}
+          <button
+            onClick={() => setSheetOpen((o) => !o)}
+            aria-label={sheetOpen ? "Hide dashboard" : "Show dashboard"}
+            aria-expanded={sheetOpen}
+            className="flex-none self-center rounded-t-lg border border-b-0 border-[#1c3447] bg-[#0d1d2b] px-6 py-0.5 text-cyan-200/70 transition hover:text-cyan-100 landscape:hidden"
+          >
+            {sheetOpen ? "▾" : "▴"}
+          </button>
+          <div
+            className={`flex-none overflow-y-auto bg-gradient-to-b from-transparent to-[#0a1622] px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2 transition-[max-height] duration-300 ${
+              sheetOpen ? "max-h-[52dvh]" : "max-h-0 overflow-hidden py-0"
+            } landscape:h-full landscape:max-h-none landscape:border-l landscape:border-[#11212e] landscape:bg-gradient-to-l landscape:pr-[max(0.75rem,env(safe-area-inset-right))] landscape:pt-2 landscape:w-[clamp(260px,38vw,360px)]`}
+          >
+            {dockBody}
           </div>
-        )}
+        </>
+      )}
 
-        {tab === "time" && (
-          <div className="space-y-2">
-            <div className="flex min-h-[44px] items-center gap-2.5 rounded-lg border border-[#1c3447] bg-[#0d1d2b] px-2.5 py-2">
-              <span className="w-[66px] flex-none font-mono text-[11px] tracking-[0.06em] text-[#7fa9bf]">GROW DAY</span>
-              <input
-                type="range"
-                min={0}
-                max={maxPreviewDay}
-                step={0.5}
-                value={Math.min(day, maxPreviewDay)}
-                onChange={(e) => setPreviewDay(Number(e.target.value))}
-                className="h-2 flex-1 cursor-pointer accent-grow-400"
-                aria-label="Preview growth day"
-              />
-              <span className="w-[52px] flex-none text-right font-mono text-[11px] font-bold text-white">
-                d{Math.round(day)}
-              </span>
+      {/* PHONE-LANDSCAPE SLIDE-OUT HUDs (owner mockup) — the plant stays the
+          unobstructed center; the LEFT HUD carries actions + controls, the
+          RIGHT HUD carries insights + management. A tap-out backdrop and an
+          auto-compact-after-action keep the main display in focus. */}
+      {!ended && phoneLandscape && hudSide !== null && (
+        <>
+          <button
+            aria-label="Close panel"
+            onClick={() => setHudSide(null)}
+            className="absolute inset-0 z-30 bg-black/40 backdrop-blur-[1px]"
+          />
+          <aside
+            className={`absolute top-0 z-40 flex h-full w-[min(78vw,320px)] flex-col overflow-y-auto border-[#11212e] bg-[#0a1622]/95 p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] backdrop-blur-md ${
+              hudSide === "left"
+                ? "left-0 border-r pl-[max(0.625rem,env(safe-area-inset-left))]"
+                : "right-0 border-l pr-[max(0.625rem,env(safe-area-inset-right))]"
+            }`}
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-[11px] font-extrabold tracking-[0.18em] text-cyan-200">
+                {hudSide === "left" ? "GROW CONTROLS" : "PLANT INSIGHTS"}
+              </h2>
+              <button
+                onClick={() => setHudSide(null)}
+                aria-label="Close panel"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-cyan-200/70 hover:bg-white/10 hover:text-cyan-100"
+              >
+                ✕
+              </button>
             </div>
-            <div className="flex items-center justify-between gap-2 px-1">
-              <span className="text-[10px] leading-relaxed text-[#7fa9bf]">
-                {previewing
-                  ? `Previewing ${titleCase(renderStage)} — not this plant's real age.`
-                  : `Tracking live growth · ${titleCase(renderStage)}, day ${Math.round(day)}.`}
-              </span>
-              {previewing && (
-                <button
-                  onClick={() => setPreviewDay(null)}
-                  className="flex-none rounded-md border border-[#3a6a86] bg-[#16364c] px-2 py-1 text-[10px] font-bold text-[#eaf7ff]"
-                >
-                  Back to live
-                </button>
-              )}
-            </div>
-            <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
-              Scrub to watch this strain grow seed → harvest. Buds swell, pistils colour and
-              trichome frost builds in as it matures.
-            </p>
-          </div>
-        )}
-      </div>
+            {hudSide === "left" ? (
+              // Actions + climate/time controls. Auto-compact: a care tap closes
+              // the HUD so the plant reaction plays center-stage.
+              <div className="space-y-2">
+                <ChamberActionBar plant={plant} vertical onAction={() => setHudSide(null)} />
+                {dockBody}
+              </div>
+            ) : (
+              // Insights & management (plan, insights, progress, boosts).
+              <div className="space-y-2">
+                <ChamberPanel plant={plant} strain={strain} />
+                {plant.forecast && <PlantProgressStrip forecast={plant.forecast} />}
+                <BoostsInline />
+              </div>
+            )}
+          </aside>
+        </>
+      )}
       </div>
 
     </div>

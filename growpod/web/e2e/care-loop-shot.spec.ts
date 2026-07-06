@@ -52,25 +52,28 @@ test("PROOF: harvest-ready plant shows an unmissable next action on the MAIN PAG
   await expect(page.getByRole("button", { name: "✂️ Harvest" })).toBeVisible();
 });
 
-test("PROOF: the CHAMBER is the arcade layer — boosts stay, dashboard panels are gone", async ({ page }) => {
+test("PROOF: the CHAMBER GROW tab is the full game hub (owner mockup)", async ({ page }) => {
   await setup(page);
   await page.goto("/dashboard/plants/plant1/chamber");
 
-  // Arcade feel keeps the embedded action tiles on the stage...
+  // The embedded action tiles stay on the stage base...
   for (const label of ["WATER", "FEED", "PRUNE", "TRAIN"]) {
     await expect(page.getByRole("button", { name: new RegExp(label, "i") }).first()).toBeVisible();
   }
-  // ...and the arcade toolbar (boosts inline + quick chips + growth boost) —
-  // folded directly under the default CLIMATE tab (PR #156), no separate
-  // ARCADE tab needed.
+  // ...and the default GROW tab now carries the full hub (owner mockup: manage
+  // everything without leaving the chamber): Today's Plan + Plant Insights +
+  // Plant Progress + boosts + the ⚡ growth boost, all in one scroll.
+  await expect(page.getByText(/TODAY'S PLAN/i)).toBeVisible();
+  await expect(page.getByText(/PLANT INSIGHTS/i)).toBeVisible();
+  await expect(page.getByText(/PLANT PROGRESS/i)).toBeVisible();
   await expect(page.getByText(/^BOOSTS/i).first()).toBeVisible();
   await expect(page.getByTestId("growth-boost")).toBeVisible();
 
-  // The dashboard-y panels moved to the main page — they must NOT be here.
-  await expect(page.getByText(/TODAY'S PLAN/i)).toHaveCount(0);
-  await expect(page.getByText(/PLANT INSIGHTS/i)).toHaveCount(0);
-  await expect(page.getByText(/PLANT PROGRESS/i)).toHaveCount(0);
-  await page.screenshot({ path: "e2e-output/care-loop-chamber-arcade.png", fullPage: true });
+  // CLIMATE + TIME are the other two tabs (GROW is default).
+  await expect(page.getByRole("button", { name: /^GROW$/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^CLIMATE$/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^TIME$/i })).toBeVisible();
+  await page.screenshot({ path: "e2e-output/care-loop-chamber-grow-hub.png", fullPage: true });
 });
 
 test("PROOF: harvested plant shows the full next-action set", async ({ page }) => {
