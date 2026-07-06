@@ -121,7 +121,7 @@ function NudgeBtn({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-7 w-7 flex-none items-center justify-center rounded-md border border-[#1c3447] bg-[#0a1722] font-mono text-sm leading-none text-[#7fa9bf] hover:border-cyan-400/50 hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-40"
+      className="flex h-11 w-11 flex-none items-center justify-center rounded-md border border-[#1c3447] bg-[#0a1722] font-mono text-sm leading-none text-[#7fa9bf] hover:border-cyan-400/50 hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>

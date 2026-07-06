@@ -525,7 +525,7 @@ export function BoostsInline() {
                   : `Quick-apply ${cfg.label}, ${cfg.multiplier} times multiplier`
               }
               style={{ ["--gpe-glow" as string]: isActive ? "118 192 36" : "253 224 71" } as React.CSSProperties}
-              className={`flex min-h-[36px] flex-1 items-center justify-center gap-1 rounded-lg border font-mono text-[11px] font-bold ${
+              className={`flex min-h-[44px] flex-1 items-center justify-center gap-1 rounded-lg border font-mono text-[11px] font-bold ${
                 onCooldown
                   ? "cursor-not-allowed border-[#1c3447] bg-[#0a1722] text-cyan-200/40 transition-colors"
                   : isActive

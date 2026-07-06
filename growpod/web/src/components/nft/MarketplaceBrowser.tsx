@@ -83,8 +83,16 @@ export function MarketplaceBrowser() {
             {items.map((listing) => (
               <div
                 key={listing.listing_id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedListing(listing)}
-                className={`cursor-pointer rounded-lg border-2 border-ink-700 bg-ink-900/40 p-3 transition-all hover:border-grow-600 ${
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedListing(listing);
+                  }
+                }}
+                className={`cursor-pointer rounded-lg border-2 border-ink-700 bg-ink-900/40 p-3 transition-all hover:border-grow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-grow-400 ${
                   selectedListing?.listing_id === listing.listing_id
                     ? "ring-2 ring-offset-2 ring-grow-500"
                     : ""

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { LoadingBlock } from "@/components/ui/Spinner";
+import { ErrorState } from "@/components/ui/States";
 import { UrgencyPill } from "@/components/ui/Pills";
 import { PlantVisual } from "@/components/plant/PlantVisual";
 import { StatBars } from "@/components/plant/StatBars";
@@ -97,6 +98,13 @@ function FtueInner() {
     advance.mutate();
   };
 
+  if (statusQ.isError) {
+    return (
+      <div className="mx-auto max-w-md py-10">
+        <ErrorState error={statusQ.error} onRetry={() => statusQ.refetch()} />
+      </div>
+    );
+  }
   if (statusQ.isLoading || !step) return <LoadingBlock label="Loading your first grow…" />;
 
   const done = step === "completed";
