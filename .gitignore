@@ -11,6 +11,9 @@ out-tsc
 # dependencies
 node_modules
 
+# local git worktrees (per-branch scratch checkouts, never committed)
+/.worktrees
+
 # IDEs and editors
 /.idea
 .project

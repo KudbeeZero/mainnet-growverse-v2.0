@@ -15,16 +15,21 @@ the four public/authed endpoints:
 The current Cup is created lazily on read (`CupService.current_cup()` opens the
 season's Cup compute-on-read), so the happy paths need no admin setup: hitting
 the routes is enough. Entering needs a qualifying *unsold* harvest owned by the
-player; we mint one over HTTP exactly like the harvest helper in
-`test_http_boundary.py` (harvest has no stage gate), then drive the enter route.
+player; we mint one over HTTP (advancing the plant to flowering first, since
+harvest now requires it), then drive the enter route.
 """
 
 import os
 import sys
+from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import pytest
+
+from growpodempire.db.session import session_scope
+from growpodempire.db.models import Plant
+from growpodempire.enums import GrowthStage
 
 
 @pytest.fixture()
@@ -39,10 +44,23 @@ def _new_player(client, username="cupper"):
     return p["id"], p["api_key"]
 
 
+def _advance_to_flowering(plant_id):
+    """Jump a freshly-planted seed straight to flowering so it's harvestable,
+    mirroring a real grow without waiting sim time. `harvest_plant()` now
+    requires the plant to be flowering-or-later and alive (disruptor-sweep
+    fix #1 — see `services/game_service.py`)."""
+    with session_scope() as s:
+        plant = s.get(Plant, plant_id)
+        now = datetime.utcnow()
+        plant.growth_stage = GrowthStage.FLOWERING.value
+        plant.health = 90.0
+        plant.last_tick_at = now
+        plant.stage_entered_at = now
+
+
 def _harvest(client, pid, key):
     """Grow + harvest a strain over HTTP so the player holds an unsold harvest
-    eligible for Cup entry. Harvest has no stage gate, so we can harvest the
-    freshly-planted seed immediately."""
+    eligible for Cup entry."""
     hdr = {"X-API-Key": key}
     sid = client.get("/api/game/strains").get_json()[0]["id"]
     stack = client.post(
@@ -56,6 +74,7 @@ def _harvest(client, pid, key):
         json={"seed_id": stack["id"], "pod_id": pod["id"]},
         headers=hdr,
     ).get_json()
+    _advance_to_flowering(plant["id"])
     return client.post(
         f"/api/game/players/{pid}/plants/{plant['id']}/harvest",
         json={"sell": False},

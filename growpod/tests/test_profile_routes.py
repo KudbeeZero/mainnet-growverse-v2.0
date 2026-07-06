@@ -15,10 +15,15 @@ driving them through the client also confirms the route wiring posts faucets.
 
 import os
 import sys
+from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import pytest
+
+from growpodempire.db.session import session_scope
+from growpodempire.db.models import Plant
+from growpodempire.enums import GrowthStage
 
 
 @pytest.fixture()
@@ -34,12 +39,25 @@ def _new_player(client, username="profile"):
     return p["id"], p["api_key"]
 
 
+def _advance_to_flowering(plant_id):
+    """Jump a freshly-planted seed straight to flowering so it's harvestable,
+    mirroring a real grow without waiting sim time. `harvest_plant()` now
+    requires the plant to be flowering-or-later and alive (disruptor-sweep
+    fix #1 — see `services/game_service.py`)."""
+    with session_scope() as s:
+        plant = s.get(Plant, plant_id)
+        now = datetime.utcnow()
+        plant.growth_stage = GrowthStage.FLOWERING.value
+        plant.health = 90.0
+        plant.last_tick_at = now
+        plant.stage_entered_at = now
+
+
 def _harvest_once(client, pid, key):
     """Drive the full grow->harvest loop over HTTP so `first_harvest` unlocks.
 
-    Harvest has no stage gate (mirrors test_http_boundary's `_rare_harvest`), so a
-    freshly planted seed can be harvested immediately. Any strain works for the
-    `first_harvest` achievement; the seeded catalog's first strain is fine.
+    Any strain works for the `first_harvest` achievement; the seeded catalog's
+    first strain is fine.
     """
     hdr = {"X-API-Key": key}
     sid = client.get("/api/game/strains").get_json()[0]["id"]
@@ -54,6 +72,7 @@ def _harvest_once(client, pid, key):
         json={"seed_id": stack["id"], "pod_id": pod["id"]},
         headers=hdr,
     ).get_json()
+    _advance_to_flowering(plant["id"])
     return client.post(
         f"/api/game/players/{pid}/plants/{plant['id']}/harvest",
         json={"sell": False},

@@ -8,12 +8,16 @@ regress. They drive the real Flask app via its test client.
 
 import os
 import sys
+from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import pytest
 
 from growpodempire.api.flask_api import create_app
+from growpodempire.db.session import session_scope
+from growpodempire.db.models import Plant
+from growpodempire.enums import GrowthStage
 
 
 @pytest.fixture()
@@ -61,11 +65,26 @@ def _plant_a_seed(client, pid, key):
     return plant["id"]
 
 
+def _advance_to_flowering(plant_id):
+    """Jump a freshly-planted seed straight to flowering so it's harvestable,
+    mirroring a real grow without waiting sim time. `harvest_plant()` now
+    requires the plant to be flowering-or-later and alive (disruptor-sweep
+    fix #1 — see `services/game_service.py`)."""
+    with session_scope() as s:
+        plant = s.get(Plant, plant_id)
+        now = datetime.utcnow()
+        plant.growth_stage = GrowthStage.FLOWERING.value
+        plant.health = 90.0
+        plant.last_tick_at = now
+        plant.stage_entered_at = now
+
+
 # ----- Anti-cheat: server-authoritative harvest --------------------------
 def test_harvest_value_is_server_authoritative(client):
     """A client cannot inflate harvest weight/quality to mint currency."""
     pid, key = _new_player(client, "cheater")
     plant_id = _plant_a_seed(client, pid, key)
+    _advance_to_flowering(plant_id)
 
     r = client.post(
         f"/api/game/players/{pid}/plants/{plant_id}/harvest",
