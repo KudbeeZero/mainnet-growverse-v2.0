@@ -179,6 +179,9 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
       : tr.head_development > 0.3
         ? "Swelling"
         : "Forming";
+  // Cola progress → the metric card's accent bar (categorical, so mapped to a
+  // representative fill rather than an invented number).
+  const colaPct = !tr?.active ? 8 : tr.head_development > 0.6 ? 100 : tr.head_development > 0.3 ? 60 : 30;
 
   const act = (kind: NonNullable<(typeof plan)[number]["kind"]>) => {
     if (kind === "harvest") {
@@ -242,39 +245,51 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
       {/* PLANT INSIGHTS */}
       <div className="rounded-xl border border-[#1c3447] bg-[#0d1d2b] p-2.5">
         <h3 className="mb-1.5 text-[10px] font-extrabold tracking-[0.18em] text-cyan-300">PLANT INSIGHTS</h3>
-        {/* 6-chip glanceable row (design punch list items 3 + 10): honest fallbacks,
-            no dense paragraphs. Deeper science stays on Inspect / the journal. */}
-        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-          <InsightChip icon="🌸" label="Top cola" value={topCola} strong={topCola === "Strong"} />
-          <InsightChip
+        {/* Roomy metric cards (design punch list items 3 + 10) — icon + label +
+            a big value + a thin accent progress bar. Replaces the old cramped
+            6-chip row so long honest values (e.g. "73% cloudy · 8% amber") get
+            room to breathe and can never spill their box. Deeper science stays
+            on Inspect / the journal. */}
+        <div className="grid grid-cols-3 gap-1.5">
+          <MetricCard
+            icon="🌸"
+            label="Top cola"
+            value={topCola}
+            pct={colaPct}
+            tone={topCola === "Strong" ? "good" : "default"}
+          />
+          <MetricCard
             icon="❤️"
             label="Health"
             value={`${Math.round(plant.health)}%`}
-            strong={plant.health >= 70}
-            warn={plant.health < 40}
+            pct={plant.health}
+            tone={plant.health >= 70 ? "good" : plant.health < 40 ? "warn" : "default"}
           />
-          <InsightChip
+          <MetricCard
             icon="👃"
             label="Aroma"
             value={strain?.terpenes?.length ? strain.terpenes[0] : "Not scanned"}
             cap
           />
-          <InsightChip
+          <MetricCard
             icon="❄️"
             label="Trichomes"
             value={tr?.active ? `${Math.round(tr.cloudy_pct)}% cloudy · ${Math.round(tr.amber_pct)}% amber` : "Not yet"}
+            pct={tr?.active ? tr.cloudy_pct : undefined}
           />
-          <InsightChip
+          <MetricCard
             icon="🔥"
             label="Care streak"
             value={plant.care_streak ? `${plant.care_streak}d` : "—"}
-            strong={!!(plant.care_streak && plant.care_streak >= 5)}
+            pct={plant.care_streak ? Math.min(100, (plant.care_streak / 7) * 100) : undefined}
+            tone={plant.care_streak && plant.care_streak >= 5 ? "good" : "default"}
           />
-          <InsightChip
+          <MetricCard
             icon="💎"
             label="Resin score"
             value={plant.resin_score ? `${Math.round(plant.resin_score)}/100` : "—"}
-            strong={!!(plant.resin_score && plant.resin_score >= 70)}
+            pct={plant.resin_score ?? undefined}
+            tone={plant.resin_score && plant.resin_score >= 70 ? "good" : "default"}
           />
         </div>
         <Link href={`/dashboard/plants/${plant.id}#journal`} className="mt-2 block text-[10px] font-semibold text-cyan-300 hover:underline">
@@ -285,34 +300,43 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
   );
 }
 
-function InsightChip({
+/**
+ * Roomy plant-metric card — icon + label, a big honest value, and a thin
+ * accent progress bar. Replaces the old cramped InsightChip: the value gets two
+ * full lines before it clamps (with a title tooltip), so long readouts like
+ * "73% cloudy · 8% amber" never spill their box.
+ */
+function MetricCard({
   icon,
   label,
   value,
-  strong,
-  warn,
+  pct,
+  tone = "default",
   cap,
 }: {
   icon: string;
   label: string;
   value: string;
-  strong?: boolean;
-  warn?: boolean;
+  /** 0–100 fill for the accent bar; omit for non-numeric metrics (bar stays empty). */
+  pct?: number;
+  tone?: "good" | "warn" | "default";
   cap?: boolean;
 }) {
+  const num = tone === "warn" ? "text-red-400" : tone === "good" ? "text-grow-300" : "text-gray-100";
+  const bar = tone === "warn" ? "bg-red-400" : tone === "good" ? "bg-grow-400" : "bg-cyan-400/80";
+  const fill = pct === undefined ? 0 : Math.max(0, Math.min(100, pct));
   return (
-    <div className="flex min-h-[46px] flex-col justify-center rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1">
-      <span className="text-[9px] text-[#7fa9bf]">
-        {icon} {label}
+    <div className="flex min-h-[68px] flex-col justify-between gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5">
+      <span className="flex items-center gap-1 text-[9px] font-medium text-[#7fa9bf]">
+        <span className="flex-none" aria-hidden>{icon}</span>
+        <span className="truncate">{label}</span>
       </span>
-      <span
-        className={`truncate text-[11px] font-bold ${cap ? "capitalize" : ""} ${
-          warn ? "text-red-400" : strong ? "text-grow-300" : "text-gray-100"
-        }`}
-        title={value}
-      >
+      <span className={`line-clamp-2 break-words text-[15px] font-extrabold leading-tight ${cap ? "capitalize" : ""} ${num}`} title={value}>
         {value}
       </span>
+      <div className="h-1 overflow-hidden rounded-full bg-white/10">
+        <div className={`h-full rounded-full ${bar} transition-[width] duration-500`} style={{ width: `${fill}%` }} />
+      </div>
     </div>
   );
 }
@@ -490,12 +514,13 @@ export function BoostsInline() {
                   ? `${cfg.label} on cooldown, ready in ${Math.ceil(cdLeft / 1000)} seconds`
                   : `Quick-apply ${cfg.label}, ${cfg.multiplier} times multiplier`
               }
-              className={`flex min-h-[36px] flex-1 items-center justify-center gap-1 rounded-lg border font-mono text-[11px] font-bold transition-colors ${
+              style={{ ["--gpe-glow" as string]: isActive ? "118 192 36" : "253 224 71" } as React.CSSProperties}
+              className={`flex min-h-[36px] flex-1 items-center justify-center gap-1 rounded-lg border font-mono text-[11px] font-bold ${
                 onCooldown
-                  ? "cursor-not-allowed border-[#1c3447] bg-[#0a1722] text-cyan-200/40"
+                  ? "cursor-not-allowed border-[#1c3447] bg-[#0a1722] text-cyan-200/40 transition-colors"
                   : isActive
-                    ? "border-grow-400/60 bg-grow-500/15 text-grow-200"
-                    : "border-white/10 bg-white/[0.04] text-cyan-100 hover:border-amber-300/40 hover:bg-amber-300/10"
+                    ? "gpe-glow gpe-active border-grow-400/60 bg-grow-500/15 text-grow-200"
+                    : "gpe-glow border-white/10 bg-white/[0.04] text-cyan-100 hover:border-amber-300/40 hover:bg-amber-300/10"
               }`}
             >
               <span className={`text-sm leading-none ${onCooldown ? "opacity-50" : ""}`}>{BOOST_ICONS[type]}</span>

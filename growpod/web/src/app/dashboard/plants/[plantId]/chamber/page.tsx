@@ -443,8 +443,9 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             key={t}
             onClick={() => setTab(t)}
             aria-pressed={tab === t}
-            className={`flex min-h-[44px] flex-1 items-center justify-center rounded-lg border px-1 text-xs font-bold tracking-[0.08em] transition-colors ${
-              tab === t ? "border-[#3a6a86] bg-[#16364c] text-[#eaf7ff]" : "border-[#1c3447] bg-[#0d1d2b] text-[#7fa9bf]"
+            style={{ ["--gpe-glow" as string]: "56 189 248" } as React.CSSProperties}
+            className={`gpe-glow flex min-h-[44px] flex-1 items-center justify-center whitespace-nowrap rounded-lg border px-1 text-xs font-bold tracking-[0.08em] ${
+              tab === t ? "gpe-active border-[#3a6a86] bg-[#16364c] text-[#eaf7ff]" : "border-[#1c3447] bg-[#0d1d2b] text-[#7fa9bf]"
             }`}
           >
             {t.toUpperCase()}
@@ -467,7 +468,8 @@ function ChamberScreen({ plantId }: { plantId: string }) {
               onClick={() => growthBoost.mutate()}
               disabled={growthBoost.isPending}
               data-testid="growth-boost"
-              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/50 bg-gradient-to-r from-cyan-500/15 to-grow-500/15 px-3 text-xs font-bold tracking-[0.06em] text-cyan-100 transition-all hover:border-cyan-300 hover:from-cyan-500/25 hover:to-grow-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+              style={{ ["--gpe-glow" as string]: "56 189 248" } as React.CSSProperties}
+              className="gpe-glow flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/50 bg-gradient-to-r from-cyan-500/15 to-grow-500/15 px-3 text-xs font-bold tracking-[0.06em] text-cyan-100 transition-all hover:border-cyan-300 hover:from-cyan-500/25 hover:to-grow-500/25 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {growthBoost.isPending ? "Boosting…" : "⚡ Boost Growth · 60 🌿"}
             </button>

@@ -74,9 +74,10 @@ export function MobileTabBar() {
                     key={l.href}
                     href={l.href}
                     aria-current={active ? "page" : undefined}
-                    className={`flex items-center gap-3 rounded-lg px-4 py-3 text-base transition-colors ${
+                    style={{ ["--gpe-glow" as string]: "118 192 36" } as React.CSSProperties}
+                    className={`gpe-glow flex items-center gap-3 rounded-lg px-4 py-3 text-base ${
                       active
-                        ? "bg-grow-700 text-white"
+                        ? "gpe-active bg-grow-700 text-white"
                         : "text-gray-200 hover:bg-ink-700 active:bg-ink-700"
                     }`}
                   >
@@ -110,9 +111,10 @@ export function MobileTabBar() {
             aria-haspopup="dialog"
             aria-expanded={moreOpen}
             aria-current={moreActive ? "page" : undefined}
-            className={`flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] transition-colors ${
+            style={{ ["--gpe-glow" as string]: "118 192 36" } as React.CSSProperties}
+            className={`gpe-glow mx-0.5 my-1 flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-[10px] ${
               moreActive || moreOpen
-                ? "text-grow-300"
+                ? "gpe-active bg-grow-500/15 text-grow-300"
                 : "text-gray-400 active:text-gray-100"
             }`}
           >
@@ -133,8 +135,9 @@ function Tab({ link, active }: { link: NavLink; active: boolean }) {
       href={link.href}
       data-onboarding={navOnboardingId(link.href)}
       aria-current={active ? "page" : undefined}
-      className={`flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] transition-colors ${
-        active ? "text-grow-300" : "text-gray-400 active:text-gray-100"
+      style={{ ["--gpe-glow" as string]: "118 192 36" } as React.CSSProperties}
+      className={`gpe-glow mx-0.5 my-1 flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-[10px] ${
+        active ? "gpe-active bg-grow-500/15 text-grow-300" : "text-gray-400 active:text-gray-100"
       }`}
     >
       <span
