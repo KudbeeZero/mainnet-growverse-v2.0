@@ -13,6 +13,7 @@ import { RarityChip } from "@/components/ui/Pills";
 import { Countdown } from "@/components/ui/Countdown";
 import { ListingCard } from "@/components/market/ListingCard";
 import { CreateListingForm } from "@/components/market/CreateListingForm";
+import { MarketplaceBrowser } from "@/components/nft/MarketplaceBrowser";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useMarket, useContracts } from "@/hooks/queries";
 import { api } from "@/lib/api";
@@ -43,10 +44,24 @@ function MarketInner() {
           { key: "fixed", label: "Fixed price", badge: fixed.length },
           { key: "auctions", label: "Auctions", badge: auctions.length },
           ...(FEATURES.contracts ? [{ key: "contracts", label: "Contracts" }] : []),
+          ...(FEATURES.nftMarketplace ? [{ key: "nft", label: "NFT Market" }] : []),
         ]}
       />
 
-      {tab !== "contracts" && (
+      {tab === "nft" && (
+        <Section
+          title="NFT marketplace"
+          action={
+            <span className="text-xs text-gray-500">
+              Peer-to-peer trading of minted harvest NFTs — testnet/mock, no real money.
+            </span>
+          }
+        >
+          <MarketplaceBrowser />
+        </Section>
+      )}
+
+      {tab !== "contracts" && tab !== "nft" && (
         <Card className="max-w-2xl">
           <CardHeader title="Sell a seed" subtitle="List at a fixed price or open an auction" />
           <CreateListingForm />

@@ -14,7 +14,9 @@ export type FeatureName =
   | "chain"
   | "cup"
   | "university"
-  | "contracts";
+  | "contracts"
+  | "nftMarketplace"
+  | "nftStaking";
 
 /** A flag is enabled only by the exact string "true" (not "TRUE"/"1"/"yes"). */
 function on(value: string | undefined): boolean {
@@ -38,6 +40,8 @@ export type FeatureEnv = {
   NEXT_PUBLIC_ENABLE_CUP?: string;
   NEXT_PUBLIC_ENABLE_UNIVERSITY?: string;
   NEXT_PUBLIC_ENABLE_CONTRACTS?: string;
+  NEXT_PUBLIC_ENABLE_NFT_MARKETPLACE?: string;
+  NEXT_PUBLIC_ENABLE_NFT_STAKING?: string;
 };
 
 /** Pure mapper from NEXT_PUBLIC_ENABLE_* env strings to the flag record. */
@@ -48,6 +52,8 @@ export function computeFeatures(env: FeatureEnv): Record<FeatureName, boolean> {
     cup:         on(env.NEXT_PUBLIC_ENABLE_CUP),
     university:  on(env.NEXT_PUBLIC_ENABLE_UNIVERSITY),
     contracts:   on(env.NEXT_PUBLIC_ENABLE_CONTRACTS),
+    nftMarketplace: on(env.NEXT_PUBLIC_ENABLE_NFT_MARKETPLACE),
+    nftStaking:     on(env.NEXT_PUBLIC_ENABLE_NFT_STAKING),
   };
 }
 
@@ -71,6 +77,12 @@ export const FEATURES: Record<FeatureName, boolean> = {
   cup:         enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_CUP),
   university:  enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_UNIVERSITY),
   contracts:   enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_CONTRACTS),
+  // Sprint 4 (NFT marketplace + curing-room staking) is brand-new and OFF by
+  // default on the backend (balance.yaml's nft_marketplace/nft_staking flags)
+  // -- the client mirrors that with strict opt-in (`on`, not
+  // `enabledUnlessDisabled`) so these surfaces can't dark-launch here either.
+  nftMarketplace: on(process.env.NEXT_PUBLIC_ENABLE_NFT_MARKETPLACE),
+  nftStaking:     on(process.env.NEXT_PUBLIC_ENABLE_NFT_STAKING),
 };
 
 /** True if a named feature is enabled in this build. */

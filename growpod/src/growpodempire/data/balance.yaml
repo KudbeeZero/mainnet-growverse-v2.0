@@ -550,6 +550,19 @@ chain:
     mint_min_rarity: rare
     strain_min_stability: 0.85
 
+# NFT marketplace (Sprint 4, testnet/mock only). Tuning knobs for
+# services/marketplace.py; the actual mint stays gated by chain.nft above --
+# this only covers listing/trading an already-minted NFTAsset.
+nft_marketplace:
+  listing_expiry_days: 7        # default expiry for a new NFTListing
+
+# NFT staking / "curing room" (Sprint 4, testnet/mock only). Locking a minted
+# NFTAsset for `default_cure_hours` earns `reward_pct` of the harvest's
+# sale_value as a bonus GC payout on claim. Tuning knobs for services/staking.py.
+staking:
+  default_cure_hours: 168.0     # 7 days
+  reward_pct: 0.10              # +10% of harvest.sale_value on claim
+
 # --- Feature flags -------------------------------------------------------
 # Data-driven launch gates / kill-switches for player-facing surfaces. Each is a
 # boolean default; override per-environment WITHOUT a deploy via a FEATURE_<NAME>
@@ -558,6 +571,10 @@ chain:
 # marketplace/chain/cup_competitions/university/contracts surfaces are gated on
 # their API routes (require_feature); flip one OFF per-environment for launch.
 # No per-player targeting.
+#
+# nft_marketplace/nft_staking are the exception to the "defaults ON" rule above:
+# this is a brand-new, just-landed testnet/mock system (Sprint 4) that the owner
+# has not reviewed live yet, so both default OFF until explicitly flipped on.
 feature_flags:
   ftue_tutorial: true          # guided first-grow onboarding (/ftue)
   grow_chamber: true           # whole-plant grow-chamber view
@@ -571,3 +588,5 @@ feature_flags:
   contracts: true              # NPC contracts (gated)
   seasonal_strains: true       # monthly exclusive seed drops (token sink)
   faction_waitlist: true       # pre-launch faction + waitlist (NON-economic)
+  nft_marketplace: false       # NFT collection + peer-to-peer trading (gated, OFF by default)
+  nft_staking: false           # NFT curing room / staking locks (gated, OFF by default)

@@ -74,6 +74,7 @@ repo-relative (under `src/growpodempire/` unless noted); every ✅ here is check
 | `design/HERMES_UNIVERSITY.md` | **live memory companion** to `10` — current layer map, AI provider table, open-work list, must-not-drift invariants; updated each session | ✅ created 2026-07-03 |
 | `design/11-global-learning-memory.md` | personalized experience + the global learning memory — `services/learner_model_service.py` · `services/master_grower_service.py` · `services/lecturer_service.py` · `db/models.py` (planned `knowledge_events`) | ⬜ design (owner directive 2026-07-02); P1–P4 build order |
 | `design/12-arcade-animation-system.md` | the arcade-feel rulebook — `web/src/app/globals.css` (`@keyframes gpe-*` + reduced-motion) · `web/src/hooks/usePlantBounce.ts` · `web/src/components/plant/careReactionsData.ts`/`PlantReactionLayer.tsx` · `web/src/lib/arcade/boostEngine.ts` · `BoostAmbientLayer.tsx` | 🔨 rules + boost squash-stretch-bounce live (owner directive 2026-07-03) |
+| `design/NFT_MARKETPLACE_SPEC.md` | NFT marketplace + staking ("curing room") — `db/models.py` (`NFTAsset`/`NFTListing`/`NFTTrade`/`StakingLock`) · `services/nft_mint.py`/`marketplace.py`/`staking.py`/`ipfs.py` · `api/nft_api.py` · `web/src/components/nft/` | 🔨 TestNet/mock MVP landed; `nft_marketplace`/`nft_staking` flags OFF by default — early partial step toward Phase 7 |
 
 **What the sim engine actually reads today** (`simulation/engine.py`): water, nutrient (single
 scalar), temperature, humidity, pH, **light (PPFD)**, **derived leaf VPD**, pest & disease levels;
