@@ -60,8 +60,9 @@ test("PROOF: the CHAMBER is the arcade layer — boosts stay, dashboard panels a
   for (const label of ["WATER", "FEED", "PRUNE", "TRAIN"]) {
     await expect(page.getByRole("button", { name: new RegExp(label, "i") }).first()).toBeVisible();
   }
-  // ...and the ARCADE sheet: boosts inline + quick chips + growth boost.
-  await expect(page.getByRole("button", { name: /ARCADE/i })).toBeVisible();
+  // ...and the arcade toolbar (boosts inline + quick chips + growth boost) —
+  // folded directly under the default CLIMATE tab (PR #156), no separate
+  // ARCADE tab needed.
   await expect(page.getByText(/^BOOSTS/i).first()).toBeVisible();
   await expect(page.getByTestId("growth-boost")).toBeVisible();
 
