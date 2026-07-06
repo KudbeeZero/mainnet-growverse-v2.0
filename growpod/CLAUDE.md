@@ -14,6 +14,10 @@ in `web/`. The database is SQLAlchemy + Alembic (SQLite in dev, Postgres in prod
 Take a working, tested backend → a launchable, long-lived live game, **without breaking the
 core loop**: grow → care → harvest → cure → sell/breed/stabilize → mint → trade.
 
+**GrowVerse direction (adopted 2026-07-06).** The path from here to a shipped beta is the 22-phase
+roadmap in `docs/memory/GROWVERSE_ROADMAP.md`, built one branch at a time via
+`docs/memory/EXECUTION_MACHINE.md` — start there. Same invariants as below; nothing new.
+
 ## How to work here (conventions that must not drift)
 - **DB is authoritative; the chain is a mirror/settlement layer.** Never let on-chain state
   drive gameplay truth.
@@ -99,7 +103,10 @@ change*; this is *how to decide what's true and what to do next*.
 |------|------|---------|-----------|
 | 0 | `CLAUDE.md` (this file) | Identity, invariants, how to work | Low |
 | 1 | `docs/memory/ARCHITECTURE.md` | System map + load-bearing invariants ("don't break") | Low |
+| 1 | `docs/memory/ARCHITECTURE_TRUTH.md` | GrowVerse verified current-state baseline (3-audit inventory) | Refreshed per phase |
 | 1+ | `docs/memory/design/` | **Design Codex** — deep vision/intent: the moat, the scientist-grade sim & generative-genetics targets ("where we're going") | Low |
+| 1+ | `docs/memory/GROWVERSE_ROADMAP.md` | GrowVerse Master Roadmap — the 22-phase upgrade path + First 10 PRs + 30/60/90 | Low |
+| — | `docs/memory/EXECUTION_MACHINE.md` | Dynamic build loop + live next-branch pointer — **start here to build** | Live |
 | 2 | `docs/memory/DECISIONS.md` | Why things are the way they are (ADR log) | Append-only |
 | 3 | `docs/memory/BACKLOG.md` | Prioritized work: now / medium / low | High |
 | 3 | `docs/memory/VERIFIED_RENDERS.md` | Screenshot archive ("chapter list"): golden renders + regen recipes — check it BEFORE building any screenshot rig; capture via the `capture-shots` skill | Append-mostly |

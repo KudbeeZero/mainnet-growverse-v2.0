@@ -43,6 +43,9 @@ flowchart TD
 | 3 | `docs/memory/DOCS_INDEX.md` | Docs tracking layer — every repo .md with role/status; living docs must stay true (fix-in-same-PR) | Append-mostly |
 | 3 | `docs/memory/VERIFIED_RENDERS.md` | Visual-verification archive ("the chapter list"): golden screenshots in `verification/golden/` + one-command regen recipes; capture harness in `.claude/skills/capture-shots/SKILL.md` | Append-mostly |
 | 3 | `docs/memory/BRANCH_STATUS.md` | Branch audit register — merge status, safe-to-delete list, unmerged-content warnings, owner delete instructions | Updated per audit |
+| 1 | `docs/memory/ARCHITECTURE_TRUTH.md` | GrowVerse verified current-state snapshot (3-audit inventory) — the baseline the roadmap builds on | Refreshed per phase |
+| 1+ | `docs/memory/GROWVERSE_ROADMAP.md` | GrowVerse Master Roadmap — the 22-phase upgrade path + First 10 PRs + 30/60/90 (where we're going) | Low |
+| — | `docs/memory/EXECUTION_MACHINE.md` | The dynamic build loop + live "Current Position" next-branch pointer — start here to build | Live |
 | 4 | `docs/memory/standups/` | Dated LUT round-table reports | Daily |
 
 Read **top-down** (Layer 0 is short + stable; each layer down is more detailed + volatile). Write

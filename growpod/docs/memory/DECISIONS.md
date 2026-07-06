@@ -676,3 +676,23 @@ over them with photos.
 onboarding cinematic `/media/grow-pod-hero.jpg`) is untouched by this decision — separate surfaces,
 separate call. (3) Follow-up track: tighten `GrowChamber`/`BudGL` per-strain fidelity (morphology,
 bud shape/color coverage across the catalog) — the work the stills had short-circuited.
+
+### 2026-07-06 — Adopt the GrowVerse 22-phase roadmap + a dynamic execution machine
+**Decision:** Commit the GrowVerse Master Roadmap (`docs/memory/GROWVERSE_ROADMAP.md`), a verified
+current-state baseline (`docs/memory/ARCHITECTURE_TRUTH.md`) produced from three parallel read-only
+audits, and a followable build loop (`docs/memory/EXECUTION_MACHINE.md`) whose "Current Position"
+block is the single source of "what's next." GrowVerse is an **upgrade path over existing systems**
+(pod visuals, plant-state engine, the six live AI agents, the ledgered economy, the testnet chain
+layer), not a rebuild. Execution is one `claude/gv-pNN-slug` branch at a time via the Session Relay
+Protocol; scouts read ahead but never edit ahead; agents run depth-1 (depth-2 owner-approved,
+depth-3 forbidden).
+**Why:** The owner wants a plan detailed enough to kick off building without guessing, persisted in
+the enforced memory layer so it survives sessions and stays honest. Deferring live building keeps the
+foundation protected while the map is agreed.
+**Consequences:** (1) The next build branch is `claude/gv-p02-game-loop-codex`; p01 (architecture
+truth) is delivered by this documentation PR. (2) Protected surfaces (chain funds paths,
+`balance.yaml` numbers, mainnet) stay owner-gated behind the security pass (p13) — no funds-path
+rewrites, no mainnet, no securities-like promises. (3) Every closeout updates the Execution Machine's
+Current Position pointer and reconciles BACKLOG. (4) The roadmap's later phases (agent runtime guard,
+TDE, security pass) formalize the agent-safety and monetization guardrails already implied by the
+charter.
