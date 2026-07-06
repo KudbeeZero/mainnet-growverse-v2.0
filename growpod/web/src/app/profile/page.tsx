@@ -12,6 +12,8 @@ import { ProgressRing } from "@/components/ui/ProgressRing";
 import { TitleBadge } from "@/components/ui/Pills";
 import { HarvestsPanel } from "@/components/harvest/HarvestsPanel";
 import { ConnectWalletButton } from "@/components/wallet/ConnectWalletButton";
+import { NFTCollection } from "@/components/nft/NFTCollection";
+import { CuringRoom } from "@/components/nft/CuringRoom";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import {
   usePlayer,
@@ -388,6 +390,31 @@ function ProfileInner() {
       <Section title="Harvest vault">
         <HarvestsPanel />
       </Section>
+
+      {/* ── NFT Collection (Sprint 4, testnet/mock — gated OFF by default) ── */}
+      {FEATURES.nftMarketplace && (
+        <div id="nft-collection">
+          <Section
+            title="NFT Collection"
+            action={
+              <span className="text-xs text-gray-500">
+                A minted harvest shows up here — list it or send it to the curing room below.
+              </span>
+            }
+          >
+            <NFTCollection />
+          </Section>
+        </div>
+      )}
+
+      {/* ── Curing Room / staking (Sprint 4, testnet/mock — gated OFF by default) ── */}
+      {FEATURES.nftStaking && (
+        <div id="nft-curing-room">
+          <Section title="Curing Room">
+            <CuringRoom />
+          </Section>
+        </div>
+      )}
 
       {/* ── Ledger ── */}
       <Section title="Ledger">

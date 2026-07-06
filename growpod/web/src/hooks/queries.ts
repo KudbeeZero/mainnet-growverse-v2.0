@@ -257,3 +257,22 @@ export function useStoreBundles() {
     staleTime: 60_000,
   });
 }
+
+export function useNFTCollection() {
+  const { playerId, isAuthed } = useSession();
+  return useQuery({
+    queryKey: queryKeys.nftCollection(playerId ?? ""),
+    queryFn: () => api.nft.getCollection(playerId!),
+    enabled: isAuthed,
+  });
+}
+
+export function useStakingLocks() {
+  const { playerId, isAuthed } = useSession();
+  return useQuery({
+    queryKey: queryKeys.stakingLocks(playerId ?? ""),
+    queryFn: () => api.stakes.getLocks(playerId!),
+    enabled: isAuthed,
+    refetchInterval: 10_000, // live progress ring updates
+  });
+}

@@ -86,6 +86,7 @@ class LedgerEntryType(str, Enum):
     TUITION = "tuition"                    # sink: GrowPod University course enrollment
     POD_CLEANUP = "pod_cleanup"            # sink: paid to clear a harvested/dead plant
     GROWTH_BOOST = "growth_boost"          # sink: paid to fast-forward + revive a plant
+    STAKING_REWARD = "staking_reward"      # faucet: post-cure bonus GC from an NFT staking lock
 
 
 class ListingStatus(str, Enum):
@@ -108,3 +109,37 @@ class NFTStatus(str, Enum):
     PENDING = "pending"
     MINTED = "minted"
     FAILED = "failed"
+
+
+class NFTAssetType(str, Enum):
+    """What kind of game entity an `NFTAsset` marketplace-tracking row wraps.
+
+    Only HARVEST is wired up (Sprint 4 MVP); SEED is reserved for the design
+    doc's full scope (seed NFTs) and is not yet produced anywhere.
+    """
+    HARVEST = "harvest"
+    SEED = "seed"
+
+
+class NFTAssetStatus(str, Enum):
+    """Marketplace lifecycle of a minted `NFTAsset` (distinct from the
+    on-chain `NFTStatus` of the underlying Harvest, which only tracks
+    none/pending/minted/failed)."""
+    MINTED = "minted"
+    LISTED = "listed"
+    STAKING = "staking"
+    TRADED = "traded"
+
+
+class NFTTradeStatus(str, Enum):
+    """Settlement state of an `NFTTrade` row."""
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    FAILED = "failed"
+
+
+class StakingLockStatus(str, Enum):
+    """Lifecycle of a `StakingLock` (the "curing room" — cure = staking)."""
+    ACTIVE = "active"
+    COMPLETE = "complete"
+    WITHDRAWN = "withdrawn"

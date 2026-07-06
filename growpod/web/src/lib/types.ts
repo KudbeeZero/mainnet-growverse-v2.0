@@ -792,3 +792,58 @@ export interface WaitlistSignup {
   source: string;
   created_at: string | null;
 }
+
+// ---- NFT Marketplace & Staking (Sprint 4, testnet/mock only) ----
+
+export type NFTAssetStatus = "minted" | "listed" | "staking" | "traded";
+export type NFTListingStatus = "active" | "sold" | "cancelled" | "expired";
+export type StakingStatus = "active" | "complete" | "withdrawn";
+
+export interface NFTAsset {
+  asset_id: number;
+  type: string;
+  status: NFTAssetStatus;
+  game_item_id: string;
+  ipfs_hash: string | null;
+  metadata?: {
+    name?: string;
+    description?: string;
+    properties?: Record<string, unknown>;
+    attributes?: Array<{ trait_type: string; value: string | number }>;
+    [k: string]: unknown;
+  } | null;
+  minted_at: string;
+  /** Set only when status === "listed" — the active NFTListing.id to cancel. */
+  listing_id?: string | null;
+}
+
+export interface NFTListing {
+  listing_id: string;
+  asset_id: number;
+  seller_address: string;
+  price_ualgos: string;
+  status: NFTListingStatus;
+  created_at: string;
+  expires_at: string | null;
+  nft_metadata?: NFTAsset["metadata"];
+}
+
+export interface NFTTrade {
+  trade_id: string;
+  listing_id: string;
+  status: "pending" | "confirmed" | "failed";
+  price_ualgos: string;
+  created_at: string;
+}
+
+export interface StakingLock {
+  lock_id: string;
+  asset_id: number;
+  status: StakingStatus;
+  cure_started_at: string;
+  cure_ends_at: string;
+  progress_pct: number;
+  time_remaining_seconds: number;
+  rewards_amount: string;
+  can_claim: boolean;
+}

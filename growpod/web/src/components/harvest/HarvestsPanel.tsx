@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { LoadingBlock } from "@/components/ui/Spinner";
@@ -10,6 +11,7 @@ import { useApiMutation } from "@/hooks/useApiMutation";
 import { useHarvests, useStrainMap } from "@/hooks/queries";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { FEATURES } from "@/lib/features";
 import { queryKeys } from "@/lib/queryKeys";
 import { grow, num, titleCase } from "@/lib/format";
 import type { Harvest } from "@/lib/types";
@@ -44,6 +46,7 @@ function HarvestCard({
   onEnterCup?: (harvestId: string) => void;
 }) {
   const { playerId } = useSession();
+  const router = useRouter();
   const { map } = useStrainMap();
   const [targetHours, setTargetHours] = useState(48);
   const name = map.get(harvest.strain_id)?.name ?? "Harvest";
@@ -67,6 +70,17 @@ function HarvestCard({
     invalidate: inv,
     successMessage: "Harvest minted as NFT",
   });
+  // Sprint 4 (testnet/mock, gated behind `nft_marketplace`): wraps the mint
+  // above (if it hasn't happened yet) into a marketplace-ready NFTAsset, then
+  // jumps to the Collection/Curing Room section on /profile. Idempotent —
+  // safe to click again from the profile page.
+  const goToNftMarket = useApiMutation(
+    () => api.nft.mint(playerId!, harvest.id),
+    {
+      invalidate: [queryKeys.nftCollection(playerId ?? "")],
+      onSuccess: () => router.push("/profile#nft-collection"),
+    },
+  );
 
   return (
     <div className="panel p-3">
@@ -115,6 +129,16 @@ function HarvestCard({
           {harvest.nft_status !== "minted" && (
             <Button size="sm" variant="ghost" loading={mint.isPending} onClick={() => mint.mutate()}>
               Mint
+            </Button>
+          )}
+          {harvest.nft_status === "minted" && FEATURES.nftMarketplace && (
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={goToNftMarket.isPending}
+              onClick={() => goToNftMarket.mutate()}
+            >
+              🖼️ NFT Market
             </Button>
           )}
           {onEnterCup && (

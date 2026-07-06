@@ -75,12 +75,28 @@ GATED_ROUTES = [
     ("chain", "POST", "/api/game/players/p1/harvests/H1/mint"),
     ("chain", "POST", "/api/game/players/p1/strains/ST1/mint"),
     ("chain", "GET", "/api/game/nft/harvest/H1.json"),
+    # ----- NFT marketplace (Sprint 4, OFF by default) -----
+    ("nft_marketplace", "GET", "/api/nft/players/p1/collection"),
+    ("nft_marketplace", "POST", "/api/nft/players/p1/mint"),
+    ("nft_marketplace", "GET", "/api/market/listings"),
+    ("nft_marketplace", "GET", "/api/market/listings/L1"),
+    ("nft_marketplace", "POST", "/api/market/players/p1/listings"),
+    ("nft_marketplace", "DELETE", "/api/market/players/p1/listings/L1"),
+    ("nft_marketplace", "POST", "/api/market/players/p1/execute/L1"),
+    ("nft_marketplace", "GET", "/api/market/history/1"),
+    # ----- NFT staking / curing room (Sprint 4, OFF by default) -----
+    ("nft_staking", "POST", "/api/stakes/players/p1"),
+    ("nft_staking", "GET", "/api/stakes/players/p1"),
+    ("nft_staking", "GET", "/api/stakes/players/p1/LOCK1"),
+    ("nft_staking", "POST", "/api/stakes/players/p1/LOCK1/claim"),
 ]
 
 
 def _call(client, method, path):
     if method == "GET":
         return client.get(path)
+    if method == "DELETE":
+        return client.delete(path)
     # A minimal body so request.get_json doesn't change behaviour; the gate runs
     # before the body is ever inspected.
     return client.post(path, json={})

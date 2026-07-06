@@ -9,6 +9,8 @@ describe("computeFeatures", () => {
       cup: false,
       university: false,
       contracts: false,
+      nftMarketplace: false,
+      nftStaking: false,
     });
   });
 
@@ -19,12 +21,15 @@ describe("computeFeatures", () => {
       NEXT_PUBLIC_ENABLE_CUP: "1",
       NEXT_PUBLIC_ENABLE_UNIVERSITY: "yes",
       NEXT_PUBLIC_ENABLE_CONTRACTS: "false",
+      NEXT_PUBLIC_ENABLE_NFT_MARKETPLACE: "true",
     });
     expect(f.marketplace).toBe(true);
     expect(f.chain).toBe(false);
     expect(f.cup).toBe(false);
     expect(f.university).toBe(false);
     expect(f.contracts).toBe(false);
+    expect(f.nftMarketplace).toBe(true);
+    expect(f.nftStaking).toBe(false);
   });
 
   it("enables features independently", () => {

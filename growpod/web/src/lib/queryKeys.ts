@@ -44,4 +44,11 @@ export const queryKeys = {
   consumables: (id: string) => ["consumables", id] as const,
   gear: (id: string) => ["gear", id] as const,
   bundles: (id: string) => ["bundles", id] as const,
+  nftCollection: (playerId: string) => ["nft", "collection", playerId] as const,
+  nftMarketListings: (offset: number, limit: number, sort: string) =>
+    ["nft", "market", "listings", offset, limit, sort] as const,
+  nftListingDetail: (listingId: string) => ["nft", "market", "listing", listingId] as const,
+  nftPriceHistory: (assetId: number) => ["nft", "price-history", assetId] as const,
+  stakingLocks: (playerId: string) => ["nft", "staking", "locks", playerId] as const,
+  stakeLock: (lockId: string) => ["nft", "staking", "lock", lockId] as const,
 };

@@ -18,6 +18,10 @@ import { store } from "./store";
 import { turbo } from "./turbo";
 import { health } from "./health";
 import { waitlist } from "./waitlist";
+import { nft } from "./nft";
+import { nftMarket } from "./nft-marketplace";
+import { stakes } from "./nft-staking";
+import { flags } from "./flags";
 
 export const api = {
   players,
@@ -40,6 +44,10 @@ export const api = {
   turbo,
   health,
   waitlist,
+  nft,
+  nftMarket,
+  stakes,
+  flags,
 };
 
 export { ApiError } from "./client";

@@ -864,3 +864,105 @@ class MarketListing(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     __mapper_args__ = {"version_id_col": version}
+
+
+# ---------------------------------------------------------------------------
+# NFT marketplace + staking (Sprint 4 — testnet/mock only).
+#
+# Harvest.nft_asset_id / nft_status (above) remain the single source of truth
+# for "has this harvest been minted on-chain" — that mint is idempotent and
+# optimistic-locked via Harvest.version (see services/minting_service.py).
+# NFTAsset is an ADDITIVE marketplace-tracking wrapper around an already-minted
+# Harvest: it never mints on its own (services/nft_mint.py delegates the actual
+# chain call to MintingService), it just adds the IPFS pin, owner address, and
+# listing/staking status needed for NFTListing/NFTTrade/StakingLock below.
+# ---------------------------------------------------------------------------
+
+
+class NFTAsset(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Marketplace-tracking record for an on-chain-minted Algorand ASA."""
+
+    __tablename__ = "nft_assets"
+
+    asset_id: Mapped[int] = mapped_column(Integer, nullable=False, unique=True, index=True)
+    asset_type: Mapped[str] = mapped_column(String(16), nullable=False)  # NFTAssetType
+    owner_address: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    # Reference to the game entity this wraps (currently always a Harvest.id).
+    game_item_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Only known when the mint surfaced a txid (create_asset_tx); the shared
+    # harvest/strain mint path (MintingService) uses create_asset and doesn't.
+    mint_txid: Mapped[Optional[str]] = mapped_column(String(80))
+    ipfs_hash: Mapped[Optional[str]] = mapped_column(String(64))  # QmXxx... (or mock hash)
+    metadata_snapshot: Mapped[Optional[dict]] = mapped_column(JSON)  # ARC-3 JSON pinned to IPFS
+    status: Mapped[str] = mapped_column(String(16), default="minted", nullable=False)  # NFTAssetStatus
+    synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    __table_args__ = (Index("ix_nft_assets_owner", "owner_address"),)
+
+
+class NFTListing(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Marketplace listing for an NFTAsset (peer-to-peer, TestNet-priced)."""
+
+    __tablename__ = "nft_listings"
+
+    nft_asset_id: Mapped[int] = mapped_column(
+        ForeignKey("nft_assets.asset_id"), nullable=False, index=True
+    )
+    seller_address: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    price_ualgos: Mapped[Decimal] = mapped_column(MONEY, nullable=False)  # microAlgos
+    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)  # ListingStatus
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    sold_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    # Optimistic-lock counter (same pattern as MarketListing/Wallet/Harvest).
+    # Guards create_listing/cancel_listing/execute_trade's check-then-act on
+    # `status` -- two concurrent buyers of the same listing can't both commit
+    # `status = sold`; the loser hits StaleDataError and never double-spends
+    # the same NFT to two buyers.
+    version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    __mapper_args__ = {"version_id_col": version}
+    __table_args__ = (Index("ix_nft_listings_status", "status", "seller_address"),)
+
+
+class NFTTrade(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Settlement record for a completed (or attempted) NFTListing trade."""
+
+    __tablename__ = "nft_trades"
+
+    listing_id: Mapped[str] = mapped_column(ForeignKey("nft_listings.id"), nullable=False)
+    nft_asset_id: Mapped[int] = mapped_column(
+        ForeignKey("nft_assets.asset_id"), nullable=False, index=True
+    )
+    buyer_address: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    seller_address: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    price_ualgos: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    txid: Mapped[Optional[str]] = mapped_column(String(80))  # on-chain txid once confirmed
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False)  # NFTTradeStatus
+    confirmed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    error_message: Mapped[Optional[str]] = mapped_column(String(512))
+
+    __table_args__ = (Index("ix_nft_trades_status", "status", "created_at"),)
+
+
+class StakingLock(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Curing room lock: an NFTAsset locked for a duration to earn bonus GC
+    (the "cure = staking" mechanic — see docs/memory/design/NFT_MARKETPLACE_SPEC.md).
+    """
+
+    __tablename__ = "staking_locks"
+
+    nft_asset_id: Mapped[int] = mapped_column(
+        ForeignKey("nft_assets.asset_id"), nullable=False, index=True
+    )
+    player_id: Mapped[str] = mapped_column(ForeignKey("players.id"), nullable=False)
+    cure_start_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    cure_end_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    cure_target_hours: Mapped[float] = mapped_column(Float, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)  # StakingLockStatus
+    rewards_amount: Mapped[Optional[Decimal]] = mapped_column(MONEY)  # bonus GC earned post-cure
+    rewards_claimed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    __table_args__ = (
+        Index("ix_staking_locks_player", "player_id", "status"),
+        Index("ix_staking_locks_end", "cure_end_at"),
+    )
