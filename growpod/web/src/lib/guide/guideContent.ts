@@ -96,7 +96,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       { body: "Notifications & activity feed: being expanded.", status: "in-progress" },
       { body: "Deeper genetics / lineage tools: being expanded.", status: "in-progress" },
       { body: "Grow Cup / competitions: planned, not live yet.", status: "planned" },
-      { body: "Staking / on-chain rewards: NOT wired in this build.", status: "not-wired" as GuideStatus },
+      { body: "Curing room / on-chain rewards: NOT wired in this build.", status: "not-wired" as GuideStatus },
     ],
   },
   {

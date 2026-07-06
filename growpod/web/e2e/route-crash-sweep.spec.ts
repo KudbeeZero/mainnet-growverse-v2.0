@@ -37,6 +37,7 @@ const ROUTES = [
   "/leaderboards",
   "/market",
   "/mission",
+  "/privacy",
   "/profile",
   "/store",
   "/university",
