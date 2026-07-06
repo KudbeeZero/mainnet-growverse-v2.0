@@ -14,7 +14,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from ..db.models import Harvest, NFTAsset, StakingLock
+from ..db.models import Harvest, NFTAsset, Player, StakingLock
 from ..economy.config import EconomyConfig, get_economy_config
 from ..economy.ledger import post
 from ..enums import LedgerEntryType, NFTAssetStatus, StakingLockStatus
@@ -57,7 +57,10 @@ class StakingService:
             StakingLock record
 
         Raises:
-            StakingError: If NFT not found, not owned by player, or already locked
+            StakingError: If NFT not found, already locked/listed, already
+                completed one staking cure, not currently owned by player
+                (checked against the player's linked wallet, not who
+                originally harvested it), or cure_target_hours is non-positive
         """
         nft = self.session.query(NFTAsset).filter_by(asset_id=nft_asset_id).first()
         if not nft:
@@ -69,13 +72,36 @@ class StakingService:
         if nft.status == NFTAssetStatus.LISTED.value:
             raise StakingError(f"Asset {nft_asset_id} is listed and cannot be staked")
 
-        # Verify ownership by checking the harvest's player_id (the NFTAsset
-        # itself is keyed on Algorand address, not player_id).
-        harvest = self.session.query(Harvest).filter_by(id=harvest_id).first()
-        if not harvest or harvest.player_id != player_id:
-            raise StakingError("Only the harvest owner can stake this NFT")
+        # Disruptor-sweep finding #2: staking is a one-shot bonus per asset, not
+        # a repeatable faucet. claim_rewards() sets this on withdrawal.
+        if nft.staked_once:
+            raise StakingError(
+                f"Asset {nft_asset_id} has already completed a staking cure and can't be staked again"
+            )
 
+        # Disruptor-sweep finding #7: authorize on CURRENT ownership of the NFT
+        # (the caller's linked wallet must match the asset's owner_address),
+        # not the harvest's original player_id -- the harvest's player stays
+        # fixed forever, but the NFT itself can change hands on the
+        # marketplace, and staking must follow the asset, not the harvester.
+        player = self.session.query(Player).filter_by(id=player_id).first()
+        if not player or not player.algorand_address or player.algorand_address != nft.owner_address:
+            raise StakingError("Only the current owner of this NFT can stake it")
+
+        harvest = self.session.query(Harvest).filter_by(id=harvest_id).first()
+        if not harvest:
+            raise StakingError(f"Harvest {harvest_id} not found")
+
+        # Disruptor-sweep finding #16 (mirrors GameService.start_cure's
+        # validation): reject a non-positive duration and clamp an excessive
+        # one, rather than trusting the caller (currently unreachable via the
+        # HTTP route, which doesn't forward this param -- but the service
+        # itself shouldn't rely on that).
+        max_hours = float(self.cfg.raw.get("staking", {}).get("max_cure_hours", 720.0))
         hours = cure_target_hours if cure_target_hours is not None else self._default_cure_hours
+        if hours <= 0:
+            raise StakingError("Cure duration must be positive")
+        hours = min(hours, max_hours)
         now = datetime.utcnow()
         lock = StakingLock(
             nft_asset_id=nft_asset_id,
@@ -175,6 +201,9 @@ class StakingService:
         nft = self.session.query(NFTAsset).filter_by(asset_id=lock.nft_asset_id).first()
         if nft:
             nft.status = NFTAssetStatus.MINTED.value
+            # Disruptor-sweep finding #2: mark the cure used up so create_lock
+            # rejects re-staking this asset for another reward cycle.
+            nft.staked_once = True
 
         lock.status = StakingLockStatus.WITHDRAWN.value
         lock.rewards_claimed_at = datetime.utcnow()

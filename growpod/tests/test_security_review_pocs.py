@@ -228,7 +228,10 @@ def _rare_harvest(s):
     stack = svc.buy_seed(p.id, strain.id)
     pod = svc.create_pod(p.id, "Tent", charge=False)
     plant = svc.plant_seed(p.id, stack.id, pod.id)
-    harvest = svc.harvest_plant(p.id, plant.id, weight_g=100, quality=90)
+    # sell=False: this PoC is about the mint-concurrency race, not selling --
+    # harvest_plant's own default (sell=True) would auto-sell it first,
+    # tripping the disruptor-sweep sold-harvest mint guard.
+    harvest = svc.harvest_plant(p.id, plant.id, weight_g=100, quality=90, sell=False)
     return p.id, harvest.id
 
 

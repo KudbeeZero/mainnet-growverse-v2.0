@@ -171,6 +171,11 @@ class TestMarketplaceService:
 class TestStakingService:
     def _minted_asset_with_value(self, s, username="staker1", sale_value=Decimal("100.00")):
         pid, harvest = _harvest(s, username)
+        # Link the staker's wallet to the SAME address the NFT is minted to,
+        # so create_lock's current-ownership authz check (disruptor-sweep
+        # finding #7) passes for this staker, matching a real "I own this NFT"
+        # state instead of an unlinked wallet.
+        GameService(s).link_wallet(pid, _ADDR_A)
         harvest.sale_value = sale_value
         s.commit()
         nft = NFTMintService(s).mint_harvest(pid, harvest.id, _ADDR_A)
@@ -269,17 +274,27 @@ class TestNFTApiEndToEnd:
         )
         assert r.status_code == 201, r.get_json()
 
-        # Curing room: the ORIGINAL seller stakes their harvest (ownership of
-        # the NFT already moved to the buyer, but staking is keyed off the
-        # Harvest owner, matching the design doc's "cure your own harvest").
+        # Curing room: ownership of the NFT has moved to the buyer, so the
+        # ORIGINAL seller can no longer stake it -- staking now authorizes on
+        # CURRENT ownership (disruptor-sweep finding #7), not who originally
+        # harvested it.
         r = client.post(
             f"/api/stakes/players/{pid}",
             json={"asset_id": asset_id, "harvest_id": harvest_id},
             headers=headers,
         )
+        assert r.status_code == 400, r.get_json()
+
+        # The BUYER, who now owns the NFT, can stake it.
+        buyer_headers = {"X-API-Key": buyer_key}
+        r = client.post(
+            f"/api/stakes/players/{buyer_id}",
+            json={"asset_id": asset_id, "harvest_id": harvest_id},
+            headers=buyer_headers,
+        )
         assert r.status_code == 201, r.get_json()
         lock_id = r.get_json()["lock_id"]
 
-        r = client.get(f"/api/stakes/players/{pid}", headers=headers)
+        r = client.get(f"/api/stakes/players/{buyer_id}", headers=buyer_headers)
         assert r.status_code == 200
         assert any(l["lock_id"] == lock_id for l in r.get_json())

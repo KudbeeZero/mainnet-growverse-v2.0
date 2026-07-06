@@ -896,7 +896,17 @@ class NFTAsset(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     metadata_snapshot: Mapped[Optional[dict]] = mapped_column(JSON)  # ARC-3 JSON pinned to IPFS
     status: Mapped[str] = mapped_column(String(16), default="minted", nullable=False)  # NFTAssetStatus
     synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    # Set once a staking lock on this asset is claimed (StakingService.claim_rewards)
+    # so it can't be re-staked for a repeat reward (disruptor-sweep finding #2 —
+    # the "cure = staking" bonus is a one-shot reward per asset, not a faucet).
+    staked_once: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Optimistic-lock counter (same pattern as NFTListing/Wallet/Harvest).
+    # Guards create_lock/create_listing's check-then-act on `status` -- two
+    # concurrent callers can't both commit a status transition for the same
+    # asset; the loser hits StaleDataError (disruptor-sweep finding #8).
+    version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
+    __mapper_args__ = {"version_id_col": version}
     __table_args__ = (Index("ix_nft_assets_owner", "owner_address"),)
 
 

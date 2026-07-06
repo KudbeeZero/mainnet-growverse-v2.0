@@ -60,6 +60,14 @@ class MintingService:
         harvest = self.session.get(Harvest, harvest_id)
         if harvest is None or harvest.player_id != player_id:
             raise GameError("Harvest not found")
+        # Disruptor-sweep finding #3: a harvest already sold to the NPC market
+        # has already been monetized once (harvest.sale_value posted to the
+        # ledger, sell_harvest() stamps sold=True) -- minting it too would let
+        # the same harvest pay out twice (NPC-market GC now, marketplace ALGO +
+        # a staking bonus later). Covers both mint entry points: this is the
+        # single chain-mint path NFTMintService.mint_harvest delegates to.
+        if harvest.sold:
+            raise GameError("Cannot mint a harvest that has already been sold")
         if harvest.nft_status == NFTStatus.MINTED.value:
             return harvest  # idempotent
         if harvest.nft_status == NFTStatus.PENDING.value:
