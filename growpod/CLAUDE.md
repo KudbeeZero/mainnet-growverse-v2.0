@@ -14,14 +14,9 @@ in `web/`. The database is SQLAlchemy + Alembic (SQLite in dev, Postgres in prod
 Take a working, tested backend → a launchable, long-lived live game, **without breaking the
 core loop**: grow → care → harvest → cure → sell/breed/stabilize → mint → trade.
 
-**GrowVerse direction (adopted 2026-07-06).** The agreed path from here to a shipped beta is the
-22-phase **GrowVerse Master Roadmap** (`docs/memory/GROWVERSE_ROADMAP.md`) — an *upgrade over
-existing systems*, not a rebuild (verified baseline: `docs/memory/ARCHITECTURE_TRUTH.md`). Build it
-one `claude/gv-pNN-slug` branch at a time via the **Execution Machine**
-(`docs/memory/EXECUTION_MACHINE.md`), whose "Current Position" block always names the next branch.
-Its guardrails match this file's invariants: DB authoritative / chain a mirror, testnet-only until
-the security pass, agents depth-1 and kill-switched, `balance.yaml` owner-gated, no mainnet, no
-securities-like promises.
+**GrowVerse direction (adopted 2026-07-06).** The path from here to a shipped beta is the 22-phase
+roadmap in `docs/memory/GROWVERSE_ROADMAP.md`, built one branch at a time via
+`docs/memory/EXECUTION_MACHINE.md` — start there. Same invariants as below; nothing new.
 
 ## How to work here (conventions that must not drift)
 - **DB is authoritative; the chain is a mirror/settlement layer.** Never let on-chain state

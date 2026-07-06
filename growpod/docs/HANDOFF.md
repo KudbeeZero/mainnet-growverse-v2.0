@@ -78,13 +78,19 @@ A large hardening + feature batch (all gate-green, CI green each push):
 
 ## NEXT ACTION (single)
 
-**Two owner-directed threads are open on #137 and need a decision or a build:**
+**Build `claude/gv-p02-game-loop-codex`** (Phase 2 of the GrowVerse roadmap) — see the "NEXT CHAT
+STARTS HERE" line above and `docs/memory/EXECUTION_MACHINE.md`'s Current Position pointer.
+
+**Two older owner-directed threads from PR #137 (now merged) are still open — not gating GrowVerse
+work, but not forgotten (tracked in BACKLOG.md, pick up opportunistically or when the owner
+prioritizes them):**
 1. **Onboarding rework (owner, 2026-07-03):** "it's too long, not exciting, doesn't really work —
    set up some sort of onboarding with AI helping along the way." The AI advisor (Master Grower)
    already exists on the dashboard, plant detail, FTUE (per-step coaching) and University — it's
    wired, just not prominent, and needs the advisor key in prod. Current onboarding = a 4-beat
    cinematic landing (`/onboarding`) + a 7-step FTUE (`/ftue`). Needs a shorter, AI-guided
-   first-run — scope/taste to confirm with owner before a big rebuild.
+   first-run — scope/taste to confirm with owner before a big rebuild. (This overlaps GrowVerse
+   Phase 18's onboarding-finish requirement — likely gets resolved there.)
 2. **Plant render:** owner says it's not 10/10 (honest self-score ~8). It's under the owner's own
    "don't chase the macro bud" freeze — needs the owner to name the specific gap (or lift the
    freeze) before a targeted 2D-chamber round.

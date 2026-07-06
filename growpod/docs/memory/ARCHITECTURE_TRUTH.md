@@ -15,9 +15,9 @@
 
 GROWv2 is a **working, tested game** with far more built than a fresh plan would assume. The
 GrowVerse roadmap is an **upgrade path over existing systems**, not a rebuild. The single most
-important planning fact: the plant-state engine, the ~4,300-LOC chamber renderer, the full
-grow→harvest→breed→mint loop, the ledgered economy, six live AI agents, and 1,122 passing backend
-tests **already exist**.
+important planning fact: the plant-state engine, the ~3,100-LOC chamber renderer, the full
+grow→harvest→breed→mint loop, the ledgered economy, 5 live AI agents (+1 code-ready), and 1,140
+passing backend tests **already exist**.
 
 ---
 
@@ -29,10 +29,10 @@ tests **already exist**.
 | `services/` | ✅ Solid | Ledgered `Decimal` economy, settlement (explicit ASA creation only — hardened in audit PR #148), contract-expiry persistence, withdrawal caps fail-closed. |
 | `api/` | ✅ Solid | 50+ endpoints. Writes need `X-API-Key` auth; reads public; mutations rate-limited. |
 | `chain/` | ✅ Solid, gated | Provider ABCs; deterministic Mock for CI; genesis-ID guard on the Algorand provider; **never require live keys in CI**. |
-| `ai/` | ✅ Stronger than expected | **Six Claude-backed agents live behind provider ABCs** (see §5). Structured output via `messages.parse()`; deterministic mocks in CI. |
+| `ai/` | ✅ Stronger than expected | **5 Claude-backed agents live + 1 code-ready, behind provider ABCs** (see §5). Structured output via `messages.parse()`; deterministic mocks in CI. |
 | `data/balance.yaml` | ✅ PROTECTED | The tuning surface. Economy changes are data-driven here and owner-gated. |
 | `genetics/` | ✅ Solid | Deterministic Mendelian crossbreeding, stability/rarity progression. |
-| DB | ✅ Solid | SQLAlchemy + Alembic; SQLite dev / Postgres prod; alembic-drift CI gate (added PR #148); 1,122 tests, 93.64% coverage (floor 79%, ratcheted). |
+| DB | ✅ Solid | SQLAlchemy + Alembic; SQLite dev / Postgres prod; alembic-drift CI gate (added PR #148); 1,140 tests, ≥93% coverage (floor 79%, ratcheted). |
 
 ### Plant state engine — `simulation/state/plant_state.py` ✅
 Persistent aggregates: `overall_health` (death at ≤1), `water_level`, `nutrient_level`,
@@ -99,16 +99,16 @@ Care cadence: 24h wall clock ≈ one calendar day; simulation `time_scale` ≈ 0
 - **University:** 6 departments, 14+ courses, degree perks. 🔨 Only `bio-101` has an assessment
   bank — **14 to author**.
 - **Cannabis Cup** (deterministic scoring), **contracts** (NPC deliveries), **achievements**,
-  **16-node research tree**, **marketplace** (auction + listing, 3% list fee + 5% sale tax).
+  **14-node research tree**, **marketplace** (auction + listing, 3% list fee + 5% sale tax).
 
 ---
 
-## 5. AI agents — 6 live + 2 scaffold
+## 5. AI agents — 5 live + 1 code-ready + 2 scaffold
 
 | Agent | State | Location/usage | Verdict for roadmap |
 |---|---|---|---|
 | Advisor (plant diagnostician) | ✅ Live | `ai/`, plant detail | Backbone of the new Scout |
-| Master Grower (conversational) | 🔨 Code-ready | `/api/game/ask` endpoint live, **no web UI** | Wire the UI (cheap unlock) |
+| Master Grower (conversational) | 🔨 Code-ready | `/api/game/ask` endpoint live; web UI already exists at `/university/coach` (`BotChatPanel.tsx`) — not surfaced elsewhere | Extend surface area (dashboard/chamber), not build from zero |
 | Lecturer (course content) | ✅ Live | university | Keep; feeds knowledge layer |
 | Admissions (intake quiz) | ✅ Live | FTUE | Keep + surface recommendation |
 | Roadmap (learning paths) | ✅ Live | university | Keep |
@@ -154,12 +154,20 @@ owner approval.
 
 1. **Feature flags dormant** — 5 of 12 flags gate nothing when OFF; web never reads
    `GET /api/game/flags` (defaults to env). High-value early fix. → Roadmap p18 prep.
-2. **Mission system half-wired** — mission UI components exist; backend `MissionService` not wired.
-   → p10.
-3. **Master Grower chat** — endpoint live, no web UI. → p05/p10.
+2. **No player-facing mission/quest system** — `/mission` is a self-documented, nav-hidden,
+   owner/admin-only "Mission Control v0" ops board (`web/src/app/mission/page.tsx`); there is no
+   `MissionService` and no player quest system anywhere in the backend. This is new-build work, not
+   a wiring job. → p10 (correctly scoped as new-build in the roadmap; do not describe it as
+   "wiring an existing service").
+3. **Master Grower chat** — endpoint live; a web UI already exists at `/university/coach`
+   (`BotChatPanel.tsx`) but isn't surfaced on the dashboard/chamber. → p05/p10.
 4. **Chain settlement not live** — mock only; testnet go-live needs treasury funding, `ASA_ID`,
-   deposit txid verification, replay protection, reconciliation (BACKLOG "RISK #7"). → p07.
-5. **Idempotency-Key header** — skeleton shipped (PR #142), not wired across mutations. → p07/p13.
+   deposit txid verification, and a reconciliation job (BACKLOG "RISK #7"). Only **replay
+   protection** belongs to p07 (Phase 7's own "Do NOT touch" list forbids withdraw/deposit/
+   settlement work); treasury/`ASA_ID`/deposit-verification is p13, and the **reconciliation job is
+   p22** (see GROVERSE_ROADMAP.md Phase 22). → p07 (replay protection only) / p13 / p22.
+5. **Idempotency-Key header** — infrastructure shipped (commit `7333b86`, 18 mutation endpoints via
+   `@require_idempotency`); confirm full mutation coverage. → p07/p13.
 6. **Assessment banks** — 14 course YAMLs to author. → p06.
 7. **Mood animations + mutation/rarity visuals** — state exists, visuals TBD. → p03.
 8. **Market P2P settlement** — flows exist; web settlement incomplete. → p08/p13.

@@ -227,14 +227,20 @@ flagged read-only Genetics Advisor; wire mutation visuals from p03; no breeding-
 closeout." **Acceptance:** lineage renders; reveal plays; advisor behind flag; breeding determinism
 unchanged. **Do NOT touch:** `genetics/` cross math, rarity-assignment logic.
 
-### Phase 10 — Mission Control / Agent Feed · `claude/gv-p10-mission-control`
-**Purpose:** wire backend `MissionService` → existing mission UI; add the agent-report feed with
-attribution/confidence/freshness. **Tech:** connect MissionService to the existing MissionPacketCard/
-WiringPanel; agent-feed surface reading `scout_reports` + the agent registry; dev/debug toggle.
-**Security:** feed renders only sanitized text (reuse p04 sanitization). **Sonnet prompt:** "Wire
-MissionService to the mission UI; build the attributed agent-report feed; add a dev/debug toggle;
-closeout." **Acceptance:** missions serve + complete; feed shows attributed reports; sanitization
-holds. **Do NOT touch:** economy reward numbers (missions read `balance.yaml`, don't redefine).
+### Phase 10 — Player Missions + Agent Feed · `claude/gv-p10-mission-control`
+**Purpose:** build a player-facing daily/weekly mission (quest) system from scratch — there is no
+existing `MissionService` or player quest UI to wire; the current `/mission` route is a separate,
+nav-hidden, owner/admin-only "Mission Control v0" ops board (`web/src/app/mission/page.tsx`) and
+stays exactly that. Also add the agent-report feed with attribution/confidence/freshness.
+**Tech:** new `MissionService` + mission schema + player-facing mission UI (new components, not the
+admin `MissionPacketCard`/`WiringPanel`); agent-feed surface reading `scout_reports` + the agent
+registry; dev/debug toggle. **Security:** feed renders only sanitized text (reuse p04
+sanitization). **Sonnet prompt:** "Build a player-facing mission/quest system (new MissionService +
+schema + UI, distinct from the existing admin-only /mission ops board); build the attributed
+agent-report feed; add a dev/debug toggle; closeout." **Acceptance:** player missions serve +
+complete; feed shows attributed reports; sanitization holds; the admin `/mission` ops board is
+untouched. **Do NOT touch:** economy reward numbers (missions read `balance.yaml`, don't redefine);
+the existing admin `/mission` ops board.
 
 ### Phase 11 — GrowVerse TDE / Agent OS · `claude/gv-p11-tde-agent-os`
 **Purpose:** the owner's control center — repo/PR/CI status, plant-systems health, agent map + last
@@ -436,8 +442,11 @@ per card: depth-1 default; depth-2 needs recorded owner approval; depth-3 forbid
    missing 20%.
 2. **Scout report card (p05)** — the headline differentiator; builds on the live Advisor; the sim is
    a free eval oracle.
-3. **Wire the mission system (p10)** — UI built, backend `MissionService` unwired; cheap retention win.
-4. **Master Grower chat UI** — endpoint live, no UI; small component, whole feature unlocked.
+3. **Build player missions (p10)** — no existing MissionService/quest UI (the current `/mission`
+   route is an unrelated admin ops board); new-build, not a wiring job, but still a strong
+   retention lever.
+4. **Master Grower chat UI** — endpoint live, a UI already exists at `/university/coach`; surface it
+   on the dashboard/chamber for a cheap unlock.
 5. **Feature-flag enforcement (p18 prep)** — small change, removes a real launch risk.
 6. **Testnet mint-at-harvest ceremony (p07)** — turns mock minting into a real ownership moment.
 

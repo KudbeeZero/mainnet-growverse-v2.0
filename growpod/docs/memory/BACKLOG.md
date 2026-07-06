@@ -3,9 +3,12 @@
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
 once they appear here. Last reconciled: **2026-07-06** (GrowVerse roadmap adopted — `docs/memory/GROWVERSE_ROADMAP.md`
 [22-phase upgrade path], `docs/memory/ARCHITECTURE_TRUTH.md` [verified baseline from 3 audits], and
-`docs/memory/EXECUTION_MACHINE.md` [dynamic build loop, next branch = `claude/gv-p02-game-loop-codex`];
-the open items below map onto roadmap phases — feature-flag gaps → p18 prep, chain settlement RISK #7 →
-p07, assessment banks → p06, mission wiring → p10; prior note follows.) (infrastructure audit of api/chain/db/services
+`docs/memory/EXECUTION_MACHINE.md` [dynamic build loop, next branch = `claude/gv-p02-game-loop-codex`] —
+tracked as item 0a below; the open items below map onto roadmap phases — feature-flag gaps → p18 prep,
+chain settlement RISK #7 → replay-protection only is p07, treasury/ASA_ID/deposit-verify is p13,
+reconciliation job is p22 (not p07 — Phase 7's own scope forbids settlement/withdraw work), assessment
+banks → p06, player-mission new-build (not "wiring", no MissionService exists) → p10; prior note
+follows.) (infrastructure audit of api/chain/db/services
 plumbing — report at `docs/audits/2026-07-05-infra-audit.md`, findings queued under `## 🔴 Immediate`;
 prior note follows.) (pod-recycle fix + landing-particle perf/scale fix — GameService.cleanup_plant now ARCHIVES (not deletes) a harvested/dead plant so Harvest/CupEntry rows survive, and the missing UI got wired into all 3 screens (dashboard, plant detail, chamber); Constellation.tsx particle glow now scales with viewport + blits a cached sprite instead of a per-frame gradient, fixing both the mobile "huge blob" look and the slow frame rate; Lab microscope rework phase 1 — purple-hue fix via authored strainVisuals BudColor (calyxTint), live-plant deep-link ?plantId= seeded from server trichome telemetry (maturityFromTelemetry), chamber 🔬 Inspect-trichomes chip replacing the dead View-Bud placeholder, terpene-label collision skip + µm scale bar; visual-verification archive — `docs/memory/VERIFIED_RENDERS.md` chapter list + `verification/golden/` + shared e2e fixtures (`web/e2e/fixtures/mockGame.ts`) + parameterized `capture.spec.ts` + sandbox-Chromium auto-detect in `playwright.config.ts` + `capture-shots` skill, ending the per-session throwaway-rig ritual; plant round 8c — leaf + bract TEXTURE LAYERING (owner: "the layering in the texture"): `drawFan` leaflets now carry deterministic per-leaflet size/angle/tone jitter plus a light↔shadow facet gradient (was one flat hsl() fill repeated identically at every node — the "stamped decal" read); `drawPod` now gives every calyx bract a volumetric gradient (the old `w>4.2` gate meant almost none ever cleared it, since podW's own ceiling is 4.2) plus a new base "undercut" shadow so overlapping bracts read as a physically shingled stack instead of blending into the mass gradient; plant round 8b — airier, more-separated candelabra branch layout in chamberCore.ts's `buildPlant`, matching the owner's "10/10" hero render (fewer/more-separated tiers, colas held further OUT, opened interior), superseding the round-2..7 density push on the spacing axis; top cola construction — deterministic ring-parity stacking-alternation colour ("every other one purple"), ported from `buildMacro`'s golden-angle ring-pack; plant round 8 combined "10/10 hero render" push — four parallel specialists combined-verified against the reference: pistil hairs (curl, length tiers, tip-density, pale→orange mix), trichome frost (dense crystalline sugar-coat), green sugar-leaf sepals (tuned to peek not stab — purple dominant), chamber glow Phase 2 (in-canvas green rim/back glow + green pot-base ring); dedupe floating boost tray; chamber ambient glow Phase 1 (DOM-only); game-hub restructure; plant mockup round 6 purple-dominant color; top cola construction v2 structure-first; mint metadata server-truth fix).
 
@@ -20,9 +23,13 @@ prior note follows.) (pod-recycle fix + landing-particle perf/scale fix — Game
 > ✅ done and ❄️ parked items are in their track sections below and are NOT listed here.
 
 ### 🔴 Now — correctness / risk / security (must close before public launch)
+0a. 🔨 **GrowVerse 22-phase roadmap execution** — Phase 1 (Architecture Truth) lands this PR; next
+    branch tracked live in `docs/memory/EXECUTION_MACHINE.md`'s "Current Position" block (currently
+    `claude/gv-p02-game-loop-codex`) → `docs/memory/GROWVERSE_ROADMAP.md`
 0. ✅ **Infra-audit 2026-07-05 findings** — migration drift + implicit treasury ASA create + 4 MEDIUMs, all fixed → `## 🔴 Immediate`
 1. 🔨 **Concurrency hardening** — remaining: `Idempotency-Key` header + one-shot-grant uniqueness → `## 🔴 Immediate`
-2. ⬜ **Chain settlement verification (RISK #7)** — deposit txid verify, replay protection, reconciliation job → `## 🔴 Immediate`
+2. ⬜ **Chain settlement verification (RISK #7)** — deposit txid verify + treasury/ASA_ID is p13,
+   replay protection is p07, reconciliation job is p22 → `## 🔴 Immediate`
 3. ⬜ **Security follow-ups PR #104** — deposit redesign, CSP nonce, CORS allowlist, player key off localStorage → `## 🏛️ HERMES`
 4. ⬜ **5 of 12 feature flags gate nothing** — `ftue_tutorial`/`grow_chamber`/`master_grower_advisor`/`breeding_lab`/`daily_stipend` off does nothing (owner OK needed) → `### 🕵️ Dormant investments`
 5. ⬜ **Web gating never reads `GET /api/game/flags`** — `features.ts` is env-var default-ON; land the re-point → `### 🕵️ Dormant investments`

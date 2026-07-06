@@ -21,9 +21,13 @@
 - **Owner action pending before next kickoff:** none — cleared to start p02 on the owner's "go".
 - **Carried risk into next branch:** none.
 
-> **This block is the single source of "what's next."** Every `/closeout` updates it: tick the phase
-> complete, set NEXT BRANCH / NEXT PR TITLE from the [First 10 PRs](GROWVERSE_ROADMAP.md) table (then
-> the phase list beyond #10), and note any owner action or carried risk.
+> **`docs/HANDOFF.md` stays the single source of truth for what the next chat does first** (per its
+> own header). This block is the roadmap-phase-level detail behind that pointer — the mechanics of
+> *which branch/PR is next in the 22-phase sequence*. Every `/closeout` updates **both**: this block
+> (tick the phase complete, set NEXT BRANCH / NEXT PR TITLE from the
+> [First 10 PRs](GROWVERSE_ROADMAP.md) table, then the phase list beyond #10, note any owner action
+> or carried risk) **and** HANDOFF.md's header, so the two never disagree. If they ever do disagree,
+> HANDOFF.md wins — fix this block to match it.
 
 ---
 
@@ -71,8 +75,10 @@ Every PR must be green on the gates its phase touches:
 | Visual goldens | capture-shots promote | any chamber/visual change |
 
 **Protected-surface gate** (adds to the above) — any diff touching `chain/`, settlement, withdrawal,
-`data/balance.yaml` numbers, auth, or wallet UI requires, in the PR body: the Security-Reviewer
-checklist, the owner's testnet click-test, and a transaction-watcher capture. See `docs/BUILD_RULES.md`.
+`data/balance.yaml` numbers, Alembic migrations, auth, wallet UI, or lockfiles requires, in the PR
+body: the Security-Reviewer checklist, the owner's testnet click-test, and a transaction-watcher
+capture. This must always match `docs/BUILD_RULES.md` and `CLAUDE.md`'s "Build safely" list — if
+they ever diverge, treat it as a bug in this doc and fix it here.
 
 ---
 
