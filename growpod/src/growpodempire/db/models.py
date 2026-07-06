@@ -46,7 +46,9 @@ class Player(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     email: Mapped[Optional[str]] = mapped_column(String(255), unique=True)
     # Algorand wallet address (Phase 3); nullable until the player links/creates one.
-    algorand_address: Mapped[Optional[str]] = mapped_column(String(64), index=True)
+    # unique=True: defense-in-depth against wallet hijack (disruptor-sweep #4) --
+    # two players can't link the same address at the DB layer.
+    algorand_address: Mapped[Optional[str]] = mapped_column(String(64), unique=True, index=True)
     last_active_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     # Per-player API key for authenticating write requests (returned once at creation).
     api_key: Mapped[Optional[str]] = mapped_column(String(64), unique=True, index=True)
