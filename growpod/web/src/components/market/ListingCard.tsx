@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { queryKeys } from "@/lib/queryKeys";
+import { useInFlightGuard } from "@/hooks/useInFlightGuard";
 import { grow, titleCase, dateTime } from "@/lib/format";
 import type { Listing } from "@/lib/types";
 
@@ -18,6 +19,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
   const toast = useToast();
   const qc = useQueryClient();
   const [bid, setBid] = useState("");
+  // Synchronous in-flight guard (see useInFlightGuard): each mutation's
+  // `isPending` only disables its button after a React re-render, so a fast
+  // double-click can fire `.mutate()` twice for the same buy/bid/settle
+  // before that lands — one click, two real market transactions.
+  const guard = useInFlightGuard<"buy" | "bid" | "settle">();
 
   const mine = listing.seller_id === playerId;
 
@@ -111,21 +117,39 @@ export function ListingCard({ listing }: { listing: Listing }) {
                     size="sm"
                     loading={placeBid.isPending}
                     disabled={!bid || Number(bid) < minNext}
-                    onClick={() => placeBid.mutate()}
+                    onClick={() => {
+                      if (!guard.start("bid")) return;
+                      placeBid.mutate(undefined, { onSettled: () => guard.stop("bid") });
+                    }}
                   >
                     Bid
                   </Button>
                 </>
               )}
               {mine && (
-                <Button size="sm" variant="secondary" loading={settle.isPending} onClick={() => settle.mutate()}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={settle.isPending}
+                  onClick={() => {
+                    if (!guard.start("settle")) return;
+                    settle.mutate(undefined, { onSettled: () => guard.stop("settle") });
+                  }}
+                >
                   Settle
                 </Button>
               )}
             </>
           ) : (
             !mine && (
-              <Button size="sm" loading={buy.isPending} onClick={() => buy.mutate()}>
+              <Button
+                size="sm"
+                loading={buy.isPending}
+                onClick={() => {
+                  if (!guard.start("buy")) return;
+                  buy.mutate(undefined, { onSettled: () => guard.stop("buy") });
+                }}
+              >
                 Buy {grow(listing.unit_price * listing.quantity)}
               </Button>
             )

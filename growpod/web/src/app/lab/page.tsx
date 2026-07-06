@@ -13,6 +13,7 @@ import { StrainCard } from "@/components/strain/StrainCard";
 import { StrainFilters } from "@/components/strain/StrainFilters";
 import { useStrains, useFavorites, useSeeds, useStrainMap, useSeasonalStrains } from "@/hooks/queries";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { useInFlightGuard } from "@/hooks/useInFlightGuard";
 import { useSession } from "@/lib/session";
 import { queryKeys } from "@/lib/queryKeys";
 import { api } from "@/lib/api";
@@ -48,6 +49,11 @@ function SeasonalSection() {
   const { playerId, isAuthed } = useSession();
 
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  // Synchronous in-flight guard (see useInFlightGuard): `purchase.isPending`
+  // only disables the button after React re-renders, so a fast double-click
+  // (or a duplicate synthetic click) can call `.mutate()` twice for the same
+  // seasonal strain before that lands — two real purchases from one click.
+  const guard = useInFlightGuard<string>();
   const purchase = useApiMutation(
     (seasonalId: string) => api.seasonal.purchase(playerId!, seasonalId),
     {
@@ -110,8 +116,9 @@ function SeasonalSection() {
                   size="sm"
                   loading={purchase.isPending && purchasingId === s.id}
                   onClick={() => {
+                    if (!guard.start(s.id)) return;
                     setPurchasingId(s.id);
-                    purchase.mutate(s.id);
+                    purchase.mutate(s.id, { onSettled: () => guard.stop(s.id) });
                   }}
                 >
                   Buy Seed

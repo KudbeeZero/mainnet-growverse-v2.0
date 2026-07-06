@@ -20,6 +20,7 @@ import { useSession } from "@/lib/session";
 import { api } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
+import { useInFlightGuard } from "@/hooks/useInFlightGuard";
 import type { StorePartner, StoreBundle, FeaturedItem } from "@/lib/api/store";
 
 function gcFmt(v: number) {
@@ -75,6 +76,7 @@ function FeaturedShelf() {
   const qc = useQueryClient();
   const [buying, setBuying] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Record<string, string>>({});
+  const guard = useInFlightGuard<string>();
 
   function setMsg(id: string, msg: string) {
     setMsgs((prev) => ({ ...prev, [id]: msg }));
@@ -111,14 +113,16 @@ function FeaturedShelf() {
 
   async function handleBuy(item: typeof allItems[number]) {
     if (!isAuthed || !playerId) return;
+    // Synchronous in-flight guard (see useInFlightGuard): closes the
+    // fast-double-click gap the `buying` state alone can't, since the state
+    // update below isn't visible to a second click until React re-renders.
+    if (!guard.start(item.id)) return;
     setBuying(item.id);
     setMsg(item.id, "");
     try {
       if (item.source === "seasonal") {
         await api.seasonal.purchase(playerId, item.item_id);
         await qc.invalidateQueries({ queryKey: queryKeys.seeds(playerId) });
-      await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
-      await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
         await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
         await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
         setMsg(item.id, "✓ Seed added to inventory");
@@ -136,8 +140,6 @@ function FeaturedShelf() {
           body: { strain_id: item.item_id, quantity: 1 },
         });
         await qc.invalidateQueries({ queryKey: queryKeys.seeds(playerId) });
-      await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
-      await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
         await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
         await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
         setMsg(item.id, "✓ Seed added to inventory");
@@ -145,6 +147,7 @@ function FeaturedShelf() {
     } catch (e: unknown) {
       setMsg(item.id, e instanceof Error ? e.message : "Purchase failed");
     } finally {
+      guard.stop(item.id);
       setBuying(null);
     }
   }
@@ -196,9 +199,11 @@ function PartnerCard({ partner }: { partner: StorePartner }) {
   const qc = useQueryClient();
   const [buying, setBuying] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const guard = useInFlightGuard();
 
   async function buy() {
     if (!isAuthed || !playerId) return;
+    if (!guard.start(true)) return;
     setBuying(true);
     setMsg(null);
     try {
@@ -210,6 +215,7 @@ function PartnerCard({ partner }: { partner: StorePartner }) {
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Purchase failed");
     } finally {
+      guard.stop(true);
       setBuying(false);
     }
   }
@@ -276,9 +282,11 @@ function BundleCard({ bundle }: { bundle: StoreBundle }) {
   const qc = useQueryClient();
   const [buying, setBuying] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const guard = useInFlightGuard();
 
   async function buy() {
     if (!isAuthed || !playerId) return;
+    if (!guard.start(true)) return;
     setBuying(true);
     setMsg(null);
     try {
@@ -290,6 +298,7 @@ function BundleCard({ bundle }: { bundle: StoreBundle }) {
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Purchase failed");
     } finally {
+      guard.stop(true);
       setBuying(false);
     }
   }
@@ -370,6 +379,7 @@ function ConsumablesSection() {
   const [loading, setLoading] = useState(false);
   const [buying, setBuying] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const guard = useInFlightGuard<string>();
 
   async function load() {
     if (!isAuthed || !playerId) return;
@@ -387,6 +397,7 @@ function ConsumablesSection() {
 
   async function buy(key: string) {
     if (!isAuthed || !playerId) return;
+    if (!guard.start(key)) return;
     setBuying(key);
     setMsg(null);
     try {
@@ -402,6 +413,7 @@ function ConsumablesSection() {
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Purchase failed");
     } finally {
+      guard.stop(key);
       setBuying(null);
     }
   }
@@ -469,6 +481,7 @@ function SeedsSection() {
   const [loading, setLoading] = useState(false);
   const [buying, setBuying] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const guard = useInFlightGuard<string>();
 
   async function load() {
     setLoading(true);
@@ -483,6 +496,7 @@ function SeedsSection() {
 
   async function buy(strainId: string) {
     if (!isAuthed || !playerId) return;
+    if (!guard.start(strainId)) return;
     setBuying(strainId);
     setMsg(null);
     try {
@@ -498,6 +512,7 @@ function SeedsSection() {
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Purchase failed");
     } finally {
+      guard.stop(strainId);
       setBuying(null);
     }
   }
@@ -560,6 +575,7 @@ function ResearchSection() {
   const [loading, setLoading] = useState(false);
   const [unlocking, setUnlocking] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const guard = useInFlightGuard<string>();
 
   async function load() {
     if (!isAuthed || !playerId) return;
@@ -578,6 +594,7 @@ function ResearchSection() {
 
   async function unlock(key: string) {
     if (!isAuthed || !playerId) return;
+    if (!guard.start(key)) return;
     setUnlocking(key);
     setMsg(null);
     try {
@@ -592,6 +609,7 @@ function ResearchSection() {
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Unlock failed");
     } finally {
+      guard.stop(key);
       setUnlocking(null);
     }
   }
@@ -758,6 +776,7 @@ function GrowRoomGearSection() {
   const [pods, setPods] = useState<Pod[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const guard = useInFlightGuard<string>();
 
   useEffect(() => {
     if (!isAuthed || !playerId) return;
@@ -783,6 +802,7 @@ function GrowRoomGearSection() {
 
   async function buy(key: string) {
     if (!playerId) return;
+    if (!guard.start(key)) return;
     setBusy(key);
     setMsg(null);
     try {
@@ -793,12 +813,18 @@ function GrowRoomGearSection() {
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Purchase failed");
     } finally {
+      guard.stop(key);
       setBusy(null);
     }
   }
 
   async function equip(key: string, podId: string) {
     if (!playerId) return;
+    // Key by gear AND pod: equipping the same light to a second pod while the
+    // first equip is in flight is a distinct, legitimate request — keying by
+    // gear alone silently dropped it (no request, no message).
+    const k = `${key}:${podId}`;
+    if (!guard.start(k)) return;
     setBusy(key);
     setMsg(null);
     try {
@@ -808,6 +834,7 @@ function GrowRoomGearSection() {
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Equip failed");
     } finally {
+      guard.stop(k);
       setBusy(null);
     }
   }
