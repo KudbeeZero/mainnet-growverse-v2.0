@@ -37,7 +37,17 @@ const TILES: { kind: BarKind | "inspect"; icon: string; label: string; benefit: 
   { kind: "boost", icon: "⚡", label: "Boost", benefit: "Apply boost", accent: "253,224,71" },
 ];
 
-export function ChamberActionBar({ plant }: { plant: PlantState }) {
+export function ChamberActionBar({
+  plant,
+  vertical = false,
+  onAction,
+}: {
+  plant: PlantState;
+  /** Landscape slide-out HUD layout: full-width labeled rows instead of the 6-tile bar. */
+  vertical?: boolean;
+  /** Fires after a care tap lands — the landscape HUD uses it to auto-compact. */
+  onAction?: () => void;
+}) {
   const { care } = useCareActions(plant.id);
   const { fire, layer } = useCareFeedback();
   const [tapped, setTapped] = useState<string | null>(null);
@@ -55,6 +65,7 @@ export function ChamberActionBar({ plant }: { plant: PlantState }) {
       onSuccess: () => {
         setSucceeded(kind);
         window.setTimeout(() => setSucceeded((k) => (k === kind ? null : k)), 1100);
+        onAction?.();
       },
     });
   };
@@ -62,16 +73,22 @@ export function ChamberActionBar({ plant }: { plant: PlantState }) {
   return (
     <div className="relative">
       {layer}
-      <div className="grid grid-cols-6 gap-1.5 rounded-2xl border border-cyan-400/15 bg-[#08141e]/80 p-1.5 backdrop-blur-md">
+      <div
+        className={`${
+          vertical ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-6 gap-1.5 rounded-2xl border border-cyan-400/15 bg-[#08141e]/80 p-1.5 backdrop-blur-md"
+        }`}
+      >
         {TILES.map((t) => {
           const isInspect = t.kind === "inspect";
           const state = isInspect ? null : avail[t.kind as BarKind];
           const enabled = !dead && (isInspect || !!state?.available);
           const reason = !isInspect && !dead && state && !state.available ? state.reason : null;
           const lastUsed = state ? formatSinceUsed(state.hoursSinceUsed) : null;
-          const cls = `relative flex min-h-[64px] flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 py-1.5 text-center transition-all ${
-            tapped === t.kind ? "gpe-tile-tap" : ""
-          } ${succeeded === t.kind ? "ring-2 ring-grow-400/80" : ""} ${
+          const cls = `relative rounded-xl border transition-all ${
+            vertical
+              ? "flex min-h-[48px] flex-row items-center gap-2.5 px-2.5 py-1.5 text-left"
+              : "flex min-h-[64px] flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-center"
+          } ${tapped === t.kind ? "gpe-tile-tap" : ""} ${succeeded === t.kind ? "ring-2 ring-grow-400/80" : ""} ${
             enabled
               ? "cursor-pointer border-[var(--tile)]/50 bg-gradient-to-b from-white/[0.06] to-transparent hover:from-white/[0.12]"
               : "cursor-not-allowed border-white/10 opacity-45"
@@ -88,12 +105,25 @@ export function ChamberActionBar({ plant }: { plant: PlantState }) {
                 </div>
               )}
               <span className="text-lg leading-none drop-shadow-[0_0_6px_rgba(255,255,255,0.25)]">{t.icon}</span>
-              <span className="text-[10px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
-                {t.label.toUpperCase()}
-              </span>
-              <span className="text-[9px] leading-tight text-[#7fa9bf]">
-                {reason ? "Unavailable" : (lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit)}
-              </span>
+              {vertical ? (
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-[11px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
+                    {t.label.toUpperCase()}
+                  </span>
+                  <span className="truncate text-[9px] leading-tight text-[#7fa9bf]">
+                    {reason ?? (lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit)}
+                  </span>
+                </span>
+              ) : (
+                <>
+                  <span className="text-[10px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
+                    {t.label.toUpperCase()}
+                  </span>
+                  <span className="text-[9px] leading-tight text-[#7fa9bf]">
+                    {reason ? "Unavailable" : (lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit)}
+                  </span>
+                </>
+              )}
             </>
           );
           return isInspect ? (

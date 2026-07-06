@@ -1,54 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { BoostsInline } from "./ChamberDock";
 import { GearPanel } from "./GearPanel";
 import { ConsumablesPanel } from "./ConsumablesPanel";
 import { BundlePanel } from "./BundlePanel";
 import { PartnerPanel } from "./PartnerPanel";
 import type { Plant } from "@/lib/types";
-import type { UseMutationResult } from "@tanstack/react-query";
 
+// Store/equipment shelf only. The boost surfaces (BoostsInline + the ⚡ growth
+// boost) moved to the chamber's GROW tab — the single boost-apply surface —
+// so this toolbar can't duplicate them.
 interface ArcadeToolbarProps {
   plant: Plant;
   ended: boolean;
-  growthStage?: string;
-  growthBoost?: UseMutationResult<unknown, unknown, void, unknown>;
 }
 
 type OpenPanel = "gear" | "consumables" | "bundles" | "partners" | null;
 
-const BUTTON_CLASS = (isActive: boolean, color: string) => `
-  flex-1 min-h-[36px] rounded-lg border transition-all text-center text-[10px] font-bold tracking-wide px-2 py-2
-  ${isActive
-    ? `border-${color}/60 bg-${color}/20`
-    : `border-${color}/25 bg-${color}/5 hover:bg-${color}/15`
-  }
-  text-${color}/90 hover:text-${color}
-`;
-
-export function ArcadeToolbar({ plant, ended, growthStage, growthBoost }: ArcadeToolbarProps) {
+export function ArcadeToolbar({ plant, ended }: ArcadeToolbarProps) {
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
 
   if (ended) return null;
 
   return (
     <>
-      {/* Active boost display */}
-      <BoostsInline />
-
-      {/* Growth boost button - optional, only if growth stage allows */}
-      {growthBoost && growthStage && growthStage !== "harvest" && (
-        <button
-          onClick={() => growthBoost.mutate()}
-          disabled={growthBoost.isPending}
-          data-testid="growth-boost"
-          className="w-full min-h-[36px] flex items-center justify-center gap-1.5 rounded-lg border border-cyan-400/40 bg-gradient-to-r from-cyan-500/10 to-grow-500/10 hover:from-cyan-500/20 hover:to-grow-500/20 px-3 py-2 text-xs font-bold text-cyan-200 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {growthBoost.isPending ? "Boosting…" : "⚡ Boost Growth · 60 🌿"}
-        </button>
-      )}
-
       {/* Compact professional toolbar */}
       <div className="space-y-2">
         <div className="grid grid-cols-4 gap-1.5">
