@@ -30,9 +30,10 @@ from growpodempire.services.marketplace import MarketplaceService, MarketplaceEr
 from growpodempire.services.staking import StakingService, StakingError
 from growpodempire.chain.mock import MockChainProvider
 from algosdk import account as _algo_account
+from _wallet_test_helpers import link_wallet_for_test
 
-_ADDR_A = _algo_account.generate_account()[1]
-_ADDR_B = _algo_account.generate_account()[1]
+_PRIV_A, _ADDR_A = _algo_account.generate_account()
+_PRIV_B, _ADDR_B = _algo_account.generate_account()
 
 
 def _harvest(s, username, slug="gorilla-glue-no-4", sell=False):
@@ -175,7 +176,7 @@ class TestStakingService:
         # so create_lock's current-ownership authz check (disruptor-sweep
         # finding #7) passes for this staker, matching a real "I own this NFT"
         # state instead of an unlinked wallet.
-        GameService(s).link_wallet(pid, _ADDR_A)
+        link_wallet_for_test(GameService(s), pid, _PRIV_A, _ADDR_A)
         harvest.sale_value = sale_value
         s.commit()
         nft = NFTMintService(s).mint_harvest(pid, harvest.id, _ADDR_A)
@@ -239,7 +240,7 @@ class TestNFTApiEndToEnd:
         with session_scope() as s:
             pid, harvest = _harvest(s, "e2e-seller")
             svc = GameService(s)
-            svc.link_wallet(pid, _ADDR_A)
+            link_wallet_for_test(svc, pid, _PRIV_A, _ADDR_A)
             key = s.get(type(svc.get_player(pid)), pid).api_key
             harvest_id = harvest.id
 
@@ -265,7 +266,7 @@ class TestNFTApiEndToEnd:
 
         with session_scope() as s:
             buyer = GameService(s).create_player("e2e-buyer")
-            GameService(s).link_wallet(buyer.id, _ADDR_B)
+            link_wallet_for_test(GameService(s), buyer.id, _PRIV_B, _ADDR_B)
             buyer_id, buyer_key = buyer.id, buyer.api_key
 
         r = client.post(

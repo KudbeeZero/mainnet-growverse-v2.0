@@ -34,14 +34,19 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
     `harvest_plant()` (`services/game_service.py:1059`) lets a seed be harvested for full value at t=0;
     fix mirrors `cleanup_plant`'s `is_alive` check + a `growth_stage == HARVEST` gate. Not economy-tuning,
     not flag-gated — recommended fix on `main` → `docs/memory/standups/2026-07-06-disruptor-sweep.md` #1
-0c. ⬜ **Disruptor sweep 2026-07-06 — NFT/staking economy security set (keep flags OFF until fixed)** —
-    infinite restake faucet, sell+mint double-spend, wallet-address hijack (no key proof / non-unique
-    address), stake-off-`player_id`, `NFTAsset` missing `version_id_col`; all owner-gated (economy/auth/
-    chain), OFF by default so not live. Batch into one Security-Reviewer-gated PR before enabling
-    `nft_marketplace`/`nft_staking` → disruptor report #2–#8. Plus LIVE frontend items: zero error
-    boundaries (#6), genome hover dead on touch (#5), #161 double-click guard incomplete (#9), chamber
-    per-frame gradients (#10). App-Store: no privacy policy (BLOCKER), "staking" naming, 1.4.3 strain
-    names/THC%.
+0c. ✅ **Disruptor sweep 2026-07-06 — NFT/staking economy security set** — infinite restake faucet,
+    sell+mint double-spend, stake-off-`player_id`, `NFTAsset` missing `version_id_col` fixed in #167;
+    wallet-address hijack (finding #4) closed by the real fix — signed-challenge ownership proof
+    (`services/wallet_auth.py` + `wallet_link_challenges` table + frontend `signChallenge`/Pera
+    `signData`/dev raw-ed25519 signer), on top of #167's uniqueness-constraint defense-in-depth. LIVE
+    frontend items (#5 genome hover, #6 error boundaries, #9 double-click guard, #10 chamber gradients)
+    fixed in #165/#166. App-Store privacy policy + "staking"→"curing" naming fixed in #168. → disruptor
+    report #2–#10; `nft_marketplace`/`nft_staking` flags can now be considered for enabling (still owner
+    go, per BUILD_RULES protected-surface + live testnet click-test sign-off).
+0d. ⬜ **Disruptor sweep 2026-07-06 — App-Store 1.4.3 strain-name/THC% abstraction** — deliberately
+    deferred out of #168's scope: fictionalize strain names and abstract THC% display before a public/
+    App-Store launch. Invasive brand/gameplay change — needs explicit owner go on the approach (new
+    fictional strain names? THC range bands instead of exact %?) before starting.
 0. ✅ **Infra-audit 2026-07-05 findings** — migration drift + implicit treasury ASA create + 4 MEDIUMs, all fixed → `## 🔴 Immediate`
 1. 🔨 **Concurrency hardening** — remaining: `Idempotency-Key` header + one-shot-grant uniqueness → `## 🔴 Immediate`
 2. ⬜ **Chain settlement verification (RISK #7)** — deposit txid verify + treasury/ASA_ID is p13,

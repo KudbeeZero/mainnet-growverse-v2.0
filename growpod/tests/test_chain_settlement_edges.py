@@ -38,7 +38,8 @@ from growpodempire.genetics.traits import genome_from_traits
 from growpodempire.economy.ledger import post
 from growpodempire.enums import LedgerEntryType
 from algosdk import account as _algo_account
-_VALID_ADDR = _algo_account.generate_account()[1]  # checksum-valid test address
+from _wallet_test_helpers import link_wallet_for_test
+_VALID_PRIV, _VALID_ADDR = _algo_account.generate_account()  # checksum-valid test keypair
 
 
 # --------------------------------------------------------------------------- #
@@ -126,7 +127,7 @@ def test_withdraw_disabled_daily_cap_allows_large(db, monkeypatch):
     with session_scope() as s:
         gs = GameService(s)
         p = gs.create_player("capoff")
-        gs.link_wallet(p.id, _VALID_ADDR)
+        link_wallet_for_test(gs, p.id, _VALID_PRIV, _VALID_ADDR)
         # Fund well past the default cap so only the disabled-cap branch matters.
         post(s, p.id, Decimal("20000"), LedgerEntryType.STARTING_GRANT,
              ref_type="test", ref_id="topup")
@@ -141,7 +142,7 @@ def test_withdraw_exceeding_daily_cap_rejected(db, monkeypatch):
     with session_scope() as s:
         gs = GameService(s)
         p = gs.create_player("capped")
-        gs.link_wallet(p.id, _VALID_ADDR)
+        link_wallet_for_test(gs, p.id, _VALID_PRIV, _VALID_ADDR)
         svc = _svc(s)
         svc.withdraw(p.id, 100)  # within cap
         s.flush()  # make the first entry visible to the cap query
@@ -154,7 +155,7 @@ def test_withdraw_chain_failure_maps_to_game_error(db):
     with session_scope() as s:
         gs = GameService(s)
         p = gs.create_player("wderr")
-        gs.link_wallet(p.id, _VALID_ADDR)
+        link_wallet_for_test(gs, p.id, _VALID_PRIV, _VALID_ADDR)
         with pytest.raises(GameError, match="On-chain transfer failed"):
             _svc(s, provider=_BoomProvider()).withdraw(p.id, 10)
 
@@ -164,7 +165,7 @@ def test_deposit_chain_failure_maps_to_game_error(db):
     with session_scope() as s:
         gs = GameService(s)
         p = gs.create_player("dperr")
-        gs.link_wallet(p.id, _VALID_ADDR)
+        link_wallet_for_test(gs, p.id, _VALID_PRIV, _VALID_ADDR)
         # Seed off-game ASA so the deposit reaches the transfer call.
         _svc(s).withdraw(p.id, 50)
         with pytest.raises(GameError, match="On-chain transfer failed"):
@@ -187,7 +188,7 @@ def test_deposit_fails_closed_off_mock(db):
     with session_scope() as s:
         gs = GameService(s)
         p = gs.create_player("depoffmock")
-        gs.link_wallet(p.id, _VALID_ADDR)
+        link_wallet_for_test(gs, p.id, _VALID_PRIV, _VALID_ADDR)
         svc = SettlementService(s, provider=_FakeRealProvider(), asset_id=1)
         # Give the wallet on-chain ASA balance to withdraw against, bypassing the
         # "insufficient ASA balance" guard so the fail-closed check is what fires.

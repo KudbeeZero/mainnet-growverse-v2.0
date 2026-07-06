@@ -52,6 +52,7 @@ from growpodempire.chain.token import create_token_asa
 from growpodempire.db.models import Harvest, Strain
 from growpodempire.db.session import get_sessionmaker
 from growpodempire.economy import ledger
+from _wallet_test_helpers import link_wallet_for_test
 from growpodempire.economy.config import load_economy_config
 from growpodempire.enums import NFTStatus
 from growpodempire.services.game_service import GameService, GameError
@@ -59,7 +60,7 @@ from growpodempire.services.minting_service import MintingService
 from growpodempire.services.settlement_service import SettlementService
 
 CFG = load_economy_config()
-_VALID_ADDR = _algo_account.generate_account()[1]
+_VALID_PRIV, _VALID_ADDR = _algo_account.generate_account()
 
 
 def _sync_before_first_commit(session, barrier, timeout=3.0):
@@ -152,7 +153,7 @@ def test_candidate1_withdraw_fix_closes_double_payout(session):
     """
     gs = GameService(session)
     player = gs.create_player("racer_withdraw")
-    gs.link_wallet(player.id, _VALID_ADDR)
+    link_wallet_for_test(gs, player.id, _VALID_PRIV, _VALID_ADDR)
     wallet = ledger.get_wallet(session, player.id)
     wallet.cached_balance = ledger.to_money("1000")  # plenty for two 100 debits
     session.commit()

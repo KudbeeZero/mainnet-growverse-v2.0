@@ -15,7 +15,8 @@ from growpodempire.services.minting_service import MintingService
 from growpodempire.chain.mock import MockChainProvider
 from growpodempire.genetics.traits import genome_from_traits
 from algosdk import account as _algo_account
-_VALID_ADDR = _algo_account.generate_account()[1]  # checksum-valid test address
+from _wallet_test_helpers import link_wallet_for_test
+_VALID_PRIV, _VALID_ADDR = _algo_account.generate_account()  # checksum-valid test keypair
 
 
 def _harvest_of(s, slug):
@@ -95,5 +96,5 @@ def test_link_wallet(db):
     with session_scope() as s:
         svc = GameService(s)
         p = svc.create_player("walletuser")
-        svc.link_wallet(p.id, _VALID_ADDR)
+        link_wallet_for_test(svc, p.id, _VALID_PRIV, _VALID_ADDR)
         assert svc.get_player(p.id).algorand_address == _VALID_ADDR

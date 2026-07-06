@@ -34,6 +34,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.171.0",
+    "tweetnacl": "^1.0.3",
     "zustand": "^5.0.2"
   },
   "devDependencies": {

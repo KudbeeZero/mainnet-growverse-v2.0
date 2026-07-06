@@ -1764,6 +1764,29 @@ def admin_seasonal_strains_rollover():
 
 
 # ----- On-chain: wallet linking, NFT minting, metadata -------------------
+@game_bp.post("/players/<player_id>/wallet/challenge")
+@require_feature("chain")
+@require_player
+def wallet_challenge(player_id):
+    """Issue a one-time nonce the caller must sign with the target address's
+    private key before /wallet/link will trust it (disruptor-sweep #4)."""
+    data = request.get_json(force=True, silent=True) or {}
+    if not data.get("address"):
+        return _error("address is required")
+    try:
+        with session_scope() as s:
+            challenge = GameService(s).create_wallet_challenge(player_id, data["address"])
+        return jsonify(
+            {
+                "message": challenge["message"],
+                "nonce": challenge["nonce"],
+                "expires_at": challenge["expires_at"].isoformat(),
+            }
+        )
+    except GameError as e:
+        return _error(str(e))
+
+
 @game_bp.post("/players/<player_id>/wallet/link")
 @require_feature("chain")
 @require_player
@@ -1771,9 +1794,13 @@ def link_wallet(player_id):
     data = request.get_json(force=True, silent=True) or {}
     if not data.get("address"):
         return _error("address is required")
+    if not data.get("nonce") or not data.get("signature"):
+        return _error("nonce and signature are required (request a /wallet/challenge first)")
     try:
         with session_scope() as s:
-            player = GameService(s).link_wallet(player_id, data["address"])
+            player = GameService(s).link_wallet(
+                player_id, data["address"], data["nonce"], data["signature"]
+            )
             payload = S.player_dict(player)
         return jsonify(payload)
     except GameError as e:

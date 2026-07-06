@@ -12,6 +12,10 @@ PyYAML==6.0.2
 # Algorand on-chain layer (Phase 3). The app runs without a configured treasury
 # (falls back to an offline mock chain), but this is required to mint on TestNet.
 py-algorand-sdk==2.11.1
+# Signed-challenge wallet-ownership verification (services/wallet_auth.py) --
+# already a transitive dep of py-algorand-sdk; pinned explicitly since we now
+# import it directly.
+PyNaCl==1.6.2
 # AI "Master Grower" advisor. The app runs without an ANTHROPIC_API_KEY (falls
 # back to an offline mock advisor); this is required for real Claude advice.
 anthropic>=0.49.0

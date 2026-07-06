@@ -24,7 +24,8 @@ from growpodempire.services.game_service import GameService, GameError
 from growpodempire.simulation.clock import FrozenClock
 from launch_economy import launch_config
 from algosdk import account as _algo_account
-_VALID_ADDR = _algo_account.generate_account()[1]  # checksum-valid test address
+from _wallet_test_helpers import link_wallet_for_test
+_VALID_PRIV, _VALID_ADDR = _algo_account.generate_account()  # checksum-valid test keypair
 
 LAUNCH_CFG = launch_config()
 BASE = datetime(2025, 1, 1)
@@ -73,8 +74,8 @@ def test_link_wallet_requires_address(db):
         svc = GameService(s)
         p = svc.create_player("linker")
         with pytest.raises(GameError):
-            svc.link_wallet(p.id, "")
-        updated = svc.link_wallet(p.id, _VALID_ADDR)
+            svc.link_wallet(p.id, "", "", "")
+        updated = link_wallet_for_test(svc, p.id, _VALID_PRIV, _VALID_ADDR)
         assert updated.algorand_address == _VALID_ADDR
 
 
