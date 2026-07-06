@@ -16,16 +16,16 @@ so we assert on that mock's structured output.
 
 import os
 import sys
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from growpodempire.db.session import session_scope
-from growpodempire.db.models import Player, CourseEnrollment, DegreeProgress
+from growpodempire.db.models import Player, CourseEnrollment, DegreeProgress, Plant
 from growpodempire.economy.ledger import post, balance
-from growpodempire.enums import LedgerEntryType
+from growpodempire.enums import GrowthStage, LedgerEntryType
 from growpodempire.services import leveling_service
 
 
@@ -74,6 +74,20 @@ def _backdate_enrollment(player_id, course_key, hours=200):
         e.started_at = e.started_at - timedelta(hours=hours)
 
 
+def _advance_to_flowering(plant_id):
+    """Jump a freshly-planted seed straight to flowering so it's harvestable,
+    mirroring a real grow without waiting sim time. `harvest_plant()` now
+    requires the plant to be flowering-or-later and alive (disruptor-sweep
+    fix #1 — see `services/game_service.py`)."""
+    with session_scope() as s:
+        plant = s.get(Plant, plant_id)
+        now = datetime.utcnow()
+        plant.growth_stage = GrowthStage.FLOWERING.value
+        plant.health = 90.0
+        plant.last_tick_at = now
+        plant.stage_entered_at = now
+
+
 def _harvest_blue_dream(client, pid, key):
     """Run one full grow→harvest over HTTP so the harvest_count practical (used by
     cult-101 / nut-101 / ipm-101) is satisfied. Yield/quality are computed
@@ -92,6 +106,7 @@ def _harvest_blue_dream(client, pid, key):
         json={"seed_id": stack["id"], "pod_id": pod["id"]},
         headers=hdr,
     ).get_json()
+    _advance_to_flowering(plant["id"])
     return client.post(
         f"/api/game/players/{pid}/plants/{plant['id']}/harvest",
         json={"sell": False},

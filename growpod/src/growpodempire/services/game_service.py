@@ -1067,6 +1067,23 @@ class GameService:
         # harvest taken under the speed faucet reflects the accelerated growth.
         engine.catch_up(self.session, plant, self._player_now(self.get_player(player_id)), self.cfg)
 
+        # Gate the player-facing harvest. The API route computes weight/quality
+        # server-side (it never forwards client overrides — see game_api.py), so a
+        # real player always lands on the `weight_g is None and quality is None`
+        # path below. Without this guard a brand-new seed — health defaults to 100,
+        # and quality resolves to 100 for any non-flowering stage — could be
+        # harvested for full value at t=0, bypassing the grow → care loop entirely.
+        # `_harvest_window` returns "not_flowering" for every pre-flowering stage
+        # (seed/germination/seedling/vegetative), the same telemetry the yield and
+        # quality math below already use; a dead plant is cleared via cleanup_plant,
+        # not harvested. Internal callers that fabricate a harvest with explicit
+        # weight_g AND quality (tests/fixtures) intentionally skip this gate.
+        if weight_g is None and quality is None:
+            if not plant.is_alive:
+                raise GameError("This plant has died — clear the pod instead of harvesting it")
+            if self._harvest_window(plant) == "not_flowering":
+                raise GameError("Plant isn't ready to harvest yet — wait until it starts flowering")
+
         strain = self.get_strain(plant.strain_id)
         fx = self._research(player_id)  # research-tree modifiers
 
