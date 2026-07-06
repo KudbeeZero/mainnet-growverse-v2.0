@@ -820,7 +820,11 @@ function GrowRoomGearSection() {
 
   async function equip(key: string, podId: string) {
     if (!playerId) return;
-    if (!guard.start(key)) return;
+    // Key by gear AND pod: equipping the same light to a second pod while the
+    // first equip is in flight is a distinct, legitimate request — keying by
+    // gear alone silently dropped it (no request, no message).
+    const k = `${key}:${podId}`;
+    if (!guard.start(k)) return;
     setBusy(key);
     setMsg(null);
     try {
@@ -830,7 +834,7 @@ function GrowRoomGearSection() {
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Equip failed");
     } finally {
-      guard.stop(key);
+      guard.stop(k);
       setBusy(null);
     }
   }

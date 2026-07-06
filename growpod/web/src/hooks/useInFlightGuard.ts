@@ -23,19 +23,24 @@ import { useRef } from "react";
  * disabled state and covers the slow-network case).
  */
 export function useInFlightGuard<K = true>() {
-  const ref = useRef<K | null>(null);
+  // A Set, not a single slot: sections that share one guard across many items
+  // (e.g. the store's FeaturedShelf) can have item A's request still in
+  // flight when item B starts. A single-slot `ref = B` overwrite would forget
+  // A — re-opening the exact double-charge window for A that this hook exists
+  // to close. Each key is tracked independently.
+  const inFlight = useRef<Set<K>>(new Set());
 
   /** Returns true and marks `key` in-flight, or false if it already is. */
   function start(key: K): boolean {
-    if (ref.current === key) return false;
-    ref.current = key;
+    if (inFlight.current.has(key)) return false;
+    inFlight.current.add(key);
     return true;
   }
 
-  /** Clears the in-flight marker for `key` (no-op if it's already cleared or
-   * belongs to a different key). Call in a `finally`/`onSettled`. */
+  /** Clears the in-flight marker for `key` (no-op if it's already cleared).
+   * Call in a `finally`/`onSettled`. */
   function stop(key: K): void {
-    if (ref.current === key) ref.current = null;
+    inFlight.current.delete(key);
   }
 
   return { start, stop };

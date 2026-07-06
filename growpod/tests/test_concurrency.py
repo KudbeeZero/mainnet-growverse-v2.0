@@ -11,7 +11,6 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-import threading
 from datetime import datetime
 from decimal import Decimal
 
@@ -145,58 +144,59 @@ def test_version_increments_on_normal_post(session):
 # reintroducing a silent double-charge. No server-side change was made for
 # this finding — the fix is client-side (see web/e2e for the double-click
 # guard proof); these tests are the "the server was never the bug" receipt.
-def _race(barrier, work):
-    """Run `work()` after every racer has reached the barrier, so both threads'
-    reads happen before either's write — the actual concurrent-request shape
-    (not two sequential calls in one thread, which never overlap)."""
-    barrier.wait()
-    return work()
+# NOTE on shape: an earlier version of these two tests raced real threads
+# released by a `threading.Barrier`. That was flaky by construction — the
+# barrier synchronized *entry into the service call*, not the wallet-version
+# read several statements later, so under CI scheduling one thread could run
+# read→commit before the other ever read, both purchases legitimately
+# succeeded, and `["ok", "ok"] == ["ok", "stale"]` failed (first seen on PR
+# #161's backend job). The shapes below are deterministic: both sessions
+# perform their reads BEFORE either commits (the exact idiom of
+# test_optimistic_lock_blocks_concurrent_double_spend above), so the loser is
+# GUARANTEED to hold a stale wallet version when it commits — no scheduling
+# luck involved. pysqlite runs reads in autocommit (no snapshot held), and
+# neither session flushes before the winner commits, so SQLite's single-writer
+# lock never wedges the single test thread.
 
 
 def test_gear_purchase_survives_concurrent_requests(session):
-    """Two truly concurrent requests (real threads, released together by a
-    barrier) both buying the same gear for the same player: exactly one
-    debit/inventory-increment lands. The other cleanly loses the
-    optimistic-lock race (StaleDataError -> retry) — never a double charge.
-    Mirrors gunicorn -w 2 in prod; matches the QA report's confirmed
+    """Two overlapping requests both buying the same gear for the same player:
+    exactly one debit/inventory-increment lands; the other loses the
+    optimistic-lock race (StaleDataError -> the API's 409 retry) — never a
+    double charge. Matches the QA report's confirmed
     `/store/gear/:key/purchase` endpoint at the GameService.buy_gear layer."""
     gear_key, item = next(iter(CFG.shop_gear.items()))
     cost = Decimal(str(item.get("cost", 0)))
     pid = _funded_player(session, str(cost * 3))
-    # Pre-seed an owned-zero stack so both racers take buy_gear()'s "increment
-    # an existing row" path. (A concurrent *first-ever* purchase of a gear key
-    # races on gear_inventory's (player_id, gear_key) unique index instead —
-    # a real, narrower gap found while writing this test: the loser gets an
-    # IntegrityError/500 rather than a clean 409. No money or item is lost
-    # (the whole flush — wallet debit included — rolls back atomically), so
-    # it's an error-hygiene gap, not a double-charge; out of scope for this
-    # fix, flagged in the PR description as a follow-up.)
+    # Pre-seed an owned-zero stack so both buyers take buy_gear()'s "increment
+    # an existing row" path — which defers all SQL to commit, letting the two
+    # calls genuinely overlap in one thread. (A concurrent *first-ever*
+    # purchase of a gear key races on gear_inventory's (player_id, gear_key)
+    # unique index instead — a real, narrower gap found while writing this
+    # test: the loser gets an IntegrityError/500 rather than a clean 409. No
+    # money or item is lost (the whole flush — wallet debit included — rolls
+    # back atomically), so it's an error-hygiene gap, not a double-charge;
+    # out of scope for this fix, flagged in the PR description as a follow-up.)
     session.add(GearInventory(player_id=pid, gear_key=gear_key, category=item.get("category", "gear"), quantity=0))
     session.commit()
 
     SM = get_sessionmaker()
-    barrier = threading.Barrier(2)
-    outcomes: dict[str, str] = {}
+    s_win, s_lose = SM(), SM()
+    try:
+        # Both requests read the same wallet version and stage their purchase...
+        GameService(s_win).buy_gear(pid, gear_key, 1)
+        GameService(s_lose).buy_gear(pid, gear_key, 1)
+        # ...the winner commits first (wallet version N -> N+1)...
+        s_win.commit()
+        # ...so the loser's commit writes WHERE version=N, matches 0 rows, and
+        # loses cleanly — exactly the second of two overlapping HTTP requests.
+        with pytest.raises(StaleDataError):
+            s_lose.commit()
+        s_lose.rollback()
+    finally:
+        s_win.close()
+        s_lose.close()
 
-    def attempt(tag):
-        s = SM()
-        try:
-            _race(barrier, lambda: GameService(s).buy_gear(pid, gear_key, 1))
-            s.commit()
-            outcomes[tag] = "ok"
-        except StaleDataError:
-            s.rollback()
-            outcomes[tag] = "stale"
-        finally:
-            s.close()
-
-    threads = [threading.Thread(target=attempt, args=(f"t{i}",)) for i in range(2)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
-
-    assert sorted(outcomes.values()) == ["ok", "stale"]
     session.expire_all()
     assert ledger.balance(session, pid) == ledger.to_money(cost * 2)  # 3x funded - 1x spent
     stack = (
@@ -208,9 +208,17 @@ def test_gear_purchase_survives_concurrent_requests(session):
 
 
 def test_seasonal_strain_purchase_survives_concurrent_requests(session):
-    """Same guarantee, same real-thread-plus-barrier shape, for the other
-    endpoint the QA report named:
-    `/players/:id/seasonal/strains/:id/purchase`."""
+    """Same guarantee for the other endpoint the QA report named:
+    `/players/:id/seasonal/strains/:id/purchase`.
+
+    Shape note: SeasonalService.purchase() flushes internally, so two open
+    purchase() calls cannot coexist under SQLite's single-writer lock in one
+    thread (the second flush would just block on the first). Instead the
+    overlapping reader here is a plain version-locked wallet debit staged
+    BEFORE the real purchase commits: its StaleDataError proves purchase()
+    debited through the version-locked wallet (bumping the version) rather
+    than around it. The gear test above covers the service-call-as-loser
+    direction; together they pin both sides of the lock."""
     strain = session.query(Strain).first()
     month = datetime.utcnow().strftime("%Y-%m")
     row = SeasonalService(session).upsert(strain.id, month, Decimal("60"))
@@ -218,28 +226,21 @@ def test_seasonal_strain_purchase_survives_concurrent_requests(session):
     session.commit()
 
     SM = get_sessionmaker()
-    barrier = threading.Barrier(2)
-    outcomes: dict[str, str] = {}
+    s_win, s_lose = SM(), SM()
+    try:
+        # Overlapping request stages a debit at the pre-purchase version...
+        ledger.post(s_lose, pid, "-1", LedgerEntryType.SEED_PURCHASE)
+        # ...the real seasonal purchase runs end-to-end and commits...
+        SeasonalService(s_win).purchase(pid, row["id"])
+        s_win.commit()
+        # ...and the overlapped write must lose the version race.
+        with pytest.raises(StaleDataError):
+            s_lose.commit()
+        s_lose.rollback()
+    finally:
+        s_win.close()
+        s_lose.close()
 
-    def attempt(tag):
-        s = SM()
-        try:
-            _race(barrier, lambda: SeasonalService(s).purchase(pid, row["id"]))
-            s.commit()
-            outcomes[tag] = "ok"
-        except StaleDataError:
-            s.rollback()
-            outcomes[tag] = "stale"
-        finally:
-            s.close()
-
-    threads = [threading.Thread(target=attempt, args=(f"t{i}",)) for i in range(2)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
-
-    assert sorted(outcomes.values()) == ["ok", "stale"]
     session.expire_all()
     assert ledger.balance(session, pid) == ledger.to_money("120")  # 180 - 60, once
     seeds = (

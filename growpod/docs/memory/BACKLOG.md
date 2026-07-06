@@ -1034,7 +1034,21 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
   fast-forwards under the dev clock and is guarded against early finish. 1117 green.
 
 ## 🔴 Immediate (do now — correctness, truth, or unblocks others)
-- 🔴 ✅ **Infra-audit 2026-07-05 findings** (`docs/audits/2026-07-05-infra-audit.md`, owner
+- 🔴 ⬜ **Double-click purchase exposure on sibling money buttons (code-review finding,
+  2026-07-06)** — the `useInFlightGuard` fix (shipped with PR #161: store/lab/market call
+  sites, Set-keyed guard, deterministic concurrency tests) deliberately covered only the
+  three screens from the playtest report. A cross-file trace found the identical
+  pre-render double-click window still open on: chamber `BundlePanel.tsx` + `PartnerPanel.tsx`
+  (same endpoints as the guarded store cards), `cup/page.tsx` `enter.mutate` (entry fee),
+  `university/page.tsx` + `university/courses/[key]/page.tsx` `enroll.mutate` (tuition),
+  `lab/breed/page.tsx` `breed.mutate`/`stabilize.mutate` (breeding fees), and
+  `CreatePodForm.tsx`/`PlantActionCTA.tsx` (pod purchase/cleanup). The RIGHT fix (altitude
+  review, same date) is one keyed single-flight in the shared write layer —
+  `lib/api/client.ts` `apiFetch()` (covers raw handlers) or `useApiMutation` — instead of
+  hand-wiring N more guards; deeper still, `apiFetch` could attach the `Idempotency-Key`
+  header that the server has honored on 18 mutation endpoints since PR #149 but **no client
+  ever sends** (covers multi-tab/network-retry resubmits too). Do the shared-layer fix once;
+  retire the per-site guards or leave them as harmless redundancy.
   pre-authorized fix-in-place) — both HIGH fixed: (1) catch-up migration `cf72176d4eff` +
   permanent `alembic check` CI gate closes the model↔migration drift (`bundles`/
   `featured_items`/`store_partners`/`player_badges` + `seasonal_strains.price_gc` rescale);
