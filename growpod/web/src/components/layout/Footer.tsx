@@ -16,6 +16,10 @@ export function Footer() {
           Grow Guide
         </Link>
         <span className="mx-2">·</span>
+        <Link href="/privacy" className="hover:text-grow-300 hover:underline">
+          Privacy
+        </Link>
+        <span className="mx-2">·</span>
         {/* Build stamp: version + the deployed commit SHA so you can confirm at a
             glance which build is live. The SHA only renders for real deploys. */}
         <span className="font-mono" title={IS_DEPLOYED_BUILD ? `build ${BUILD_SHA}` : "local build"}>

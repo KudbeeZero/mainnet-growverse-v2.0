@@ -164,6 +164,11 @@ export function CuringRoom() {
           <p>3. Earn a bonus % of the harvest&apos;s sale value</p>
           <p>4. Claim your NFT + bonus GC when ready</p>
         </div>
+        <p className="mt-3 border-t border-purple-700/30 pt-2 text-[11px] text-gray-500">
+          Curing is a cosmetic in-game bonus with no real-world value. It
+          isn&apos;t an investment, and GC/NFTs earned have no cash-out
+          guarantee outside the game.
+        </p>
       </Card>
     </div>
   );
