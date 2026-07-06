@@ -42,6 +42,7 @@ export function ArcadeToolbar({ plant, ended, growthStage, growthBoost }: Arcade
         <button
           onClick={() => growthBoost.mutate()}
           disabled={growthBoost.isPending}
+          data-testid="growth-boost"
           className="w-full min-h-[36px] flex items-center justify-center gap-1.5 rounded-lg border border-cyan-400/40 bg-gradient-to-r from-cyan-500/10 to-grow-500/10 hover:from-cyan-500/20 hover:to-grow-500/20 px-3 py-2 text-xs font-bold text-cyan-200 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {growthBoost.isPending ? "Boosting…" : "⚡ Boost Growth · 60 🌿"}
