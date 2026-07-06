@@ -90,36 +90,48 @@ export function ChamberActionBar({
               : "flex min-h-[64px] flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-center"
           } ${tapped === t.kind ? "gpe-tile-tap" : ""} ${succeeded === t.kind ? "ring-2 ring-grow-400/80" : ""} ${
             enabled
-              ? "cursor-pointer border-[var(--tile)]/50 bg-gradient-to-b from-white/[0.06] to-transparent hover:from-white/[0.12]"
+              ? "gpe-tile cursor-pointer border-[var(--tile)]/50 bg-gradient-to-b from-white/[0.06] to-transparent hover:from-white/[0.12]"
               : "cursor-not-allowed border-white/10 opacity-45"
           }`;
           const style = enabled
-            ? ({ "--tile": `rgb(${t.accent})`, boxShadow: `0 0 14px rgba(${t.accent},0.28), inset 0 1px 0 rgba(255,255,255,0.08)`, borderColor: `rgba(${t.accent},0.45)` } as React.CSSProperties)
+            ? ({ "--tile": `rgb(${t.accent})`, "--gpe-glow": t.accent.replace(/,/g, " "), borderColor: `rgba(${t.accent},0.45)` } as React.CSSProperties)
             : undefined;
+          const dotColor = enabled ? (lastUsed && lastUsed !== "Just now" ? "#f59e0b" : "#22c55e") : "#ef4444";
+          const statusWord = !enabled ? "Wait" : lastUsed && lastUsed !== "Just now" ? "Ready" : "Optimal";
           const inner = (
             <>
-              <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: enabled ? (lastUsed && lastUsed !== "Just now" ? "#f59e0b" : "#22c55e") : "#ef4444" }} />
+              {!vertical && (
+                <div className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: dotColor }} />
+              )}
               {succeeded === t.kind && plant.care_streak && (
                 <div className="absolute inset-0 flex items-center justify-center gpe-streak-pop pointer-events-none">
                   <span className="text-sm font-bold text-grow-300">+{plant.care_streak}</span>
                 </div>
               )}
-              <span className="text-lg leading-none drop-shadow-[0_0_6px_rgba(255,255,255,0.25)]">{t.icon}</span>
+              <span className="flex-none text-lg leading-none drop-shadow-[0_0_6px_rgba(255,255,255,0.25)]">{t.icon}</span>
               {vertical ? (
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-[11px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
-                    {t.label.toUpperCase()}
+                <>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-[11px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
+                      {t.label.toUpperCase()}
+                    </span>
+                    <span className="truncate text-[9px] leading-tight text-[#7fa9bf]">
+                      {reason ?? (lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit)}
+                    </span>
                   </span>
-                  <span className="truncate text-[9px] leading-tight text-[#7fa9bf]">
-                    {reason ?? (lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit)}
+                  <span className="flex flex-none items-center gap-1 pl-1">
+                    <span className="h-1.5 w-1.5 flex-none rounded-full" style={{ backgroundColor: dotColor }} />
+                    <span className="text-[9px] font-bold uppercase tracking-[0.08em]" style={{ color: dotColor }}>
+                      {statusWord}
+                    </span>
                   </span>
-                </span>
+                </>
               ) : (
                 <>
-                  <span className="text-[10px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
+                  <span className="w-full truncate text-center text-[10px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
                     {t.label.toUpperCase()}
                   </span>
-                  <span className="text-[9px] leading-tight text-[#7fa9bf]">
+                  <span className="w-full truncate text-center text-[9px] leading-tight text-[#7fa9bf]">
                     {reason ? "Unavailable" : (lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit)}
                   </span>
                 </>
@@ -196,7 +208,7 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
               <li key={i} className="flex min-h-[36px] items-center gap-2 border-b border-white/5 pb-1 last:border-0 last:pb-0">
                 <span className="text-sm">{e.icon}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-bold text-gray-100">{e.title}</p>
+                  <p className="truncate text-[11px] font-bold text-gray-100">{e.title}</p>
                   <p className="truncate text-[9px] text-[#7fa9bf]">{e.why}</p>
                 </div>
                 {e.kind ? (
