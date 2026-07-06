@@ -12,6 +12,11 @@ import { Tabs } from "@/components/ui/Tabs";
 import { Stat } from "@/components/ui/Metric";
 import { RarityChip, VerifyBadge } from "@/components/ui/Pills";
 import { Constellation } from "@/components/viz/Constellation";
+import {
+  GeneHoverCard,
+  genomeHoverContent,
+  lineageHoverContent,
+} from "@/components/viz/GeneHoverCard";
 import { genomeGraph, lineageGraph } from "@/components/viz/graphAdapters";
 import {
   useStrain,
@@ -270,23 +275,31 @@ function KnowledgeValue({ value }: { value: unknown }) {
 
 function DnaTab({ strainId }: { strainId: string }) {
   const strain = useStrain(strainId);
+  const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
   if (strain.isLoading) return <LoadingBlock />;
   if (!strain.data) return <ErrorState error={strain.error} />;
   if (!strain.data.genome)
     return <EmptyState icon="🧬" title="No genome data" hint="This strain has no stored genome." />;
-  const { nodes, edges } = genomeGraph(strain.data);
+  const data = strain.data;
+  const { nodes, edges } = genomeGraph(data);
   return (
     <div className="space-y-3">
-      <Constellation
-        mode="graph"
-        nodes={nodes}
-        edges={edges}
-        height={460}
-        caption="EACH NODE IS A LOCUS · LUMINOUS HUBS ARE EXPRESSED TRAITS"
-      />
+      <div className="relative">
+        <Constellation
+          mode="graph"
+          nodes={nodes}
+          edges={edges}
+          height={460}
+          caption="EACH NODE IS A LOCUS · LUMINOUS HUBS ARE EXPRESSED TRAITS"
+          onHoverNode={setHover}
+        />
+        {hover && (
+          <GeneHoverCard x={hover.x} y={hover.y} content={genomeHoverContent(data, hover.id)} />
+        )}
+      </div>
       <p className="text-xs text-gray-500">
-        Hover a node to read its trait and value. Violet hubs are expressed (high-value) alleles.
-        Drag to pan, scroll to zoom.
+        Hover any node for its trait, expression % and genotype. Violet hubs are expressed
+        (high-value) alleles; the center star is the cultivar itself. Drag to pan, scroll to zoom.
       </p>
     </div>
   );
@@ -294,11 +307,13 @@ function DnaTab({ strainId }: { strainId: string }) {
 
 function LineageTab({ strainId }: { strainId: string }) {
   const lineage = useLineage(strainId);
+  const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
   if (lineage.isLoading) return <LoadingBlock label="Replaying the family tree…" />;
   if (lineage.isError || !lineage.data)
     return <ErrorState error={lineage.error} onRetry={() => lineage.refetch()} />;
   const data = lineage.data;
   const { nodes, edges } = lineageGraph(data, strainId);
+  const hoveredNode = hover ? data.lineage.find((n) => n.strain_id === hover.id) : undefined;
 
   return (
     <div className="space-y-3">
@@ -308,13 +323,19 @@ function LineageTab({ strainId }: { strainId: string }) {
           {data.node_count} NODES · {data.root_count} ROOTS{data.truncated ? " · TRUNCATED" : ""}
         </span>
       </div>
-      <Constellation
-        mode="graph"
-        nodes={nodes}
-        edges={edges}
-        height={460}
-        caption="PEDIGREE · PARENT → CHILD EDGES · ✓ = REPLAY-VERIFIED"
-      />
+      <div className="relative">
+        <Constellation
+          mode="graph"
+          nodes={nodes}
+          edges={edges}
+          height={460}
+          caption="PEDIGREE · PARENT → CHILD EDGES · ✓ = REPLAY-VERIFIED"
+          onHoverNode={setHover}
+        />
+        {hover && hoveredNode && (
+          <GeneHoverCard x={hover.x} y={hover.y} content={lineageHoverContent(hoveredNode)} />
+        )}
+      </div>
       <Card>
         <CardHeader title="Ancestry" subtitle="Every bred node is replayed from its seed and verified" />
         <ul className="space-y-1.5 text-sm">

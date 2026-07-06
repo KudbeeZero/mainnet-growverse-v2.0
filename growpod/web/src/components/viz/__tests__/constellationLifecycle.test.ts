@@ -92,20 +92,19 @@ describe("Constellation lifecycle contracts", () => {
   });
 
   it("does not touch the sacred geometry/physics/render functions", () => {
-    // draw() hash intentionally updated (owner: mobile particles read as
-    // "huge" and the effect "ran very slow"): the per-particle draw now blits
-    // a cached glow+core sprite (getGlowSprite) instead of rebuilding a
-    // createRadialGradient every frame, and scales the blit by `sizeScale`
-    // (viewport-proportional, was a fixed pixel size regardless of screen
-    // width — the actual cause of the mobile "huge blobs" read) with a
-    // gradient fallback for headless/unsupported canvases. Pixel output is
-    // the same shape/color, just computed differently and now correctly
-    // proportional — leafParticles/graphParticles/step are untouched.
+    // draw() hash intentionally updated (owner: "redo the genetics dots — hover
+    // any of them anywhere, even after breeding; more info, more pop-ups"): the
+    // hovered node's plain baked-in canvas text label is removed — the rich
+    // detail now lives in a DOM hover-card (GeneHoverCard) the host renders over
+    // the canvas — and the hovered dot instead gets a bright twin focus ring so
+    // the active node still reads on the canvas. Particle geometry, colors and
+    // the sprite-blit path are unchanged; leafParticles/graphParticles/step are
+    // untouched (their hashes below are unchanged from the previous freeze).
     const expected: Record<string, string> = {
       leafParticles: "4730224577faa700724cae8f16b880dc6697b8c947670cc7a302d01b48a66d21",
       graphParticles: "17e3fc14e098d0f3f1a68f938252cedcc274dd1d8ee72d74abbfbbfd03e5a0de",
       step: "7ea722e92cc4757851cb0f61ce3927cd3d3da0a0c2671c8c190a352b8ab332cf",
-      draw: "6bf9e53a37040adf47c09cf49c3c9c51e95f7fba11f6ea32c088c30f92d5f80e",
+      draw: "29af70323d8e93601ca950cae43cb30cbdfb8e8f68fbf268323399c3df3f6a7e",
     };
     for (const [name, hash] of Object.entries(expected)) {
       expect(
