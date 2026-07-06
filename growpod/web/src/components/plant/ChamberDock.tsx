@@ -270,6 +270,7 @@ export function ChamberPanel({ plant, strain }: { plant: PlantState; strain?: St
             label="Aroma"
             value={strain?.terpenes?.length ? strain.terpenes[0] : "Not scanned"}
             cap
+            truncateValue
           />
           <MetricCard
             icon="❄️"
@@ -313,6 +314,7 @@ function MetricCard({
   pct,
   tone = "default",
   cap,
+  truncateValue,
 }: {
   icon: string;
   label: string;
@@ -321,6 +323,9 @@ function MetricCard({
   pct?: number;
   tone?: "good" | "warn" | "default";
   cap?: boolean;
+  /** Single-word readouts (e.g. a terpene name) truncate on one line with an
+   *  ellipsis instead of breaking mid-word; the full value stays in the tooltip. */
+  truncateValue?: boolean;
 }) {
   const num = tone === "warn" ? "text-red-400" : tone === "good" ? "text-grow-300" : "text-gray-100";
   const bar = tone === "warn" ? "bg-red-400" : tone === "good" ? "bg-grow-400" : "bg-cyan-400/80";
@@ -331,7 +336,12 @@ function MetricCard({
         <span className="flex-none" aria-hidden>{icon}</span>
         <span className="truncate">{label}</span>
       </span>
-      <span className={`line-clamp-2 break-words text-[15px] font-extrabold leading-tight ${cap ? "capitalize" : ""} ${num}`} title={value}>
+      <span
+        className={`text-[15px] font-extrabold leading-tight ${
+          truncateValue ? "truncate" : "line-clamp-2 break-words"
+        } ${cap ? "capitalize" : ""} ${num}`}
+        title={value}
+      >
         {value}
       </span>
       <div className="h-1 overflow-hidden rounded-full bg-white/10">
