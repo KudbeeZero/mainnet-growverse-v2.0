@@ -146,6 +146,50 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
   let W = 0;
   let H = 0;
 
+  // ---- gradient object cache (disruptor-sweep finding #10) ----
+  // The hottest per-shape draws (trichome sparkle halo, leaflet facet, pod
+  // body/undercut/tip-glow) rebuilt a CanvasGradient from scratch every single
+  // frame — a real allocation + colour-stop-string-parse cost repeated ~30x/sec
+  // per shape, even though a shape's own colour/coordinate inputs (health,
+  // genetics, per-shape jitter) don't change between consecutive frames of the
+  // SAME plant state: they're only recomputed when the sim/care state actually
+  // changes. Caching the gradient OBJECT itself (not a rasterized sprite —
+  // these are shape-path-bound fills, not simple circles, so a sprite blit
+  // would need to rasterize the path too) on the EXACT (unrounded) inputs lets
+  // identical calls reuse the same object — a near-100% hit rate across the
+  // redraw loop for an unchanged plant, with zero approximation: the cached
+  // gradient is byte-identical to one freshly built from the same inputs, it's
+  // just not rebuilt every single frame. Scoped per chamber instance (this
+  // closure), not module-level, so multiple open chambers never share state
+  // and the cache is freed when the instance is.
+  const gradientCache = new Map<string, CanvasGradient>();
+  function cachedRadialGradient(
+    x0: number, y0: number, r0: number, x1: number, y1: number, r1: number,
+    stops: ReadonlyArray<readonly [number, string]>,
+  ): CanvasGradient {
+    const key = `r:${x0}:${y0}:${r0}:${x1}:${y1}:${r1}:${stops.map((s) => s.join(",")).join("|")}`;
+    let g = gradientCache.get(key);
+    if (!g) {
+      g = ctx.createRadialGradient(x0, y0, r0, x1, y1, r1);
+      for (const [offset, color] of stops) g.addColorStop(offset, color);
+      gradientCache.set(key, g);
+    }
+    return g;
+  }
+  function cachedLinearGradient(
+    x0: number, y0: number, x1: number, y1: number,
+    stops: ReadonlyArray<readonly [number, string]>,
+  ): CanvasGradient {
+    const key = `l:${x0}:${y0}:${x1}:${y1}:${stops.map((s) => s.join(",")).join("|")}`;
+    let g = gradientCache.get(key);
+    if (!g) {
+      g = ctx.createLinearGradient(x0, y0, x1, y1);
+      for (const [offset, color] of stops) g.addColorStop(offset, color);
+      gradientCache.set(key, g);
+    }
+    return g;
+  }
+
   // ---- fan-leaf tone ----
   // Base foliage colour is the strain morphology; in flower it deepens (mature
   // fans darken) and, for strains whose bud identity is cool/desaturated teal
@@ -258,10 +302,18 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     // pod ever cleared it) — the volumetric gradient this file's own comments
     // describe as "the single highest-leverage fix" was effectively dead code
     // at real render sizes. Every pod now gets the gradient.
-    const g = ctx!.createRadialGradient(-w * 0.22, -h * 0.24, w * 0.08, 0, 0, w * 1.15);
-    g.addColorStop(0, `hsl(${hue}, ${Math.min(80, sat + 6)}%, ${Math.min(64, lit + 8)}%)`);
-    g.addColorStop(0.55, `hsl(${hue}, ${sat}%, ${lit}%)`);
-    g.addColorStop(1, `hsl(${hue}, ${Math.min(88, sat + 16)}%, ${Math.max(10, lit - 16)}%)`);
+    // Gradient cache (disruptor-sweep finding #10): w/h/hue/sat/lit are exact
+    // (not quantized/bucketed) — a given pod's own values are stable
+    // frame-to-frame for an unchanged plant state (they only change when the
+    // sim/care state actually changes), so caching on the exact value already
+    // gets a near-100% hit rate across the ~30fps redraw loop with ZERO
+    // approximation: the cached gradient is byte-identical to one freshly
+    // built from the same inputs, it just isn't rebuilt every single frame.
+    const g = cachedRadialGradient(-w * 0.22, -h * 0.24, w * 0.08, 0, 0, w * 1.15, [
+      [0, `hsl(${hue}, ${Math.min(80, sat + 6)}%, ${Math.min(64, lit + 8)}%)`],
+      [0.55, `hsl(${hue}, ${sat}%, ${lit}%)`],
+      [1, `hsl(${hue}, ${Math.min(88, sat + 16)}%, ${Math.max(10, lit - 16)}%)`],
+    ]);
     ctx!.fillStyle = g;
     calyxPath(shape, w, h);
     ctx!.fill();
@@ -272,9 +324,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     // what makes overlapping bracts read as physically layered scales instead
     // of blending into one smooth mass — the read the reference calls a
     // shingled/scaled surface, not a teardrop gradient.
-    const undercut = ctx!.createLinearGradient(0, h * 0.06, 0, h * 0.5);
-    undercut.addColorStop(0, `hsla(${hue}, ${sat}%, ${Math.max(6, lit - 8)}%, 0)`);
-    undercut.addColorStop(1, `hsla(${hue}, ${Math.min(90, sat + 10)}%, ${Math.max(4, lit - 22)}%, 0.5)`);
+    const undercut = cachedLinearGradient(0, h * 0.06, 0, h * 0.5, [
+      [0, `hsla(${hue}, ${sat}%, ${Math.max(6, lit - 8)}%, 0)`],
+      [1, `hsla(${hue}, ${Math.min(90, sat + 10)}%, ${Math.max(4, lit - 22)}%, 0.5)`],
+    ]);
     ctx!.fillStyle = undercut;
     calyxPath(shape, w, h);
     ctx!.fill();
@@ -303,9 +356,10 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       ctx!.save();
       ctx!.translate(x, y);
       ctx!.rotate(rot);
-      const tipGlow = ctx!.createLinearGradient(0, h * 0.5, 0, -h * 0.86);
-      tipGlow.addColorStop(0, `hsla(${hue}, ${sat * 0.4}%, ${Math.max(8, lit - 8)}%, 0)`);
-      tipGlow.addColorStop(1, `hsla(${hue}, ${Math.min(92, sat + 20)}%, ${Math.min(74, lit + 16)}%, 0.3)`);
+      const tipGlow = cachedLinearGradient(0, h * 0.5, 0, -h * 0.86, [
+        [0, `hsla(${hue}, ${sat * 0.4}%, ${Math.max(8, lit - 8)}%, 0)`],
+        [1, `hsla(${hue}, ${Math.min(92, sat + 20)}%, ${Math.min(74, lit + 16)}%, 0.3)`],
+      ]);
       ctx!.fillStyle = tipGlow;
       calyxPath(shape, w, h);
       ctx!.fill();
@@ -1221,13 +1275,29 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
             // whole field with expensive gradients.
             if (tr.spk > 0.95) {
               const hr = gr * 1.9;
-              const halo = ctx!.createRadialGradient(bx, by, 0, bx, by, hr);
-              halo.addColorStop(0, `rgba(255,255,255,${clamp(0.42 * sh, 0, 0.8)})`);
-              halo.addColorStop(1, "rgba(240,250,250,0)");
+              // Gradient cache (disruptor-sweep finding #10): every trichome has
+              // its own unique (bx,by), so a gradient centred there would never
+              // hit the cache. Build it centred at the local origin instead —
+              // exact (not quantized) radius, since a given trichome's own `hr`
+              // is stable frame-to-frame (only time-based shimmer changes; see
+              // below) — and reposition via `translate` at fill time. The alpha
+              // here used to be baked into the gradient's own colour stop; it's
+              // animated per-frame (shimmer), so it's applied via `globalAlpha`
+              // at fill time instead — mathematically identical output, but the
+              // gradient itself becomes cacheable across frames.
+              const halo = cachedRadialGradient(0, 0, 0, 0, 0, hr, [
+                [0, "rgba(255,255,255,1)"],
+                [1, "rgba(240,250,250,0)"],
+              ]);
+              const prevAlpha = ctx!.globalAlpha;
+              ctx!.save();
+              ctx!.translate(bx, by);
+              ctx!.globalAlpha = prevAlpha * clamp(0.42 * sh, 0, 0.8);
               ctx!.fillStyle = halo;
               ctx!.beginPath();
-              ctx!.arc(bx, by, hr, 0, TAU);
+              ctx!.arc(0, 0, hr, 0, TAU);
               ctx!.fill();
+              ctx!.restore();
             }
           }
         }
@@ -1927,10 +1997,13 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // a single hsl() fill can't carry. The lit edge leans toward whichever side
       // this leaflet already tilts (jA), so the facet direction varies fan to fan.
       const litSide = jA < 0.5 ? -1 : 1;
-      const facet = ctx!.createLinearGradient(-litSide * Wd, 0, litSide * Wd, 0);
-      facet.addColorStop(0, `hsl(${hue}, ${Math.max(0, satJ - 6)}%, ${Math.max(6, litJ - 9)}%)`);
-      facet.addColorStop(0.48, `hsl(${hue}, ${satJ}%, ${litJ}%)`);
-      facet.addColorStop(1, `hsl(${hue}, ${Math.min(76, satJ + 8)}%, ${Math.min(70, litJ + 10)}%)`);
+      // Gradient cache (disruptor-sweep finding #10): exact (not quantized)
+      // inputs — see the identical rationale on drawPod's cached gradients.
+      const facet = cachedLinearGradient(-litSide * Wd, 0, litSide * Wd, 0, [
+        [0, `hsl(${hue}, ${Math.max(0, satJ - 6)}%, ${Math.max(6, litJ - 9)}%)`],
+        [0.48, `hsl(${hue}, ${satJ}%, ${litJ}%)`],
+        [1, `hsl(${hue}, ${Math.min(76, satJ + 8)}%, ${Math.min(70, litJ + 10)}%)`],
+      ]);
       ctx!.fillStyle = facet;
       leafletPath(L, Wd, curl);
       ctx!.fill();
