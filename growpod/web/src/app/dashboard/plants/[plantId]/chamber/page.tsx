@@ -58,16 +58,10 @@ const GrowChamber = dynamic(
   { ssr: false, loading: () => null },
 );
 
-// Arcade Mode HUD (rewind + chain row only) — lazy so it's tree-shaken from
-// every non-chamber route. Boost-apply UI lives in BoostsInline (ChamberDock)
-// so it isn't duplicated here.
-const ArcadeHUD = dynamic(
-  () => import("@/components/arcade/ArcadeHUD").then((m) => m.ArcadeHUD),
-  { ssr: false, loading: () => null },
-);
-
 // Chain row (wallet + mint). Lazy + only mounted when ALGO is enabled, so algosdk
-// stays out of the chamber bundle otherwise.
+// stays out of the chamber bundle otherwise. Rendered at the bottom of the GROW
+// tab dock (never floating over the plant — the old ArcadeHUD that used to carry
+// it, plus its ⏪ REWIND control, was removed for blocking the plant).
 const ChainRow = dynamic(
   () => import("@/components/arcade/ChainRow").then((m) => m.ChainRow),
   { ssr: false, loading: () => null },
@@ -475,6 +469,16 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             </button>
           )}
           {!ended && <EncouragementFooter health={health} />}
+          {/* Chain row (wallet + mint) — only when ALGO is enabled. Docked here
+              at the bottom of the GROW tab instead of the removed floating HUD,
+              so the mint/wallet path never covers the plant. Server-truth mint
+              options (see `mintTruth`), not the boosted/previewed display values. */}
+          {ALGO_ENABLED && !ended && (
+            <ChainRow
+              plant={plant}
+              mintOptions={{ strainName: strain?.name, growDay: mintTruth.growDay, budDev: mintTruth.budDev }}
+            />
+          )}
         </div>
       )}
 
@@ -719,26 +723,11 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </>
         )}
 
-        {/* REWIND control + chain row — floating button anchored in the chamber
-            scene, so it can only ever overlap the stage, never the plan/insights.
-            Boost-APPLY UI lives only in the inline BoostsInline (GROW/ARCADE
-            sheet below) — this no longer duplicates it. */}
-        {!ended && (
-          <ArcadeHUD
-            reducedMotion={reducedMotion}
-            chainSlot={
-              ALGO_ENABLED ? (
-                <ChainRow
-                  plant={plant}
-                  // Server truth, not the boosted/previewed display values (`day`,
-                  // `budScalars.budDev`) — see `mintTruth` above. The on-screen
-                  // stage below still renders `day`/`budScalars` unchanged.
-                  mintOptions={{ strainName: strain?.name, growDay: mintTruth.growDay, budDev: mintTruth.budDev }}
-                />
-              ) : undefined
-            }
-          />
-        )}
+        {/* The floating REWIND HUD that used to live here was removed — it
+            covered the plant and its ⏪ time-rewind control was a cosmetic
+            gimmick outside the core loop. Boost-APPLY UI lives only in the
+            inline BoostsInline (GROW sheet); the ALGO-gated ChainRow (wallet +
+            mint) now docks at the bottom of the GROW tab, never over the stage. */}
 
         {ended && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#050b12]/85 text-center">

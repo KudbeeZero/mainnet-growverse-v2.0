@@ -3,14 +3,15 @@ import { test, expect, type Page } from "@playwright/test";
 // Proof for the "remove duplicate floating boost tray" fix: the chamber used
 // to show TWO boost-apply surfaces reading the same useBoostStore state — the
 // floating ArcadeHUD tray (4 boost buttons + its own grow-speed readout) AND
-// the inline BoostsInline quick-chip row embedded in the GROW/ARCADE sheet.
-// ArcadeHUD is now slimmed to REWIND + the chain row only; BoostsInline is the
-// single boost-apply surface. Verifies (mobile 390x844 + desktop):
+// the inline BoostsInline quick-chip row embedded in the GROW sheet.
+// The floating ArcadeHUD (which also carried the ⏪ REWIND control) was removed
+// entirely for covering the plant; BoostsInline is now the single boost-apply
+// surface. Verifies (mobile 390x844 + desktop):
 //   1. exactly one boost-apply surface (BoostsInline's quick chips) — no
 //      "Add Boost" button, no ArcadeHUD-style boost buttons with a
 //      "<LABEL> <N>× boost" aria-label duplicating the chips;
-//   2. the REWIND control (⏪) still renders and opens its snapshot sheet;
-//   3. nothing else regressed: care tiles, ARCADE sheet, growth-boost button.
+//   2. the floating REWIND control is gone (no longer over the plant);
+//   3. nothing else regressed: care tiles, GROW sheet, growth-boost button.
 // Hermetic (mock API), same pattern as care-loop-shot.spec.ts.
 
 const PLAYER = {
@@ -107,21 +108,17 @@ async function assertSingleBoostSurface(page: Page) {
   // unique per type/cooldown state, so count via the accessible label prefix).
   const chips = page.getByRole("button", { name: /Quick-apply|on cooldown, ready in/i });
   await expect(chips).toHaveCount(4);
-  // The REWIND control (ArcadeHUD, slimmed) still renders.
-  await expect(page.getByRole("button", { name: /Time rewind/i })).toBeVisible();
+  // The floating REWIND control was removed — it must NOT be on the stage.
+  await expect(page.getByRole("button", { name: /Time rewind/i })).toHaveCount(0);
 }
 
 test.describe("mobile 390x844", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("PROOF: single boost surface + rewind works on mobile", async ({ page }) => {
+  test("PROOF: single boost surface, no floating rewind, on mobile", async ({ page }) => {
     await setup(page);
     await page.goto("/dashboard/plants/plant1/chamber");
     await assertSingleBoostSurface(page);
-
-    // Rewind still opens its snapshot sheet.
-    await page.getByRole("button", { name: /Time rewind/i }).click();
-    await expect(page.getByText(/Rewind ·.*snapshots/i)).toBeVisible();
 
     // Nothing else regressed: care tiles + growth-boost button still present.
     for (const label of ["WATER", "FEED", "PRUNE", "TRAIN"]) {
@@ -136,13 +133,10 @@ test.describe("mobile 390x844", () => {
 test.describe("desktop 1440x900", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("PROOF: single boost surface + rewind works on desktop", async ({ page }) => {
+  test("PROOF: single boost surface, no floating rewind, on desktop", async ({ page }) => {
     await setup(page);
     await page.goto("/dashboard/plants/plant1/chamber");
     await assertSingleBoostSurface(page);
-
-    await page.getByRole("button", { name: /Time rewind/i }).click();
-    await expect(page.getByText(/Rewind ·.*snapshots/i)).toBeVisible();
 
     for (const label of ["WATER", "FEED", "PRUNE", "TRAIN"]) {
       await expect(page.getByRole("button", { name: new RegExp(label, "i") }).first()).toBeVisible();
