@@ -119,16 +119,21 @@ they ever diverge, treat it as a bug in this doc and fix it here.
 
 ## Ready-to-paste next prompt (for Sonnet 5)
 
-> **Start GrowVerse `claude/gv-p02-game-loop-codex`.** Run `/handoff-audit` first. Then create the
-> branch from fresh `main`. Deliver Phase 2 from [GROWVERSE_ROADMAP.md](GROWVERSE_ROADMAP.md): write
-> `docs/memory/design/GAME_LOOPS.md` (the 30-sec/5-min/daily/weekly/seasonal beats against existing
-> systems + mercy mechanics), add a lightweight `telemetry` table + Alembic migration + service hooks
-> in the existing GameService action handlers (server-side, events post inside the same transaction as
-> the action), and tests proving ≥12 events fire. Do NOT touch `balance.yaml` values or the sim engine
-> internals. Run `make test`, `make lint`, `make check-memory` and the alembic checks. Then `/closeout`:
-> reconcile BACKLOG, update the Current Position pointer in this file, rewrite the baton, open exactly
-> one draft PR titled `feat(telemetry): codify game loops + in-txn event taxonomy`, and report Asked /
-> Done / Needs you.
+> **Start the 90-day plan: `claude/gv-o01-store-correctness`** (week 1 of
+> [ROADMAP_90D_2026Q3.md](ROADMAP_90D_2026Q3.md) — its §2 has the full spec and per-branch prompt;
+> evidence in [AUDIT_NFT_STORE_LOOP.md](AUDIT_NFT_STORE_LOOP.md)). Run `/handoff-audit` first, create
+> the branch from fresh `main`, deliver exactly the week-1 slice, run the gates, `/closeout` with one
+> draft PR, then continue down the ROADMAP_90D schedule (second slots per §1b when a week's primary
+> merges early).
+>
+> **End-of-session contract (owner, 2026-07-07 — binding on every session):** ROADMAP_90D §7b. At
+> the end of the day: (1) **`main` is green** — if it's red, fixing it preempts everything; (2) the
+> **Session Loop is fully closed** (gates → verify → closeout → pointer/baton/BACKLOG); (3)
+> **everything is pushed** — zero unpushed commits (`git status` clean,
+> `git log origin/<branch>..<branch>` empty), every PR open on github.com with a current body, so
+> the owner sees on the GitHub website the exact same repo state that exists locally; (4) nothing
+> silently parked — blocked work is still pushed, with the blocker named in the PR body and baton.
+> Report Asked / Done / Needs you.
 
 ---
 

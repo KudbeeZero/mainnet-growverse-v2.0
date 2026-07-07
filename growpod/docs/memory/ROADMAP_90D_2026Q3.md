@@ -361,6 +361,35 @@ surfaces (`chain/`, migrations, `balance.yaml` numbers, wallet UI, auth, lockfil
 `docs/BUILD_RULES.md` — checklist + owner click-test in the PR body. CI keyless, always. When
 the audit and this plan disagree with the code, **the code wins** — fix the doc in the same PR.
 
+### 7b. End-of-session contract (owner directive 2026-07-07 — NON-NEGOTIABLE)
+
+A session is not finished until ALL of these hold, verified — not assumed:
+
+1. **`main` is green.** The last merged PR's CI passed; if a session's merge (or anything else)
+   broke `main`, fixing `main` **preempts all roadmap work** — diagnose, fix, re-kick until the
+   default branch's checks pass. Never end the day with a red `main`.
+2. **The loop is closed.** The full Session Loop ran for the branch: build → gates
+   (`make test` · `make lint` · `make check-memory` · alembic · web checks as touched) → verify
+   end-to-end behavior → `/closeout` → pointer + baton + BACKLOG updated → exactly one draft PR
+   opened. No half-run loops, no "will finish next session" gates.
+3. **GitHub is the truth the owner sees.** Every commit is **pushed** — nothing exists only in
+   the local working tree or a local branch. Before ending: `git status` is clean,
+   `git log origin/<branch>..<branch>` is empty (zero unpushed commits), and the open PR on
+   github.com shows the exact same diff as the local branch. The owner must be able to open
+   GitHub in a browser and see precisely the repo state the session ends with — local and cloud
+   identical, every PR's description current, every finished branch's PR open (draft) and
+   CI-triggered.
+4. **Nothing is silently parked.** If work genuinely can't finish (blocked on an owner decision
+   or a real defect out of scope), it is still committed + pushed on its branch, its PR body
+   says exactly what's missing and why, and the baton's NEXT ACTION names it. Unpushed work at
+   session end is treated as lost work.
+
+Sonnet has (and must use) all the tools this requires: the full git CLI for branch/commit/push,
+the GitHub MCP tools for PR create/update/CI-status/checks, the repo gates (`make test`,
+`make lint`, `make check-memory`, web `typecheck/lint/build/vitest/e2e`), the `verify` and
+`capture-shots` skills, and the `/handoff-audit`/`/closeout` session skills. "I couldn't check
+CI" is not an end state — check it, and if it's red, work it.
+
 ---
 
 *Adopted 2026-07-07 (owner directive, Fable 5 planning session). Companion evidence:
