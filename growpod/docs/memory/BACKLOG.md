@@ -1,7 +1,13 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-06** (GrowVerse roadmap adopted — `docs/memory/GROWVERSE_ROADMAP.md`
+once they appear here. Last reconciled: **2026-07-07** (owner 90-day plan adopted —
+`docs/memory/ROADMAP_90D_2026Q3.md` re-sequences the next 12 weeks around the owner's four
+directives (seed-NFT claiming end-to-end, store correctness, store items with real sim impact,
+pod shows equipped gear), backed by the verified defect registry
+`docs/memory/AUDIT_NFT_STORE_LOOP.md` (N/S/E/C defect IDs; planning-only session, no code
+changed); next branch is now `claude/gv-o01-store-correctness`, tracked in
+`docs/memory/EXECUTION_MACHINE.md`; new item 0e below; prior note follows.) (GrowVerse roadmap adopted — `docs/memory/GROWVERSE_ROADMAP.md`
 [22-phase upgrade path], `docs/memory/ARCHITECTURE_TRUTH.md` [verified baseline from 3 audits], and
 `docs/memory/EXECUTION_MACHINE.md` [dynamic build loop, next branch = `claude/gv-p02-game-loop-codex`] —
 tracked as item 0a below; the open items below map onto roadmap phases — feature-flag gaps → p18 prep,
@@ -30,10 +36,11 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
 0a. 🔨 **GrowVerse 22-phase roadmap execution** — Phase 1 (Architecture Truth) lands this PR; next
     branch tracked live in `docs/memory/EXECUTION_MACHINE.md`'s "Current Position" block (currently
     `claude/gv-p02-game-loop-codex`) → `docs/memory/GROWVERSE_ROADMAP.md`
-0b. ⬜ **Disruptor sweep 2026-07-06 — LIVE core finding: harvest has no stage/alive gate** —
-    `harvest_plant()` (`services/game_service.py:1059`) lets a seed be harvested for full value at t=0;
-    fix mirrors `cleanup_plant`'s `is_alive` check + a `growth_stage == HARVEST` gate. Not economy-tuning,
-    not flag-gated — recommended fix on `main` → `docs/memory/standups/2026-07-06-disruptor-sweep.md` #1
+0b. ✅ **Disruptor sweep 2026-07-06 — LIVE core finding: harvest has no stage/alive gate** —
+    shipped in PR #164 (`bcee23a`): `harvest_plant()` now rejects dead plants and pre-flowering
+    stages (`services/game_service.py:1136-1140`, via `_harvest_window == "not_flowering"`).
+    Verified against source in the 2026-07-07 audit sweep (this entry had gone stale — the fix
+    merged the same day the finding was logged).
 0c. ✅ **Disruptor sweep 2026-07-06 — NFT/staking economy security set** — infinite restake faucet,
     sell+mint double-spend, stake-off-`player_id`, `NFTAsset` missing `version_id_col` fixed in #167;
     wallet-address hijack (finding #4) closed by the real fix — signed-challenge ownership proof
@@ -43,6 +50,16 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
     fixed in #165/#166. App-Store privacy policy + "staking"→"curing" naming fixed in #168. → disruptor
     report #2–#10; `nft_marketplace`/`nft_staking` flags can now be considered for enabling (still owner
     go, per BUILD_RULES protected-surface + live testnet click-test sign-off).
+0e. ⬜ **90-day owner plan 2026-07-07 (Q3) — seed-NFT claim / store reality / equipment sim /
+    pod visuals** — 12-week branch schedule for Sonnet in `docs/memory/ROADMAP_90D_2026Q3.md`
+    (weeks 1–8 = `gv-o01…o06b`, weeks 9–12 fold in p02/p03/p05 + flags/e2e hardening; §1b adds a
+    second-slot queue under the owner's extensive-work clearance, pulling p04 + p06 forward and
+    absorbing the small open items; §8 is the full absorption register placing EVERY open backlog
+    item — scheduled / queued-13+ / parked — so this list and the 90-day plan can't drift); defect
+    registry with file:line evidence in `docs/memory/AUDIT_NFT_STORE_LOOP.md` (headliners: seed-NFT
+    claiming unreachable N1–N3; fans/soils are no-op purchases S3/E2; CO₂ decorative E1; chamber
+    ignores equipped gear S4; staking cure reward always 0 C1; mint can strand PENDING C6).
+    Owner decision gates D1–D7 listed in ROADMAP_90D §5.
 0d. ⬜ **Disruptor sweep 2026-07-06 — App-Store 1.4.3 strain-name/THC% abstraction** — deliberately
     deferred out of #168's scope: fictionalize strain names and abstract THC% display before a public/
     App-Store launch. Invasive brand/gameplay change — needs explicit owner go on the approach (new
