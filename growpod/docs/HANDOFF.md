@@ -4,35 +4,30 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-07-07 (later still) · **By:** the `gv-o03d-plant-scale-vitality` session —
-another **off-roadmap** owner-directed fix, run in parallel with `ROADMAP_90D_2026Q3.md`. The owner
-lifted the round-8 "not 10/10, don't chase the macro bud" plant-render freeze (see BACKLOG.md /
-older-threads item below) by naming the specific gap: "the plants are still too small the Indica
-plants way too small there... start working on a repetitive dynamic loop... there's a lot of
-branch work that still needs to be done." This session fixed the named scale + idle-motion gap
-only — see "What shipped" below and VER-018 through VER-021 in `VERIFIED_RENDERS.md`. Branch
-architecture (candelabra spacing, branchlet placement) was deliberately NOT touched — the owner's
-own framing ("a lot of branch work still needs to be done") makes clear this is one round of an
-ongoing series, not a one-shot close-out.
-**Active branch:** `claude/gv-o03d-plant-scale-vitality` — draft PR (see below) open against
-`main`. All gates green: backend `make test` 1210 passed/6 skipped/91.73% coverage (untouched by
-this pure-frontend change, re-run for the record), `make check-memory` OK, `make lint` clean; web
-typecheck/build/lint clean, full web vitest suite 528/528, 36 relevant Playwright e2e specs
-(care-loop-shot, chamber-landscape-hud-shot, bud3d-shot, the full 30-route crash-sweep) all green.
-**Housekeeping note (found, not fixed, this session):** this baton's prior revision (for PR #174,
-`gv-o03b-pod-button-fixes`) was never updated across the two sessions that landed on top of it —
-PR #175 (`gv-o03c-command-center-redesign`, commit `00aa7ac`) and PR #176 (D2/D3 owner decisions +
-Today's-Plan/Arcade-scrubber design calls, commit `b9be886`) both merged to `main` without a baton
-rewrite. Per `docs/memory/DECISIONS.md`, **D2 and D3 are now RESOLVED** (D2: staking
-`reward_pct` = 2%; D3: cure clock moves to the player-effective/turbo clock with a wall-clock
-floor) — so `claude/gv-o04-cure-mint-integrity` (week 5, protected-surface) is very likely
-unblocked, but the next chat should re-read `DECISIONS.md` directly to confirm before building,
-since this session did not audit that work itself (out of scope for a pure plant-visuals fix).
+**Last rewritten:** 2026-07-07 (later still) · **By:** the `gv-o03f-arcade-polish` session — another
+**off-roadmap** owner-directed pass, run in parallel with `ROADMAP_90D_2026Q3.md`. Owner's dictated
+ask: "polish off the arcade part of the game" (the single-plant chamber screen). This session
+executed the already-decided Arcade preview-growth-scrubber removal (recorded in `BACKLOG.md`/
+`DECISIONS.md` from PR #176) and did a light polish audit — see "What shipped" below and
+VER-022/022b in `VERIFIED_RENDERS.md`. The prior session, `gv-o03d-plant-scale-vitality` (indica
+scale + idle-motion fix, PR #178), is already merged to `main` — this branch was cut from
+post-#178 `main`.
+**Active branch:** `claude/gv-o03f-arcade-polish` — draft PR (see below) open against `main`. All
+gates green: backend `make test` 1210 passed/6 skipped/91.74% coverage (untouched by this
+pure-frontend change, re-run for the record), `make check-memory` OK, `make lint` clean; web
+typecheck/build/lint clean, full web vitest suite 528/528, 39 relevant Playwright e2e specs
+(care-loop-shot, chamber-landscape-hud-shot, growth-boost-shot, turbo-shot, slider-shot,
+bud3d-shot, the full 30-route crash-sweep) all green.
+**Per `docs/memory/DECISIONS.md`, D2 and D3 are RESOLVED** (D2: staking `reward_pct` = 2%; D3: cure
+clock moves to the player-effective/turbo clock with a wall-clock floor) — `claude/gv-o04-cure-
+mint-integrity` (week 5, protected-surface) is unblocked pending a direct re-read of
+`DECISIONS.md` by whoever starts it (this session didn't touch that work — out of scope for an
+Arcade-page polish pass).
 **NEXT CHAT STARTS HERE:** get this PR merged (after CI + owner review), then either (a) resume
 `ROADMAP_90D_2026Q3.md` week 5 (`gv-o04-cure-mint-integrity`) now that D2/D3 read as resolved — a
 Security-Reviewer checklist + owner sign-off is still required in that PR body per
-BUILD_RULES.md's protected-surface gate — or (b) take further owner direction on the plant render
-if this pass still doesn't land at "10/10" for them.
+BUILD_RULES.md's protected-surface gate — or (b) take further owner direction if there's more
+Arcade/Command-Center polish or plant-render feedback.
 **Superseded pointer note:** the pre-2026-07-07 next branch was `claude/gv-p02-game-loop-codex`;
 p02 now lands in week 9 of the 90-day schedule. Historical context below is unchanged.
 **Chamber-mockup decision — RESOLVED (owner, 2026-07-06):** the owner chose to **replace** the
@@ -54,7 +49,40 @@ growverse.dev (Vercel) deploys `web/` from `main`.
 
 ---
 
-## What shipped 2026-07-07 (latest — off-roadmap, `gv-o03d-plant-scale-vitality`)
+## What shipped 2026-07-07 (latest — Arcade chamber polish, off-roadmap, `gv-o03f-arcade-polish`)
+
+Owner's dictated ask: "polish off the arcade part of the game" (the single-plant chamber screen,
+`dashboard/plants/[plantId]/chamber/page.tsx` — distinct from the Command Center hub redesigned in
+PR #175 and the plant-scale/vitality fix in PR #178, below). Two decisions were already recorded
+in `BACKLOG.md`/`DECISIONS.md` (D2/D3 plus the Arcade-scrubber call, PR #176); this session
+executed the scrubber removal and did a light polish audit:
+
+1. **Removed the Arcade page's own preview-growth scrubber** — the TIME tab, `previewDay`/
+   `setPreviewDay` state, the `previewing` flag, and every branch reading it (`day`/`renderStage`/
+   `dev`/`serverBud` now always resolve to the live/boosted values, collapsing what used to be
+   preview-vs-live ternaries). `maxPreviewDay` survives renamed `maxGrowDay` — it's still the
+   clamp ceiling the ⚡ Boost Growth mechanic needs. The purchasable growth boost and the rewind/
+   time-travel snapshot system (`useRewindStore`) were left untouched, per the owner's guardrail.
+2. **Polish audit** over the page + `ArcadeToolbar`/`PlantReactionLayer`/`BoostAmbientLayer`/
+   `ChamberDock` found two dead-code items, both **deferred to BACKLOG** (not fixed) because
+   fixing either means picking a direction inside the protected rewind system:
+   `components/arcade/ArcadeHUD.tsx` is a fully orphaned component (no longer mounted anywhere —
+   the rewind feature has had no player-facing entry point since an earlier PR removed its
+   floating-over-the-plant mount), and `chamber/page.tsx`'s `budScalars` is computed every render
+   but never passed to `GrowChamber`'s `dev` prop, so a restored rewind UI still wouldn't visually
+   "un-grow" the bud on this screen (unlike `bud/page.tsx`'s `BudGL`, which does consume the
+   equivalent scalars).
+3. Two Playwright specs updated for the removed TIME tab: `care-loop-shot.spec.ts` (asserted TIME
+   was visible, now asserts `toHaveCount(0)`) and `chamber-landscape-hud-shot.spec.ts` (stale
+   comment/redundant assertion cleaned up). New golden captures VER-022/022b confirm only GROW/
+   CLIMATE tabs render, no "· preview" badge.
+4. Verification: backend `make test` 1210 passed/6 skipped/91.74% coverage (unchanged — no backend
+   files touched), `make lint`/`make check-memory` clean; web `npm run typecheck`/`lint`/`build`
+   clean, `npm run test` 528/528; `npx playwright test care-loop-shot chamber-landscape-hud-shot
+   growth-boost-shot turbo-shot slider-shot bud3d-shot` (9/9) + the full `route-crash-sweep`
+   (30/30) all green. No protected surfaces touched.
+
+## What shipped 2026-07-07 (earlier — off-roadmap, `gv-o03d-plant-scale-vitality`, PR #178)
 
 Owner lifted the round-8 plant-render freeze by naming the gap: indica strains read too
 small/weak, and idle motion too subtle. Root cause traced to `INDICA.heightMul` (0.74 vs
@@ -367,13 +395,25 @@ resolved 2026-07-06 (owner chose replace — shipped in PR #159); the 90-day pla
    "What shipped" above). Branch-level architecture is the likely next ask if the owner still sees
    a gap; no freeze is in force right now, but don't speculatively chase more polish without new
    owner direction — same "don't chase the macro bud" spirit, just not literally frozen anymore.
-3. **Cleanup:** close stale draft PRs #151, #152 (arcade polish — superseded, no unique content).
+3. ~~**Cleanup:** close stale draft PRs #151, #152 (arcade polish — superseded, no unique content).~~
+   Confirmed closed (not open) — no action needed.
 
 Off-limits unless separately approved: economy values, treasury paths, settlement deposit/withdraw.
 
 ## Verification split
 
-- **Agent-verified (test-backed, `gv-o03d-plant-scale-vitality`, this session):** web
+- **Agent-verified (test-backed, `gv-o03f-arcade-polish`, this session):** web typecheck/lint/build
+  clean; full web vitest suite 528/528; 9 targeted Playwright specs green (care-loop-shot,
+  chamber-landscape-hud-shot, growth-boost-shot, turbo-shot, slider-shot, bud3d-shot) + the full
+  30-route crash-sweep; backend `make test` 1210 passed/6 skipped/91.74% coverage (untouched, no
+  backend files touched), `make lint` + `make check-memory` clean. Fresh capture-shots goldens
+  (VER-022/022b) confirm the chamber's GROW and CLIMATE tabs render with the TIME tab and its
+  "· preview" badge fully gone.
+- **Device-verify (owner):** open the Arcade chamber (`/dashboard/plants/<id>/chamber`) and confirm
+  only GROW and CLIMATE tabs remain (no TIME), the ⚡ Boost Growth button still works, and nothing
+  about the plant's growth day/stage display looks different from before other than the missing
+  tab — this is purely a removal, so the bar is "nothing changed except the scrubber is gone."
+- **Agent-verified (test-backed, `gv-o03d-plant-scale-vitality`, prior session):** web
   typecheck/lint/build clean; full web vitest suite 528/528 (incl. `morphology.test.ts`,
   `chamberCore.test.ts`); 36 relevant Playwright specs green (care-loop-shot,
   chamber-landscape-hud-shot, bud3d-shot, the full 30-route crash-sweep); backend `make test`
