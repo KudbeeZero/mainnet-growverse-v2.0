@@ -53,6 +53,27 @@
 Slack: each month has ~½ week of buffer inside its slices; if a slice slips, push the *phase*
 branches (w9–11) right — never stack branches.
 
+### 1b. Second-slot queue (extensive-capacity track)
+
+The owner has cleared Sonnet for **extensive work** (2026-07-07): when a week's primary branch
+merges with time to spare, take that week's second slot below — still **one active branch/PR at
+a time** (sequential, never stacked), each through the full session loop. Second slots are
+deliberately smaller and independent of their week's primary. If a primary slips, its second
+slot moves right with it; second slots never displace a primary.
+
+| Wk | Second-slot branch | Contents (BACKLOG refs) |
+|---|---|---|
+| 1 | `claude/gv-o01b-docs-chores` | Reconcile `docs/ROADMAP.md` (#6), retire `docs/NEXT_SESSION_SPRINT3.md` (#7), fix `BUILDLOG.md` header (#8), close stale draft PRs #151/#152 (HANDOFF risk), tick BACKLOG 0b (harvest gate — verified shipped in PR #164, `services/game_service.py:1136-1140`), add the HANDOFF staleness gate to `scripts/check_memory.py` (#29). Also: double-click purchase guard on sibling money buttons (BACKLOG 🔴 code-review finding) folds into **o01 primary** (button correctness). |
+| 2 | `claude/gv-o02b-retire-dead-code` | Retire `serve_narration` (#17) + remaining dead web code (#21, owner-taste call on `VideoHero.tsx` goes to the owner first); DB-backup snapshot workflow (HANDOFF risk / SECURITY.md gap). |
+| 4 | `claude/gv-o03b-wire-finished-backends` | BACKLOG #20: `GET /strains/<id>/effects` panel, `Player.last_active_at` touch — natural adjacency with o03's store/consumable UX work (the consumables use-item UI half already shipped in PR #137). |
+| 5 | `claude/gv-o04b-idempotency-general` | General `Idempotency-Key` header semantics — duplicate returns the original response, not a 409 (#1/#25); one-shot-grant uniqueness audit. Ops (owner tap, not a branch): attach Fly Redis and drop `RATELIMIT_ALLOW_MEMORY` (INCIDENTS 🟡). |
+| 6 | `claude/gv-p04-plant-state-ext` | **Phase 4 pulled forward** (GROWVERSE_ROADMAP spec, unchanged): care-history rollup, stress-event log, pure `project_metadata()` for ARC-19/ARC-69 — o06b's dynamic seed/harvest NFTs want this projection; landing it in week 6 keeps week 8 clean. |
+| 6b | `claude/gv-o05b-lecture-audio-unify` | Unify `/lecture` on the produce-once audio path (#13) — small, isolated. |
+| 9 | `claude/gv-o08-care-ack-welcome-back` | WO-1/WO-2 Grow Guide salvage (#22): per-action care-ack signals + welcome-back delta endpoint — pairs with p02 telemetry landing the same week. |
+| 10 | `claude/gv-o09-chamber-mobile-followups` | Chamber mobile follow-ups (#12) riding p03's chamber work. Bud/flower polish (#11/#34) stays **owner-frozen** — needs the owner to name the gap first. |
+| 11–12 | `claude/gv-p06-knowledge-layer` | **Phase 6 pulled forward** (GROWVERSE_ROADMAP spec): tagged KB + excerpt helper + the 14 assessment banks (#14) + admissions-recommendation persist/surface (#15) + MasteryPanel metadata (#16) + the four University playtest fixes (study-time dev-clock reach, course-completion celebration, bio-101 credentialing, University visibility in onboarding/mobile-nav). Grounds the week-11 Scout's lesson links. |
+| 11 | `claude/gv-o10-onboarding-ai-guide` | Onboarding rework (#9, owner thread 2026-07-03: "too long, not exciting"): landing-page scroll + 3-panel FTUE coach wiring, making the existing Master Grower the visible guide — after p05 lands its Scout surfaces. |
+
 ---
 
 ## 2. Month 1 — Make the store real
@@ -266,6 +287,10 @@ registry)`."*
 | Before w7 | D1 port-vs-wire confirmation (recommended: port) | o06a/b |
 | w8 | Owner testnet click-test (seed claim) | o06b merge |
 | Anytime pre-launch | D6 seed cost 0→25 (p08, unchanged) | p18 |
+| Before w2 second slot | Owner-taste call: keep or delete `VideoHero.tsx` + `public/media/*` (BACKLOG #21) | o02b completeness |
+| Week 5 (owner tap, ops) | Attach Fly Redis (`fly redis create` → `RATELIMIT_STORAGE_URI`) so rate limits stop being per-worker in prod | INCIDENTS 🟡 closure |
+| Before w12 | D9 — confirm intended semantics of the 5 no-op flags before they start gating for real (BACKLOG #4 notes "owner OK needed") | o07 |
+| Pre-launch (not 90d-blocking) | D8 — App-Store strain-name/THC% abstraction approach (BACKLOG 0d: fictional names? THC bands?) | p18/p19 |
 
 Every decision lands in [DECISIONS.md](DECISIONS.md) when made.
 
@@ -274,11 +299,58 @@ Every decision lands in [DECISIONS.md](DECISIONS.md) when made.
 ## 6. What this plan deliberately does NOT do (unchanged from GROWVERSE_ROADMAP)
 
 Mainnet anything · fiat rail · funds-path rewrites (withdraw/deposit/settlement math) · 3D bud
-viewer · generative genetics · depth-2+ agent chains · HeyGen. The p08–p22 phases not named
-above (economy v1, genetics UI, missions, TDE, runtime guard, security pass, UI master, assets,
-evals, MVP assembly, community, revenue, beta hardening) remain queued in their
-GROVERSE_ROADMAP order and resume after week 12 — this 90-day plan front-loads the owner's
-priorities without abandoning the 22-phase arc.
+viewer · generative genetics · depth-2+ agent chains · HeyGen. This 90-day plan front-loads the
+owner's priorities without abandoning the 22-phase arc — §8 below places every remaining phase
+and backlog item explicitly.
+
+---
+
+## 8. Full absorption register — every open item, placed (2026-07-07 sweep)
+
+Sweep of BACKLOG.md (all ⬜/🔨), HANDOFF.md open risks, INCIDENTS.md, and the 22 GrowVerse
+phases. Every item lands in exactly one bucket. BACKLOG snapshot numbers in parentheses.
+
+**Scheduled in weeks 1–12** (primary or second slot — see §1/§1b):
+store correctness + double-click purchase guard (w1) · docs chores #6 #7 #8 + stale PRs
+#151/#152 + HANDOFF gate #29 (w1b) · equipment sim effects S3/E1/E2 (w2–3) · dead-code retirement
+#17 #21 + DB-backup workflow (w2b) · pod equipment visuals S4/S5 (w4) · finished-backend wiring
+#20 (w4b) · cure/mint integrity C1/C5/C6/C8/C9 (w5) · general Idempotency-Key #1/#25 (w5b) ·
+wallet/CTA unification N4–N8/C7 (w6) · **p04** plant-state ext + metadata projection (w6, 2nd
+track) · lecture-audio unify #13 (w6b) · **p07a+b** preview + watcher (w7) · **p07c-extended**
+seed-NFT claim N1–N3 (w8) · **p02** telemetry (w9) · care-ack/welcome-back #22 (w9b) · **p03**
+moods (w10) · chamber mobile follow-ups #12 (w10b) · **p05** Scout slice 1 (w11) · onboarding
+AI-guide rework #9 (w11) · **p06** knowledge layer + 14 banks #14–#16 + University playtest
+fixes (w11–12) · flags #4/#5 (D9) + full-loop e2e #28 + N10 stub honesty (w12).
+
+**Queued weeks 13+ — the arc resumes in GROWVERSE_ROADMAP order** (next-branch pointer advances
+here after w12): **p05 slice 2** (live Haiku + budget guard) → **p08** economy v1 (D6 seed cost;
+boost-economy #23 decisions ride here) → **p09** genetics UI → **p10** player missions → **p11**
+TDE/Agent OS → **p12** runtime guard → **p13** security pass — absorbs: PR #104 follow-ups #3
+(deposit redesign, CSP nonce, CORS allowlist, player key off localStorage), chain-settlement
+verification #2/#24 (treasury funding, `ASA_ID`, deposit txid verify), trust-layer remainder
+#30, observability/secrets/age-gating #39 → **p14** UI master → **p15** assets → **p16**
+data/evals — absorbs Global Learning Memory #18 (design/11 P1/P2) → **p17** QA/sim — absorbs
+load/soak `/state` #27 → **p18** MVP — absorbs playtesting/retention tail #19, D8
+strain-name/THC abstraction (0d), education-gated Master Grower #33 candidacy → **p19–p22**
+(community, revenue, execution machine upkeep, beta hardening — p22 absorbs the chain
+reconciliation job).
+
+**Covered by scheduled work (no separate item):** non-custodial Pera/WalletConnect path #38
+(= o06a/b) · KB enrichment #32 partially (= p06; the strain-data enrichment tail stays with
+p06 follow-up) · web e2e smoke #28 (= o07).
+
+**Parked — explicit gate, not forgotten:** anti-bot framework #26 (player scale) ·
+bud/flower/macro polish #11/#34 (owner visual freeze — owner names the gap) · Constellation
+leaf-mesh #31 (low, cosmetic) · generative genetics #35, grower-skill mastery #36, LiveOps
+sprint 6 #37, sponsored content #41 (all post-MVP by design) · fiat rail #40 (owner-parked,
+5 decisions) · AI-assistance package #23-AI (5 owner gates) · PARKED PRs #27/#28 (do not
+modify, per BACKLOG).
+
+**Stale-ticked this sweep:** BACKLOG 0b (harvest stage/alive gate) verified shipped in PR #164
+(`services/game_service.py:1136-1140`) — ticked ✅ in the same PR as this register.
+
+If Sonnet finds an open item not named in this register, that's a bug in this doc — add it to
+the right bucket in the same PR (memory never lies).
 
 ## 7. Standing execution rules for Sonnet (unchanged, restated)
 

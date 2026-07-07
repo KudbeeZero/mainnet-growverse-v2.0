@@ -18,6 +18,13 @@ core loop**: grow → care → harvest → cure → sell/breed/stabilize → min
 roadmap in `docs/memory/GROWVERSE_ROADMAP.md`, built one branch at a time via
 `docs/memory/EXECUTION_MACHINE.md` — start there. Same invariants as below; nothing new.
 
+**90-day owner plan (adopted 2026-07-07).** For the next 12 weeks the build order is
+`docs/memory/ROADMAP_90D_2026Q3.md` — the owner's re-sequencing (seed-NFT claiming end-to-end,
+store correctness, real fan/soil/CO₂ simulation effects, pod shows equipped gear), with a
+second-slot queue and a full absorption register placing every open backlog item. Evidence:
+`docs/memory/AUDIT_NFT_STORE_LOOP.md`. The EXECUTION_MACHINE pointer tracks it; after week 12
+the 22-phase order resumes. Owner has cleared extensive work — still one branch/PR at a time.
+
 ## How to work here (conventions that must not drift)
 - **DB is authoritative; the chain is a mirror/settlement layer.** Never let on-chain state
   drive gameplay truth.
