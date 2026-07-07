@@ -1285,25 +1285,24 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
   Phase B (photosynthesis + transpiration + EC/pH→uptake) — land the sim-cost-cap first.
 
 ## 🟡 Low / later (valuable, not urgent)
-- 🟡 ⬜ **Today's Plan → device power-toggle blocks with status lights (owner idea, 2026-07-07,
-  Command Center redesign)** — the owner liked "Today's Plan" and floated evolving it into
-  plug-in-style blocks for equipped devices (fan, light, etc.) that can be turned off/on, each with
-  a status light (active / inactive / problem). Not built this pass — genuine design fork, not a
-  quick fix: today gear only has `equip_gear`/`unequip_gear` (`services/game_service.py:658-731`),
-  no runtime on/off toggle while equipped, and the sim doesn't model a "device is malfunctioning"
-  state distinct from environment bands being out of range. A lightweight first step (status-light
-  chips using ALREADY-known state: equipped = active, unequipped = n/a, env reading out-of-band =
-  "problem") is buildable without new backend; the actual power-toggle mechanic needs an owner
-  decision on what "off" means gameplay-wise (does an unpowered fan stop applying its `GearEffects`
-  entirely? does it cost GC to leave equipment idle?) before building.
-- 🟡 ⬜ **The Arcade chamber page (`/dashboard/plants/[plantId]/chamber`) still has its own
-  preview-growth scrubber (Command Center redesign, 2026-07-07)** — the owner's screenshots and
-  removal request were specifically about the Command Center (`PodCommandCenter.tsx`,
-  `dashboard/page.tsx`), which is now clean (`GrowthScrubber.tsx` + `lib/chamber/growthPreview.ts`
-  deleted). The separate Arcade/chamber page has its own hand-rolled, differently-wired version of
-  the same "drag to preview, visual only" slider (`chamber/page.tsx` around the CLIMATE/TIME tabs,
-  intertwined with boost-offset math) — left untouched to keep this PR scoped to what was shown.
-  Flag if the owner wants it removed there too.
+- 🟡 ⬜ **Today's Plan → device power-toggle blocks with status lights — design decided
+  2026-07-07, not yet built.** Owner delegated the call ("you know better than I do, come up with
+  the most logical way"). Decision: build it as a **real mechanic, not a decorative light** — this
+  codebase's own convention is honesty over invented vibes (see the Plant Mood pill: "no invented
+  streak/vibe score"), so a toggle that doesn't actually do anything would break that pattern.
+  Design: add a persisted `enabled: bool` per equipped-gear slot (new column, additive migration);
+  toggling off makes `simulation/gear.py`'s `effects_for` treat that slot as unequipped for sim
+  purposes (reuses the existing no-gear baseline path, no new sim branch) while the item stays
+  equipped/owned. Status light = equipped+enabled → active (green), equipped+disabled by player →
+  inactive (grey), equipped+enabled but the pod's relevant env band is out-of-range → problem
+  (amber) — all three states are derived from data that already exists or this one new column,
+  never invented. Queue as its own branch after the current plant-visual-system + Arcade-polish
+  work (touches `services/game_service.py`, `simulation/gear.py`, a migration, the serializer, and
+  `ChamberPanel`'s Today's Plan block) — not started this pass.
+- 🟡 🔨 **The Arcade chamber page's own preview-growth scrubber — decided 2026-07-07: remove it.**
+  Consistent with the Command Center removal and the owner's literal "remove that from the game."
+  Folded into the queued Arcade-polish branch (after the plant-visual-system branch merges, per
+  "one active PR at a time").
 - 🟡 ✅ **Dead self-link "Inspect" button on the plant detail page (button-wiring audit, finding
   B3; shipped PR #174)** — `CareButtons` gained an `onDetailPage` prop that hides the "🔍 Inspect"
   self-link when already mounted on `/dashboard/plants/<id>`; still shown on its other mount point

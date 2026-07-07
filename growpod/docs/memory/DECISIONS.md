@@ -696,3 +696,19 @@ rewrites, no mainnet, no securities-like promises. (3) Every closeout updates th
 Current Position pointer and reconciles BACKLOG. (4) The roadmap's later phases (agent runtime guard,
 TDE, security pass) formalize the agent-safety and monetization guardrails already implied by the
 charter.
+
+### 2026-07-07 — D2/D3: staking reward_pct and cure clock basis (unblocks gv-o04 week 5)
+**Decision:** D2 — the seed-NFT staking reward is `appraised_value × reward_pct` with
+**`reward_pct = 2%`** (the conservative default proposed in `ROADMAP_90D_2026Q3.md` §2/D7, no
+change from the Economy Balancer's own recommendation). D3 — the cure clock moves from wall-clock
+to the **player-effective (turbo-aware) clock, with a wall-clock floor** so a maxed-out turbo
+multiplier can never make cure instant/trivial.
+**Why:** Owner confirmed both via `AskUserQuestion` (2026-07-07), picking the Recommended option
+on each: 2% keeps the new faucet conservative with zero playtest data to justify anything higher
+(easy to raise later); the turbo-aware clock keeps cure consistent with every other stage of the
+grow cycle already reacting to turbo, while the floor is the guardrail against a trivial/instant
+cure.
+**Consequences:** Unblocks `claude/gv-o04-cure-mint-integrity` (ROADMAP_90D week 5) — a
+protected-surface branch (mint path + a faucet number) requiring a Security-Reviewer checklist +
+this decision cited in the PR body, plus an Economy Balancer sim attached per D7. `balance.yaml`
+gains/updates the `reward_pct` and cure-clock-floor constants there, not hardcoded in Python.
