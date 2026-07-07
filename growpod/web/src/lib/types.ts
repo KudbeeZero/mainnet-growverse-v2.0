@@ -149,6 +149,26 @@ export interface Seed {
 
 export type PodTier = "basic" | "standard" | "pro";
 
+// Merged, clamped equipped-gear effects (mirrors simulation/gear.py's GearEffects;
+// duplicated here rather than imported from lib/api/store.ts to avoid a
+// types.ts <-> store.ts <-> client.ts import cycle — client.ts already imports
+// from this file).
+export interface PodGearEffects {
+  temp_offset_c?: number;
+  humidity_offset_pct?: number;
+  pest_spawn_mult?: number;
+  disease_growth_mult?: number;
+  water_decay_mult?: number;
+  nutrient_decay_mult?: number;
+  flowering_quality_bonus?: number;
+}
+
+export interface PodEquippedGear {
+  gear_key: string;
+  category: "light" | "fan" | "soil";
+  name: string;
+}
+
 export interface Pod {
   id: string;
   player_id: string;
@@ -165,6 +185,10 @@ export interface Pod {
   co2_level: number | null;
   light_intensity: number | null;
   ph_level: number | null;
+  // Equipped gear + merged net effects (ROADMAP_90D week 2-3 serializer;
+  // feeds week 4's chamber visuals — equipped-gear chips, fan sway, tint).
+  equipped_gear: PodEquippedGear[];
+  gear_effects: PodGearEffects;
 }
 
 export interface Plant {

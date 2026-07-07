@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { setup } from "./fixtures/mockGame";
+import { setup, POD } from "./fixtures/mockGame";
 
 // Parameterized screenshot capture — the permanent replacement for the
 // throwaway one-off specs every visual-verification session used to write.
@@ -29,6 +29,9 @@ import { setup } from "./fixtures/mockGame";
 //   CAPTURE_UNAUTH     "1" → skip the mock-API/auth seed entirely (for the
 //                      logged-out onboarding/landing routes, which redirect
 //                      an authed session straight to /dashboard)
+//   CAPTURE_POD_STATE  comma-separated k=v overrides applied to the mock POD
+//                      (equipped gear, environment) — e.g.
+//                      equipped_gear='[{"gear_key":"inline_exhaust_6in","category":"fan","name":"6\" Inline Exhaust"}]',light_intensity=950
 //
 // Skipped entirely unless CAPTURE_ROUTE is set, so it never runs (and never
 // costs time) in CI or a plain `npx playwright test` sweep.
@@ -65,7 +68,11 @@ test.describe("capture", () => {
   for (const [w, h] of VIEWPORTS) {
     test(`shoot ${ROUTE} @ ${w}x${h}`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h });
-      if (!UNAUTH) await setup(page, parseState(process.env.CAPTURE_STATE));
+      if (!UNAUTH) {
+        const podOver = parseState(process.env.CAPTURE_POD_STATE);
+        const extra = Object.keys(podOver).length ? { "/pods": [{ ...POD, ...podOver }] } : {};
+        await setup(page, parseState(process.env.CAPTURE_STATE), extra);
+      }
       await page.goto(ROUTE!);
       await page.waitForTimeout(WAIT);
       await page.screenshot({ path: `${OUT}/${NAME}-${w}x${h}.png`, fullPage: true });

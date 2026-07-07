@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -10,11 +11,13 @@ import { Tabs } from "@/components/ui/Tabs";
 import { store as storeApi } from "@/lib/api/store";
 import type { GearItem, GearCategory } from "@/lib/api/store";
 import type { Pod } from "@/lib/types";
+import { pickApplyTarget } from "@/lib/consumableAction";
 import {
   useStorePartners,
   useStoreFeatured,
   useStoreBundles,
   useSeasonalStrains,
+  usePlantsList,
 } from "@/hooks/queries";
 import { useSession } from "@/lib/session";
 import { api } from "@/lib/api";
@@ -381,6 +384,7 @@ interface ConsumableItem {
 function ConsumablesSection() {
   const { playerId, isAuthed } = useSession();
   const queryClient = useQueryClient();
+  const { data: plants } = usePlantsList();
   const [items, setItems] = useState<ConsumableItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [buying, setBuying] = useState<string | null>(null);
@@ -461,6 +465,19 @@ function ConsumablesSection() {
                   {buying === item.key ? "…" : "Buy"}
                 </button>
               </div>
+              {/* S5: owning it isn't enough — point straight at where to use
+                  it (apply lives on the plant view, not the store). */}
+              {item.owned > 0 && (() => {
+                const targetId = pickApplyTarget(plants, item.stage_req);
+                return targetId ? (
+                  <Link
+                    href={`/dashboard/plants/${targetId}?apply=${item.key}`}
+                    className="text-xs text-grow-400 hover:underline"
+                  >
+                    Apply to plant →
+                  </Link>
+                ) : null;
+              })()}
             </div>
           ))}
         </div>
