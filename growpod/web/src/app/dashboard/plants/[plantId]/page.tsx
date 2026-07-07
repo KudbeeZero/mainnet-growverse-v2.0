@@ -10,6 +10,8 @@ import { LoadingBlock } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/States";
 import { plantRender } from "@/lib/plantRender";
 import { previewDev, seedForPlant } from "@/lib/chamber/morphology";
+import { NO_FAN_BASELINE, fanVisualIntensity } from "@/lib/chamber/gearVisuals";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { StatBars } from "@/components/plant/StatBars";
 import { ConditionBadges } from "@/components/plant/ConditionBadges";
 import { CareButtons } from "@/components/plant/CareButtons";
@@ -55,6 +57,7 @@ function PlantDetail({ plantId }: { plantId: string }) {
   });
   // QA-only: toast on real state changes between polls so testing feels alive.
   useQaMilestones(plant, playerId);
+  const reducedMotion = usePrefersReducedMotion();
 
   if (isLoading) return <LoadingBlock label="Loading plant…" />;
   if (isError || !plant)
@@ -69,6 +72,9 @@ function PlantDetail({ plantId }: { plantId: string }) {
 
   const strain = map.get(plant.strain_id);
   const pod = pods?.find((p) => p.id === plant.pod_id) ?? null;
+  // Same fix as PodCommandCenter's S4 fix, applied here too (B2) — this chamber
+  // preview must reflect the pod's real equipped fan, not a fixed constant.
+  const fanVisual = reducedMotion ? NO_FAN_BASELINE : fanVisualIntensity(pod?.equipped_gear);
   // Derive the canonical chamber-render inputs (morphology / bud DNA / nominal
   // grow day) so this view shows the SAME real plant as the chamber/command/card.
   const render = plantRender(plant, strain, pod ?? undefined);
@@ -134,7 +140,7 @@ function PlantDetail({ plantId }: { plantId: string }) {
               budColor={render.budColor}
               budDna={render.budDna}
               climate={{
-                fan: 45,
+                fan: fanVisual,
                 temp: pod?.temperature ?? 24,
                 hum: pod?.humidity ?? 50,
                 co2: pod?.co2_level ?? 800,
@@ -188,7 +194,7 @@ function PlantDetail({ plantId }: { plantId: string }) {
               </div>
               <div>
                 <h3 className="mb-2 text-sm font-semibold text-gray-300">Care</h3>
-                <CareButtons plant={plant} />
+                <CareButtons plant={plant} onDetailPage />
               </div>
               {/* Owned consumables — "use item", the missing half of the store
                   loop. Renders nothing when the player owns none. */}

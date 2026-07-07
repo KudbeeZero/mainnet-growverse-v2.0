@@ -256,7 +256,11 @@ export function EnvironmentRail({
       action={
         <span
           className="rounded border border-ink-700 px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.12em] text-gray-500"
-          title="Automatic climate control — coming soon"
+          title={
+            pod?.auto_water || pod?.auto_feed
+              ? "This pod's tier automatically tops up water/nutrients when they run low"
+              : "Upgrade this pod's tier for automatic water/nutrient top-ups"
+          }
         >
           AUTO {pod?.auto_water || pod?.auto_feed ? "ON" : "OFF"}
         </span>

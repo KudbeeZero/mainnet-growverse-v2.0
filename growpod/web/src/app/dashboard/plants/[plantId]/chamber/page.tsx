@@ -42,6 +42,7 @@ import {
   cycleDays,
   mintTruthMetadata,
 } from "@/lib/chamber/morphology";
+import { NO_FAN_BASELINE, fanVisualIntensity } from "@/lib/chamber/gearVisuals";
 import { budColorForStrain, silhouetteFor } from "@/lib/chamber/strainVisuals";
 import { budDnaFor, applyEnvironmentToBudDNA } from "@/lib/chamber/budDna";
 import { budParamsFromTrichomes } from "@/lib/chamber/bud3d/serverBud";
@@ -81,7 +82,7 @@ interface ChamberClimate extends Environment {
 }
 
 const DEFAULT_CLIMATE: ChamberClimate = {
-  fan: 45,
+  fan: NO_FAN_BASELINE,
   temperature: 24,
   humidity: 50,
   co2_level: 800,
@@ -277,19 +278,23 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const pod = pods?.find((p) => p.id === plant?.pod_id);
 
   // Seed the sliders from the pod's real environment, once, when it loads.
+  // FAN seeds from the pod's real equipped-gear intensity (B2 — was frozen at
+  // the DEFAULT_CLIMATE constant regardless of equipped gear) but stays a
+  // local/visual-only dial afterward — the player can still drag it freely,
+  // same as before; only the STARTING point is now honest.
   const seededRef = useRef(false);
   useEffect(() => {
     if (seededRef.current || !pod) return;
     seededRef.current = true;
     setClimate((c) => ({
-      fan: c.fan,
+      fan: reducedMotion ? NO_FAN_BASELINE : fanVisualIntensity(pod.equipped_gear),
       temperature: pod.temperature ?? c.temperature,
       humidity: pod.humidity ?? c.humidity,
       co2_level: pod.co2_level ?? c.co2_level,
       light_intensity: pod.light_intensity ?? c.light_intensity,
       ph_level: pod.ph_level ?? c.ph_level,
     }));
-  }, [pod]);
+  }, [pod, reducedMotion]);
 
   const setEnv = useMutation<unknown, ApiError, Environment>({
     mutationFn: (env) => api.pods.setEnvironment(playerId!, plant!.pod_id, env),

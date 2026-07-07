@@ -54,13 +54,15 @@ export function CreatePodForm({ onCreated }: { onCreated?: () => void }) {
             <option value="pro">Pro</option>
           </Select>
         </Field>
-        <Field label="Capacity">
+        <Field label="Capacity" hint="Dashboard shows up to 4 plants per pod today">
           <TextInput
             type="number"
             min={1}
-            max={12}
+            max={4}
             value={capacity}
-            onChange={(e) => setCapacity(Number(e.target.value))}
+            onChange={(e) =>
+              setCapacity(Math.min(4, Math.max(1, Number(e.target.value) || 1)))
+            }
           />
         </Field>
       </div>

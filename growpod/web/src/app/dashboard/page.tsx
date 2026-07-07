@@ -183,7 +183,9 @@ function DashboardInner() {
                     }`}
                   >
                     {pod.name}
-                    <span className="ml-1.5 text-[10px] text-gray-500">{count}/4</span>
+                    <span className="ml-1.5 text-[10px] text-gray-500">
+                      {count}/{Math.min(4, pod.capacity || 4)}
+                    </span>
                   </button>
                 );
               })}
