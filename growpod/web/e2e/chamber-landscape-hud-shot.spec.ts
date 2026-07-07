@@ -6,7 +6,7 @@ import { setup } from "./fixtures/mockGame";
 // and instead shows two edge tabs that reveal slide-out HUDs — LEFT = grow
 // controls (actions), RIGHT = insights & management — keeping the plant the
 // unobstructed center of the stage. Verifies:
-//   1. the docked GROW/CLIMATE/TIME rail is NOT rendered (it's replaced);
+//   1. the docked GROW/CLIMATE rail is NOT rendered (it's replaced);
 //   2. both edge tabs (▸ open controls, ◂ open insights) are visible;
 //   3. tapping the LEFT tab opens the GROW CONTROLS HUD with the care actions;
 //   4. tapping a care action auto-compacts the HUD (closes it) so the plant
@@ -26,9 +26,8 @@ async function openChamber(page: Page) {
 test("PROOF: phone-landscape shows slide-out HUDs, not the docked rail", async ({ page }) => {
   await openChamber(page);
 
-  // The docked tab rail is gone in this mode — no GROW/CLIMATE/TIME tab buttons.
+  // The docked tab rail is gone in this mode — no GROW/CLIMATE tab buttons.
   await expect(page.getByRole("button", { name: /^CLIMATE$/i })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /^TIME$/i })).toHaveCount(0);
 
   // Both edge tabs are present.
   const leftTab = page.getByRole("button", { name: /Open grow controls/i });

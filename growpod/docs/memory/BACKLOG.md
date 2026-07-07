@@ -1,11 +1,28 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-07** (plant scale + idle vitality,
-`claude/gv-o03d-plant-scale-vitality`: owner named the specific gap in the round-8 "not 10/10"
-plant-render freeze — indica strains reading too small/weak, idle motion too subtle — lifting it
-for this pass; see the plant-render entry below and VER-018 through VER-021 in
-`VERIFIED_RENDERS.md`. Prior note follows.) (owner-directed Command Center redesign,
+once they appear here. Last reconciled: **2026-07-07** (owner-directed Arcade chamber polish,
+off-roadmap, `claude/gv-o03f-arcade-polish`: executed the already-decided removal of the Arcade
+chamber page's own preview-growth scrubber (TIME tab + `previewDay`/`previewing`/`stageForDay`
+branch in `chamber/page.tsx`; the boost-clamp ceiling that shared the same line, `maxPreviewDay`,
+survives renamed to `maxGrowDay` since the ⚡ Boost Growth mechanic still needs it) — consistent
+with the identical removal already shipped on the Command Center. Left the purchasable growth
+boost and the rewind/time-travel snapshot system untouched, per the owner's guardrail. A light
+polish audit over the page + `ArcadeToolbar`/`PlantReactionLayer`/`BoostAmbientLayer`/
+`ChamberDock` found two dead-code items, both deferred (not fixed) below because they only touch
+the protected rewind system and need an owner call: `ArcadeHUD.tsx` (the rewind + chain-row HUD)
+is a fully orphaned component — no longer imported/mounted anywhere since an earlier PR removed
+its floating-over-the-plant mount point, so the rewind feature has had no player-facing entry
+point since; and `chamber/page.tsx`'s `budScalars` (`rewindOverride ?? liveScalars`) is computed
+every render but never passed to `GrowChamber`'s `dev` prop, so even a restored rewind UI wouldn't
+visually "un-grow" the bud on this screen the way `bud/page.tsx`'s `BudGL` already does. Fresh
+capture-shots goldens (VER-022/022b) confirm the chamber now shows only GROW/CLIMATE tabs. Prior
+note follows.)
+(plant scale + idle vitality, `claude/gv-o03d-plant-scale-vitality`: owner named the specific gap
+in the round-8 "not 10/10" plant-render freeze — indica strains reading too small/weak, idle
+motion too subtle — lifting it for this pass; see the plant-render entry below and VER-018
+through VER-021 in `VERIFIED_RENDERS.md`. Prior note follows.)
+(owner-directed Command Center redesign,
 off-roadmap, `claude/gv-o03c-command-center-redesign`: the owner sent annotated screenshots of the
 main dashboard/Command Center asking for (1) a centered pod-switcher menu instead of left-aligned
 wrapping pills, (2) removal of the PREVIEW GROWTH dev scrubber ("drag to watch it grow, visual
@@ -1328,10 +1345,29 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
   never invented. Queue as its own branch after the current plant-visual-system + Arcade-polish
   work (touches `services/game_service.py`, `simulation/gear.py`, a migration, the serializer, and
   `ChamberPanel`'s Today's Plan block) — not started this pass.
-- 🟡 🔨 **The Arcade chamber page's own preview-growth scrubber — decided 2026-07-07: remove it.**
-  Consistent with the Command Center removal and the owner's literal "remove that from the game."
-  Folded into the queued Arcade-polish branch (after the plant-visual-system branch merges, per
-  "one active PR at a time").
+- 🟡 ✅ **The Arcade chamber page's own preview-growth scrubber — decided 2026-07-07: remove it
+  (shipped `claude/gv-o03f-arcade-polish`).** Consistent with the Command Center removal and the
+  owner's literal "remove that from the game." Removed the TIME tab, `previewDay`/`setPreviewDay`
+  state, the `previewing` flag, and every branch that read it (`day`/`renderStage`/`dev`/
+  `serverBud` now always use the live/boosted values); `maxPreviewDay` survived, renamed
+  `maxGrowDay`, since the ⚡ Boost Growth clamp still needs it. The purchasable growth boost and
+  the rewind/time-travel system were left untouched, as directed.
+- 🟠 ⬜ **`ArcadeHUD.tsx` is a fully orphaned component — the rewind feature has no player-facing
+  entry point (Arcade-polish audit, 2026-07-07)** — `web/src/components/arcade/ArcadeHUD.tsx` (the
+  floating REWIND scrubber + Phase-2 chain-row slot) is never imported/mounted anywhere in the
+  app; every reference to it elsewhere is a comment describing its historical removal from the
+  chamber page ("the floating REWIND HUD that used to live here was removed — it covered the
+  plant"). Meanwhile `chamber/page.tsx` still runs the rewind plumbing every render
+  (`useRewindStore`'s `captureSnapshot` on a 6s interval, `rewindOverride`/`rewindActive` reads,
+  the VHS-scanline overlay) with no way for a player to ever trigger `rewindTo`. Compounding: even
+  if a rewind UI existed, `chamber/page.tsx`'s `budScalars` (`rewindOverride ?? liveScalars`) is
+  computed but never passed to `GrowChamber`'s `dev` prop, so the "un-grow" effect the code
+  comments describe wouldn't render on THIS screen anyway — only `bud/page.tsx`'s `BudGL` actually
+  consumes an equivalent scalars object. Not fixed this pass: both live inside the explicitly
+  protected rewind/time-travel system (see this session's guardrails), and picking a direction —
+  restore a rewind entry point + wire `budScalars` into the chamber's `GrowChamber`, or fully rip
+  out the now-vestigial rewind plumbing (the store, the capture effect, `ArcadeHUD.tsx`) — is a
+  genuine design fork needing the owner's call, not a quick fix.
 - 🟡 ✅ **Dead self-link "Inspect" button on the plant detail page (button-wiring audit, finding
   B3; shipped PR #174)** — `CareButtons` gained an `onDetailPage` prop that hides the "🔍 Inspect"
   self-link when already mounted on `/dashboard/plants/<id>`; still shown on its other mount point

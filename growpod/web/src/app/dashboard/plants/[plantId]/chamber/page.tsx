@@ -36,7 +36,6 @@ import {
   climateModel,
   clamp,
   seedForPlant,
-  stageForDay,
   previewDev,
   nominalGrowDay,
   cycleDays,
@@ -156,7 +155,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const reducedMotion = usePrefersReducedMotion();
   // GROW is the default hub tab (owner mockup): Today's Plan + Plant Insights +
   // progress + boosts live ON the chamber — everything without leaving the screen.
-  const [tab, setTab] = useState<"grow" | "climate" | "time">("grow");
+  const [tab, setTab] = useState<"grow" | "climate">("grow");
   // Portrait bottom sheet pop-up/down (the chevron the owner likes on the nav).
   const [sheetOpen, setSheetOpen] = useState(true);
   // Phone-landscape slide-out HUDs (owner mockup: "Landscape Mobile Overlay
@@ -164,9 +163,6 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const phoneLandscape = usePhoneLandscape();
   const [hudSide, setHudSide] = useState<"left" | "right" | null>(null);
   const [climate, setClimate] = useState<ChamberClimate>(DEFAULT_CLIMATE);
-  // Growth-preview scrubber: null = track the real (server) age; a number =
-  // preview that day on the cycle. Preview never mutates server state.
-  const [previewDay, setPreviewDay] = useState<number | null>(null);
   // Purchasable (simulated) growth boost — spends in-game GROW to jump the plant
   // forward + revive it; on success we flash the ⚡ electric surge over the stage.
   const [boostFlash, setBoostFlash] = useState(false);
@@ -374,21 +370,21 @@ function ChamberScreen({ plantId }: { plantId: string }) {
     ? nominalGrowDay(plant.growth_stage, plant.forecast.stage_progress_pct, flMid)
     : ageDays(plant.planted_at);
   // Server-truth snapshot for permanent on-chain mint metadata — always off
-  // liveNominalDay, so an active growth boost or an engaged time-preview
-  // scrubber (below) can never leak a transient visual state into the ARC-69
-  // note field. Matches how grow_stage/trich_density already read straight
-  // off `plant` in buildPlantMetadata. Do NOT swap this for `day`/`budScalars`.
+  // liveNominalDay, so an active growth boost can never leak a transient
+  // visual state into the ARC-69 note field. Matches how grow_stage/
+  // trich_density already read straight off `plant` in buildPlantMetadata.
+  // Do NOT swap this for `day`/`budScalars`.
   const mintTruth = mintTruthMetadata(liveNominalDay, flMid);
-  const previewing = previewDay !== null;
-  const maxPreviewDay = Math.round(cycleDays(flMid) + 8);
-  // Fold the Arcade boost offset into the LIVE look only (clamped); the time-preview
-  // scrubber ignores it. Purely visual — server/plant state is never advanced.
-  const boostedLiveDay = previewing ? liveNominalDay : Math.min(maxPreviewDay, liveNominalDay + boostOffset);
-  const day = previewing ? previewDay : boostedLiveDay;
-  const renderStage = previewing ? stageForDay(day, flMid) : plant.growth_stage;
-  const dev = previewing ? previewDev(day, flMid) : previewDev(boostedLiveDay, flMid);
-  // Server trichome telemetry → bud frost/maturity (live only); null while previewing.
-  const serverBud = budParamsFromTrichomes(plant.trichomes, previewing);
+  // Growth-boost clamp ceiling — one full cycle length + a small margin, so a
+  // sustained boost can't visually run the bud past a sane end-of-cycle look.
+  const maxGrowDay = Math.round(cycleDays(flMid) + 8);
+  // Fold the Arcade boost offset into the live look (clamped). Purely visual —
+  // server/plant state is never advanced.
+  const day = Math.min(maxGrowDay, liveNominalDay + boostOffset);
+  const renderStage = plant.growth_stage;
+  const dev = previewDev(day, flMid);
+  // Server trichome telemetry → bud frost/maturity.
+  const serverBud = budParamsFromTrichomes(plant.trichomes, false);
   // The bud's renderable scalars — replaced by the rewind override while scrubbing
   // backward (the bud "un-grows": pistils retract, frost recedes, bud shrinks).
   const liveScalars = {
@@ -400,7 +396,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   };
   const budScalars = rewindOverride ?? liveScalars;
   // Keep the snapshot timer fed with the latest LIVE look (not the rewound override).
-  scalarsRef.current = { ...liveScalars, day: boostedLiveDay, stage: renderStage };
+  scalarsRef.current = { ...liveScalars, day, stage: renderStage };
   // Keep plant identity current for the on-chain boost listener.
   chainPlantRef.current = { id: plant.id, strain: plant.strain_id };
   // "To harvest" is the authoritative, pace-aware countdown from the server
@@ -437,7 +433,7 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const dockBody = (
     <>
       <div className="mb-2 flex gap-1.5">
-        {(["grow", "climate", "time"] as const).map((t) => (
+        {(["grow", "climate"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -529,46 +525,6 @@ function ChamberScreen({ plantId }: { plantId: string }) {
           </p>
         </div>
       )}
-
-      {tab === "time" && (
-        <div className="space-y-2">
-          <div className="flex min-h-[44px] items-center gap-2.5 rounded-lg border border-[#1c3447] bg-[#0d1d2b] px-2.5 py-2">
-            <span className="w-[66px] flex-none font-mono text-[11px] tracking-[0.06em] text-[#7fa9bf]">GROW DAY</span>
-            <input
-              type="range"
-              min={0}
-              max={maxPreviewDay}
-              step={0.5}
-              value={Math.min(day, maxPreviewDay)}
-              onChange={(e) => setPreviewDay(Number(e.target.value))}
-              className="h-2 flex-1 cursor-pointer accent-grow-400"
-              aria-label="Preview growth day"
-            />
-            <span className="w-[52px] flex-none text-right font-mono text-[11px] font-bold text-white">
-              d{Math.round(day)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-2 px-1">
-            <span className="text-[10px] leading-relaxed text-[#7fa9bf]">
-              {previewing
-                ? `Previewing ${titleCase(renderStage)} — not this plant's real age.`
-                : `Tracking live growth · ${titleCase(renderStage)}, day ${Math.round(day)}.`}
-            </span>
-            {previewing && (
-              <button
-                onClick={() => setPreviewDay(null)}
-                className="flex-none rounded-md border border-[#3a6a86] bg-[#16364c] px-2 py-1 text-[10px] font-bold text-[#eaf7ff]"
-              >
-                Back to live
-              </button>
-            )}
-          </div>
-          <p className="px-1 text-[10px] leading-relaxed text-[#7fa9bf]">
-            Scrub to watch this strain grow seed → harvest. Buds swell, pistils colour and
-            trichome frost builds in as it matures.
-          </p>
-        </div>
-      )}
     </>
   );
 
@@ -639,7 +595,6 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         <div className="pointer-events-none absolute inset-x-2 top-2 flex flex-wrap items-center gap-1.5 sm:flex-nowrap sm:overflow-x-auto">
           <span className="flex-none rounded-lg border border-cyan-400/40 bg-[#08141e]/70 px-2 py-1 font-mono text-[10px] tracking-wide backdrop-blur">
             {strain?.name ?? "Plant"} · {titleCase(renderStage)} · Day {Math.round(day)}
-            {previewing && <span className="text-grow-300"> · preview</span>}
           </span>
           <span className="hidden flex-1 sm:block" />
           <HudChip k="TO HARVEST" v={harvestDays ?? "—"} unit="d" />

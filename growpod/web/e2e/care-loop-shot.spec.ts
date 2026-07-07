@@ -69,10 +69,12 @@ test("PROOF: the CHAMBER GROW tab is the full game hub (owner mockup)", async ({
   await expect(page.getByText(/^BOOSTS/i).first()).toBeVisible();
   await expect(page.getByTestId("growth-boost")).toBeVisible();
 
-  // CLIMATE + TIME are the other two tabs (GROW is default).
+  // CLIMATE is the other tab (GROW is default). The TIME tab — a free
+  // visual-only preview scrubber — was removed 2026-07-07, consistent with
+  // the same scrubber's removal from the Command Center.
   await expect(page.getByRole("button", { name: /^GROW$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^CLIMATE$/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^TIME$/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^TIME$/i })).toHaveCount(0);
   await page.screenshot({ path: "e2e-output/care-loop-chamber-grow-hub.png", fullPage: true });
 });
 
