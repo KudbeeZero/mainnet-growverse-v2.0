@@ -17,12 +17,12 @@
   [ROADMAP_90D_2026Q3.md](ROADMAP_90D_2026Q3.md) now sequences the next 12 weeks (owner-priority
   `gv-oNN` branches first, gv phases p02/p03/p05 folded into month 3); evidence in
   [AUDIT_NFT_STORE_LOOP.md](AUDIT_NFT_STORE_LOOP.md). After week 12 the 22-phase order resumes.
-- **Phases complete:** p01 (Architecture Truth). Weeks 1–2/3 (PRs #171, #172) merged, both
-  audited PASS. Week 4 (`gv-o03-pod-equipment-visuals`) built this session — draft PR open,
-  gates green — awaiting the next `/handoff-audit` to confirm and merge. Also fixed an
-  owner-reported desktop layout bug on the same page (chamber wasn't top-aligned with the side
-  rails) while in there.
-- **NEXT BRANCH:** `claude/gv-o04-cure-mint-integrity` (ROADMAP_90D week 5)
+- **Phases complete:** p01 (Architecture Truth). Weeks 1–2/3–4 (PRs #171, #172, #173) merged, all
+  audited PASS. **Off-roadmap:** an owner-directed `/goal` audit (pod organization + button
+  wiring + store completeness + chain-wiring gaps + a new-item/workflow ask) ran in parallel;
+  concrete findings fixed in `gv-o03b-pod-button-fixes` (PR #174, gates green, awaiting
+  `/handoff-audit` + merge). Design-fork findings (A1/A4/A5/B4) queued in `BACKLOG.md`, not built.
+- **NEXT BRANCH (after #174 merges):** `claude/gv-o04-cure-mint-integrity` (ROADMAP_90D week 5)
 - **NEXT PR TITLE:** (not yet named — pick one reflecting the actual seams fixed, e.g.
   `fix(mint): cure/mint state machine can't strand, lie, or pay zero`)
 - **Owner action pending before next kickoff — STOP, do not build week 5 without these:**
