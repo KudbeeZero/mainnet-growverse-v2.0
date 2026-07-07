@@ -15,10 +15,12 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from ..enums import GrowthStage
-from ..db.models import Plant, GrowPod, PlantEvent
+from ..db.models import Plant, GrowPod, GearInventory, PlantEvent
 from . import reactions, horticulture
+from . import gear as gear_sim
 from .conditions import PlantCondition
 from .engines.base import EngineContext
+from .gear import GearEffects
 
 # The per-hour engine pipeline. Built lazily so `engines.legacy` (which imports
 # `_step` from this module) can be imported without a cycle. Parity-first: the
@@ -174,26 +176,46 @@ def _growth_cm_per_hour(stage: GrowthStage, sim: Dict, health: float) -> float:
     return rate / 24.0 * (health / 100.0)
 
 
-def _env_for(plant: Plant, pod: Optional[GrowPod], sim: Dict) -> Dict:
+def _env_for(
+    plant: Plant, pod: Optional[GrowPod], sim: Dict, effects: Optional[GearEffects] = None
+) -> Dict:
     defaults = sim.get("environment", {}).get("defaults", {})
     light_default = defaults.get("light_intensity", 600)
+    co2_default = defaults.get("co2_level", 800)
     if pod is not None and pod.temperature is not None:
-        return {
+        env = {
             "temperature": pod.temperature,
             "humidity": pod.humidity,
             "ph_level": pod.ph_level if pod.ph_level is not None else defaults.get("ph_level", 6.5),
             "light": pod.light_intensity if pod.light_intensity is not None else light_default,
+            "co2": pod.co2_level if pod.co2_level is not None else co2_default,
         }
-    return {
-        "temperature": defaults.get("temperature", 24),
-        "humidity": defaults.get("humidity", 50),
-        "ph_level": defaults.get("ph_level", 6.5),
-        "light": light_default,
-    }
+    else:
+        env = {
+            "temperature": defaults.get("temperature", 24),
+            "humidity": defaults.get("humidity", 50),
+            "ph_level": defaults.get("ph_level", 6.5),
+            "light": light_default,
+            "co2": co2_default,
+        }
+    # Equipped-gear offsets (fans) shift the EFFECTIVE environment the health
+    # math scores below — the same fan helps in a humid pod and hurts in a dry
+    # one, since it's the offset environment's distance from the optimal band
+    # that drives stress, not the offset itself. `environment_for` (the public,
+    # display-facing wrapper) never passes `effects`, so the raw sensor reading
+    # shown to players is unaffected.
+    if effects is not None:
+        env["temperature"] += effects.temp_offset_c
+        env["humidity"] += effects.humidity_offset_pct
+    return env
 
 
 def environment_for(plant: Plant, pod: Optional[GrowPod], sim: Dict) -> Dict:
-    """Public view of a plant's current environment (temp/humidity/pH/light)."""
+    """Public view of a plant's current environment (temp/humidity/pH/light).
+
+    Deliberately omits equipped-gear offsets — this is the raw sensor reading
+    a player set, not the gear-adjusted value the engine scores internally.
+    """
     return _env_for(plant, pod, sim)
 
 
@@ -237,12 +259,19 @@ def _health_target(plant: Plant, env: Dict, sim: Dict) -> float:
     )
     vpd_stress = outside(vpd, v_lo, v_hi)
 
+    # CO2 (E1 fix): was a decorative sensor — now outside the optimal band
+    # saps health like any other stressor. Weight is modest by design.
+    co2cfg = sim.get("co2", {})
+    c_lo, c_hi = co2cfg.get("optimal_ppm", [400, 1400])
+    co2_stress = outside(env.get("co2", (c_lo + c_hi) / 2.0), c_lo, c_hi)
+
     penalty = (
         water_stress * h.get("water_stress_weight", 0.6)
         + nutrient_stress * h.get("nutrient_stress_weight", 0.5)
         + env_stress * h.get("env_stress_weight", 0.5)
         + light_stress * h.get("light_stress_weight", 0.02)
         + vpd_stress * h.get("vpd_stress_weight", 0.5)
+        + co2_stress * co2cfg.get("stress_weight", 0.15)
         + plant.pest_level * h.get("pest_weight", 0.45)
         + plant.disease_level * h.get("disease_weight", 0.55)
     )
@@ -256,15 +285,20 @@ def _step(
     rng: random.Random,
     t: datetime,
     auto: Optional[Dict] = None,
+    effects: Optional[GearEffects] = None,
 ) -> List[dict]:
     """Advance the plant by one simulated hour. Returns stage/death events."""
     events: List[dict] = []
     decay = sim.get("resource_decay", {})
+    fx = effects if effects is not None else GearEffects()
 
-    # 1. Resources dry out / deplete.
-    plant.water_level = max(0.0, plant.water_level - decay.get("water_per_hour", 1.5))
+    # 1. Resources dry out / deplete (soils scale the drain rate).
+    plant.water_level = max(
+        0.0, plant.water_level - decay.get("water_per_hour", 1.5) * fx.water_decay_mult
+    )
     plant.nutrient_level = max(
-        0.0, plant.nutrient_level - decay.get("nutrient_per_hour", 1.0)
+        0.0,
+        plant.nutrient_level - decay.get("nutrient_per_hour", 1.0) * fx.nutrient_decay_mult,
     )
 
     # 1b. Pod automation tops resources back up when they run low.
@@ -275,28 +309,33 @@ def _step(
         if auto.get("feed") and plant.nutrient_level < autocfg.get("nutrient_refill_below", 40):
             plant.nutrient_level = autocfg.get("nutrient_refill_to", 72)
 
-    # 2. Pests: spawn when absent, otherwise worsen until treated.
+    # 2. Pests: spawn when absent, otherwise worsen until treated (fans scale
+    #    the spawn chance — see GearEffects.pest_spawn_mult).
     pests = sim.get("pests", {})
     pest_res = _gene(plant, "pest_resistance", 0.5)
     if plant.pest_level <= 0:
         chance = pests.get("base_spawn_chance_per_hour", 0.012)
         if env["humidity"] >= pests.get("humidity_high", 62):
             chance += pests.get("humidity_spawn_bonus", 0.03)
-        chance *= (1.0 - 0.5 * pest_res)
+        chance *= (1.0 - 0.5 * pest_res) * fx.pest_spawn_mult
         if rng.random() < chance:
             plant.pest_level = 5.0
     else:
         plant.pest_level = min(
-            100.0, plant.pest_level + pests.get("growth_per_hour", 1.6) * (1.0 - 0.5 * pest_res)
+            100.0,
+            plant.pest_level
+            + pests.get("growth_per_hour", 1.6) * (1.0 - 0.5 * pest_res) * fx.pest_spawn_mult,
         )
 
-    # 3. Disease (mildew): grows in damp air, slowly clears in dry air.
+    # 3. Disease (mildew): grows in damp air, slowly clears in dry air (fans
+    #    scale the growth rate — see GearEffects.disease_growth_mult).
     disease = sim.get("disease", {})
     dis_res = _gene(plant, "disease_resistance", 0.5)
     if env["humidity"] >= disease.get("humidity_threshold", 64):
         plant.disease_level = min(
             100.0,
-            plant.disease_level + disease.get("growth_per_hour", 1.3) * (1.0 - 0.5 * dis_res),
+            plant.disease_level
+            + disease.get("growth_per_hour", 1.3) * (1.0 - 0.5 * dis_res) * fx.disease_growth_mult,
         )
     else:
         plant.disease_level = max(0.0, plant.disease_level - 0.5)
@@ -313,10 +352,16 @@ def _step(
         events.append({"type": "death", "severity": "severe", "payload": {}})
         return events
 
-    # 5. Growth & stage advancement.
+    # 5. Growth & stage advancement. Enriched CO2 (inside the tighter
+    #    `enriched_ppm` band, above the unsensored default) earns a small,
+    #    EARNED growth-rate bonus — see the co2 block's comment in balance.yaml.
     stage = GrowthStage(plant.growth_stage)
     if stage != GrowthStage.HARVEST:
-        plant.height += _growth_cm_per_hour(stage, sim, plant.health)
+        co2cfg = sim.get("co2", {})
+        e_lo, e_hi = co2cfg.get("enriched_ppm", [900, 1200])
+        co2_enriched = e_lo <= env.get("co2", 0) <= e_hi
+        growth_mult = 1.0 + (co2cfg.get("enriched_growth_bonus_pct", 0.05) if co2_enriched else 0.0)
+        plant.height += _growth_cm_per_hour(stage, sim, plant.health) * growth_mult
         base = _stage_duration_hours(plant, stage, sim)
         # Poor health slows development.
         effective = base * (1.0 + (100.0 - plant.health) / 200.0)
@@ -346,7 +391,22 @@ def catch_up(session, plant: Plant, now: datetime, cfg) -> List[PlantEvent]:
         return emitted
 
     pod = session.get(GrowPod, plant.pod_id)
-    env = _env_for(plant, pod, sim)
+
+    # Equipped gear (fans/soils) merges into a GearEffects that shifts the
+    # effective environment + hourly rates below. No gear equipped -> the
+    # neutral default -> byte-identical to the pre-gear-effects engine
+    # (see tests/test_engine_parity.py).
+    equipped = []
+    if pod is not None:
+        equipped = [
+            {"gear_key": row.gear_key}
+            for row in session.query(GearInventory).filter(
+                GearInventory.equipped_pod_id == pod.id
+            )
+        ]
+    effects = gear_sim.effects_for(equipped, cfg.shop_gear)
+
+    env = _env_for(plant, pod, sim, effects)
     auto = {
         "water": bool(pod and pod.auto_water),
         "feed": bool(pod and pod.auto_feed),
@@ -364,7 +424,7 @@ def catch_up(session, plant: Plant, now: datetime, cfg) -> List[PlantEvent]:
         rng = _rng_for(plant.id, t)
         # Thin orchestrator: run the engine pipeline for this hour. (Today that is
         # the single LegacyStepEngine, so behavior is identical to calling _step.)
-        ctx = EngineContext(plant=plant, env=env, sim=sim, rng=rng, t=t, auto=auto)
+        ctx = EngineContext(plant=plant, env=env, sim=sim, rng=rng, t=t, auto=auto, effects=effects)
         step_events: List[dict] = []
         for engine in _pipeline():
             step_events.extend(engine.update(ctx))

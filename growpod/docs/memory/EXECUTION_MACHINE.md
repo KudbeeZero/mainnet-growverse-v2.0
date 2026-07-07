@@ -17,13 +17,13 @@
   [ROADMAP_90D_2026Q3.md](ROADMAP_90D_2026Q3.md) now sequences the next 12 weeks (owner-priority
   `gv-oNN` branches first, gv phases p02/p03/p05 folded into month 3); evidence in
   [AUDIT_NFT_STORE_LOOP.md](AUDIT_NFT_STORE_LOOP.md). After week 12 the 22-phase order resumes.
-- **Phases complete:** p01 (Architecture Truth). Week 1 (`gv-o01-store-correctness`) built this
-  session — draft PR open, gates green — awaiting the next `/handoff-audit` to confirm and merge.
-- **NEXT BRANCH:** `claude/gv-o02-equipment-sim-effects` (ROADMAP_90D weeks 2–3)
-- **NEXT PR TITLE:** `feat(sim): fans, soils and CO₂ get real simulation effects (equip any gear)`
-- **Owner action pending before next kickoff:** D7 (gear-effect numbers direction) — already
-  approved 2026-07-07 per ROADMAP_90D §2 weeks 2–3 owner gate; attach the 4-scenario sim report to
-  that PR per the ready-to-paste prompt.
+- **Phases complete:** p01 (Architecture Truth). Week 1 (`gv-o01-store-correctness`, PR #171)
+  merged, audited PASS. Weeks 2–3 (`gv-o02-equipment-sim-effects`) built this session — draft PR
+  open, gates green, D7 sim report attached — awaiting the next `/handoff-audit` to confirm and
+  merge.
+- **NEXT BRANCH:** `claude/gv-o03-pod-equipment-visuals` (ROADMAP_90D week 4)
+- **NEXT PR TITLE:** `feat(chamber): the pod shows equipped gear and its effects`
+- **Owner action pending before next kickoff:** none — week 4 has no owner decision gate.
 - **Carried risk into next branch:** none.
 
 > **`docs/HANDOFF.md` stays the single source of truth for what the next chat does first** (per its

@@ -95,3 +95,92 @@ def test_equip_unowned_light_fails(db):
         pod = svc.create_pod(p.id, "Room", charge=False)
         with pytest.raises(GameError):
             svc.equip_light(p.id, pod.id, "led_480w")
+
+
+# ----- generalized equip_gear/unequip_gear (ROADMAP_90D week 2-3, S3/E2) -----
+
+def test_equip_gear_light_matches_equip_light(db):
+    """equip_gear supersedes equip_light for lights: same PPFD-write behavior."""
+    with session_scope() as s:
+        svc, p = _player(s)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        svc.buy_gear(p.id, "led_700w", 1)
+        out = svc.equip_gear(p.id, pod.id, "led_700w")
+        assert out.light_intensity == 900.0
+
+
+def test_equip_gear_fan_does_not_touch_light_intensity(db):
+    with session_scope() as s:
+        svc, p = _player(s)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        svc.buy_gear(p.id, "clip_fan", 1)
+        out = svc.equip_gear(p.id, pod.id, "clip_fan")
+        assert out.light_intensity is None
+        items = {i["key"]: i for i in svc.list_gear(p.id)}
+        assert items["clip_fan"]["equipped_pod_id"] == pod.id
+
+
+def test_equip_gear_one_per_category_per_pod(db):
+    """Equipping a second fan to the same pod swaps out the first — same
+    one-per-category rule equip_light already enforces for lights."""
+    with session_scope() as s:
+        svc, p = _player(s)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        svc.buy_gear(p.id, "clip_fan", 1)
+        svc.buy_gear(p.id, "oscillating_fan", 1)
+        svc.equip_gear(p.id, pod.id, "clip_fan")
+        svc.equip_gear(p.id, pod.id, "oscillating_fan")
+        items = {i["key"]: i for i in svc.list_gear(p.id)}
+        assert items["clip_fan"]["equipped_pod_id"] is None
+        assert items["oscillating_fan"]["equipped_pod_id"] == pod.id
+
+
+def test_equip_gear_different_categories_coexist_on_one_pod(db):
+    with session_scope() as s:
+        svc, p = _player(s)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        svc.buy_gear(p.id, "clip_fan", 1)
+        svc.buy_gear(p.id, "worm_castings", 1)
+        svc.equip_gear(p.id, pod.id, "clip_fan")
+        svc.equip_gear(p.id, pod.id, "worm_castings")
+        items = {i["key"]: i for i in svc.list_gear(p.id)}
+        assert items["clip_fan"]["equipped_pod_id"] == pod.id
+        assert items["worm_castings"]["equipped_pod_id"] == pod.id
+
+
+def test_equip_gear_unowned_fails(db):
+    with session_scope() as s:
+        svc, p = _player(s)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        with pytest.raises(GameError):
+            svc.equip_gear(p.id, pod.id, "clip_fan")
+
+
+def test_unequip_gear_clears_equipped_state(db):
+    with session_scope() as s:
+        svc, p = _player(s)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        svc.buy_gear(p.id, "clip_fan", 1)
+        svc.equip_gear(p.id, pod.id, "clip_fan")
+        svc.unequip_gear(p.id, pod.id, "clip_fan")
+        items = {i["key"]: i for i in svc.list_gear(p.id)}
+        assert items["clip_fan"]["equipped_pod_id"] is None
+
+
+def test_unequip_gear_light_resets_light_intensity(db):
+    with session_scope() as s:
+        svc, p = _player(s)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        svc.buy_gear(p.id, "led_700w", 1)
+        svc.equip_gear(p.id, pod.id, "led_700w")
+        out = svc.unequip_gear(p.id, pod.id, "led_700w")
+        assert out.light_intensity is None
+
+
+def test_unequip_gear_not_equipped_here_fails(db):
+    with session_scope() as s:
+        svc, p = _player(s)
+        pod = svc.create_pod(p.id, "Room", charge=False)
+        svc.buy_gear(p.id, "clip_fan", 1)
+        with pytest.raises(GameError):
+            svc.unequip_gear(p.id, pod.id, "clip_fan")

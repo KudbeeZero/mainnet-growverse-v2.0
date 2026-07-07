@@ -64,6 +64,18 @@ export interface ConsumableItem {
 
 export type GearCategory = "light" | "fan" | "soil";
 
+// Gear-effect keys the sim consumes (simulation/gear.py); all optional, all
+// omitted for lights (which stay the separate PPFD-write mechanism).
+export interface GearEffects {
+  temp_offset_c?: number;
+  humidity_offset_pct?: number;
+  pest_spawn_mult?: number;
+  disease_growth_mult?: number;
+  water_decay_mult?: number;
+  nutrient_decay_mult?: number;
+  flowering_quality_bonus?: number;
+}
+
 export interface GearItem {
   key: string;
   name: string;
@@ -74,6 +86,7 @@ export interface GearItem {
   specs: Record<string, string | number>;
   owned: number;
   equipped_pod_id: string | null;
+  effects?: GearEffects;
 }
 
 export const store = {
@@ -95,6 +108,20 @@ export const store = {
 
   equipLight: (playerId: string, podId: string, gearKey: string) =>
     apiFetch<unknown>(`/players/${playerId}/pods/${podId}/equip-light`, {
+      method: "POST",
+      body: { gear_key: gearKey },
+    }),
+
+  // Generalized equip/unequip — any gear category (light/fan/soil).
+  // Supersedes equipLight for new callers; equipLight stays for existing ones.
+  equipGear: (playerId: string, podId: string, gearKey: string) =>
+    apiFetch<unknown>(`/players/${playerId}/pods/${podId}/equip-gear`, {
+      method: "POST",
+      body: { gear_key: gearKey },
+    }),
+
+  unequipGear: (playerId: string, podId: string, gearKey: string) =>
+    apiFetch<unknown>(`/players/${playerId}/pods/${podId}/unequip-gear`, {
       method: "POST",
       body: { gear_key: gearKey },
     }),

@@ -1,13 +1,24 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-07** (`claude/gv-o01-store-correctness`
-[ROADMAP_90D week 1] shipped: featured-strain pricing (S1), featured-shelf wallet/player
-invalidation on every purchase path + post-buy refetch (S2/S7), phantom `led_240w` test fixture
-replaced with a real gear key (S6), and honest HarvestsPanel gating — Mint respects
+once they appear here. Last reconciled: **2026-07-07** (`claude/gv-o02-equipment-sim-effects`
+[ROADMAP_90D weeks 2-3, the flagship slice] shipped: pure `simulation/gear.py` merges equipped
+fans/soils' `effects` blocks (offsets clamped ±10, mults 0.5-1.5); the engine applies them —
+fan humidity/temp offsets shift the effective env (proven both-signed: helps a humid pod, hurts
+a dry one — D7 sim report in `docs/audits/2026-07-07-gv-o02-gear-effects-sim-report.md`), fan
+pest/disease mults always reduce hourly pressure, soil water/nutrient mults are a real tradeoff
+(coco coir: retains water, drains nutrients faster) (S3); CO2 is real now — an `optimal_ppm`
+stress band plus a narrower `enriched_ppm` sweet spot that earns a small growth bonus, deliberately
+excluding the unsensored default so no existing plant's numbers changed (E1/E2); `equip_gear`/
+`unequip_gear` generalize equip to any category, one per category per pod, no migration
+(`equip_light` kept for back-compat); pod serializer + GearPanel (drops the `["light"]` filter,
+adds unequip + an effect-preview line) expose it. Parity test green with no gear equipped. Next
+branch: `claude/gv-o03-pod-equipment-visuals` (week 4). Prior note follows.) (`claude/gv-o01-store-correctness`
+[ROADMAP_90D week 1, PR #171, merged] shipped: featured-strain pricing (S1), featured-shelf
+wallet/player invalidation on every purchase path + post-buy refetch (S2/S7), phantom `led_240w`
+test fixture replaced with a real gear key (S6), and honest HarvestsPanel gating — Mint respects
 `mint_min_rarity`+not-curing (C2), Finish-cure ETA countdown with a disabled gate until it elapses
-(C3), Sell hidden mid-cure (C4); component tests for every new gate. Next branch:
-`claude/gv-o02-equipment-sim-effects` (weeks 2–3). Prior note follows.) (owner 90-day plan adopted —
+(C3), Sell hidden mid-cure (C4); component tests for every new gate. Prior note follows.) (owner 90-day plan adopted —
 `docs/memory/ROADMAP_90D_2026Q3.md` re-sequences the next 12 weeks around the owner's four
 directives (seed-NFT claiming end-to-end, store correctness, store items with real sim impact,
 pod shows equipped gear), backed by the verified defect registry

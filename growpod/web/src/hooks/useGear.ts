@@ -24,12 +24,32 @@ export function useEquipGear(podId: string) {
   const toast = useToast();
 
   return useMutation<unknown, Error, string>({
-    mutationFn: (gearKey) => store.equipLight(playerId!, podId, gearKey),
+    mutationFn: (gearKey) => store.equipGear(playerId!, podId, gearKey),
     onSuccess: () => {
       toast.success("Equipment equipped");
       if (playerId) {
         qc.invalidateQueries({ queryKey: queryKeys.gear(playerId) });
         qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
+        qc.invalidateQueries({ queryKey: queryKeys.pods(playerId) });
+      }
+    },
+    onError: (e) => toast.error(e.message || "Equipment failed"),
+  });
+}
+
+export function useUnequipGear(podId: string) {
+  const { playerId } = useSession();
+  const qc = useQueryClient();
+  const toast = useToast();
+
+  return useMutation<unknown, Error, string>({
+    mutationFn: (gearKey) => store.unequipGear(playerId!, podId, gearKey),
+    onSuccess: () => {
+      toast.success("Equipment unequipped");
+      if (playerId) {
+        qc.invalidateQueries({ queryKey: queryKeys.gear(playerId) });
+        qc.invalidateQueries({ queryKey: queryKeys.plants(playerId) });
+        qc.invalidateQueries({ queryKey: queryKeys.pods(playerId) });
       }
     },
     onError: (e) => toast.error(e.message || "Equipment failed"),

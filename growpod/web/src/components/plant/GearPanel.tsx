@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { usePlayerGear, useEquipGear } from "@/hooks/useGear";
+import { usePlayerGear, useEquipGear, useUnequipGear } from "@/hooks/useGear";
+import { formatGearEffects } from "@/components/plant/gearEffectsData";
 import type { GearCategory, GearItem } from "@/lib/api/store";
 
 const GEAR_ICONS: Record<GearCategory, string> = {
@@ -19,12 +20,14 @@ const GEAR_LABELS: Record<GearCategory, string> = {
 export function GearPanel({ podId }: { podId: string }) {
   const { data: allGear = [], isLoading } = usePlayerGear();
   const equip = useEquipGear(podId);
+  const unequip = useUnequipGear(podId);
   const [openCategory, setOpenCategory] = useState<GearCategory | null>(null);
 
   if (isLoading || allGear.length === 0) return null;
 
-  // Only show light gear (fan/soil sim hooks pending Phase 2)
-  const categories: GearCategory[] = ["light"];
+  // Fans/soils get real sim effects now (ROADMAP_90D week 2-3) — every
+  // category is equippable, not just lights.
+  const categories: GearCategory[] = ["light", "fan", "soil"];
   const gearByCategory = categories.reduce(
     (acc, cat) => {
       acc[cat] = allGear.filter((g) => g.category === cat);
@@ -74,15 +77,21 @@ export function GearPanel({ podId }: { podId: string }) {
                 <div className="mt-2 space-y-1.5 border-t border-ink-700 pt-2">
                   {gears.map((gear) => {
                     const isEquipped = gear.equipped_pod_id === podId;
-                    const pending = equip.isPending && equip.variables === gear.key;
+                    const pending =
+                      (equip.isPending && equip.variables === gear.key) ||
+                      (unequip.isPending && unequip.variables === gear.key);
+                    const previewLines = formatGearEffects(gear.effects);
                     return (
                       <button
                         key={gear.key}
-                        onClick={() => equip.mutate(gear.key)}
-                        disabled={pending || isEquipped}
+                        onClick={() =>
+                          isEquipped ? unequip.mutate(gear.key) : equip.mutate(gear.key)
+                        }
+                        disabled={pending}
+                        title={isEquipped ? "Click to unequip" : undefined}
                         className={`w-full flex items-center gap-2 rounded-md px-2 py-1.5 border text-left transition-colors text-[11px] ${
                           isEquipped
-                            ? "border-grow-400/60 bg-grow-500/20 cursor-default"
+                            ? "border-grow-400/60 bg-grow-500/20 cursor-pointer"
                             : pending
                               ? "border-amber-400/40 bg-amber-400/10 cursor-wait"
                               : "border-ink-600 bg-ink-800/40 hover:border-grow-400/40 hover:bg-grow-500/10 cursor-pointer"
@@ -91,10 +100,20 @@ export function GearPanel({ podId }: { podId: string }) {
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-gray-100">
                             {gear.name}
+                            {isEquipped && (
+                              <span className="ml-1.5 text-[9px] uppercase tracking-wide text-grow-400">
+                                equipped
+                              </span>
+                            )}
                           </div>
                           <div className="text-gray-500 truncate">
                             {gear.description}
                           </div>
+                          {previewLines.length > 0 && (
+                            <div className="mt-0.5 text-grow-400/90 truncate">
+                              {previewLines.join(" · ")}
+                            </div>
+                          )}
                         </div>
                         <span className="shrink-0 rounded bg-ink-700 px-1.5 py-0.5 font-mono text-gray-400">
                           ×{gear.owned}

@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import random
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, ClassVar, Dict, List, Optional
+
+from ..gear import GearEffects
 
 
 @dataclass
@@ -23,7 +25,9 @@ class EngineContext:
     ``plant`` is the persisted ORM row (still the source of truth); ``env`` is the
     resolved pod environment; ``sim`` is the ``simulation`` block of balance.yaml;
     ``rng`` is the per-plant-hour seeded RNG (so the hour is reproducible); ``t``
-    is the timestamp of this step; ``auto`` carries pod automation flags.
+    is the timestamp of this step; ``auto`` carries pod automation flags;
+    ``effects`` carries the pod's merged equipped-gear effects (neutral/no-op
+    default, so omitting it reproduces the pre-gear-effects engine exactly).
     """
 
     plant: Any
@@ -32,6 +36,7 @@ class EngineContext:
     rng: random.Random
     t: datetime
     auto: Optional[Dict] = None
+    effects: GearEffects = field(default_factory=GearEffects)
 
 
 class BasePlantEngine(ABC):

@@ -4,19 +4,17 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-07-07 · **By:** the `gv-o01-store-correctness` session (owner: "merge
-PR #170 and release Sonnet on `claude/gv-o01-store-correctness`"). PR #170 (the Fable 5 planning
-PR) merged first; this session then built ROADMAP_90D week 1 exactly as specced.
-**Active branch:** `claude/gv-o01-store-correctness` — draft PR open (title:
-`fix(store): featured-strain pricing, balance refresh, honest harvest-panel gating`), gates green,
-awaiting `/handoff-audit` + merge next session.
+**Last rewritten:** 2026-07-07 · **By:** the `gv-o02-equipment-sim-effects` session (owner:
+"absolutely I'm ready to release it" — releasing weeks 2–3 after `/handoff-audit` PASS'd PR #171).
+**Active branch:** `claude/gv-o02-equipment-sim-effects` — draft PR open (title:
+`feat(sim): fans, soils and CO₂ get real simulation effects (equip any gear)`), gates green, D7
+sim report attached, awaiting `/handoff-audit` + merge next session.
 **NEXT CHAT STARTS HERE (Sonnet):** once this PR is audited PASS and merged, start
-**`claude/gv-o02-equipment-sim-effects`** (ROADMAP_90D weeks 2–3, the flagship slice — fans/soils/
-CO₂ get real, tunable, both-signs simulation effects). Read `docs/memory/ROADMAP_90D_2026Q3.md`
-§2 weeks 2–3 (the data-driven `effects` block spec + ready-to-paste Sonnet prompt) and
-`docs/memory/EXECUTION_MACHINE.md` (Current Position pointer, updated). D7 (new `balance.yaml`
-gear-effect keys) is already owner-approved 2026-07-07 — attach the 4-scenario sim report to
-that PR per the roadmap's acceptance criteria.
+**`claude/gv-o03-pod-equipment-visuals`** (ROADMAP_90D week 4 — the growing-pod area *shows* what
+the store applied: real fan/PPFD-driven chamber climate + glow, equipped-gear chips, fan sway,
+soil substrate tint, in-store "Apply to plant" deep-link). Read
+`docs/memory/ROADMAP_90D_2026Q3.md` §2 week 4 and `docs/memory/EXECUTION_MACHINE.md` (Current
+Position pointer, updated). No owner decision gate blocks week 4.
 **Superseded pointer note:** the pre-2026-07-07 next branch was `claude/gv-p02-game-loop-codex`;
 p02 now lands in week 9 of the 90-day schedule. Historical context below is unchanged.
 **Chamber-mockup decision — RESOLVED (owner, 2026-07-06):** the owner chose to **replace** the
@@ -37,6 +35,52 @@ growverse.dev (Vercel) deploys `web/` from `main`.
 > **Owner rule in force: ONE active PR at a time.** Queue further units here, don't open them.
 
 ---
+
+## What shipped 2026-07-07 (later this day — ROADMAP_90D weeks 2-3, `gv-o02-equipment-sim-effects`)
+
+Opened with `/handoff-audit` on the just-merged PR #171 (independent auditor: PASS — every claim
+verified against the diff, all gates re-run green, no scope creep, do-NOT-touch boundary held).
+Then built the flagship slice — fans/soils/CO₂ get real, tunable, **both-signed** simulation
+effects (owner directive) — exactly as specced in `ROADMAP_90D_2026Q3.md` §2 weeks 2–3:
+
+1. **New pure `simulation/gear.py`** (`GearEffects` + `effects_for`): merges every equipped item's
+   `effects` block (offsets sum, mults compound), clamped to sane bounds (offsets ±10, mults
+   0.5–1.5). 100% test coverage, 11 unit tests (`tests/test_gear_effects.py`) — determinism,
+   clamping, the coco-coir tradeoff direction, unknown-key safety.
+2. **Engine wiring** (`simulation/engine.py`): `_env_for` applies equipped fans' temp/humidity
+   offsets to the *effective* environment the health math scores (display-facing
+   `environment_for` stays unaffected — raw sensor reading only); `_step` applies pest/disease
+   mults to hourly pressure and water/nutrient mults to decay; `catch_up` reads the pod's equipped
+   `GearInventory` rows once per catch-up and threads the merged `GearEffects` through
+   `EngineContext`. **CO2 is real now** (E1/E2): an `optimal_ppm` stress band plus a narrower
+   `enriched_ppm` sweet spot that earns a small growth bonus — the sweet spot deliberately
+   excludes the unsensored default (800 ppm) so no existing plant's numbers changed.
+   `tests/test_engine_parity.py` stays green (no gear -> byte-identical); new
+   `tests/test_gear_engine_effects.py` proves the fan **helps in a humid pod and hurts in a dry
+   one** (same equipment, opposite sign — both an instantaneous `_health_target` proof and a 48h
+   trajectory), the coco tradeoff over a real 30h decay run, and the CO2 stress/bonus bands.
+3. **Generalized equip**: `GameService.equip_gear`/`unequip_gear` — one equipped item per category
+   per pod (reuses `GearInventory.equipped_pod_id`, **no migration**), lights keep writing PPFD;
+   `equip_light` kept unchanged for backward compatibility. New routes
+   `POST /players/<pid>/pods/<pod>/equip-gear` + `/unequip-gear` (`Idempotency-Key` supported, same
+   as every other mutation route). 8 new service tests (`tests/test_gear.py`).
+4. **Flowering quality bonus** (bat_guano, etc.): applied at harvest as a flat quality add from
+   whatever's equipped on the pod, same clamp as the research quality_bonus.
+5. **Serializer + web**: `pod_dict` now exposes `equipped_gear` + merged `gear_effects` (feeds
+   `gv-o03`'s chamber visuals) via the pod's own bound session — no existing call site changed.
+   `GearPanel.tsx` drops the `["light"]`-only filter (fans/soils are real now), adds unequip
+   (click an equipped item to unequip), and a pure `gearEffectsData.ts` formatter renders a
+   preview line (e.g. "−25% pest risk · −8% humidity") — 5 unit tests.
+6. **D7 sim report attached**: `docs/audits/2026-07-07-gv-o02-gear-effects-sim-report.md` — run
+   against the real engine + real `balance.yaml`, proving both signs (humid pod +4.09 health
+   target, dry pod −4.00) and the coco tradeoff (+6.8 water retained, −4.5 nutrient drained faster)
+   with real numbers, not synthetic ones.
+7. Full gates green: backend `make test` 1210 passed/6 skipped/90.57% coverage (was 1184/91.90%
+   before this session's +26 new tests — coverage % dipped slightly because the new gear.py module
+   and engine branches add lines faster than they add covered-lines share, but every new line is
+   covered: `simulation/gear.py` is 100%), `make lint`/`make check-memory`/`make check-migrations`
+   clean; web `typecheck`/`lint`/`build` clean, `npm run test` 516/516 (was 511 — +5 new
+   `gearEffectsData` tests).
 
 ## What shipped 2026-07-07 (this session — ROADMAP_90D week 1, `gv-o01-store-correctness`)
 
@@ -168,10 +212,11 @@ A large hardening + feature batch (all gate-green, CI green each push):
 
 ## NEXT ACTION (single)
 
-**Audit + merge the `gv-o01-store-correctness` PR, then start `claude/gv-o02-equipment-sim-effects`**
-(weeks 2–3 of `docs/memory/ROADMAP_90D_2026Q3.md` — the flagship slice). The chamber-mockup
-reconciliation was resolved 2026-07-06 (owner chose replace — shipped in PR #159); the 90-day plan
-supersedes the old "(b) proceed to p02" path — p02 is week 9.
+**Audit + merge the `gv-o02-equipment-sim-effects` PR, then start `claude/gv-o03-pod-equipment-visuals`**
+(week 4 of `docs/memory/ROADMAP_90D_2026Q3.md` — the pod finally *shows* equipped gear: real
+fan/PPFD-driven climate + glow, equipped-gear chips, fan sway, soil substrate tint). The
+chamber-mockup reconciliation was resolved 2026-07-06 (owner chose replace — shipped in PR #159);
+the 90-day plan supersedes the old "(b) proceed to p02" path — p02 is week 9.
 
 **Older owner-directed threads, still open, not gating anything (tracked in BACKLOG.md):**
 1. **Onboarding rework (owner, 2026-07-03):** "it's too long, not exciting, doesn't really work —
@@ -188,17 +233,19 @@ Off-limits unless separately approved: economy values, treasury paths, settlemen
 
 ## Verification split
 
-- **Agent-verified (test-backed, this session):** all 7 defects (S1 S2 S6 S7 C2 C3 C4) have a
-  passing unit/integration test pinned to the exact behavior (see "What shipped 2026-07-07"
-  above); full backend suite (1184 passed/6 skipped, 91.90% coverage), backend lint, check-memory,
-  web typecheck/lint/build, and full web vitest suite (511/511) all green.
-- **Device-verify (owner):** click through `/store` (a pinned featured strain should show a real
-  GC price and buy correctly; GC balance in the header should update immediately after any
-  purchase) and `/dashboard` harvests (a common harvest's Mint button should be disabled with a
-  tooltip; start a cure and confirm Sell disappears and Finish-cure shows a live ETA countdown
-  instead of being immediately clickable). Also carried: the chamber-mockup reconciliation
-  decision (above); growverse.dev spot-check that the ARCADE-tab-removal UX change (#156) still
-  feels right now that its test coverage is restored.
+- **Agent-verified (test-backed, this session):** the both-signed fan effect (humid pod helps,
+  dry pod hurts — instantaneous + 48h trajectory), the coco water/nutrient tradeoff, the CO2
+  stress/bonus bands, one-item-per-category-per-pod equip/unequip, and no-gear parity all have a
+  passing test pinned to the exact behavior (see "What shipped 2026-07-07 (weeks 2-3)" above and
+  the D7 sim report); full backend suite (1210 passed/6 skipped, 90.57% coverage), backend
+  lint/check-memory/check-migrations, web typecheck/lint/build, and full web vitest suite
+  (516/516) all green.
+- **Device-verify (owner):** on a plant's Equipment panel, equip a fan or soil (not just lights)
+  and confirm it shows an effect-preview line (e.g. "−25% pest risk · −8% humidity"), then click
+  the equipped item again to confirm it unequips. Confirm equipping/unequipping doesn't visibly
+  break the chamber (no visual change yet — that's `gv-o03`, next). Also carried: the
+  chamber-mockup reconciliation decision (above); growverse.dev spot-check that the
+  ARCADE-tab-removal UX change (#156) still feels right now that its test coverage is restored.
 
 ## OPEN RISKS (carried)
 
