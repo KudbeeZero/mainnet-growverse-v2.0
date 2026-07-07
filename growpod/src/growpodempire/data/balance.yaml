@@ -143,6 +143,21 @@ simulation:
       humidity: 50
       ph_level: 6.5
       light_intensity: 600    # mid-band PPFD -> no penalty when unsensored
+      co2_level: 800          # ambient-ish; inside optimal_ppm (no stress) but
+                               # below enriched_ppm (no free growth bonus) —
+                               # so an unsensored/never-touched pod is unaffected
+
+  # CO2 (ROADMAP_90D week 2-3, E1 fix): was a decorative sensor — never read by
+  # the engine. Now: outside optimal_ppm saps health like any other stressor;
+  # actively enriching into the tighter `enriched_ppm` sweet spot (above the
+  # unsensored default above) earns a small growth-rate bonus — a real, EARNED
+  # lever, not a free buff (the default sits in optimal_ppm but deliberately
+  # below enriched_ppm, so no existing plant's numbers change).
+  co2:
+    optimal_ppm: [400, 1400]
+    stress_weight: 0.15
+    enriched_ppm: [900, 1200]
+    enriched_growth_bonus_pct: 0.05
 
   # Light (Phase A). PPFD is the stored 0..1000 light scalar; the engine now
   # reads it. Outside the adequate band saps health; the band drives DLI too.
@@ -450,40 +465,56 @@ shop:
         {name: "SunForge 800W LED", category: light, cost: 1200, image: "led_800w.png",
          description: "Flagship fixture — maximum DLI for a packed 6×6 canopy.",
          specs: {watts: 800, ppfd: 1000, coverage: "6×6 ft", spectrum: "full + far-red + UV"}}
+    # `effects` (added ROADMAP_90D week 2-3, owner gate D7, 2026-07-07): the
+    # gear-effect keys the sim actually consumes (simulation/gear.py merges
+    # them, simulation/engine.py applies them). All optional; omitting the
+    # block (as lights do today) means "no effect" — see GearEffects defaults.
+    #   temp_offset_c, humidity_offset_pct      — shift the pod's EFFECTIVE env
+    #   pest_spawn_mult, disease_growth_mult    — scale hourly pest/disease pressure
+    #   water_decay_mult, nutrient_decay_mult   — scale hourly resource drain (soils)
+    #   flowering_quality_bonus                 — flat quality add at harvest (soils)
     fans:
       clip_fan:
         {name: "Clip-On Circulator", category: fan, cost: 60, image: "clip_fan.png",
          description: "Gentle airflow for a single plant — strengthens stems.",
-         specs: {cfm: 120, coverage: "1 plant", type: "clip"}}
+         specs: {cfm: 120, coverage: "1 plant", type: "clip"},
+         effects: {pest_spawn_mult: 0.85, disease_growth_mult: 0.90}}
       oscillating_fan:
         {name: "Oscillating Tower Fan", category: fan, cost: 140, image: "oscillating_fan.png",
          description: "Sweeping breeze that keeps a small tent's air moving.",
-         specs: {cfm: 400, coverage: "small tent", type: "oscillating"}}
+         specs: {cfm: 400, coverage: "small tent", type: "oscillating"},
+         effects: {pest_spawn_mult: 0.70, disease_growth_mult: 0.80, humidity_offset_pct: -2}}
       inline_exhaust_6in:
         {name: "6\" Inline Exhaust + Carbon Filter", category: fan, cost: 260, image: "inline_exhaust_6in.png",
          description: "Pulls hot, humid, smelly air out — full-tent ventilation.",
-         specs: {cfm: 440, coverage: "full tent", type: "inline exhaust"}}
+         specs: {cfm: 440, coverage: "full tent", type: "inline exhaust"},
+         effects: {pest_spawn_mult: 0.75, disease_growth_mult: 0.60, humidity_offset_pct: -8, temp_offset_c: -2}}
     soils:
       worm_castings:
         {name: "Worm Castings", category: soil, cost: 50, image: "worm_castings.png",
          description: "Living, microbe-rich castings — gentle slow-release nitrogen.",
-         specs: {npk: "1-0-0", base: "amendment", notes: "won't burn roots"}}
+         specs: {npk: "1-0-0", base: "amendment", notes: "won't burn roots"},
+         effects: {nutrient_decay_mult: 0.85}}
       bat_guano:
         {name: "Bat Guano (high-P)", category: soil, cost: 70, image: "bat_guano.png",
          description: "Phosphorus-heavy bloom amendment for fat, dense flowers.",
-         specs: {npk: "3-10-1", base: "amendment", notes: "top-dress in flower"}}
+         specs: {npk: "3-10-1", base: "amendment", notes: "top-dress in flower"},
+         effects: {nutrient_decay_mult: 0.90, flowering_quality_bonus: 2}}
       coco_coir:
         {name: "Coco Coir Brick", category: soil, cost: 40, image: "coco_coir.png",
          description: "Inert, airy coco substrate with excellent water retention.",
-         specs: {npk: "0-0-0", base: "substrate", notes: "needs feeding"}}
+         specs: {npk: "0-0-0", base: "substrate", notes: "needs feeding"},
+         effects: {water_decay_mult: 0.85, nutrient_decay_mult: 1.15}}
       super_soil:
         {name: "Super Soil (living)", category: soil, cost: 180, image: "super_soil.png",
          description: "Pre-amended living soil — plant and grow, no bottled nutrients.",
-         specs: {npk: "amended", base: "living soil", notes: "no-till friendly"}}
+         specs: {npk: "amended", base: "living soil", notes: "no-till friendly"},
+         effects: {nutrient_decay_mult: 0.70}}
       perlite_mix:
         {name: "Perlite Aeration Mix", category: soil, cost: 30, image: "perlite_mix.png",
          description: "Lightweight aeration to keep roots oxygenated and draining.",
-         specs: {npk: "0-0-0", base: "amendment", notes: "blend into any mix"}}
+         specs: {npk: "0-0-0", base: "amendment", notes: "blend into any mix"},
+         effects: {water_decay_mult: 1.10, disease_growth_mult: 0.90}}
 
 # Seasonal / limited content (Phase 2). A strain whose `season` is "all" is
 # always buyable; otherwise it must match `current_season` (or be unlocked via a

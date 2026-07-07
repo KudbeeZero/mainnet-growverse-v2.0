@@ -2314,6 +2314,43 @@ def equip_light(player_id, pod_id):
         return _error(str(e))
 
 
+@game_bp.post("/players/<player_id>/pods/<pod_id>/equip-gear")
+@require_idempotency
+@require_player
+def equip_gear(player_id, pod_id):
+    """Equip an owned gear item of ANY category (light/fan/soil) to a pod.
+    Supersedes `equip-light` for new clients; `equip-light` stays for
+    backward compatibility."""
+    data = request.get_json(force=True, silent=True) or {}
+    gear_key = data.get("gear_key")
+    if not gear_key:
+        return _error("gear_key is required")
+    try:
+        with session_scope() as s:
+            pod = GameService(s).equip_gear(player_id, pod_id, gear_key)
+            payload = S.pod_dict(pod)
+        return jsonify(payload)
+    except (GameError, InsufficientFundsError) as e:
+        return _error(str(e))
+
+
+@game_bp.post("/players/<player_id>/pods/<pod_id>/unequip-gear")
+@require_idempotency
+@require_player
+def unequip_gear(player_id, pod_id):
+    data = request.get_json(force=True, silent=True) or {}
+    gear_key = data.get("gear_key")
+    if not gear_key:
+        return _error("gear_key is required")
+    try:
+        with session_scope() as s:
+            pod = GameService(s).unequip_gear(player_id, pod_id, gear_key)
+            payload = S.pod_dict(pod)
+        return jsonify(payload)
+    except (GameError, InsufficientFundsError) as e:
+        return _error(str(e))
+
+
 @game_bp.post("/players/<player_id>/harvests/<harvest_id>/mint")
 @require_idempotency
 @require_feature("chain")

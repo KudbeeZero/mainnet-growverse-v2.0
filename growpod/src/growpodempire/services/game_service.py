@@ -31,6 +31,7 @@ from ..enums import (
 from ..genetics.breeding import cross, derive_strain_fields, assign_rarity
 from ..genetics.traits import express_terpenes, normalize_genome
 from ..simulation import engine, curing
+from ..simulation import gear as gear_sim
 from ..simulation.clock import Clock, active_clock, player_clock
 from . import leveling_service
 from ..db.models import (
@@ -578,6 +579,7 @@ class GameService:
                 "specs": item.get("specs", {}),
                 "owned": stack.quantity if stack else 0,
                 "equipped_pod_id": stack.equipped_pod_id if stack else None,
+                "effects": item.get("effects", {}),
             })
         return out
 
@@ -651,6 +653,81 @@ class GameService:
             if other.gear_key != gear_key:
                 other.equipped_pod_id = None
         stack.equipped_pod_id = pod_id
+        return pod
+
+    def equip_gear(self, player_id: str, pod_id: str, gear_key: str) -> GrowPod:
+        """Equip an owned gear item (any category) to a pod — one item per
+        category per pod (reuses `GearInventory.equipped_pod_id`, no
+        migration). Lights additionally write PPFD to `pod.light_intensity`
+        (the `equip_light` pattern above); fans/soils feed the sim purely
+        through their equipped state (`simulation/gear.py` reads it at
+        catch-up). Supersedes `equip_light` for new callers — `equip_light`
+        stays as-is for backward compatibility."""
+        item = self.cfg.shop_gear.get(gear_key)
+        if item is None:
+            raise GameError(f"Unknown gear '{gear_key}'")
+        category = item.get("category", "gear")
+
+        stack = (
+            self.session.query(GearInventory)
+            .filter(
+                GearInventory.player_id == player_id,
+                GearInventory.gear_key == gear_key,
+            )
+            .one_or_none()
+        )
+        if stack is None or stack.quantity < 1:
+            raise GameError("You don't own this gear")
+
+        pod = self.session.get(GrowPod, pod_id)
+        if pod is None or pod.player_id != player_id:
+            raise GameError("Pod not found")
+
+        if category == "light":
+            pod.light_intensity = float(item.get("specs", {}).get("ppfd", 0))
+
+        # A pod runs one item per category at a time: clear any other item of
+        # this category equipped here. Flush first (autoflush=False) so this
+        # equip is visible to the filter below within the same transaction.
+        self.session.flush()
+        for other in self.session.query(GearInventory).filter(
+            GearInventory.player_id == player_id,
+            GearInventory.category == category,
+            GearInventory.equipped_pod_id == pod_id,
+        ):
+            if other.gear_key != gear_key:
+                other.equipped_pod_id = None
+        stack.equipped_pod_id = pod_id
+        return pod
+
+    def unequip_gear(self, player_id: str, pod_id: str, gear_key: str) -> GrowPod:
+        """Unequip a gear item from a pod. A light falls back to the sim's
+        unsensored default (see `simulation.environment.defaults`)."""
+        item = self.cfg.shop_gear.get(gear_key)
+        if item is None:
+            raise GameError(f"Unknown gear '{gear_key}'")
+
+        stack = (
+            self.session.query(GearInventory)
+            .filter(
+                GearInventory.player_id == player_id,
+                GearInventory.gear_key == gear_key,
+            )
+            .one_or_none()
+        )
+        if stack is None:
+            raise GameError("You don't own this gear")
+
+        pod = self.session.get(GrowPod, pod_id)
+        if pod is None or pod.player_id != player_id:
+            raise GameError("Pod not found")
+
+        if stack.equipped_pod_id != pod_id:
+            raise GameError("This gear isn't equipped to that pod")
+
+        stack.equipped_pod_id = None
+        if item.get("category") == "light":
+            pod.light_intensity = None
         return pod
 
     # ----- Pods & planting ------------------------------------------------
@@ -1156,6 +1233,18 @@ class GameService:
         weight_g = round(weight_g * (1.0 + fx.get("yield_pct", 0.0)), 1)
         q_cap = float(self.cfg.research.get("max_quality", 100))
         quality = max(0.0, min(q_cap, quality + fx.get("quality_bonus", 0.0)))
+
+        # Equipped-soil flowering bonus (simulation/gear.py) — a flat quality
+        # add from whatever's equipped on this pod right now, same clamp as
+        # research's quality_bonus above (e.g. bat_guano: +2).
+        equipped = [
+            {"gear_key": row.gear_key}
+            for row in self.session.query(GearInventory).filter(
+                GearInventory.equipped_pod_id == plant.pod_id
+            )
+        ]
+        gear_fx = gear_sim.effects_for(equipped, self.cfg.shop_gear)
+        quality = max(0.0, min(q_cap, quality + gear_fx.flowering_quality_bonus))
 
         thc_actual = (strain.thc_min + strain.thc_max) / 2.0
         cbd_actual = (strain.cbd_min + strain.cbd_max) / 2.0

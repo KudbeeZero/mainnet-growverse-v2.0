@@ -86,7 +86,7 @@ def seed_dict(stack) -> dict:
 
 
 def pod_dict(pod) -> dict:
-    return {
+    out = {
         "id": pod.id,
         "player_id": pod.player_id,
         "name": pod.name,
@@ -104,6 +104,42 @@ def pod_dict(pod) -> dict:
         "light_intensity": pod.light_intensity,
         "ph_level": pod.ph_level,
     }
+    out["equipped_gear"], out["gear_effects"] = _pod_gear(pod)
+    return out
+
+
+def _pod_gear(pod) -> tuple:
+    """Equipped gear + merged net effects for this pod (feeds the chamber's
+    equipped-gear visuals, ROADMAP_90D week 4). Reads via the pod's own bound
+    session (every caller already holds `pod` inside an active
+    `session_scope()`), so no existing `pod_dict` call site needs to change."""
+    from dataclasses import asdict
+
+    from sqlalchemy.orm import object_session
+
+    from ..db.models import GearInventory
+    from ..economy.config import get_economy_config
+    from ..simulation import gear as gear_sim
+
+    session = object_session(pod)
+    rows = []
+    if session is not None:
+        rows = (
+            session.query(GearInventory)
+            .filter(GearInventory.equipped_pod_id == pod.id)
+            .all()
+        )
+    catalog = get_economy_config().shop_gear
+    equipped = [
+        {
+            "gear_key": r.gear_key,
+            "category": r.category,
+            "name": catalog.get(r.gear_key, {}).get("name", r.gear_key),
+        }
+        for r in rows
+    ]
+    effects = gear_sim.effects_for([{"gear_key": r.gear_key} for r in rows], catalog)
+    return equipped, asdict(effects)
 
 
 def plant_dict(plant, metrics=None) -> dict:
