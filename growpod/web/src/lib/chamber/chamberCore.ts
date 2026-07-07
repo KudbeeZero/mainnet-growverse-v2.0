@@ -1318,6 +1318,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
   const DUST_MAX = 90;
   const ptr = { x: -999, y: -999, vx: 0, active: false, lastT: 0 };
   let windPhase = 0;
+  // Idle-life pass: the current frame's clock, captured once per draw() call
+  // so drawFan (a shared leaf-drawing helper with no tt param of its own,
+  // called 10+ times per frame from many contexts) can add a tiny independent
+  // per-leaflet flutter without threading tt through every call site.
+  let frameTT = 0;
 
   interface SceneCap { x: number; w: number; y: number; h: number; cx: number; floorY: number; haloY: number }
   interface Scene {
@@ -1414,6 +1419,18 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     else if (d <= 34) hN = lerp(0.13, 0.55, Math.pow((d - 10) / 24, 0.75));
     else hN = lerp(0.55, clamp(0.6 * S.stretch, 0, 0.97), smooth(clamp((d - 34) / 28, 0, 1)));
     hN = clamp(hN * S.heightMul * (0.85 + 0.15 * CL.growthMult), 0.05, 0.97);
+    // Mature presence floor (2026-07-07, owner: "the Indica plants way too
+    // small there... not 10/10 there"): heightMul is a real shape trait
+    // (indica IS shorter/bushier) but a fixed floor value on it can still let
+    // a mature flowering plant read as SHRUNKEN rather than short — the whole
+    // canopy, buds, and cola scale off this same fraction of the fixed frame.
+    // Ramp a floor in only once flowering is underway (matches devParams'
+    // budDev window, ~day 34-64) so seedlings/veg are untouched and no strain
+    // blend, however indica-leaning, drops below ~58% of the frame at full
+    // maturity — still visibly shorter than a sativa (which reaches the 0.97
+    // ceiling), but never "weak."
+    const matureFrac = smooth(clamp((d - 34) / 30, 0, 1));
+    hN = Math.max(hN, lerp(0, 0.58, matureFrac));
     const stemH = A * hN;
 
     // Main stem: tapered (drawn thick→thin) with gentle noise so it isn't a
@@ -1968,10 +1985,17 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     for (let i = 0; i < leaflets; i++) {
       const jL = fanJit(seed, i, 1), jA = fanJit(seed, i, 2), jT = fanJit(seed, i, 3);
       const L = size * FAN_M[i] * (0.86 + 0.28 * jL), Wd = L * 0.32 * S.leafW * (0.88 + 0.24 * fanJit(seed, i, 4));
+      // Idle-life pass: a tiny independent per-leaflet flutter, out of phase
+      // per leaflet (i) and per fan (seed) so a canopy of hundreds of
+      // leaflets never reads as one rigid painted shape swaying as a block —
+      // it's the difference between a photo of a plant and a plant. Small
+      // (~2° max) relative to branch-level sway; zeroed under reduced motion.
+      const flutter = motionOK ? Math.sin(frameTT * 2.1 + seed * 0.53 + i * 1.7) * 0.035 : 0;
       const a =
         FAN_A[i] +
         (claw ? Math.sign(FAN_A[i] || 1) * claw * (0.2 + Math.abs(FAN_A[i]) * 0.5) : 0) +
-        (jA - 0.5) * 0.16;
+        (jA - 0.5) * 0.16 +
+        flutter;
       // Outer leaflets arch over harder than the central spike, so the whole fan
       // cups downward/outward (natural relaxed leaf) rather than splaying flat.
       const curl = arch * (0.5 + Math.abs(FAN_A[i]) * 0.7);
@@ -2628,7 +2652,17 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       // Airflow WAVE (not random wiggle): the top leads and lower nodes lag, with
       // bigger amplitude up top. Heavy buds damp the swing, lag further, slow down.
       const amp = CL.windAmp * (0.8 + nd.f * 1.2) * flex * af.ampMul;
-      const sway = motionOK ? Math.sin(tt * 1.6 * af.freqMul - (1 - nd.f) * 1.3 * af.lagMul) * amp + wind * (0.4 + nd.f * 0.6) : 0;
+      // Idle-life pass: a single sine per branch reads as a metronome once you
+      // stare at it. Layering a slower, per-node-phased second wave (nd.phase
+      // already exists for leaf-flutter desync — reused here) breaks the
+      // unison so the canopy sways like a real plant in shifting air instead
+      // of one rigid shape rocking in place. Small relative to the primary
+      // term so the overall silhouette/branch geometry is unaffected.
+      const sway = motionOK
+        ? Math.sin(tt * 1.6 * af.freqMul - (1 - nd.f) * 1.3 * af.lagMul) * amp +
+          Math.sin(tt * 0.55 * af.freqMul + nd.phase) * amp * 0.4 +
+          wind * (0.4 + nd.f * 0.6)
+        : 0;
       const spring = phys.nodes[i] ? phys.nodes[i].ao : 0;
       const jig = Math.min(3, Math.abs(phys.nodes[i] ? phys.nodes[i].av : 0) * 7);
       // Residual tip bow on top of the branch rotation, for a compound sag curve.
@@ -2867,7 +2901,11 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
       {
         const hb = clamp(live.current.dev.budDev, 0, 1);
         if (hb > 0.05) {
-          const r = p.cola.site.baseW * 3.2;
+          // Idle-life pass: a slow breathing pulse on the hero bloom radius
+          // (±5%, ~10s period) — the one deliberately "alive, not static" cue
+          // that doesn't touch geometry or hit-testing, just the glow size.
+          const breathe = motionOK ? 1 + 0.05 * Math.sin(tt * 0.6 + seed * 0.13) : 1;
+          const r = p.cola.site.baseW * 3.2 * breathe;
           const cy = -p.cola.site.axisLen * 0.5;
           const bloom = ctx!.createRadialGradient(0, cy, 0, 0, cy, r);
           bloom.addColorStop(0, `hsla(${S.hue + 14}, 62%, 66%, ${0.16 * hb})`);
@@ -3165,6 +3203,7 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
   }
 
   function draw(tt: number) {
+    frameTT = tt;
     ctx!.clearRect(0, 0, W, H);
     if (view === "macro") drawMacro(tt);
     else {

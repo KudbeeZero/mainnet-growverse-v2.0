@@ -100,8 +100,19 @@ export interface Morphology {
 
 // Archetypes lifted verbatim from the mockup STRAINS table.
 // INDICA = Northern Lights (indica_ratio -> 1), SATIVA = Durban Poison (-> 0).
+//
+// heightMul (2026-07-07, owner: "the plants are still too small the Indica
+// plants way too small there"): 0.74 made a mature flowering indica occupy
+// only ~half the vertical frame a sativa reaches (both share the same fixed
+// canvas cap, so heightMul directly controls screen presence, not just
+// relative shape) — that read as shrunken/weak, not "short and bushy." Raised
+// 0.74 -> 0.88 so indica still reads clearly shorter than sativa (real
+// cannabis indica IS shorter/bushier — that distinction is correct and kept)
+// but no longer looks like a different, smaller plant. See also the mature
+// presence floor in chamberCore's buildPlant, which backstops this for any
+// strain blend that still lands short at full flower.
 const INDICA: Omit<Morphology, "pattern"> = {
-  hue: 122, sat: 44, lit: 31, leafW: 1.3, leafletMax: 9, heightMul: 0.74,
+  hue: 122, sat: 44, lit: 31, leafW: 1.3, leafletMax: 9, heightMul: 0.88,
   internode: 0.08, branchMul: 1.26, stretch: 1.12, bracts: 11, clusterLen: 0.85,
   clusterFat: 1.3, flowerFrom: 0.18, nodeBudFrac: 0.55, foxtail: 0.0,
 };
@@ -183,7 +194,13 @@ export function climateModel({ fan, temp, hum, co2 }: ClimateInput): ClimateResu
   const co2Pen = co2 < 600 ? (600 - co2) * 0.01 : 0;
   const co2Boost = clamp((co2 - 800) / 700, 0, 1) * 0.12;
   const stress = clamp(tempPen + humPen + fanPen + co2Pen, 0, 100);
-  const windAmp = 0.004 + (fan / 100) * 0.05;
+  // Idle-life pass (2026-07-07, owner: "start working on a repetitive dynamic
+  // loop... we're not 10 of 10 there"): the sway loop was live but too subtle
+  // to read as alive, especially at low fan settings. Raised floor (0.004 ->
+  // 0.007) and top end (0.05 -> 0.062) — still a gentle sway, not a wind
+  // storm, and unchanged at fan=0 relative scaling so windburn framing still
+  // holds. Reduced-motion users see none of this (motionOK gates every use).
+  const windAmp = 0.007 + (fan / 100) * 0.062;
   return {
     stress,
     fanPen,

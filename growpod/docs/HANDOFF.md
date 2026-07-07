@@ -4,33 +4,35 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-07-07 (later still) · **By:** the `gv-o03b-pod-button-fixes` session — an
-**off-roadmap** owner-directed track, run in parallel with `ROADMAP_90D_2026Q3.md`. Owner's `/goal`
-ask (paraphrased): audit pod organization for UX clarity, verify every button in that area actually
-works, find new store-item opportunities, write a repeatable workflow for wiring store items
-correctly, and flag chain/Algorand gaps. Two independent audit agents ran (pod/button-wiring;
-store-completeness + chain-wiring + new-item ideas). Findings recorded in `BACKLOG.md`; the
-concrete, immediately-fixable ones (A2, A3, A6, B1, B2, B3) were fixed in this session — see PR
-#174. The bigger design-fork items (A1 pod tier/upgrade UI, A4 archive semantics, A5 GearPanel
-placement, B4 setClimate CTA) were deliberately queued, not fixed — they need either a product
-judgment call or a feature that doesn't exist yet.
-**Active branch:** `claude/gv-o03b-pod-button-fixes` — draft PR #174 open (title:
-`fix(pods): pod-organization and button-wiring fixes from the audit`). All gates green: backend
-`make test` 1210 passed/6 skipped/91.73% coverage, `make check-memory` OK, `make lint` clean; web
-typecheck/build/533-test-suite/lint all clean; 35 relevant Playwright e2e specs passed. Subscribed
-to PR activity; awaiting CI (Vercel preview) + merge next session.
-**NEXT CHAT STARTS HERE (Sonnet):** once PR #174's CI is green, merge it, then resume
-`ROADMAP_90D_2026Q3.md` — **STOP before building `claude/gv-o04-cure-mint-integrity` (week 5)** —
-it is a **protected-surface week**
-(mint path + a faucet number) gated on two owner decisions that are NOT yet answered:
-- **D2** — the owner must approve the staking reward number/formula (appraised value ×
-  `reward_pct`) before any code is written; the PR must attach an Economy Balancer sim.
-- **D3** — the owner must confirm the cure clock moves to the player-effective (turbo) clock
-  with a wall-clock floor.
-Ask the owner for D2/D3 (`AskUserQuestion`), record the answers in `docs/memory/DECISIONS.md`,
-*then* build — per `docs/memory/ROADMAP_90D_2026Q3.md` §3 week 5 and
-`docs/memory/EXECUTION_MACHINE.md`. A Security-Reviewer checklist + owner sign-off is required in
-the PR body (BUILD_RULES.md protected-surface gate).
+**Last rewritten:** 2026-07-07 (later still) · **By:** the `gv-o03d-plant-scale-vitality` session —
+another **off-roadmap** owner-directed fix, run in parallel with `ROADMAP_90D_2026Q3.md`. The owner
+lifted the round-8 "not 10/10, don't chase the macro bud" plant-render freeze (see BACKLOG.md /
+older-threads item below) by naming the specific gap: "the plants are still too small the Indica
+plants way too small there... start working on a repetitive dynamic loop... there's a lot of
+branch work that still needs to be done." This session fixed the named scale + idle-motion gap
+only — see "What shipped" below and VER-018 through VER-021 in `VERIFIED_RENDERS.md`. Branch
+architecture (candelabra spacing, branchlet placement) was deliberately NOT touched — the owner's
+own framing ("a lot of branch work still needs to be done") makes clear this is one round of an
+ongoing series, not a one-shot close-out.
+**Active branch:** `claude/gv-o03d-plant-scale-vitality` — draft PR (see below) open against
+`main`. All gates green: backend `make test` 1210 passed/6 skipped/91.73% coverage (untouched by
+this pure-frontend change, re-run for the record), `make check-memory` OK, `make lint` clean; web
+typecheck/build/lint clean, full web vitest suite 528/528, 36 relevant Playwright e2e specs
+(care-loop-shot, chamber-landscape-hud-shot, bud3d-shot, the full 30-route crash-sweep) all green.
+**Housekeeping note (found, not fixed, this session):** this baton's prior revision (for PR #174,
+`gv-o03b-pod-button-fixes`) was never updated across the two sessions that landed on top of it —
+PR #175 (`gv-o03c-command-center-redesign`, commit `00aa7ac`) and PR #176 (D2/D3 owner decisions +
+Today's-Plan/Arcade-scrubber design calls, commit `b9be886`) both merged to `main` without a baton
+rewrite. Per `docs/memory/DECISIONS.md`, **D2 and D3 are now RESOLVED** (D2: staking
+`reward_pct` = 2%; D3: cure clock moves to the player-effective/turbo clock with a wall-clock
+floor) — so `claude/gv-o04-cure-mint-integrity` (week 5, protected-surface) is very likely
+unblocked, but the next chat should re-read `DECISIONS.md` directly to confirm before building,
+since this session did not audit that work itself (out of scope for a pure plant-visuals fix).
+**NEXT CHAT STARTS HERE:** get this PR merged (after CI + owner review), then either (a) resume
+`ROADMAP_90D_2026Q3.md` week 5 (`gv-o04-cure-mint-integrity`) now that D2/D3 read as resolved — a
+Security-Reviewer checklist + owner sign-off is still required in that PR body per
+BUILD_RULES.md's protected-surface gate — or (b) take further owner direction on the plant render
+if this pass still doesn't land at "10/10" for them.
 **Superseded pointer note:** the pre-2026-07-07 next branch was `claude/gv-p02-game-loop-codex`;
 p02 now lands in week 9 of the 90-day schedule. Historical context below is unchanged.
 **Chamber-mockup decision — RESOLVED (owner, 2026-07-06):** the owner chose to **replace** the
@@ -51,6 +53,36 @@ growverse.dev (Vercel) deploys `web/` from `main`.
 > **Owner rule in force: ONE active PR at a time.** Queue further units here, don't open them.
 
 ---
+
+## What shipped 2026-07-07 (latest — off-roadmap, `gv-o03d-plant-scale-vitality`)
+
+Owner lifted the round-8 plant-render freeze by naming the gap: indica strains read too
+small/weak, and idle motion too subtle. Root cause traced to `INDICA.heightMul` (0.74 vs
+`SATIVA`'s 1.22, `web/src/lib/chamber/morphology.ts`) modulating a fraction of the SAME fixed
+canvas frame that every strain shares, with branch/cola mass deriving from that same stem
+height (`chamberCore.ts`'s `buildPlant`) — so a mature indica-leaning plant used only ~half the
+vertical frame a sativa reaches, reading as shrunken rather than short-and-bushy.
+- **Scale/presence fix:** `INDICA.heightMul` 0.74 → 0.88, plus a mature-flower presence floor in
+  `buildPlant` (`hN` never below 58% of frame once flowering is underway, ramped in only after
+  day 34 so seedling/veg curves are untouched). Verified against the two worst-case real strains
+  (Northern Lights indica_ratio 1.0, Hindu Kush 0.9); Durban Poison (sativa baseline, 0.0) renders
+  pixel-identical before/after, confirming the sativa/indica shape distinction is preserved.
+- **Idle-motion liveliness:** `climateModel`'s `windAmp` floor/ceiling raised (0.004→0.007,
+  0.05→0.062); branch sway gained a second, slower, out-of-phase wave so the canopy doesn't read
+  as one rigid shape rocking in unison; leaflets get a small independent flutter (`drawFan`, ~2°,
+  via a new module-scoped `frameTT`); the hero cola's bloom halo now breathes (±5% radius, ~10s
+  period). All new motion is gated on the existing `motionOK` (`prefers-reduced-motion`) check —
+  reduced-motion users see zero change.
+- **Evidence:** VER-018 (Hindu Kush before/after) / VER-019 (Northern Lights before) / VER-020
+  (Northern Lights after) / VER-021 (real in-app chamber integration, Gelato) in
+  `VERIFIED_RENDERS.md`; a headless-render pixel diff between two animation frames shows ~58%
+  more mean movement after the motion change (quantitative liveliness check, not just eyeballing).
+- **Self-score: ~9/10**, not 10/10 — the owner's own framing ("a lot of branch work still needs to
+  be done") signals this is one round of an ongoing series; branch-level architecture
+  (candelabra spacing, branchlet placement, apical-dominance tuning) was deliberately untouched
+  this round and is the likely next target if the owner still sees a gap.
+- **Not touched (guardrail, confirmed in scope):** `balance.yaml`, migrations, auth/lockfiles, the
+  Arcade chamber page's preview-growth scrubber, the Today's Plan panel.
 
 ## What shipped 2026-07-07 (off-roadmap, owner `/goal` audit — `gv-o03b-pod-button-fixes`, PR #174)
 
@@ -316,11 +348,13 @@ A large hardening + feature batch (all gate-green, CI green each push):
 
 ## NEXT ACTION (single)
 
-**Audit + merge the `gv-o03-pod-equipment-visuals` PR, then get owner decisions D2 + D3 BEFORE
-starting `claude/gv-o04-cure-mint-integrity`** (week 5 — see the header note above and
-`ROADMAP_90D_2026Q3.md` §3 week 5; this is a protected-surface week, not a plain "start building"
-week like 1–4). The chamber-mockup reconciliation was resolved 2026-07-06 (owner chose replace —
-shipped in PR #159); the 90-day plan supersedes the old "(b) proceed to p02" path — p02 is week 9.
+**Get the `gv-o03d-plant-scale-vitality` PR reviewed/merged, then re-read `DECISIONS.md` to
+confirm D2/D3 are truly resolved before starting `claude/gv-o04-cure-mint-integrity`** (week 5 —
+protected-surface, not a plain "start building" week). If the owner instead has more plant-render
+feedback after seeing this pass, that supersedes gv-o04 (owner taste on the hero render takes
+priority over the roadmap, per the delegation charter). The chamber-mockup reconciliation was
+resolved 2026-07-06 (owner chose replace — shipped in PR #159); the 90-day plan supersedes the old
+"(b) proceed to p02" path — p02 is week 9.
 
 **Older owner-directed threads, still open, not gating anything (tracked in BACKLOG.md):**
 1. **Onboarding rework (owner, 2026-07-03):** "it's too long, not exciting, doesn't really work —
@@ -328,31 +362,37 @@ shipped in PR #159); the 90-day plan supersedes the old "(b) proceed to p02" pat
    already exists on the dashboard, plant detail, FTUE (per-step coaching) and University — it's
    wired, just not prominent. Current onboarding = a 4-beat cinematic landing (`/onboarding`) + a
    7-step FTUE (`/ftue`). Overlaps GrowVerse Phase 18's onboarding-finish requirement.
-2. **Plant render:** owner says it's not 10/10 (honest self-score ~8), under the owner's own
-   "don't chase the macro bud" freeze — needs the owner to name the specific gap (or lift the
-   freeze).
+2. **Plant render:** the round-8 freeze is LIFTED as of this session — owner named the gap
+   (indica scale + idle vitality), `gv-o03d-plant-scale-vitality` fixed it, self-score ~9/10 (see
+   "What shipped" above). Branch-level architecture is the likely next ask if the owner still sees
+   a gap; no freeze is in force right now, but don't speculatively chase more polish without new
+   owner direction — same "don't chase the macro bud" spirit, just not literally frozen anymore.
 3. **Cleanup:** close stale draft PRs #151, #152 (arcade polish — superseded, no unique content).
 
 Off-limits unless separately approved: economy values, treasury paths, settlement deposit/withdraw.
 
 ## Verification split
 
-- **Agent-verified (test-backed, this session):** the pure gear-visuals mappings (fan intensity
-  ranking, light-glow scaling, soil tint, chip formatting — 12 tests) and the apply-target
-  picker (5 tests) are unit-tested; capture-shots evidence (VER-016) shows the chip row rendering
-  correctly with real gear and no crash; the desktop layout fix is verified via before/after
-  captures + all 35 relevant e2e specs (care-loop-shot, chamber-landscape-hud-shot, the full
-  30-route crash sweep) green; web typecheck/lint/build clean, full web vitest suite 533/533;
-  backend suite re-run for the record though untouched this week (1210 passed/6 skipped, matching
-  `gv-o02`'s baseline exactly).
-- **Device-verify (owner):** on `/dashboard`, confirm the plant chamber now sits flush with the
-  top of the PLANT DNA / ENVIRONMENT side rails (not below the carousel thumbnail) and looks
-  right at your normal desktop width — the fix targets 1440px, spot-check your actual monitor
-  width too. Equip a fan/soil/light on a pod and confirm the chip row appears on the chamber with
-  the right icons. In the store, an owned consumable should show "Apply to plant →"; clicking it
-  should land on the plant page with that item highlighted. Also carried: the chamber-mockup
-  reconciliation decision (above); growverse.dev spot-check that the ARCADE-tab-removal UX change
-  (#156) still feels right now that its test coverage is restored.
+- **Agent-verified (test-backed, `gv-o03d-plant-scale-vitality`, this session):** web
+  typecheck/lint/build clean; full web vitest suite 528/528 (incl. `morphology.test.ts`,
+  `chamberCore.test.ts`); 36 relevant Playwright specs green (care-loop-shot,
+  chamber-landscape-hud-shot, bud3d-shot, the full 30-route crash-sweep); backend `make test`
+  1210 passed/6 skipped/91.73% coverage (untouched by this change, re-run for the record),
+  `make lint` + `make check-memory` clean. Headless `chamberCore` renders confirm: Northern Lights
+  (indica_ratio 1.0) and Hindu Kush (0.9) grow visibly taller/fuller at late-flower/harvest;
+  Durban Poison (sativa baseline, 0.0) renders pixel-identical before/after (no regression to the
+  strain this fix wasn't targeting); a two-frame pixel diff shows ~58% more mean movement in the
+  idle-sway loop after the motion-amplitude change. See VER-018 through VER-021 in
+  `VERIFIED_RENDERS.md`.
+- **Device-verify (owner):** open a Northern Lights / Hindu Kush (or any high-indica-ratio) plant
+  in the chamber at flowering/harvest and judge by eye whether it now reads as a substantial,
+  short-and-bushy plant rather than a small/weak one — this is inherently an owner-taste call, the
+  agent can only verify the numeric fix landed and didn't regress the sativa baseline. Also watch
+  the idle sway for ~10-15s and judge whether the plant now reads as visibly alive without being
+  distracting; toggle OS-level "reduce motion" and confirm the plant goes fully static (this is a
+  device-only check — the agent verified the code gates on `motionOK` but can't observe an actual
+  OS accessibility setting). Older carried device-checks (chamber-mockup reconciliation,
+  ARCADE-tab-removal UX) are unchanged by this session.
 
 ## OPEN RISKS (carried)
 
