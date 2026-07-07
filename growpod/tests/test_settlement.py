@@ -15,9 +15,10 @@ from growpodempire.services.game_service import GameService, GameError
 from growpodempire.services.settlement_service import SettlementService
 from growpodempire.chain.mock import MockChainProvider
 from algosdk import account
+from _wallet_test_helpers import link_wallet_for_test
 
-# A real, checksum-valid Algorand address (link_wallet now validates the format).
-_VALID_ADDR = account.generate_account()[1]
+# A real, checksum-valid Algorand keypair (link_wallet now requires a signed challenge).
+_VALID_PRIV, _VALID_ADDR = account.generate_account()
 
 
 def _svc(s):
@@ -28,7 +29,7 @@ def test_withdraw_mirrors_to_chain(db):
     with session_scope() as s:
         gs = GameService(s)
         p = gs.create_player("settler")
-        gs.link_wallet(p.id, _VALID_ADDR)
+        link_wallet_for_test(gs, p.id, _VALID_PRIV, _VALID_ADDR)
         start = balance(s, p.id)
 
         result = _svc(s).withdraw(p.id, 100)
@@ -56,7 +57,7 @@ def test_withdraw_then_deposit_roundtrips(db):
     with session_scope() as s:
         gs = GameService(s)
         p = gs.create_player("rt")
-        gs.link_wallet(p.id, _VALID_ADDR)
+        link_wallet_for_test(gs, p.id, _VALID_PRIV, _VALID_ADDR)
         svc = _svc(s)
         svc.withdraw(p.id, 200)
         before = balance(s, p.id)
@@ -69,6 +70,6 @@ def test_cannot_withdraw_more_than_balance(db):
     with session_scope() as s:
         gs = GameService(s)
         p = gs.create_player("broke")
-        gs.link_wallet(p.id, _VALID_ADDR)
+        link_wallet_for_test(gs, p.id, _VALID_PRIV, _VALID_ADDR)
         with pytest.raises(InsufficientFundsError):
             _svc(s).withdraw(p.id, 100000)

@@ -48,8 +48,10 @@ from ..db.models import (
     ConsumableInventory,
     GearInventory,
     GrantClaim,
+    WalletLinkChallenge,
 )
 from ..db.seed import slugify
+from .wallet_auth import build_challenge_message, verify_wallet_signature
 
 import yaml
 
@@ -254,15 +256,68 @@ class GameService:
 
         return {**self.turbo_state(player), "synced_pods": len(living)}
 
-    def link_wallet(self, player_id: str, algorand_address: str) -> Player:
-        """Associate (connect / "log in") a player with an Algorand address.
-        Validates the address checksum so a typo can't be stored."""
+    WALLET_CHALLENGE_TTL_SECONDS = 300  # 5 min -- long enough for a wallet-app round trip
+
+    def create_wallet_challenge(self, player_id: str, algorand_address: str) -> dict:
+        """Issue a one-time nonce the caller must sign with `algorand_address`'s
+        private key before `link_wallet` will trust it (disruptor-sweep #4:
+        wallet-address hijack -- a bare address string was previously sufficient
+        to claim someone else's public address as your own)."""
         from algosdk import encoding
         addr = (algorand_address or "").strip()
         if not addr:
             raise GameError("algorand_address is required")
         if not encoding.is_valid_address(addr):
             raise GameError("That doesn't look like a valid Algorand address.")
+        self.get_player(player_id)  # raises if the player doesn't exist
+        nonce = secrets.token_hex(16)
+        expires_at = self.clock.now() + timedelta(seconds=self.WALLET_CHALLENGE_TTL_SECONDS)
+        challenge = WalletLinkChallenge(
+            player_id=player_id, address=addr, nonce=nonce, expires_at=expires_at
+        )
+        self.session.add(challenge)
+        self.session.flush()
+        return {
+            "message": build_challenge_message(player_id, addr, nonce),
+            "nonce": nonce,
+            "expires_at": expires_at,
+        }
+
+    def link_wallet(
+        self, player_id: str, algorand_address: str, nonce: str, signature: str
+    ) -> Player:
+        """Associate (connect / "log in") a player with an Algorand address.
+        Requires a signature over the matching `create_wallet_challenge` nonce
+        proving the caller holds the address's private key -- a bare address
+        string is spoofable (disruptor-sweep #4: wallet-address hijack)."""
+        from algosdk import encoding
+        addr = (algorand_address or "").strip()
+        if not addr:
+            raise GameError("algorand_address is required")
+        if not encoding.is_valid_address(addr):
+            raise GameError("That doesn't look like a valid Algorand address.")
+        if not nonce or not signature:
+            raise GameError("A signed wallet challenge is required to link an address.")
+
+        challenge = (
+            self.session.query(WalletLinkChallenge)
+            .filter(WalletLinkChallenge.nonce == nonce)
+            .one_or_none()
+        )
+        if (
+            challenge is None
+            or challenge.player_id != player_id
+            or challenge.address != addr
+            or challenge.consumed_at is not None
+            or challenge.expires_at < self.clock.now()
+        ):
+            raise GameError("That wallet challenge is invalid or has expired. Request a new one.")
+
+        message = build_challenge_message(player_id, addr, nonce)
+        if not verify_wallet_signature(message, signature, addr):
+            raise GameError("Wallet signature verification failed.")
+
+        challenge.consumed_at = self.clock.now()
         player = self.get_player(player_id)
         player.algorand_address = addr
         return player

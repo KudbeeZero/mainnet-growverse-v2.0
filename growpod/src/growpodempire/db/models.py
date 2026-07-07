@@ -274,6 +274,27 @@ class IdempotencyKey(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
+class WalletLinkChallenge(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A one-time nonce a player must sign with their wallet's private key
+    before /wallet/link trusts the address as an ownership credential
+    (disruptor-sweep #4: a spoofable owner_address string alone let anyone
+    link -- and thereby control the marketplace/staking authorization for --
+    an address they read off the public listings feed). Bound to one
+    player+address pair, single-use, short-lived."""
+
+    __tablename__ = "wallet_link_challenges"
+
+    player_id: Mapped[str] = mapped_column(ForeignKey("players.id"), nullable=False)
+    address: Mapped[str] = mapped_column(String(64), nullable=False)
+    nonce: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    consumed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    __table_args__ = (
+        Index("ix_wallet_challenge_player", "player_id"),
+    )
+
+
 class ResearchProgress(UUIDPrimaryKeyMixin, Base):
     """A research-tree node a player has unlocked (Phase 2 expansion)."""
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RequireAuth } from "@/components/layout/RequireAuth";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -11,7 +11,14 @@ import { PageHeader, Section } from "@/components/ui/PageHeader";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { TitleBadge } from "@/components/ui/Pills";
 import { HarvestsPanel } from "@/components/harvest/HarvestsPanel";
-import { ConnectWalletButton } from "@/components/wallet/ConnectWalletButton";
+import {
+  useWalletStore,
+  connectWallet,
+  disconnectWallet,
+  signChallenge,
+} from "@/lib/chain/algorand/wallet";
+import { isFaucetAvailable } from "@/lib/chain/algorand/devFaucet";
+import { wallet as walletApi } from "@/lib/api/wallet";
 import { NFTCollection } from "@/components/nft/NFTCollection";
 import { CuringRoom } from "@/components/nft/CuringRoom";
 import { useApiMutation } from "@/hooks/useApiMutation";
@@ -28,6 +35,85 @@ import { FEATURES } from "@/lib/features";
 import { queryKeys } from "@/lib/queryKeys";
 import { grow, dateTime, titleCase } from "@/lib/format";
 import type { Badge as BadgeType } from "@/lib/types";
+
+// ---------------------------------------------------------------------------
+// Algorand wallet linker — connect (Pera/dev), sign the server's one-time
+// challenge to prove key ownership, then hand the caller (address, nonce,
+// signature) to submit to /wallet/link (disruptor-sweep #4: a bare address
+// string used to be enough to claim someone else's public address).
+// ---------------------------------------------------------------------------
+
+function AlgorandWalletLinker({
+  playerId,
+  linkedAddress,
+  onLink,
+  onUnlink,
+}: {
+  playerId: string;
+  linkedAddress?: string | null;
+  onLink: (address: string, nonce: string, signature: string) => void;
+  onUnlink: () => void;
+}) {
+  const address = useWalletStore((s) => s.address);
+  const connected = useWalletStore((s) => s.connected);
+  const connecting = useWalletStore((s) => s.connecting);
+  const [signing, setSigning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const attempted = useRef<string | null>(null);
+  const wasConnected = useRef(connected);
+
+  useEffect(() => {
+    if (!connected || !address || address === linkedAddress || attempted.current === address) return;
+    attempted.current = address;
+    setSigning(true);
+    setError(null);
+    (async () => {
+      const challenge = await walletApi.challenge(playerId, address);
+      const signature = await signChallenge(challenge.message);
+      onLink(address, challenge.nonce, signature);
+    })()
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to link wallet."))
+      .finally(() => setSigning(false));
+  }, [connected, address, linkedAddress, playerId, onLink]);
+
+  useEffect(() => {
+    if (wasConnected.current && !connected && linkedAddress) onUnlink();
+    wasConnected.current = connected;
+  }, [connected, linkedAddress, onUnlink]);
+
+  if (connected && address) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <code className="rounded-md border border-ink-600 bg-ink-900 px-2 py-1 text-xs text-gray-300">
+          {address.slice(0, 6)}…{address.slice(-4)}
+        </code>
+        {signing && <span className="text-[10px] text-gray-500">Signing…</span>}
+        <Button size="sm" variant="secondary" onClick={() => disconnectWallet()}>
+          Disconnect
+        </Button>
+        {error && <span className="text-[10px] text-orange-300">{error}</span>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button size="sm" loading={connecting} onClick={() => connectWallet("pera").catch(() => {})}>
+        Connect wallet
+      </Button>
+      {isFaucetAvailable() && (
+        <button
+          type="button"
+          onClick={() => connectWallet("dev").catch(() => {})}
+          className="text-[10px] text-gray-500 hover:text-gray-300"
+        >
+          Dev
+        </button>
+      )}
+      {error && <span className="text-[10px] text-orange-300">{error}</span>}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Rank card — icon, name, XP progress bar toward next rank level
@@ -257,10 +343,14 @@ function ProfileInner() {
     invalidate: money,
     successMessage: (r) => `Claimed ${grow(r.amount)} daily stipend`,
   });
-  const link = useApiMutation((address: string) => api.wallet.link(playerId!, address), {
-    invalidate: [queryKeys.player(playerId ?? "")],
-    successMessage: "Algorand wallet linked",
-  });
+  const link = useApiMutation(
+    ({ address, nonce, signature }: { address: string; nonce: string; signature: string }) =>
+      api.wallet.link(playerId!, address, nonce, signature),
+    {
+      invalidate: [queryKeys.player(playerId ?? "")],
+      successMessage: "Algorand wallet linked",
+    },
+  );
 
   const unlink = useApiMutation(() => api.wallet.unlink(playerId!), {
     invalidate: [queryKeys.player(playerId ?? "")],
@@ -340,13 +430,11 @@ function ProfileInner() {
           {FEATURES.chain && (
             <div className="mt-4">
               <div className="instrument-label mb-1">ALGORAND WALLET</div>
-              <ConnectWalletButton
-                onConnected={(address) => {
-                  if (address !== p?.algorand_address) link.mutate(address);
-                }}
-                onDisconnected={() => {
-                  if (p?.algorand_address) unlink.mutate();
-                }}
+              <AlgorandWalletLinker
+                playerId={playerId!}
+                linkedAddress={p?.algorand_address}
+                onLink={(address, nonce, signature) => link.mutate({ address, nonce, signature })}
+                onUnlink={() => unlink.mutate()}
               />
               {p?.algorand_address && (
                 <code className="mt-2 block break-all rounded-md border border-ink-600 bg-ink-900 px-3 py-2 text-[11px] text-gray-400">

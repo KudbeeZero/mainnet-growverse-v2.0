@@ -1,11 +1,23 @@
 import { apiFetch } from "./client";
 import type { Player } from "@/lib/types";
 
+export interface WalletChallenge {
+  message: string;
+  nonce: string;
+  expires_at: string;
+}
+
 export const wallet = {
-  link: (playerId: string, address: string) =>
-    apiFetch<Player>(`/players/${playerId}/wallet/link`, {
+  challenge: (playerId: string, address: string) =>
+    apiFetch<WalletChallenge>(`/players/${playerId}/wallet/challenge`, {
       method: "POST",
       body: { address },
+    }),
+
+  link: (playerId: string, address: string, nonce: string, signature: string) =>
+    apiFetch<Player>(`/players/${playerId}/wallet/link`, {
+      method: "POST",
+      body: { address, nonce, signature },
     }),
 
   unlink: (playerId: string) =>

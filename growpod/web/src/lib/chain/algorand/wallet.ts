@@ -86,6 +86,44 @@ export async function disconnectWallet(): Promise<void> {
 }
 
 /**
+ * Sign arbitrary text with the connected wallet's key, proving ownership of
+ * the address without moving funds -- used to answer a `/wallet/challenge`
+ * nonce before `/wallet/link` will trust the address (disruptor-sweep #4:
+ * wallet-address hijack). Returns a base64 detached ed25519 signature.
+ *
+ * Pera's `signData` (ARC-60 arbitrary-data signing) signs the given bytes
+ * directly, with NO domain-separation prefix -- unlike algosdk's own
+ * `signBytes`/`verifyBytes` ("MX" prefix, meant for on-chain tooling). The
+ * dev signer uses the same raw/unprefixed primitive so both paths verify
+ * against the one scheme the backend checks (services/wallet_auth.py).
+ */
+export async function signChallenge(message: string): Promise<string> {
+  const { mode, address } = useWalletStore.getState();
+  if (!address || !mode) throw new AlgoClientError("Connect a wallet first.");
+  const bytes = new TextEncoder().encode(message);
+
+  if (mode === "dev") {
+    if (!_devSk) throw new AlgoClientError("Dev signer is not initialised.");
+    const nacl = await import("tweetnacl");
+    const sig = nacl.sign.detached(bytes, _devSk);
+    return bytesToBase64(sig);
+  }
+
+  const [sig] = await getPera().signData(
+    [{ data: bytes, message: "Confirm wallet ownership to link this address to your GrowVerse account." }],
+    address,
+    true,
+  );
+  return bytesToBase64(sig);
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+/**
  * Sign a transaction (or atomic group) with the connected wallet and submit it.
  * Callers gate on isSimulate() before reaching here — this is the real-send path.
  */

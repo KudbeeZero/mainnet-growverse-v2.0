@@ -50,15 +50,30 @@ def _new_player(client, username="boundary"):
     return p["id"], p["api_key"]
 
 
+import base64
+
 from algosdk import account as _algo_account
-_VALID_ADDR = _algo_account.generate_account()[1]  # checksum-valid test address
+from nacl.signing import SigningKey
+
+_VALID_PRIV, _VALID_ADDR = _algo_account.generate_account()  # checksum-valid test keypair
 
 
-def _link(client, pid, key, address=_VALID_ADDR):
+def _link(client, pid, key, address=_VALID_ADDR, priv=_VALID_PRIV):
+    """Drive the full challenge -> sign -> link HTTP round trip."""
+    hdr = {"X-API-Key": key}
+    challenge = client.post(
+        f"/api/game/players/{pid}/wallet/challenge",
+        json={"address": address},
+        headers=hdr,
+    ).get_json()
+    seed = base64.b64decode(priv)[:32]
+    signature = base64.b64encode(
+        SigningKey(seed).sign(challenge["message"].encode("utf-8")).signature
+    ).decode()
     client.post(
         f"/api/game/players/{pid}/wallet/link",
-        json={"address": address},
-        headers={"X-API-Key": key},
+        json={"address": address, "nonce": challenge["nonce"], "signature": signature},
+        headers=hdr,
     )
 
 

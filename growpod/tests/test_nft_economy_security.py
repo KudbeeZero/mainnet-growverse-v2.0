@@ -22,9 +22,10 @@ from growpodempire.services.nft_mint import NFTMintService, NFTMintError
 from growpodempire.services.marketplace import MarketplaceService, MarketplaceError
 from growpodempire.services.staking import StakingService, StakingError
 from algosdk import account as _algo_account
+from _wallet_test_helpers import link_wallet_for_test
 
-_ADDR_A = _algo_account.generate_account()[1]
-_ADDR_B = _algo_account.generate_account()[1]
+_PRIV_A, _ADDR_A = _algo_account.generate_account()
+_PRIV_B, _ADDR_B = _algo_account.generate_account()
 
 
 def _rare_harvest(s, username, sell=False):
@@ -64,7 +65,7 @@ def test_cannot_restake_an_nft_after_claiming_its_reward(session):
     pid, harvest = _rare_harvest(session, "restaker")
     harvest.sale_value = Decimal("100.00")
     session.commit()
-    GameService(session).link_wallet(pid, _ADDR_A)
+    link_wallet_for_test(GameService(session), pid, _PRIV_A, _ADDR_A)
     nft = NFTMintService(session).mint_harvest(pid, harvest.id, _ADDR_A)
 
     svc = StakingService(session)
@@ -91,7 +92,7 @@ def test_create_lock_rejects_non_positive_cure_hours(session):
     pid, harvest = _rare_harvest(session, "zerohours")
     harvest.sale_value = Decimal("50.00")
     session.commit()
-    GameService(session).link_wallet(pid, _ADDR_A)
+    link_wallet_for_test(GameService(session), pid, _PRIV_A, _ADDR_A)
     nft = NFTMintService(session).mint_harvest(pid, harvest.id, _ADDR_A)
 
     with pytest.raises(StakingError, match="must be positive"):
@@ -104,7 +105,7 @@ def test_create_lock_clamps_an_excessive_cure_hours(session):
     pid, harvest = _rare_harvest(session, "toolonghours")
     harvest.sale_value = Decimal("50.00")
     session.commit()
-    GameService(session).link_wallet(pid, _ADDR_A)
+    link_wallet_for_test(GameService(session), pid, _PRIV_A, _ADDR_A)
     nft = NFTMintService(session).mint_harvest(pid, harvest.id, _ADDR_A)
 
     lock = StakingService(session).create_lock(
@@ -119,7 +120,7 @@ def test_confirm_trade_rejects_a_non_pending_trade(session):
     reconciliation step), but the service itself shouldn't trust trade.status
     is always PENDING when called."""
     pid, harvest = _rare_harvest(session, "trade-seller")
-    GameService(session).link_wallet(pid, _ADDR_A)
+    link_wallet_for_test(GameService(session), pid, _PRIV_A, _ADDR_A)
     nft = NFTMintService(session).mint_harvest(pid, harvest.id, _ADDR_A)
 
     svc = MarketplaceService(session)
@@ -154,7 +155,7 @@ def test_nft_asset_version_lock_serializes_concurrent_stakes(session):
     pid, harvest = _rare_harvest(session, "racer")
     harvest.sale_value = Decimal("100.00")
     session.commit()
-    GameService(session).link_wallet(pid, _ADDR_A)
+    link_wallet_for_test(GameService(session), pid, _PRIV_A, _ADDR_A)
     nft = NFTMintService(session).mint_harvest(pid, harvest.id, _ADDR_A)
     asset_id = nft.asset_id
     session.commit()
