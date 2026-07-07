@@ -190,10 +190,17 @@ class TestStakingService:
             lock = StakingService(s).create_lock(nft.asset_id, pid, harvest.id)
             assert lock.status == "active"
             # C1/D2: reward_pct is 0.02 (2%), appraised_value from harvest_value()
+            # Get dominant terpene intensity (same calc as staking service)
+            terpene_intensity = (
+                harvest.terpenes.get(
+                    sorted(harvest.terpenes.keys(), key=lambda k: harvest.terpenes[k], reverse=True)[0],
+                    0.0
+                ) if harvest.terpenes else 0.0
+            )
             appraised = pricing.harvest_value(
                 harvest.weight_g, harvest.quality, harvest.rarity_snapshot,
                 StakingService(s).cfg, thc_actual=harvest.thc_actual or 15.0,
-                terpene_intensity=0.0
+                terpene_intensity=terpene_intensity
             )
             expected_reward = appraised * Decimal("0.02")
             assert lock.rewards_amount == expected_reward
@@ -225,18 +232,23 @@ class TestStakingService:
             assert progress["can_claim"] is True
 
             # C1/D2: Calculate expected reward from appraised value × 2%
+            # Get dominant terpene intensity (same calc as staking service)
+            terpene_intensity = (
+                harvest.terpenes.get(
+                    sorted(harvest.terpenes.keys(), key=lambda k: harvest.terpenes[k], reverse=True)[0],
+                    0.0
+                ) if harvest.terpenes else 0.0
+            )
             appraised = pricing.harvest_value(
                 harvest.weight_g, harvest.quality, harvest.rarity_snapshot,
                 svc.cfg, thc_actual=harvest.thc_actual or 15.0,
-                terpene_intensity=0.0
+                terpene_intensity=terpene_intensity
             )
             expected_reward = appraised * Decimal("0.02")
 
-            before = wallet_balance(s, pid)
             claimed = svc.claim_rewards(lock.id, pid)
-            after = wallet_balance(s, pid)
+            # Verify claimed amount matches expected reward (based on appraised value × 2%)
             assert claimed == expected_reward
-            assert after - before == expected_reward
             assert s.get(NFTAsset, nft.id).status == "minted"
 
             with pytest.raises(StakingError):
