@@ -13,12 +13,15 @@
 
 ## ▶️ Current Position (the live pointer — update every closeout)
 
-- **Roadmap adopted:** 2026-07-06
-- **Phases complete:** p01 (Architecture Truth) — *this documentation PR lands the audit, roadmap,
-  and this machine.*
-- **NEXT BRANCH:** `claude/gv-p02-game-loop-codex`
-- **NEXT PR TITLE:** `feat(telemetry): codify game loops + in-txn event taxonomy`
-- **Owner action pending before next kickoff:** none — cleared to start p02 on the owner's "go".
+- **Roadmap adopted:** 2026-07-06 · **90-day owner re-sequencing adopted 2026-07-07:**
+  [ROADMAP_90D_2026Q3.md](ROADMAP_90D_2026Q3.md) now sequences the next 12 weeks (owner-priority
+  `gv-oNN` branches first, gv phases p02/p03/p05 folded into month 3); evidence in
+  [AUDIT_NFT_STORE_LOOP.md](AUDIT_NFT_STORE_LOOP.md). After week 12 the 22-phase order resumes.
+- **Phases complete:** p01 (Architecture Truth).
+- **NEXT BRANCH:** `claude/gv-o01-store-correctness` (ROADMAP_90D week 1)
+- **NEXT PR TITLE:** `fix(store): featured-strain pricing, balance refresh, honest harvest-panel gating`
+- **Owner action pending before next kickoff:** release Sonnet on the 90-day plan ("go"); D7
+  effect-number approval needed before week 2 (see ROADMAP_90D §5 decision gates).
 - **Carried risk into next branch:** none.
 
 > **`docs/HANDOFF.md` stays the single source of truth for what the next chat does first** (per its

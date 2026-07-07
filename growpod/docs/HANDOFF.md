@@ -4,18 +4,21 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-07-06 · **By:** the session-freeze-investigation session (GitHub status
-check + CI regression fix + owner-mockup chamber redesign). This baton had gone stale — it still
-described PR #137 as open 3 days after it merged, and never logged the ~19 PRs (#138–#156) that
-shipped in between. Corrected below.
-**Active branch:** `claude/session-freeze-investigation-ouw47a` — **open PR #159** (the chamber
-redesign; the branch was restarted from `main` after its prior fix PR #158 merged). PR #158 (CI
-fix) and PR #157 (GrowVerse roadmap docs) are both **merged**.
-**NEXT CHAT STARTS HERE:** when the owner says "go" on the roadmap, the first build branch is
-`claude/gv-p02-game-loop-codex` (Phase 2). Read `docs/memory/EXECUTION_MACHINE.md` — its "Current
-Position" block is the live next-branch pointer; `docs/memory/GROWVERSE_ROADMAP.md` has the full
-22-phase plan; `docs/memory/ARCHITECTURE_TRUTH.md` is the verified baseline. Build one
-`claude/gv-pNN-slug` branch at a time.
+**Last rewritten:** 2026-07-07 · **By:** the Fable 5 planning session (owner-directed audit of
+seed-NFT claiming / store / equipment-sim / cure→mint + the 90-day Q3 plan). **Planning-only:
+zero product code changed.** Deliverables: `docs/memory/AUDIT_NFT_STORE_LOOP.md` (verified
+defect registry, IDs N/S/E/C) and `docs/memory/ROADMAP_90D_2026Q3.md` (12-week branch schedule
+for Sonnet), plus pointer/backlog/index reconciliation.
+**Active branch:** `claude/fable5-nft-store-review-s9wmux` — this docs-only PR.
+**NEXT CHAT STARTS HERE (Sonnet):** the owner releases the 90-day plan; the first build branch
+is **`claude/gv-o01-store-correctness`** (ROADMAP_90D week 1 — store/harvest-panel button
+correctness, defects S1 S2 S6 S7 C2 C3 C4). Read `docs/memory/ROADMAP_90D_2026Q3.md` (the
+schedule + per-branch Sonnet prompts), `docs/memory/AUDIT_NFT_STORE_LOOP.md` (evidence), and
+`docs/memory/EXECUTION_MACHINE.md` (Current Position pointer, updated). One branch at a time;
+owner decision gates D1–D7 are listed in ROADMAP_90D §5 — D7 (gear-effect numbers) is needed
+before week 2 starts.
+**Superseded pointer note:** the pre-2026-07-07 next branch was `claude/gv-p02-game-loop-codex`;
+p02 now lands in week 9 of the 90-day schedule. Historical context below is unchanged.
 **Chamber-mockup decision — RESOLVED (owner, 2026-07-06):** the owner chose to **replace** the
 chamber layout with the mockups (not layer on top), and keep the Pod Visual System (moods/rarity)
 as roadmap Phase 3. Built in PR #159: a default **GROW hub tab** (Today's Plan + Plant Insights +
@@ -130,12 +133,10 @@ A large hardening + feature batch (all gate-green, CI green each push):
 
 ## NEXT ACTION (single)
 
-**Blocked on the owner's answer to the chamber-mockup reconciliation question above.** Once
-answered, either: (a) build the mockup as the new chamber design (new branch, not a `gv-pNN`
-phase — do it before or alongside Phase 3), or (b) proceed straight to
-**`claude/gv-p02-game-loop-codex`** (Phase 2 of the GrowVerse roadmap — see
-`docs/memory/EXECUTION_MACHINE.md`'s Current Position pointer) if the owner wants the mockup held
-as reference only.
+**Start `claude/gv-o01-store-correctness`** (week 1 of `docs/memory/ROADMAP_90D_2026Q3.md`) once
+the owner merges the planning PR and says "go". The chamber-mockup reconciliation was resolved
+2026-07-06 (owner chose replace — shipped in PR #159); the 90-day plan now supersedes the old
+"(b) proceed to p02" path — p02 is week 9.
 
 **Older owner-directed threads, still open, not gating anything (tracked in BACKLOG.md):**
 1. **Onboarding rework (owner, 2026-07-03):** "it's too long, not exciting, doesn't really work —
