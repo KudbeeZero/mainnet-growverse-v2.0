@@ -124,32 +124,32 @@ describe("store read-path builders", () => {
 
 describe("store player-scoped purchase/equip builders", () => {
   it("purchaseGear POSTs to the gear-purchase path with a default quantity of 1", async () => {
-    await store.purchaseGear("player-001", "led_240w");
+    await store.purchaseGear("player-001", "led_125w");
 
     expect(mockApiFetch).toHaveBeenCalledTimes(1);
     expect(mockApiFetch).toHaveBeenCalledWith(
-      "/players/player-001/store/gear/led_240w/purchase",
+      "/players/player-001/store/gear/led_125w/purchase",
       { method: "POST", body: { quantity: 1 } },
     );
   });
 
   it("purchaseGear forwards an explicit quantity", async () => {
-    await store.purchaseGear("player-001", "led_240w", 3);
+    await store.purchaseGear("player-001", "led_125w", 3);
 
     expect(mockApiFetch).toHaveBeenCalledTimes(1);
     expect(mockApiFetch).toHaveBeenCalledWith(
-      "/players/player-001/store/gear/led_240w/purchase",
+      "/players/player-001/store/gear/led_125w/purchase",
       { method: "POST", body: { quantity: 3 } },
     );
   });
 
   it("equipLight POSTs the gear key to the pod equip-light path", async () => {
-    await store.equipLight("player-001", "pod-42", "led_240w");
+    await store.equipLight("player-001", "pod-42", "led_125w");
 
     expect(mockApiFetch).toHaveBeenCalledTimes(1);
     expect(mockApiFetch).toHaveBeenCalledWith(
       "/players/player-001/pods/pod-42/equip-light",
-      { method: "POST", body: { gear_key: "led_240w" } },
+      { method: "POST", body: { gear_key: "led_125w" } },
     );
   });
 

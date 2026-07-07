@@ -1993,6 +1993,7 @@ def admin_delete_partner(partner_id):
 def store_featured():
     """Return up to 3 active, non-expired featured shelf items, enriched with price info."""
     from ..db.models import FeaturedItem, Strain
+    from ..economy import pricing as _pricing
     from ..economy.config import get_economy_config as _cfg
     from datetime import datetime as _dt
     cfg = _cfg()
@@ -2019,7 +2020,9 @@ def store_featured():
                 name = item_cfg.get("name", f.item_id)
             elif f.item_type == "strain":
                 strain = s.get(Strain, f.item_id)
-                name = strain.name if strain else f.item_id
+                if strain:
+                    name = strain.name
+                    price = float(_pricing.seed_price(strain.rarity, cfg))
             out.append({
                 "id": f.id,
                 "item_type": f.item_type,

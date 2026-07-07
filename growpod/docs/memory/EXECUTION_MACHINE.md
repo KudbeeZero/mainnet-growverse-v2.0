@@ -17,11 +17,13 @@
   [ROADMAP_90D_2026Q3.md](ROADMAP_90D_2026Q3.md) now sequences the next 12 weeks (owner-priority
   `gv-oNN` branches first, gv phases p02/p03/p05 folded into month 3); evidence in
   [AUDIT_NFT_STORE_LOOP.md](AUDIT_NFT_STORE_LOOP.md). After week 12 the 22-phase order resumes.
-- **Phases complete:** p01 (Architecture Truth).
-- **NEXT BRANCH:** `claude/gv-o01-store-correctness` (ROADMAP_90D week 1)
-- **NEXT PR TITLE:** `fix(store): featured-strain pricing, balance refresh, honest harvest-panel gating`
-- **Owner action pending before next kickoff:** release Sonnet on the 90-day plan ("go"); D7
-  effect-number approval needed before week 2 (see ROADMAP_90D §5 decision gates).
+- **Phases complete:** p01 (Architecture Truth). Week 1 (`gv-o01-store-correctness`) built this
+  session — draft PR open, gates green — awaiting the next `/handoff-audit` to confirm and merge.
+- **NEXT BRANCH:** `claude/gv-o02-equipment-sim-effects` (ROADMAP_90D weeks 2–3)
+- **NEXT PR TITLE:** `feat(sim): fans, soils and CO₂ get real simulation effects (equip any gear)`
+- **Owner action pending before next kickoff:** D7 (gear-effect numbers direction) — already
+  approved 2026-07-07 per ROADMAP_90D §2 weeks 2–3 owner gate; attach the 4-scenario sim report to
+  that PR per the ready-to-paste prompt.
 - **Carried risk into next branch:** none.
 
 > **`docs/HANDOFF.md` stays the single source of truth for what the next chat does first** (per its
