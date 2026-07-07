@@ -132,6 +132,8 @@ function FeaturedShelf() {
           method: "POST",
           body: { item_key: item.item_id, quantity: 1 },
         });
+        await qc.invalidateQueries({ queryKey: queryKeys.player(playerId) });
+        await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
         setMsg(item.id, "✓ Consumable purchased");
       } else if (item.item_type === "strain") {
         const { apiFetch } = await import("@/lib/api/client");
@@ -144,6 +146,10 @@ function FeaturedShelf() {
         await qc.invalidateQueries({ queryKey: queryKeys.wallet(playerId) });
         setMsg(item.id, "✓ Seed added to inventory");
       }
+      // Every branch above can change owned-count/repeat-state on the shelf
+      // (a bought consumable might drop off, a strain purchase can affect
+      // seasonal availability) — refetch so the shelf never shows stale state.
+      await qc.invalidateQueries({ queryKey: queryKeys.storeFeatured() });
     } catch (e: unknown) {
       setMsg(item.id, e instanceof Error ? e.message : "Purchase failed");
     } finally {

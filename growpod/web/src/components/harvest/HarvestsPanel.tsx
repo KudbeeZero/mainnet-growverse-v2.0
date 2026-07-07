@@ -14,6 +14,15 @@ import { useSession } from "@/lib/session";
 import { FEATURES } from "@/lib/features";
 import { queryKeys } from "@/lib/queryKeys";
 import { grow, num, titleCase } from "@/lib/format";
+import { Countdown } from "@/components/ui/Countdown";
+import { useCountdown } from "@/hooks/useCountdown";
+import {
+  canFinishCure,
+  canMint,
+  canSell,
+  cureDeadlineIso,
+  MINT_MIN_RARITY,
+} from "@/components/harvest/harvestGatesData";
 import type { Harvest } from "@/lib/types";
 
 export function HarvestsPanel({ onEnterCup }: { onEnterCup?: (harvestId: string) => void }) {
@@ -51,6 +60,12 @@ function HarvestCard({
   const [targetHours, setTargetHours] = useState(48);
   const name = map.get(harvest.strain_id)?.name ?? "Harvest";
   const cure = harvest.cure_status ?? "none";
+  const deadlineIso = cureDeadlineIso(harvest.cure_started_at, harvest.cure_target_hours);
+  // Ticks once/second so the "Finish cure" gate re-evaluates as the ETA passes.
+  useCountdown(cure === "curing" ? deadlineIso : null);
+  const cureReady = canFinishCure(Date.now(), deadlineIso);
+  const mintEligible = canMint(cure, harvest.rarity);
+  const sellEligible = canSell(cure);
 
   const inv = [queryKeys.harvests(playerId ?? ""), queryKeys.wallet(playerId ?? "")];
 
@@ -119,15 +134,40 @@ function HarvestCard({
             </>
           )}
           {cure === "curing" && (
-            <Button size="sm" variant="secondary" loading={finishCure.isPending} onClick={() => finishCure.mutate()}>
-              Finish cure
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={finishCure.isPending}
+                disabled={!cureReady}
+                title={cureReady ? undefined : "Cure isn't done yet"}
+                onClick={() => finishCure.mutate()}
+              >
+                Finish cure
+              </Button>
+              {!cureReady && deadlineIso && <Countdown to={deadlineIso} prefix="ETA" />}
+            </div>
+          )}
+          {sellEligible && (
+            <Button size="sm" loading={sell.isPending} onClick={() => sell.mutate()}>
+              Sell
             </Button>
           )}
-          <Button size="sm" loading={sell.isPending} onClick={() => sell.mutate()}>
-            Sell
-          </Button>
           {harvest.nft_status !== "minted" && (
-            <Button size="sm" variant="ghost" loading={mint.isPending} onClick={() => mint.mutate()}>
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={mint.isPending}
+              disabled={!mintEligible}
+              title={
+                mintEligible
+                  ? undefined
+                  : cure === "curing"
+                    ? "Finish curing before minting"
+                    : `Needs at least ${titleCase(MINT_MIN_RARITY)} rarity to mint`
+              }
+              onClick={() => mint.mutate()}
+            >
               Mint
             </Button>
           )}

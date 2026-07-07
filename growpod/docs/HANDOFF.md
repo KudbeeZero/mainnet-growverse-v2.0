@@ -4,19 +4,19 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-07-07 · **By:** the Fable 5 planning session (owner-directed audit of
-seed-NFT claiming / store / equipment-sim / cure→mint + the 90-day Q3 plan). **Planning-only:
-zero product code changed.** Deliverables: `docs/memory/AUDIT_NFT_STORE_LOOP.md` (verified
-defect registry, IDs N/S/E/C) and `docs/memory/ROADMAP_90D_2026Q3.md` (12-week branch schedule
-for Sonnet), plus pointer/backlog/index reconciliation.
-**Active branch:** `claude/fable5-nft-store-review-s9wmux` — this docs-only PR.
-**NEXT CHAT STARTS HERE (Sonnet):** the owner releases the 90-day plan; the first build branch
-is **`claude/gv-o01-store-correctness`** (ROADMAP_90D week 1 — store/harvest-panel button
-correctness, defects S1 S2 S6 S7 C2 C3 C4). Read `docs/memory/ROADMAP_90D_2026Q3.md` (the
-schedule + per-branch Sonnet prompts), `docs/memory/AUDIT_NFT_STORE_LOOP.md` (evidence), and
-`docs/memory/EXECUTION_MACHINE.md` (Current Position pointer, updated). One branch at a time;
-owner decision gates D1–D7 are listed in ROADMAP_90D §5 — D7 (gear-effect numbers) is needed
-before week 2 starts.
+**Last rewritten:** 2026-07-07 · **By:** the `gv-o01-store-correctness` session (owner: "merge
+PR #170 and release Sonnet on `claude/gv-o01-store-correctness`"). PR #170 (the Fable 5 planning
+PR) merged first; this session then built ROADMAP_90D week 1 exactly as specced.
+**Active branch:** `claude/gv-o01-store-correctness` — draft PR open (title:
+`fix(store): featured-strain pricing, balance refresh, honest harvest-panel gating`), gates green,
+awaiting `/handoff-audit` + merge next session.
+**NEXT CHAT STARTS HERE (Sonnet):** once this PR is audited PASS and merged, start
+**`claude/gv-o02-equipment-sim-effects`** (ROADMAP_90D weeks 2–3, the flagship slice — fans/soils/
+CO₂ get real, tunable, both-signs simulation effects). Read `docs/memory/ROADMAP_90D_2026Q3.md`
+§2 weeks 2–3 (the data-driven `effects` block spec + ready-to-paste Sonnet prompt) and
+`docs/memory/EXECUTION_MACHINE.md` (Current Position pointer, updated). D7 (new `balance.yaml`
+gear-effect keys) is already owner-approved 2026-07-07 — attach the 4-scenario sim report to
+that PR per the roadmap's acceptance criteria.
 **Superseded pointer note:** the pre-2026-07-07 next branch was `claude/gv-p02-game-loop-codex`;
 p02 now lands in week 9 of the 90-day schedule. Historical context below is unchanged.
 **Chamber-mockup decision — RESOLVED (owner, 2026-07-06):** the owner chose to **replace** the
@@ -37,6 +37,41 @@ growverse.dev (Vercel) deploys `web/` from `main`.
 > **Owner rule in force: ONE active PR at a time.** Queue further units here, don't open them.
 
 ---
+
+## What shipped 2026-07-07 (this session — ROADMAP_90D week 1, `gv-o01-store-correctness`)
+
+Owner merged PR #170 (Fable 5's audit + 90-day plan) and released Sonnet on week 1. Fixed audit
+defects S1, S2, S6, S7, C2, C3, C4 exactly as specced in `ROADMAP_90D_2026Q3.md` §2 week 1 (no
+`balance.yaml`/sim/chain/cure-mint-backend changes — out of scope, reserved for `gv-o04`):
+1. **S1 — featured strains are buyable:** `store_featured` (`api/game_api.py`) now prices the
+   `strain` branch via `economy.pricing.seed_price(strain.rarity, cfg)`, same catalog formula
+   `buy_seed` already uses — the web's `canBuy` gate (`price_gc != null`) now passes. Backend test
+   `tests/test_store.py::test_featured_strain_is_priced` pins a strain to the shelf and asserts
+   the price matches the catalog formula (not just "non-null").
+2. **S2/S7 — stale balances + stale shelf after purchase:** `web/src/app/store/page.tsx`
+   `handleBuy` now invalidates `wallet`/`player` queries on the featured-consumable branch (it
+   already did on strain/seasonal) and every branch now invalidates `storeFeatured()` after a
+   successful purchase, so owned-count/repeat-state never goes stale.
+3. **S6 — phantom test fixture:** `web/src/lib/api/__tests__/store.test.ts` exercised
+   `led_240w`, a gear key that doesn't exist in `balance.yaml` (real keys are `led_125w/320w/480w/
+   700w/800w`) — swapped to `led_125w`.
+4. **C2/C3/C4 — honest HarvestsPanel gating:** new pure gate module
+   `web/src/components/harvest/harvestGatesData.ts` (13 unit tests in
+   `__tests__/harvestGates.test.ts`) + wiring in `HarvestsPanel.tsx`:
+   - **Mint** (C2) is disabled unless rarity ≥ `mint_min_rarity` ("rare", mirroring
+     `balance.yaml` — server remains the sole enforcer in `minting_service.py`) **and** the
+     harvest isn't curing, with an explanatory `title` tooltip otherwise. Commons (the starter
+     path) no longer always error.
+   - **Finish cure** (C3) is disabled until `cure_started_at + cure_target_hours` elapses, using
+     the existing `Countdown`/`useCountdown` primitives for a live ETA instead of an immediate
+     error-toast.
+   - **Sell** (C4) is hidden entirely while `cure_status === "curing"` instead of guaranteed-
+     erroring.
+5. Full gates green this session: backend `make test` 1184 passed/6 skipped/91.90% coverage,
+   `make lint`/`make check-memory` clean; web `npm run typecheck`/`lint`/`build` clean, `npm run
+   test` 511/511 (was 498 before this session's +13 new harvest-gate tests). Playwright e2e not
+   re-run — no route/page structure changed, only button enablement + tooltips (device-verify
+   below covers this).
 
 ## What shipped 2026-07-06 (this session — status check + CI fix, PR #158)
 
@@ -133,10 +168,10 @@ A large hardening + feature batch (all gate-green, CI green each push):
 
 ## NEXT ACTION (single)
 
-**Start `claude/gv-o01-store-correctness`** (week 1 of `docs/memory/ROADMAP_90D_2026Q3.md`) once
-the owner merges the planning PR and says "go". The chamber-mockup reconciliation was resolved
-2026-07-06 (owner chose replace — shipped in PR #159); the 90-day plan now supersedes the old
-"(b) proceed to p02" path — p02 is week 9.
+**Audit + merge the `gv-o01-store-correctness` PR, then start `claude/gv-o02-equipment-sim-effects`**
+(weeks 2–3 of `docs/memory/ROADMAP_90D_2026Q3.md` — the flagship slice). The chamber-mockup
+reconciliation was resolved 2026-07-06 (owner chose replace — shipped in PR #159); the 90-day plan
+supersedes the old "(b) proceed to p02" path — p02 is week 9.
 
 **Older owner-directed threads, still open, not gating anything (tracked in BACKLOG.md):**
 1. **Onboarding rework (owner, 2026-07-03):** "it's too long, not exciting, doesn't really work —
@@ -153,12 +188,17 @@ Off-limits unless separately approved: economy values, treasury paths, settlemen
 
 ## Verification split
 
-- **Agent-verified (test-backed, this session):** `main`'s web CI regression (dropped
-  `growth-boost` testid) traced + fixed, PR #158 merged with tsc/lint/vitest 487/487/build/
-  Playwright 55/55 all green. `python3 scripts/check_memory.py` OK.
-- **Device-verify (owner):** the chamber-mockup reconciliation decision (above); growverse.dev
-  spot-check that the ARCADE-tab-removal UX change (#156) still feels right now that its test
-  coverage is restored.
+- **Agent-verified (test-backed, this session):** all 7 defects (S1 S2 S6 S7 C2 C3 C4) have a
+  passing unit/integration test pinned to the exact behavior (see "What shipped 2026-07-07"
+  above); full backend suite (1184 passed/6 skipped, 91.90% coverage), backend lint, check-memory,
+  web typecheck/lint/build, and full web vitest suite (511/511) all green.
+- **Device-verify (owner):** click through `/store` (a pinned featured strain should show a real
+  GC price and buy correctly; GC balance in the header should update immediately after any
+  purchase) and `/dashboard` harvests (a common harvest's Mint button should be disabled with a
+  tooltip; start a cure and confirm Sell disappears and Finish-cure shows a live ETA countdown
+  instead of being immediately clickable). Also carried: the chamber-mockup reconciliation
+  decision (above); growverse.dev spot-check that the ARCADE-tab-removal UX change (#156) still
+  feels right now that its test coverage is restored.
 
 ## OPEN RISKS (carried)
 

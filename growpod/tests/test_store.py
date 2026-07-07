@@ -61,6 +61,25 @@ def test_public_store_reads(client, stocked):
         assert b["bundle_price"] <= b["full_price"]  # discount applied
 
 
+def test_featured_strain_is_priced(client, stocked):
+    """S1 (AUDIT_NFT_STORE_LOOP.md): a pinned featured *strain* must carry a
+    real price so the web's Buy button renders — it used to stay `None`."""
+    from growpodempire.db.models import FeaturedItem, Strain
+    from growpodempire.economy import pricing
+    from growpodempire.economy.config import get_economy_config
+
+    with session_scope() as s:
+        strain = s.query(Strain).filter(Strain.slug == "blue-dream").one()
+        strain_id, strain_rarity = strain.id, strain.rarity
+        s.add(FeaturedItem(item_type="strain", item_id=strain_id, label="Featured strain"))
+
+    expected = float(pricing.seed_price(strain_rarity, get_economy_config()))
+    featured = client.get("/api/game/store/featured").get_json()
+    row = next(f for f in featured if f["item_type"] == "strain")
+    assert row["price_gc"] is not None
+    assert row["price_gc"] == pytest.approx(expected)
+
+
 def test_gear_list_and_purchase(client, player):
     pid, hdr = player
     listing = client.get(f"/api/game/players/{pid}/store/gear", headers=hdr)

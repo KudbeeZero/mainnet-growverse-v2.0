@@ -1,7 +1,13 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-07** (owner 90-day plan adopted —
+once they appear here. Last reconciled: **2026-07-07** (`claude/gv-o01-store-correctness`
+[ROADMAP_90D week 1] shipped: featured-strain pricing (S1), featured-shelf wallet/player
+invalidation on every purchase path + post-buy refetch (S2/S7), phantom `led_240w` test fixture
+replaced with a real gear key (S6), and honest HarvestsPanel gating — Mint respects
+`mint_min_rarity`+not-curing (C2), Finish-cure ETA countdown with a disabled gate until it elapses
+(C3), Sell hidden mid-cure (C4); component tests for every new gate. Next branch:
+`claude/gv-o02-equipment-sim-effects` (weeks 2–3). Prior note follows.) (owner 90-day plan adopted —
 `docs/memory/ROADMAP_90D_2026Q3.md` re-sequences the next 12 weeks around the owner's four
 directives (seed-NFT claiming end-to-end, store correctness, store items with real sim impact,
 pod shows equipped gear), backed by the verified defect registry
