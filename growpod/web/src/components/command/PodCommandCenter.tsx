@@ -1,10 +1,10 @@
 "use client";
 
 // The single-screen pod command center. You log in, you see your pod, and you
-// run EVERYTHING from here: the center is a carousel of up to four plant
-// cylinders, and selecting one repopulates the DNA rail, environment rail, grow
-// console, time controls and the seven-action care bar for that plant — without
-// ever navigating to another page. This is the embedded (in-dashboard) view; it
+// run EVERYTHING from here: a slot switcher picks among up to four plants in
+// the pod, and selecting one repopulates the DNA rail, environment rail, grow
+// console, time controls and the care bar for that plant — without ever
+// navigating to another page. This is the embedded (in-dashboard) view; it
 // owns the active-plant selection in local state, not a route param.
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -31,7 +31,6 @@ import {
 } from "@/lib/chamber/gearVisuals";
 import { hasWebGL } from "@/lib/features";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { harvestMarkers, maxPreviewDay, resolvePreview } from "@/lib/chamber/growthPreview";
 import { STAGE_ORDER } from "@/lib/stageInfo";
 import { plantRender } from "@/lib/plantRender";
 import { podStatus } from "@/lib/podStatus";
@@ -50,7 +49,6 @@ import {
 } from "@/components/plant/ChamberDock";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
 import { PlantCarousel, type CarouselPlant } from "@/components/command/PlantCarousel";
-import { GrowthScrubber } from "@/components/command/GrowthScrubber";
 import { TimeControls } from "@/components/command/TimeControls";
 import { NextActionHint } from "@/components/command/NextActionHint";
 import { StageInfoCard } from "@/components/command/StageInfoCard";
@@ -96,13 +94,6 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   // switching plants never leaves the screen.
   const ring = useMemo(() => plants.slice(0, 4), [plants]);
   const [activeId, setActiveId] = useState<string | undefined>(() => defaultPlantId(ring));
-
-  // Growth-preview scrubber position (null = track the live server age). Reset
-  // whenever the active plant changes so a scrubbed day never bleeds across pods.
-  const [previewDay, setPreviewDay] = useState<number | null>(null);
-  useEffect(() => {
-    setPreviewDay(null);
-  }, [activeId]);
 
   // "View bud" — pop the frosted 3D bud close-up for the selected plant (whole-
   // plant view stays the default). Only when the device actually has WebGL.
@@ -202,14 +193,8 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
 
   const strain = plant ? map.get(plant.strain_id) : undefined;
   const render = plant ? plantRender(plant, strain, pod) : null;
-  const flMid = render?.flMid ?? 60;
-  const harvestMarks = harvestMarkers(flMid);
-  const liveDay = render?.liveNominalDay ?? 0;
-  // Growth-preview scrubber: drag through the lifecycle (client-only visual);
-  // null = track the real server age. Never mutates server state.
-  const preview = resolvePreview(previewDay, liveDay, flMid, plant?.growth_stage ?? "seed");
-  const day = preview.day;
-  const renderStage = preview.stage;
+  const day = render?.liveNominalDay ?? 0;
+  const renderStage = plant?.growth_stage ?? "seed";
   // Live development params for the bud close-up (same source the 2D chamber uses).
   const budDev = render ? previewDev(day, render.flMid) : null;
   const stageIndex =
@@ -241,7 +226,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
         )}
       </div>
       <div className="flex flex-col items-center gap-1.5">
-        <StageHeader name={strain?.name ?? "Plant"} stage={renderStage} day={day} previewing={preview.previewing} />
+        <StageHeader name={strain?.name ?? "Plant"} stage={renderStage} day={day} />
         <div className="w-full max-w-lg">
           <StageProgressBar index={stageIndex} />
         </div>
@@ -400,7 +385,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
                     }}
                   />
                 </div>
-                {ended && !preview.previewing && (
+                {ended && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#050b12]/85 text-center">
                     <div className="text-4xl">{plant.harvested ? "🌾" : "🥀"}</div>
                     <p className="text-lg font-bold text-grow-200">
@@ -425,24 +410,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
             <TimeControls forecast={plant?.forecast} />
           </div>
 
-          {/* Client-only growth preview — scrub forward/back through the whole
-              lifecycle. Works with no backend (unlike server ACCELERATE TIME). */}
-          {plant && render && (
-            <div className="order-6 xl:order-none">
-              <GrowthScrubber
-                day={day}
-                maxDay={maxPreviewDay(flMid)}
-                stageLabel={renderStage}
-                previewing={preview.previewing}
-                readyFromDay={harvestMarks.readyFromDay}
-                harvestDay={harvestMarks.harvestDay}
-                onScrub={setPreviewDay}
-                onReset={() => setPreviewDay(null)}
-              />
-            </div>
-          )}
-
-          {/* Right under the slider: where this stage is at + what's happening,
+          {/* Right under the hero: where this stage is at + what's happening,
               then the most-reached-for tools (do-next hint, levels, care bar).
               Once the plant is harvested/dead (`ended`) none of this applies —
               there is nothing left to water/feed/prune, and showing full vitals
@@ -455,7 +423,6 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
               <StageInfoCard
                 stage={renderStage}
                 progressPct={plant.forecast?.stage_progress_pct ?? null}
-                previewing={preview.previewing}
               />
             </div>
           )}
