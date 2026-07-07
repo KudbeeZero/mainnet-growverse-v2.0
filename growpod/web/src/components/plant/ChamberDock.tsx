@@ -7,7 +7,12 @@
  * - `ChamberActionBar`: six glassy sci-fi tiles embedded at the chamber base
  *   (Water / Feed / Prune / Train / Inspect / Boost). Tiles glow when
  *   available, dim with a reason when not, flash on tap, and every tap fires
- *   the button burst + the plant's own reaction (`PlantReactionLayer`).
+ *   the button burst + the plant's own reaction (`PlantReactionLayer`). The
+ *   compact (non-`vertical`) layout is icon-only — the name/benefit/status
+ *   used to be a visible label that truncated badly at tile width ("WA...",
+ *   "Top u...") — now it surfaces as a hover/focus tooltip, with an sr-only
+ *   label keeping the accessible name intact. The `vertical` (landscape HUD)
+ *   layout has room for full labeled rows and is unchanged.
  *   Treatments aren't tiles (mockup keeps six) — active pest/disease pressure
  *   surfaces as a Do-Now row in Today's Plan instead.
  * - `ChamberPanel`: the side-panel content — Today's Plan (ranked next
@@ -84,10 +89,10 @@ export function ChamberActionBar({
           const enabled = !dead && (isInspect || !!state?.available);
           const reason = !isInspect && !dead && state && !state.available ? state.reason : null;
           const lastUsed = state ? formatSinceUsed(state.hoursSinceUsed) : null;
-          const cls = `relative rounded-xl border transition-all ${
+          const cls = `group relative rounded-xl border transition-all ${
             vertical
               ? "flex min-h-[48px] flex-row items-center gap-2.5 px-2.5 py-1.5 text-left"
-              : "flex min-h-[64px] flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-center"
+              : "flex min-h-[52px] items-center justify-center px-0.5 py-1.5 text-center"
           } ${tapped === t.kind ? "gpe-tile-tap" : ""} ${succeeded === t.kind ? "ring-2 ring-grow-400/80" : ""} ${
             enabled
               ? "gpe-tile cursor-pointer border-[var(--tile)]/50 bg-gradient-to-b from-white/[0.06] to-transparent hover:from-white/[0.12]"
@@ -108,7 +113,9 @@ export function ChamberActionBar({
                   <span className="text-sm font-bold text-grow-300">+{plant.care_streak}</span>
                 </div>
               )}
-              <span className="flex-none text-lg leading-none drop-shadow-[0_0_6px_rgba(255,255,255,0.25)]">{t.icon}</span>
+              <span className={`flex-none leading-none drop-shadow-[0_0_6px_rgba(255,255,255,0.25)] ${vertical ? "text-lg" : "text-xl"}`}>
+                {t.icon}
+              </span>
               {vertical ? (
                 <>
                   <span className="flex min-w-0 flex-1 flex-col">
@@ -128,18 +135,38 @@ export function ChamberActionBar({
                 </>
               ) : (
                 <>
-                  <span className="w-full truncate text-center text-[10px] font-extrabold tracking-[0.08em]" style={enabled ? { color: `rgb(${t.accent})` } : undefined}>
-                    {t.label.toUpperCase()}
-                  </span>
-                  <span className="w-full truncate text-center text-[9px] leading-tight text-[#7fa9bf]">
-                    {reason ? "Unavailable" : (lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit)}
+                  {/* Kept in the DOM (not visually shown) so the accessible
+                      name still matches "WATER"/"FEED"/etc. — the tiles are
+                      icon-only now (owner 2026-07-07: labels were truncating
+                      to "WA...", "Top u..." at this width); the full name +
+                      status surfaces on hover/focus instead, below. */}
+                  <span className="sr-only">{t.label.toUpperCase()}</span>
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute -top-1.5 left-1/2 z-30 hidden w-max max-w-[9.5rem] -translate-x-1/2 -translate-y-full flex-col gap-0.5 rounded-lg border border-cyan-400/25 bg-[#08141e] px-2 py-1 text-center shadow-lg group-hover:flex group-focus-visible:flex"
+                  >
+                    <span
+                      className="text-[10px] font-extrabold tracking-[0.06em]"
+                      style={enabled ? { color: `rgb(${t.accent})` } : undefined}
+                    >
+                      {t.label.toUpperCase()}
+                    </span>
+                    <span className="truncate text-[9px] leading-tight text-[#7fa9bf]">
+                      {reason ? "Unavailable" : lastUsed ? `${t.benefit} · ${lastUsed}` : t.benefit}
+                    </span>
                   </span>
                 </>
               )}
             </>
           );
           return isInspect ? (
-            <Link key={t.kind} href={`/dashboard/plants/${plant.id}`} className={cls} style={style} title="Open the full plant report">
+            <Link
+              key={t.kind}
+              href={`/dashboard/plants/${plant.id}`}
+              className={cls}
+              style={style}
+              title={vertical ? "Open the full plant report" : undefined}
+            >
               {inner}
             </Link>
           ) : (
@@ -148,7 +175,7 @@ export function ChamberActionBar({
               className={cls}
               style={style}
               disabled={!enabled || pending === t.kind}
-              title={reason ?? undefined}
+              title={vertical ? (reason ?? undefined) : undefined}
               onClick={() => doCare(t.kind as BarKind)}
             >
               {inner}

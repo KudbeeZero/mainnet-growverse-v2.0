@@ -13,12 +13,10 @@ export function StageHeader({
   name,
   stage,
   day,
-  previewing,
 }: {
   name: string;
   stage: GrowthStage;
   day: number;
-  previewing: boolean;
 }) {
   return (
     <div className="text-center">
@@ -27,7 +25,6 @@ export function StageHeader({
       </h2>
       <p className="mt-0.5 font-mono text-[11px] tracking-[0.18em] text-cyan-200/70">
         STAGE: {STAGE_INFO[stage].label.toUpperCase()} · DAY {Math.max(1, Math.round(day))}
-        {previewing && <span className="text-grow-300"> · PREVIEW</span>}
       </p>
     </div>
   );

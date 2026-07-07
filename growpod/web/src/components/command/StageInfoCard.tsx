@@ -1,10 +1,9 @@
 "use client";
 
 // "Where this grow is at" — the per-stage grower guidance the strain/seed view
-// has, brought onto the Command Center. Shows the current (or scrubbed) stage's
-// icon + label, a progress bar through the stage (live only), and the plain-
-// language "what's happening / what to do" blurb. Follows the growth slider, so
-// scrubbing explains each stage as you pass through it.
+// has, brought onto the Command Center. Shows the current stage's icon + label,
+// a progress bar through the stage, and the plain-language "what's happening /
+// what to do" blurb.
 
 import { STAGE_INFO } from "@/lib/stageInfo";
 import type { GrowthStage } from "@/lib/types";
@@ -12,17 +11,14 @@ import type { GrowthStage } from "@/lib/types";
 export function StageInfoCard({
   stage,
   progressPct,
-  previewing,
 }: {
   stage: GrowthStage;
-  /** % through the current stage (live forecast); null while previewing. */
   progressPct: number | null;
-  previewing: boolean;
 }) {
   const info = STAGE_INFO[stage];
   if (!info) return null;
   const pct = progressPct == null ? null : Math.max(0, Math.min(100, Math.round(progressPct)));
-  const showBar = !previewing && pct != null;
+  const showBar = pct != null;
 
   return (
     <div className="rounded-xl border border-cyan-400/15 bg-[#0b1b27]/50 px-3 py-2">
@@ -31,7 +27,7 @@ export function StageInfoCard({
           <span aria-hidden>{info.icon}</span> {info.label}
         </span>
         <span className="font-mono text-[10px] text-cyan-200/55">
-          {previewing ? "preview" : showBar ? `${pct}% through stage` : ""}
+          {showBar ? `${pct}% through stage` : ""}
         </span>
       </div>
       {showBar && (

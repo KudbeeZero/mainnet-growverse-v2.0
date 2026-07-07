@@ -164,31 +164,36 @@ function DashboardInner() {
         />
       ) : (
         <div className="space-y-3" data-coach="your-grows">
-          {/* Pod switcher (only when there's more than one pod). */}
+          {/* Pod switcher (only when there's more than one pod) — a single
+              centered segmented-control card, not loose left-aligned pills
+              (owner feedback 2026-07-07: "I don't want them all pushed to the
+              left. I want a nice menu that's centered and looks right."). */}
           {podList.length > 1 && (
-            <div className="flex flex-wrap gap-2">
-              {podList.map((pod) => {
-                const count = (plantsByPod.get(pod.id) ?? []).length;
-                const active = pod.id === activePod?.id;
-                return (
-                  <button
-                    key={pod.id}
-                    type="button"
-                    onClick={() => setActivePodId(pod.id)}
-                    aria-pressed={active}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      active
-                        ? "border-cyan-300/50 bg-cyan-400/10 text-cyan-100"
-                        : "border-ink-600 bg-ink-800 text-gray-400 hover:text-gray-200"
-                    }`}
-                  >
-                    {pod.name}
-                    <span className="ml-1.5 text-[10px] text-gray-500">
-                      {count}/{Math.min(4, pod.capacity || 4)}
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="flex justify-center">
+              <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-1 rounded-2xl border border-cyan-400/15 bg-[#0b1b27]/60 p-1.5">
+                {podList.map((pod) => {
+                  const count = (plantsByPod.get(pod.id) ?? []).length;
+                  const active = pod.id === activePod?.id;
+                  return (
+                    <button
+                      key={pod.id}
+                      type="button"
+                      onClick={() => setActivePodId(pod.id)}
+                      aria-pressed={active}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        active
+                          ? "bg-cyan-400/15 text-cyan-100 shadow-[0_0_0_1px_rgba(103,232,249,0.35)]"
+                          : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                      }`}
+                    >
+                      {pod.name}
+                      <span className="ml-1.5 text-[10px] opacity-60">
+                        {count}/{Math.min(4, pod.capacity || 4)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
