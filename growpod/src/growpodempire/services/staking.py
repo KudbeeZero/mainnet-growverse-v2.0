@@ -14,9 +14,10 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from ..db.models import Harvest, NFTAsset, Player, StakingLock
+from ..db.models import Harvest, NFTAsset, Player, StakingLock, Strain
 from ..economy.config import EconomyConfig, get_economy_config
 from ..economy.ledger import post
+from ..economy import pricing
 from ..enums import LedgerEntryType, NFTAssetStatus, StakingLockStatus
 
 
@@ -234,6 +235,26 @@ class StakingService:
         )
 
     def _calculate_rewards(self, harvest: Harvest) -> Decimal:
-        """Staking reward: `staking.reward_pct` of the harvest's sale_value."""
-        base_value = harvest.sale_value or Decimal("0")
+        """Staking reward: `reward_pct` (2%) of the harvest's appraised value.
+
+        C1/D2: The reward is based on the harvest's game-estimated appraised value,
+        not the sale_value, so unsold harvests that are minted can earn rewards.
+        """
+        strain = self.session.get(Strain, harvest.strain_id)
+        if strain is None:
+            # Fallback: if strain is deleted, use sale_value if available
+            base_value = harvest.sale_value or Decimal("0")
+        else:
+            # Calculate appraised value using the same formula as NPC market sale
+            base_value = pricing.harvest_value(
+                harvest.weight_g,
+                harvest.quality,
+                harvest.rarity_snapshot,
+                self.cfg,
+                thc_actual=harvest.thc_actual or 15.0,
+                terpene_intensity=harvest.terpenes.get(
+                    sorted(harvest.terpenes.keys(), key=lambda k: harvest.terpenes[k], reverse=True)[0],
+                    0.0
+                ) if harvest.terpenes else 0.0,
+            )
         return base_value * self._reward_pct

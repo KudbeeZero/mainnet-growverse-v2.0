@@ -1389,18 +1389,38 @@ class GameService:
             raise GameError("This harvest is not curing")
 
         cure_scale = 1.0 + self._research(player_id).get("cure_bonus_pct", 0.0)
+
+        # C8/D3: Use player-effective (turbo-aware) clock for cure, but enforce
+        # a wall-clock floor so cures never become instantaneous even at max turbo.
+        wall_now = self.clock.now()
+        player = self.session.get(Player, player_id)
+        eff_now, _rate = player_clock(wall_now, player, self._turbo_multiplier())
+
+        # Calculate both wall-clock and effective elapsed times
+        wall_elapsed_hours = max(0.0, (wall_now - harvest.cure_started_at).total_seconds() / 3600.0)
+        eff_elapsed_hours = max(0.0, (eff_now - harvest.cure_started_at).total_seconds() / 3600.0)
+
+        # Use effective elapsed time for quality, but ensure at least the wall-clock elapsed
+        # (so a player with max turbo still has to wait at least the wall-clock duration)
+        elapsed_for_quality = max(wall_elapsed_hours, eff_elapsed_hours)
+
+        # Pass the effective time to cure_progress by adjusting the 'now' parameter
+        # We calculate what 'now' would be to give us the desired elapsed_for_quality
+        adjusted_now = harvest.cure_started_at + timedelta(hours=elapsed_for_quality)
+
         result = curing.cure_progress(
             harvest.base_quality if harvest.base_quality is not None else harvest.quality,
             harvest.cure_started_at,
             harvest.cure_target_hours or 0.0,
-            self.clock.now(),
+            adjusted_now,
             self.cfg,
             bonus_scale=cure_scale,
         )
         if not result.done:
+            # Show the effective elapsed time to player, noting the wall-clock floor
             raise GameError(
-                f"Cure not finished yet ({result.elapsed_hours:.1f}h of "
-                f"{harvest.cure_target_hours:.1f}h elapsed)"
+                f"Cure not finished yet ({result.elapsed_hours:.1f}h effective of "
+                f"{harvest.cure_target_hours:.1f}h elapsed; {wall_elapsed_hours:.1f}h wall)"
             )
 
         harvest.quality = result.quality

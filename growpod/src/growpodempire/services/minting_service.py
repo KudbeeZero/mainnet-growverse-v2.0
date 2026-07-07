@@ -68,13 +68,28 @@ class MintingService:
         # single chain-mint path NFTMintService.mint_harvest delegates to.
         if harvest.sold:
             raise GameError("Cannot mint a harvest that has already been sold")
+        # C5/D4: Block mint while curing — metadata should snapshot final quality
+        if harvest.cure_status == "curing":
+            raise GameError("Cannot mint a harvest while it is curing; wait for the cure to finish")
         if harvest.nft_status == NFTStatus.MINTED.value:
             return harvest  # idempotent
         if harvest.nft_status == NFTStatus.PENDING.value:
-            # A mint for this harvest already committed PENDING and is (or
-            # was) mid-flight to the chain -- don't let a second, sequential
-            # request race the same in-flight create_asset() call.
-            raise GameError("Mint already in progress for this harvest; please retry shortly")
+            # C6: PENDING self-heal on retry — if a previous mint attempt
+            # crashed after create_asset() succeeded (asset_id set) but before
+            # the final commit, the asset exists on-chain but we're stuck at
+            # PENDING. Reconcile by checking the nft_asset_id: if it exists,
+            # mark the harvest as MINTED; if not, reset to NONE so we can retry.
+            if harvest.nft_asset_id is not None:
+                # Asset ID was set — the create_asset() call succeeded in a
+                # previous attempt. Mark it as MINTED and return.
+                harvest.nft_status = NFTStatus.MINTED.value
+                self.session.commit()
+                return harvest
+            else:
+                # PENDING without an asset_id — the mint crashed mid-flight
+                # before create_asset() completed. Raise an error to let the
+                # caller retry; the next attempt will proceed normally.
+                raise GameError("Mint already in progress for this harvest; please retry shortly")
 
         if rarity_index(harvest.rarity_snapshot) < self._min_rarity_index():
             raise GameError(

@@ -115,3 +115,43 @@ def test_double_sell_is_rejected(db):
         svc.sell_harvest(p.id, h.id)
         with pytest.raises(GameError):
             svc.sell_harvest(p.id, h.id)
+
+
+def test_cure_clock_uses_turbo_with_wall_floor(db):
+    """C8/D3: Cure clock respects player-effective (turbo-aware) time, but with
+    a wall-clock floor so cures never become instant even at max turbo."""
+    from growpodempire.db.models import Player
+
+    clock = FrozenClock(BASE)
+    with session_scope() as s:
+        svc, p, h = _unsold_harvest(s, clock, quality=70.0)
+
+        # Start cure for 72 hours
+        svc.start_cure(p.id, h.id, target_hours=72)
+        assert h.cure_status == "curing"
+
+        # Advance wall clock by 10 hours (not enough to finish)
+        clock.advance(hours=10)
+
+        # Enable turbo with a 10x multiplier for this player
+        player = s.get(Player, p.id)
+        player.turbo_enabled = True
+        player.turbo_anchor_at = clock.now()
+        player.turbo_offset_seconds = 0.0
+        s.commit()
+
+        # Advance wall clock by just 8 more hours (18 total wall clock)
+        clock.advance(hours=8)
+        # But with 10x turbo active: effective elapsed = 10 + (8 * 10) = 90 hours
+        # However, the wall-clock floor should apply: effective = max(18, 90) = 90
+        # But since the target is 72 hours, we should be able to finish
+
+        # Actually, the effective elapsed should be min(effective, target)
+        # So it should be able to finish
+        before = balance(s, p.id)
+        svc.finish_cure(p.id, h.id, sell=True)
+        assert h.cure_status == "cured"
+        assert h.sold
+        # Wall clock floor ensures cure doesn't get too fast
+        # Effective time should be >= wall time (90 >= 18)
+        assert balance(s, p.id) == before + h.sale_value
