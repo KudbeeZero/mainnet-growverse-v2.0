@@ -13,6 +13,7 @@ node_modules
 
 # local git worktrees (per-branch scratch checkouts, never committed)
 /.worktrees
+/.claude/worktrees
 
 # IDEs and editors
 /.idea
