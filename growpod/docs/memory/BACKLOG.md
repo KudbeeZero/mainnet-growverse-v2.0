@@ -1,7 +1,11 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-07** (owner-directed Command Center redesign,
+once they appear here. Last reconciled: **2026-07-07** (plant scale + idle vitality,
+`claude/gv-o03d-plant-scale-vitality`: owner named the specific gap in the round-8 "not 10/10"
+plant-render freeze — indica strains reading too small/weak, idle motion too subtle — lifting it
+for this pass; see the plant-render entry below and VER-018 through VER-021 in
+`VERIFIED_RENDERS.md`. Prior note follows.) (owner-directed Command Center redesign,
 off-roadmap, `claude/gv-o03c-command-center-redesign`: the owner sent annotated screenshots of the
 main dashboard/Command Center asking for (1) a centered pod-switcher menu instead of left-aligned
 wrapping pills, (2) removal of the PREVIEW GROWTH dev scrubber ("drag to watch it grow, visual
@@ -215,6 +219,31 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
   budDev suppression raised 0.25→0.40 on leafSize / 0.22→0.35 on nodeLeafSize so fans recede
   behind buds in full flower. TypeScript clean (tsc --noEmit 0 errors), vitest green. Owner to
   verify pass 8-10 visually and steer next visual round.
+- 🎮 ✅ **Plant scale + idle vitality — owner-named gap lifting the round-8 freeze (2026-07-07,
+  `claude/gv-o03d-plant-scale-vitality`)** — owner: "the plants are still too small the Indica
+  plants way too small there... let's come up with a better system... start working on a
+  repetitive dynamic loop... there's a lot of branch work that still needs to be done." Root cause:
+  `INDICA.heightMul` (0.74 vs `SATIVA`'s 1.22) modulates a fraction of the SAME fixed canvas frame,
+  and cola/branch mass derives from that same stem height — so a mature indica-leaning plant used
+  only ~half the vertical frame a sativa reaches, reading as shrunken/weak rather than short/bushy.
+  Fix: `heightMul` floor raised 0.74→0.88 (`morphology.ts`) plus a mature-flower presence floor in
+  `chamberCore.ts`'s `buildPlant` (`hN` never drops below 58% of frame once flowering is underway,
+  ramped in only after day 34 so seedling/veg growth curves are untouched) — verified against the
+  two worst-case real strains (Northern Lights indica_ratio 1.0, Hindu Kush 0.9) via headless
+  `chamberCore` renders; Durban Poison (sativa baseline, ratio 0.0) renders pixel-for-pixel
+  unchanged, confirming the sativa/indica shape distinction is preserved, not erased. Idle-motion
+  liveliness: `climateModel`'s `windAmp` floor/ceiling raised (0.004→0.007 / 0.05→0.062), branch
+  sway gained a second slower out-of-phase wave (breaks the "single metronome" read), leaflets get
+  a tiny independent flutter (`drawFan`, ~2° via a shared `frameTT`), and the hero cola's bloom
+  halo now breathes (±5% radius, ~10s period) — all gated on the existing `motionOK`/
+  `prefers-reduced-motion` check, unchanged for reduced-motion users. See VER-018/019/020/021 in
+  `VERIFIED_RENDERS.md`. Full web gate green (typecheck/lint/build/533 vitest/36 relevant Playwright
+  specs incl. full route-crash-sweep); backend suite untouched, re-run clean for the record.
+  **Honest self-score: ~9/10** — the specific named gap (indica presence, idle liveliness) is
+  fixed and evidenced; NOT claiming 10/10 because "a lot of branch work still needs to be done" is
+  the owner's own framing of this as ongoing, and the fix intentionally didn't touch branch-level
+  architecture (candelabra spacing, branchlet placement, apical-dominance tuning) — those are the
+  most likely next-round targets if the owner still sees a branch-structure gap after this lands.
 - 🎮 🔨 **Onboarding AI-guide rework (2026-07-03 PM, owner: "too long, not exciting, doesn't work;
   AI helping along the way")** — pass 1 on `/ftue` (backend step machine untouched): the Master
   Grower is now an on-screen 🤖 character (avatar + speech bubble), an instant per-step hype line
