@@ -29,6 +29,7 @@ Roles: **living** (must stay true) · **historical** (frozen record) · **spec**
 |---|---|
 | `docs/memory/GROWVERSE_ROADMAP.md` + `docs/memory/ARCHITECTURE_TRUTH.md` + `docs/memory/EXECUTION_MACHINE.md` | living — the GrowVerse 22-phase plan, verified baseline, and dynamic build loop (adopted 2026-07-06); MAP-indexed |
 | `docs/memory/ROADMAP_90D_2026Q3.md` + `docs/memory/AUDIT_NFT_STORE_LOOP.md` | living — the owner's 90-day (Q3) re-sequencing for Sonnet + its verified defect registry (adopted 2026-07-07); the Execution Machine pointer tracks it through week 12 |
+| `docs/memory/SONNET_AFTERCARE.md` | spec — the post-completion big-feature vision roadmap (flagships F1–F5, big features B1–B10, support S1–S6, season arc); activates on the owner's "aftercare" go after ROADMAP_90D + its §8 queue complete |
 | `docs/memory/design/00–10` (Design Codex, 12 files) | ✅ MAP-enforced |
 | `docs/product/` (6 GROWVERSE_* packages) | ✅ status-labeled, MAP-indexed |
 | `docs/research/` (12 dated docs) + `docs/research/university/` (8) | 🧊 inputs to the codex; MASTER_BIBLE freeze banner superseded 2026-07-02 (University shipped) |

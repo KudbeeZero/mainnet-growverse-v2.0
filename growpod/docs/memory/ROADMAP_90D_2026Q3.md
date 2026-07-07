@@ -352,6 +352,11 @@ modify, per BACKLOG).
 If Sonnet finds an open item not named in this register, that's a bug in this doc — add it to
 the right bucket in the same PR (memory never lies).
 
+**After everything above is done:** the baton passes to
+[SONNET_AFTERCARE.md](SONNET_AFTERCARE.md) — the owner's big-feature vision roadmap (Daily
+Pheno, Grow Collectives, Pheno-Hunt Expeditions, Facility Ladder, AI Mentor + seasons arc).
+It activates only on the owner's "aftercare" go, one pitched flagship per season.
+
 ## 7. Standing execution rules for Sonnet (unchanged, restated)
 
 Start every session with `/handoff-audit`; end with `/closeout` (gates green, BACKLOG
