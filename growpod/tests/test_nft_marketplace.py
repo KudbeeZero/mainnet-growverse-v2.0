@@ -183,12 +183,20 @@ class TestStakingService:
         return pid, harvest, nft
 
     def test_create_lock_computes_reward_from_sale_value(self, db):
+        from growpodempire.economy import pricing
+
         with session_scope() as s:
             pid, harvest, nft = self._minted_asset_with_value(s)
             lock = StakingService(s).create_lock(nft.asset_id, pid, harvest.id)
             assert lock.status == "active"
-            # default reward_pct is 0.10 (balance.yaml `staking.reward_pct`)
-            assert lock.rewards_amount == Decimal("10.000000")
+            # C1/D2: reward_pct is 0.02 (2%), appraised_value from harvest_value()
+            appraised = pricing.harvest_value(
+                harvest.weight_g, harvest.quality, harvest.rarity_snapshot,
+                StakingService(s).cfg, thc_actual=harvest.thc_actual or 15.0,
+                terpene_intensity=0.0
+            )
+            expected_reward = appraised * Decimal("0.02")
+            assert lock.rewards_amount == expected_reward
             assert s.get(NFTAsset, nft.id).status == "staking"
 
     def test_cannot_stake_someone_elses_harvest(self, db):
@@ -200,6 +208,7 @@ class TestStakingService:
     def test_progress_completes_and_claim_pays_ledger(self, db):
         from datetime import datetime, timedelta
         from growpodempire.economy.ledger import balance as wallet_balance
+        from growpodempire.economy import pricing
 
         with session_scope() as s:
             pid, harvest, nft = self._minted_asset_with_value(s)
@@ -215,11 +224,19 @@ class TestStakingService:
             assert progress["progress_pct"] == 100.0
             assert progress["can_claim"] is True
 
+            # C1/D2: Calculate expected reward from appraised value × 2%
+            appraised = pricing.harvest_value(
+                harvest.weight_g, harvest.quality, harvest.rarity_snapshot,
+                svc.cfg, thc_actual=harvest.thc_actual or 15.0,
+                terpene_intensity=0.0
+            )
+            expected_reward = appraised * Decimal("0.02")
+
             before = wallet_balance(s, pid)
             claimed = svc.claim_rewards(lock.id, pid)
             after = wallet_balance(s, pid)
-            assert claimed == Decimal("10.000000")
-            assert after - before == Decimal("10.000000")
+            assert claimed == expected_reward
+            assert after - before == expected_reward
             assert s.get(NFTAsset, nft.id).status == "minted"
 
             with pytest.raises(StakingError):
