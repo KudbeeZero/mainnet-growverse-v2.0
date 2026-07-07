@@ -22,6 +22,13 @@ import type { Environment } from "@/lib/api";
 import type { Plant, Pod } from "@/lib/types";
 import { queryKeys } from "@/lib/queryKeys";
 import { clamp, previewDev, seedForPlant } from "@/lib/chamber/morphology";
+import {
+  NO_FAN_BASELINE,
+  fanVisualIntensity,
+  gearChips,
+  lightGlowIntensity,
+  soilTint,
+} from "@/lib/chamber/gearVisuals";
 import { hasWebGL } from "@/lib/features";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { harvestMarkers, maxPreviewDay, resolvePreview } from "@/lib/chamber/growthPreview";
@@ -211,6 +218,14 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
   const health = plant ? clamp(plant.health, 0, 100) : 0;
   const ended = plant ? !plant.is_alive || plant.harvested : false;
 
+  // Equipped-gear chamber visuals (ROADMAP_90D week 4, S4). A reduced-motion
+  // user's canvas never gets MORE sway just because a strong fan is equipped —
+  // it stays at the ambient baseline regardless of gear.
+  const fanVisual = reducedMotion ? NO_FAN_BASELINE : fanVisualIntensity(pod.equipped_gear);
+  const glowAlpha = lightGlowIntensity(pod.light_intensity);
+  const gearChipList = gearChips(pod.equipped_gear);
+  const podSoilTint = soilTint(pod.equipped_gear);
+
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-cyan-400/15 bg-[#050b12] p-3 text-[#cfeeff]">
       {/* header band: counters (left) · stage header (center) · stat chips (right) */}
@@ -230,6 +245,22 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
         <div className="w-full max-w-lg">
           <StageProgressBar index={stageIndex} />
         </div>
+        {/* Equipped-gear chips (icon + name) — what the store actually applied
+            to this pod, from the gv-o02 serializer (S4). */}
+        {gearChipList.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            {gearChipList.map((chip) => (
+              <span
+                key={chip.key}
+                title={chip.label}
+                className="inline-flex items-center gap-1 rounded-full border border-cyan-400/25 bg-cyan-400/[0.05] px-2 py-0.5 text-[10px] text-cyan-100"
+              >
+                <span aria-hidden>{chip.icon}</span>
+                <span className="max-w-[8rem] truncate">{chip.label}</span>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* main 3-rail grid (collapses to a single scrolling column below xl).
@@ -240,7 +271,16 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
           hero first, scientist detail last) while resetting to plain source
           order at `xl` — desktop's approved layout is untouched. */}
       <div className="grid gap-3 xl:grid-cols-[320px_1fr_340px] 2xl:grid-cols-[380px_1fr_420px] 2xl:gap-4">
-        {/* center: carousel + chamber + time controls (first in DOM → leads on mobile) */}
+        {/* center: carousel + chamber + time controls. Chamber leads on BOTH
+            mobile (order-1) and desktop (xl:order-first) — the pod's actual
+            plant view is the reason the page exists, so its top edge lines up
+            with the side rails' top edge instead of sitting below the
+            carousel thumbnail + "plant a seed" bar (owner feedback
+            2026-07-07: the plant view "didn't look right" sitting lower than
+            the side rails on desktop). `order-first` (order:-9999) only pulls
+            the chamber ahead — every sibling below keeps its existing
+            `xl:order-none` (order:0), so their relative order to EACH OTHER
+            is unchanged; only the chamber jumps to the front. */}
         <div className="flex min-h-0 flex-col gap-2 xl:col-start-2 xl:row-start-1">
           <div className="order-3 xl:order-none">
             <PlantCarousel plants={carousel} activeId={activeId} onSelect={setActiveId} />
@@ -257,8 +297,9 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
 
           {/* Plant hero — first thing on mobile (order-1) and noticeably
               larger there (55vh) so it reads as the game, not a buried
-              thumbnail; desktop keeps its original position/size. */}
-          <div className="relative order-1 min-h-[55vh] flex-1 overflow-hidden rounded-2xl border border-cyan-400/15 xl:order-none xl:min-h-[42vh]">
+              thumbnail; desktop pulls it to the very front (xl:order-first)
+              so it leads there too, at its original (smaller) size. */}
+          <div className="relative order-1 min-h-[55vh] flex-1 overflow-hidden rounded-2xl border border-cyan-400/15 xl:order-first xl:min-h-[42vh]">
             {isLoading || !plant || !render ? (
               <LoadingBlock label="Loading plant…" />
             ) : (
@@ -285,7 +326,7 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
                     budColor={render.budColor}
                     budDna={render.budDna}
                     climate={{
-                      fan: 45,
+                      fan: fanVisual,
                       temp: climate.temperature,
                       hum: climate.humidity,
                       co2: climate.co2_level,
@@ -318,17 +359,30 @@ export function PodCommandCenter({ pod, plants }: { pod: Pod; plants: Plant[] })
                     {viewBud ? "🌿 Whole plant" : "🔬 View bud"}
                   </button>
                 )}
-                {/* glass grow-tube framing — grow-light glow up top, a glass
-                    reflection down the left, and a soft cyan inner glow so the
-                    center reads as a lit chamber (purely cosmetic, no clicks) */}
+                {/* glass grow-tube framing — grow-light glow up top (intensity
+                    driven by the equipped light's real PPFD, S4 — was a fixed
+                    cosmetic constant), a glass reflection down the left, and a
+                    soft cyan inner glow so the center reads as a lit chamber */}
                 <div
                   className="pointer-events-none absolute inset-0 rounded-2xl"
                   style={{
-                    boxShadow:
-                      "inset 0 0 70px rgba(80,200,255,0.10), inset 0 0 0 1px rgba(140,210,255,0.10)",
+                    boxShadow: `inset 0 0 70px rgba(80,200,255,${(0.05 + glowAlpha * 0.15).toFixed(3)}), inset 0 0 0 1px rgba(140,210,255,0.10)`,
                   }}
                 />
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-8 rounded-t-2xl bg-gradient-to-b from-cyan-200/20 to-transparent" />
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 h-8 rounded-t-2xl"
+                  style={{
+                    background: `linear-gradient(to bottom, rgba(103,232,249,${(0.12 + glowAlpha * 0.28).toFixed(3)}), transparent)`,
+                  }}
+                />
+                {/* Soil substrate tint at the pot base — reflects the equipped
+                    soil (S4), default dark substrate with none equipped. */}
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-16 rounded-b-2xl"
+                  style={{
+                    background: `radial-gradient(ellipse at center bottom, ${podSoilTint}55, transparent 70%)`,
+                  }}
+                />
                 <span className="pointer-events-none absolute bottom-8 left-3 top-8 w-2.5 rounded-full bg-white/10 blur-md" />
                 {status && (
                   <div className="absolute left-3 top-3">

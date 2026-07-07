@@ -46,3 +46,22 @@ export function ownedConsumableOptions(
       return { ...it, applicable, reason };
     });
 }
+
+/**
+ * Which of the player's plants an in-store "Apply to plant" deep-link (S5)
+ * should target: a live, unharvested plant, preferring one that already
+ * matches the item's `stage_req` (if any) so the deep-link lands somewhere
+ * the item can actually be used right away. Returns undefined when nothing
+ * qualifies (no live plants) — the caller should hide the link.
+ */
+export function pickApplyTarget(
+  plants: Pick<Plant, "id" | "growth_stage" | "is_alive" | "harvested">[] | undefined,
+  stageReq: string | null | undefined,
+): string | undefined {
+  const live = (plants ?? []).filter((p) => p.is_alive && !p.harvested);
+  if (stageReq) {
+    const staged = live.find((p) => p.growth_stage === stageReq);
+    if (staged) return staged.id;
+  }
+  return live[0]?.id;
+}

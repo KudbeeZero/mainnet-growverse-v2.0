@@ -17,13 +17,23 @@
   [ROADMAP_90D_2026Q3.md](ROADMAP_90D_2026Q3.md) now sequences the next 12 weeks (owner-priority
   `gv-oNN` branches first, gv phases p02/p03/p05 folded into month 3); evidence in
   [AUDIT_NFT_STORE_LOOP.md](AUDIT_NFT_STORE_LOOP.md). After week 12 the 22-phase order resumes.
-- **Phases complete:** p01 (Architecture Truth). Week 1 (`gv-o01-store-correctness`, PR #171)
-  merged, audited PASS. Weeks 2–3 (`gv-o02-equipment-sim-effects`) built this session — draft PR
-  open, gates green, D7 sim report attached — awaiting the next `/handoff-audit` to confirm and
-  merge.
-- **NEXT BRANCH:** `claude/gv-o03-pod-equipment-visuals` (ROADMAP_90D week 4)
-- **NEXT PR TITLE:** `feat(chamber): the pod shows equipped gear and its effects`
-- **Owner action pending before next kickoff:** none — week 4 has no owner decision gate.
+- **Phases complete:** p01 (Architecture Truth). Weeks 1–2/3 (PRs #171, #172) merged, both
+  audited PASS. Week 4 (`gv-o03-pod-equipment-visuals`) built this session — draft PR open,
+  gates green — awaiting the next `/handoff-audit` to confirm and merge. Also fixed an
+  owner-reported desktop layout bug on the same page (chamber wasn't top-aligned with the side
+  rails) while in there.
+- **NEXT BRANCH:** `claude/gv-o04-cure-mint-integrity` (ROADMAP_90D week 5)
+- **NEXT PR TITLE:** (not yet named — pick one reflecting the actual seams fixed, e.g.
+  `fix(mint): cure/mint state machine can't strand, lie, or pay zero`)
+- **Owner action pending before next kickoff — STOP, do not build week 5 without these:**
+  week 5 is a **protected-surface week** (touches the mint path + a faucet number:
+  `reward_pct`). Two owner decision gates block it, per ROADMAP_90D §3 week 5:
+  - **D2** — the owner must approve the staking reward number/formula (appraised value ×
+    `reward_pct`) BEFORE code is written; attach an Economy Balancer sim to the PR.
+  - **D3** — the owner must confirm the cure clock moves to the player-effective (turbo) clock
+    with a wall-clock floor.
+  Also required: a Security-Reviewer checklist + owner sign-off in the PR body (BUILD_RULES.md
+  protected-surface gate). Record both decisions in `docs/memory/DECISIONS.md` once given.
 - **Carried risk into next branch:** none.
 
 > **`docs/HANDOFF.md` stays the single source of truth for what the next chat does first** (per its

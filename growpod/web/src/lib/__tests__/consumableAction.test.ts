@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ownedConsumableOptions } from "@/lib/consumableAction";
+import { ownedConsumableOptions, pickApplyTarget } from "@/lib/consumableAction";
 import type { ConsumableItem } from "@/lib/api/store";
 import type { Plant } from "@/lib/types";
 
@@ -49,5 +49,35 @@ describe("ownedConsumableOptions", () => {
     const dead = ownedConsumableOptions([item()], plant({ is_alive: false }));
     expect(dead[0].applicable).toBe(false);
     expect(dead[0].reason).toMatch(/survive/i);
+  });
+});
+
+describe("pickApplyTarget", () => {
+  const p = (id: string, over: Partial<Plant> = {}) =>
+    ({ id, growth_stage: "flowering", is_alive: true, harvested: false, ...over }) as Plant;
+
+  it("returns undefined with no plants", () => {
+    expect(pickApplyTarget(undefined, null)).toBeUndefined();
+    expect(pickApplyTarget([], null)).toBeUndefined();
+  });
+
+  it("skips harvested/dead plants", () => {
+    const plants = [p("a", { harvested: true }), p("b", { is_alive: false }), p("c")];
+    expect(pickApplyTarget(plants, null)).toBe("c");
+  });
+
+  it("prefers a plant matching stage_req over the first live one", () => {
+    const plants = [p("a", { growth_stage: "vegetative" }), p("b", { growth_stage: "flowering" })];
+    expect(pickApplyTarget(plants, "flowering")).toBe("b");
+  });
+
+  it("falls back to the first live plant when none match stage_req", () => {
+    const plants = [p("a", { growth_stage: "vegetative" }), p("b", { growth_stage: "seedling" })];
+    expect(pickApplyTarget(plants, "flowering")).toBe("a");
+  });
+
+  it("ignores stage_req entirely when the item has none", () => {
+    const plants = [p("a", { growth_stage: "vegetative" })];
+    expect(pickApplyTarget(plants, null)).toBe("a");
   });
 });

@@ -7,6 +7,8 @@
 // stack and buffs the plant's simulated levels. No currency moves (it was bought
 // already), so this is care, not commerce.
 
+import { useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useConsumables, useApplyConsumable } from "@/hooks/useConsumables";
 import { ownedConsumableOptions } from "@/lib/consumableAction";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +18,15 @@ export function ConsumablesPanel({ plant }: { plant: Plant }) {
   const { data, isLoading } = useConsumables();
   const apply = useApplyConsumable(plant.id);
   const options = ownedConsumableOptions(data, plant);
+
+  // Deep-link from the store's "Apply to plant" pointer (?apply=<key>, S5) —
+  // scroll the named item into view and give it a moment's highlight so a
+  // player who just bought a consumable lands on exactly what to use next.
+  const applyKey = useSearchParams().get("apply");
+  const highlightRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (applyKey) highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [applyKey]);
 
   // Nothing owned (or still loading the first time) → render nothing, so the
   // Care area stays clean for players who haven't bought any consumables.
@@ -28,10 +39,16 @@ export function ConsumablesPanel({ plant }: { plant: Plant }) {
         {options.map((it) => {
           const pending = apply.isPending && apply.variables?.itemKey === it.key;
           const disabled = !it.applicable || pending;
+          const highlighted = it.key === applyKey;
           return (
             <div
               key={it.key}
-              className="flex items-center justify-between gap-3 rounded-lg border border-ink-700 bg-ink-900/60 p-2.5"
+              ref={highlighted ? highlightRef : undefined}
+              className={`flex items-center justify-between gap-3 rounded-lg border p-2.5 transition-colors ${
+                highlighted
+                  ? "border-grow-400 bg-grow-500/10 ring-1 ring-grow-400/60"
+                  : "border-ink-700 bg-ink-900/60"
+              }`}
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">

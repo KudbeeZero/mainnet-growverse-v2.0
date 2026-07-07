@@ -1,7 +1,19 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-07** (`claude/gv-o02-equipment-sim-effects`
+once they appear here. Last reconciled: **2026-07-07** (`claude/gv-o03-pod-equipment-visuals`
+[ROADMAP_90D week 4] shipped: real fan/PPFD-driven chamber glow + equipped-gear chip row (icon +
+name per equipped item) replacing the hardcoded `climate={{ fan: 45 }}` and cosmetic-only glow
+(S4); soil substrate tint at the pot base; in-store "Apply to plant" deep-link on owned
+consumables, landing on the plant view with the target item scrolled-into-view + highlighted
+(S5); plus an owner-reported desktop layout fix on the same page — the chamber (the reason the
+page exists) now leads and top-aligns with the PLANT DNA / ENVIRONMENT side rails instead of
+sitting ~160px below them under the carousel thumbnail + "plant a seed" bar (mobile was already
+correct; only the desktop `xl:` override needed `order-first`). Next branch:
+`claude/gv-o04-cure-mint-integrity` (week 5) — **BLOCKED on owner decision gates D2 (staking
+reward_pct number) and D3 (cure clock confirmation)** plus a Security-Reviewer checklist, since
+it's a protected-surface week (mint path + a faucet number); see EXECUTION_MACHINE.md. Prior
+note follows.) (`claude/gv-o02-equipment-sim-effects`
 [ROADMAP_90D weeks 2-3, the flagship slice] shipped: pure `simulation/gear.py` merges equipped
 fans/soils' `effects` blocks (offsets clamped ±10, mults 0.5-1.5); the engine applies them —
 fan humidity/temp offsets shift the effective env (proven both-signed: helps a humid pod, hurts

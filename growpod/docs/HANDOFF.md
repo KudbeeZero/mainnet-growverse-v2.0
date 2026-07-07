@@ -4,17 +4,25 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-07-07 · **By:** the `gv-o02-equipment-sim-effects` session (owner:
-"absolutely I'm ready to release it" — releasing weeks 2–3 after `/handoff-audit` PASS'd PR #171).
-**Active branch:** `claude/gv-o02-equipment-sim-effects` — draft PR open (title:
-`feat(sim): fans, soils and CO₂ get real simulation effects (equip any gear)`), gates green, D7
-sim report attached, awaiting `/handoff-audit` + merge next session.
-**NEXT CHAT STARTS HERE (Sonnet):** once this PR is audited PASS and merged, start
-**`claude/gv-o03-pod-equipment-visuals`** (ROADMAP_90D week 4 — the growing-pod area *shows* what
-the store applied: real fan/PPFD-driven chamber climate + glow, equipped-gear chips, fan sway,
-soil substrate tint, in-store "Apply to plant" deep-link). Read
-`docs/memory/ROADMAP_90D_2026Q3.md` §2 week 4 and `docs/memory/EXECUTION_MACHINE.md` (Current
-Position pointer, updated). No owner decision gate blocks week 4.
+**Last rewritten:** 2026-07-07 · **By:** the `gv-o03-pod-equipment-visuals` session (owner asked
+what's next, then "Yes, please continue" — merged the audited `gv-o02` PR #172 and released week
+4). Mid-session the owner also flagged a desktop layout bug on the same page (the plant view
+"didn't look right" — not aligned with the side rails); fixed in the same PR since it touched the
+same component.
+**Active branch:** `claude/gv-o03-pod-equipment-visuals` — draft PR open (title:
+`feat(chamber): the pod shows equipped gear and its effects`), gates green, awaiting
+`/handoff-audit` + merge next session.
+**NEXT CHAT STARTS HERE (Sonnet):** once this PR is audited PASS and merged, **STOP before
+building `claude/gv-o04-cure-mint-integrity` (week 5)** — it is a **protected-surface week**
+(mint path + a faucet number) gated on two owner decisions that are NOT yet answered:
+- **D2** — the owner must approve the staking reward number/formula (appraised value ×
+  `reward_pct`) before any code is written; the PR must attach an Economy Balancer sim.
+- **D3** — the owner must confirm the cure clock moves to the player-effective (turbo) clock
+  with a wall-clock floor.
+Ask the owner for D2/D3 (`AskUserQuestion`), record the answers in `docs/memory/DECISIONS.md`,
+*then* build — per `docs/memory/ROADMAP_90D_2026Q3.md` §3 week 5 and
+`docs/memory/EXECUTION_MACHINE.md`. A Security-Reviewer checklist + owner sign-off is required in
+the PR body (BUILD_RULES.md protected-surface gate).
 **Superseded pointer note:** the pre-2026-07-07 next branch was `claude/gv-p02-game-loop-codex`;
 p02 now lands in week 9 of the 90-day schedule. Historical context below is unchanged.
 **Chamber-mockup decision — RESOLVED (owner, 2026-07-06):** the owner chose to **replace** the
@@ -35,6 +43,50 @@ growverse.dev (Vercel) deploys `web/` from `main`.
 > **Owner rule in force: ONE active PR at a time.** Queue further units here, don't open them.
 
 ---
+
+## What shipped 2026-07-07 (later still — ROADMAP_90D week 4, `gv-o03-pod-equipment-visuals`)
+
+Merged the audited `gv-o02` PR #172, then built week 4 exactly as specced in
+`ROADMAP_90D_2026Q3.md` §2 week 4 — fixes S4 and S5 from `AUDIT_NFT_STORE_LOOP.md`:
+
+1. **New pure `web/src/lib/chamber/gearVisuals.ts`** (12 unit tests): maps equipped gear to
+   chamber visuals — `fanVisualIntensity` (per-SKU airflow ranking, low ambient baseline with no
+   fan), `lightGlowIntensity` (PPFD → 0.15–1 glow alpha), `soilTint` (per-SKU substrate color),
+   `gearChips` (icon+name per equipped item).
+2. **`PodCommandCenter.tsx` wiring** (S4): the hardcoded `climate={{ fan: 45 }}` now uses the
+   equipped fan's real visual intensity (neutralized to the ambient baseline when
+   `prefers-reduced-motion` is on, so a strong fan never adds MORE sway for those users — the
+   pre-existing ambient idle motion is untouched); the cosmetic glow's alpha is now driven by the
+   equipped light's real PPFD (`pod.light_intensity`); a new soil-tint radial gradient sits at
+   the pot base; an equipped-gear chip row renders below the stage progress bar when any gear is
+   equipped. `docs/memory/VERIFIED_RENDERS.md` VER-016 — capture-shots evidence (no gear vs. full
+   fan+soil+light equipped, both viewports), full route-crash-sweep green.
+3. **Desktop layout fix (owner-reported mid-session, same page):** the chamber (the reason the
+   page exists) sat ~160px below the top of the `PlantDnaRail`/`EnvironmentRail` side rails,
+   because the carousel thumbnail + "plant a seed" bar stacked above it in the center column's
+   `xl:order-none` (= reset to DOM/source order) desktop override — mobile's `order-1` already
+   put the chamber first, desktop didn't. Fixed by giving the chamber `xl:order-first`
+   (order:-9999) instead, which pulls it to the front WITHOUT touching every other sibling's
+   `xl:order-none` (order:0) — their relative order to each other is unchanged, only the chamber
+   jumps ahead. Verified: mobile capture unaffected, desktop capture shows all 3 columns starting
+   at the same y, and all 35 relevant e2e specs (care-loop-shot, chamber-landscape-hud-shot,
+   the full 30-route crash sweep) still pass.
+4. **In-store "Apply to plant" deep-link (S5):** a new pure `pickApplyTarget` helper
+   (`lib/consumableAction.ts`, 5 unit tests) picks a live, unharvested plant for a consumable —
+   preferring one matching the item's `stage_req` if any. The store's Consumables section shows
+   an "Apply to plant →" link (when `owned > 0` and a target exists) to
+   `/dashboard/plants/<id>?apply=<key>`; `ConsumablesPanel` reads that query param, scrolls the
+   matching item into view, and gives it a brief highlight ring.
+5. **`capture.spec.ts` gained `CAPTURE_POD_STATE`** (pod-level fixture overrides, mirroring the
+   existing `CAPTURE_STATE`) — documented gotcha: its comma-split parser breaks on a
+   multi-property JSON value (any embedded comma splits mid-JSON before `JSON.parse` sees it);
+   for a real equipped-gear matrix, call `setup()`'s `extraOverrides` directly instead (see the
+   temp spec pattern used this session, deleted before commit).
+6. Full gates green: web `typecheck`/`lint`/`build` clean, `npm run test` 533/533 (was 516 — +17
+   new: 12 gearVisuals + 5 pickApplyTarget), full route-crash-sweep (30 routes) + care-loop-shot +
+   chamber-landscape-hud-shot e2e all green. No backend files touched this week (S4/S5 are
+   web-only per the roadmap's "do NOT touch: sim engine, balance.yaml, 3D bud viewer" — backend
+   suite re-run anyway for the record: 1210 passed/6 skipped, unchanged from `gv-o02`).
 
 ## What shipped 2026-07-07 (later this day — ROADMAP_90D weeks 2-3, `gv-o02-equipment-sim-effects`)
 
@@ -212,11 +264,11 @@ A large hardening + feature batch (all gate-green, CI green each push):
 
 ## NEXT ACTION (single)
 
-**Audit + merge the `gv-o02-equipment-sim-effects` PR, then start `claude/gv-o03-pod-equipment-visuals`**
-(week 4 of `docs/memory/ROADMAP_90D_2026Q3.md` — the pod finally *shows* equipped gear: real
-fan/PPFD-driven climate + glow, equipped-gear chips, fan sway, soil substrate tint). The
-chamber-mockup reconciliation was resolved 2026-07-06 (owner chose replace — shipped in PR #159);
-the 90-day plan supersedes the old "(b) proceed to p02" path — p02 is week 9.
+**Audit + merge the `gv-o03-pod-equipment-visuals` PR, then get owner decisions D2 + D3 BEFORE
+starting `claude/gv-o04-cure-mint-integrity`** (week 5 — see the header note above and
+`ROADMAP_90D_2026Q3.md` §3 week 5; this is a protected-surface week, not a plain "start building"
+week like 1–4). The chamber-mockup reconciliation was resolved 2026-07-06 (owner chose replace —
+shipped in PR #159); the 90-day plan supersedes the old "(b) proceed to p02" path — p02 is week 9.
 
 **Older owner-directed threads, still open, not gating anything (tracked in BACKLOG.md):**
 1. **Onboarding rework (owner, 2026-07-03):** "it's too long, not exciting, doesn't really work —
@@ -233,19 +285,22 @@ Off-limits unless separately approved: economy values, treasury paths, settlemen
 
 ## Verification split
 
-- **Agent-verified (test-backed, this session):** the both-signed fan effect (humid pod helps,
-  dry pod hurts — instantaneous + 48h trajectory), the coco water/nutrient tradeoff, the CO2
-  stress/bonus bands, one-item-per-category-per-pod equip/unequip, and no-gear parity all have a
-  passing test pinned to the exact behavior (see "What shipped 2026-07-07 (weeks 2-3)" above and
-  the D7 sim report); full backend suite (1210 passed/6 skipped, 90.57% coverage), backend
-  lint/check-memory/check-migrations, web typecheck/lint/build, and full web vitest suite
-  (516/516) all green.
-- **Device-verify (owner):** on a plant's Equipment panel, equip a fan or soil (not just lights)
-  and confirm it shows an effect-preview line (e.g. "−25% pest risk · −8% humidity"), then click
-  the equipped item again to confirm it unequips. Confirm equipping/unequipping doesn't visibly
-  break the chamber (no visual change yet — that's `gv-o03`, next). Also carried: the
-  chamber-mockup reconciliation decision (above); growverse.dev spot-check that the
-  ARCADE-tab-removal UX change (#156) still feels right now that its test coverage is restored.
+- **Agent-verified (test-backed, this session):** the pure gear-visuals mappings (fan intensity
+  ranking, light-glow scaling, soil tint, chip formatting — 12 tests) and the apply-target
+  picker (5 tests) are unit-tested; capture-shots evidence (VER-016) shows the chip row rendering
+  correctly with real gear and no crash; the desktop layout fix is verified via before/after
+  captures + all 35 relevant e2e specs (care-loop-shot, chamber-landscape-hud-shot, the full
+  30-route crash sweep) green; web typecheck/lint/build clean, full web vitest suite 533/533;
+  backend suite re-run for the record though untouched this week (1210 passed/6 skipped, matching
+  `gv-o02`'s baseline exactly).
+- **Device-verify (owner):** on `/dashboard`, confirm the plant chamber now sits flush with the
+  top of the PLANT DNA / ENVIRONMENT side rails (not below the carousel thumbnail) and looks
+  right at your normal desktop width — the fix targets 1440px, spot-check your actual monitor
+  width too. Equip a fan/soil/light on a pod and confirm the chip row appears on the chamber with
+  the right icons. In the store, an owned consumable should show "Apply to plant →"; clicking it
+  should land on the plant page with that item highlighted. Also carried: the chamber-mockup
+  reconciliation decision (above); growverse.dev spot-check that the ARCADE-tab-removal UX change
+  (#156) still feels right now that its test coverage is restored.
 
 ## OPEN RISKS (carried)
 
