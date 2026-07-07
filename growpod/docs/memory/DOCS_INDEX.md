@@ -21,6 +21,7 @@ Roles: **living** (must stay true) · **historical** (frozen record) · **spec**
 | `docs/manual/` (player manual, 8 files) · `web/README.md` | ✅ |
 | `.claude/skills/closeout/SKILL.md` + `.claude/skills/handoff-audit/SKILL.md` + `.claude/skills/capture-shots/SKILL.md` | ✅ process skills |
 | `docs/memory/VERIFIED_RENDERS.md` (+ `docs/memory/verification/golden/`) | ✅ new 2026-07-03 — the screenshot archive / chapter list; every verification session adds a row |
+| `docs/memory/ADDING_STORE_ITEMS.md` | ✅ new 2026-07-07 — the 9-step store-item checklist (catalog → service → route → web type → UI → purchase flow → **gameplay-effect wiring** → tests → docs), templated on the gv-o01/o02/o03 fans/soils/CO₂ work; follow it for every new store SKU so it never ships catalog-only again (the S3/S4 failure mode) |
 | `knowledge/` (10 canonical morphology/botany specs) + `docs/BUD_ARCHITECTURE_BLUEPRINT.md` | ✅ cited by the Design Codex |
 
 ## Spec / planning docs

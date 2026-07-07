@@ -28,7 +28,15 @@ const ACTIONS: ActionDef[] = [
   { kind: "boost", emoji: "⚡", label: "Boost", benefit: "Free — tops up water/nutrients, health boost" },
 ];
 
-export function CareButtons({ plant }: { plant: PlantState }) {
+export function CareButtons({
+  plant,
+  onDetailPage = false,
+}: {
+  plant: PlantState;
+  /** True when already mounted on this plant's own detail page — hides the
+   * "Inspect" link, which would otherwise navigate to the page it's already on. */
+  onDetailPage?: boolean;
+}) {
   const { care, harvest } = useCareActions(plant.id);
   const { fire, layer } = useCareFeedback();
   const disabled = !plant.is_alive || plant.harvested;
@@ -79,12 +87,14 @@ export function CareButtons({ plant }: { plant: PlantState }) {
       </div>
 
       <div className="flex flex-wrap gap-2 pt-1">
-        <Link
-          href={`/dashboard/plants/${plant.id}`}
-          className="flex min-h-[38px] flex-1 items-center justify-center gap-1.5 rounded-md border border-cyan-400/30 bg-cyan-400/[0.06] px-3 text-xs font-semibold text-cyan-200 hover:bg-cyan-400/10"
-        >
-          🔍 Inspect
-        </Link>
+        {!onDetailPage && (
+          <Link
+            href={`/dashboard/plants/${plant.id}`}
+            className="flex min-h-[38px] flex-1 items-center justify-center gap-1.5 rounded-md border border-cyan-400/30 bg-cyan-400/[0.06] px-3 text-xs font-semibold text-cyan-200 hover:bg-cyan-400/10"
+          >
+            🔍 Inspect
+          </Link>
+        )}
         <Link
           href={`/dashboard/plants/${plant.id}#journal`}
           className="flex min-h-[38px] flex-1 items-center justify-center gap-1.5 rounded-md border border-cyan-400/30 bg-cyan-400/[0.06] px-3 text-xs font-semibold text-cyan-200 hover:bg-cyan-400/10"

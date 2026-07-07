@@ -4,16 +4,24 @@
 > the end of every chat; read by `/handoff-audit` at the start of the next. If this file and
 > the code disagree, the code wins — fix the baton. See `docs/SESSION_PROTOCOL.md`.
 
-**Last rewritten:** 2026-07-07 · **By:** the `gv-o03-pod-equipment-visuals` session (owner asked
-what's next, then "Yes, please continue" — merged the audited `gv-o02` PR #172 and released week
-4). Mid-session the owner also flagged a desktop layout bug on the same page (the plant view
-"didn't look right" — not aligned with the side rails); fixed in the same PR since it touched the
-same component.
-**Active branch:** `claude/gv-o03-pod-equipment-visuals` — draft PR open (title:
-`feat(chamber): the pod shows equipped gear and its effects`), gates green, awaiting
-`/handoff-audit` + merge next session.
-**NEXT CHAT STARTS HERE (Sonnet):** once this PR is audited PASS and merged, **STOP before
-building `claude/gv-o04-cure-mint-integrity` (week 5)** — it is a **protected-surface week**
+**Last rewritten:** 2026-07-07 (later still) · **By:** the `gv-o03b-pod-button-fixes` session — an
+**off-roadmap** owner-directed track, run in parallel with `ROADMAP_90D_2026Q3.md`. Owner's `/goal`
+ask (paraphrased): audit pod organization for UX clarity, verify every button in that area actually
+works, find new store-item opportunities, write a repeatable workflow for wiring store items
+correctly, and flag chain/Algorand gaps. Two independent audit agents ran (pod/button-wiring;
+store-completeness + chain-wiring + new-item ideas). Findings recorded in `BACKLOG.md`; the
+concrete, immediately-fixable ones (A2, A3, A6, B1, B2, B3) were fixed in this session — see PR
+#174. The bigger design-fork items (A1 pod tier/upgrade UI, A4 archive semantics, A5 GearPanel
+placement, B4 setClimate CTA) were deliberately queued, not fixed — they need either a product
+judgment call or a feature that doesn't exist yet.
+**Active branch:** `claude/gv-o03b-pod-button-fixes` — draft PR #174 open (title:
+`fix(pods): pod-organization and button-wiring fixes from the audit`). All gates green: backend
+`make test` 1210 passed/6 skipped/91.73% coverage, `make check-memory` OK, `make lint` clean; web
+typecheck/build/533-test-suite/lint all clean; 35 relevant Playwright e2e specs passed. Subscribed
+to PR activity; awaiting CI (Vercel preview) + merge next session.
+**NEXT CHAT STARTS HERE (Sonnet):** once PR #174's CI is green, merge it, then resume
+`ROADMAP_90D_2026Q3.md` — **STOP before building `claude/gv-o04-cure-mint-integrity` (week 5)** —
+it is a **protected-surface week**
 (mint path + a faucet number) gated on two owner decisions that are NOT yet answered:
 - **D2** — the owner must approve the staking reward number/formula (appraised value ×
   `reward_pct`) before any code is written; the PR must attach an Economy Balancer sim.
@@ -43,6 +51,50 @@ growverse.dev (Vercel) deploys `web/` from `main`.
 > **Owner rule in force: ONE active PR at a time.** Queue further units here, don't open them.
 
 ---
+
+## What shipped 2026-07-07 (off-roadmap, owner `/goal` audit — `gv-o03b-pod-button-fixes`, PR #174)
+
+Owner asked for a pod-organization/button-wiring audit, a store-completeness + chain-wiring +
+new-item audit, and a repeatable store-item workflow doc. Ran both audits independently, then
+fixed the concrete, low-risk findings in one PR (bigger design-fork items queued in `BACKLOG.md`,
+not fixed):
+
+1. **A2** — `CreatePodForm.tsx` capacity input capped to 1–4 (was up to 12; dashboard only ever
+   renders 4 plant slots per pod — the other 8 were invisible dead capacity).
+2. **A3** — dashboard pod-switcher pill (`dashboard/page.tsx`) now reads the pod's real
+   `capacity` instead of a hardcoded `"/4"`.
+3. **A6** — `EnvironmentRail`'s AUTO badge tooltip no longer says "coming soon" when
+   `auto_water`/`auto_feed` is already live for the pod's tier — was actively lying to players
+   whose pod tier already has automation.
+4. **B1** — Store's gear equip/unequip (`store/page.tsx`'s `GearCard`/`GrowRoomGearSection`) only
+   worked for `category === "light"`, calling the superseded light-only `equipLight` API — fans
+   and soils bought in-store had **no equip path in the store itself** (only via the chamber's
+   GearPanel). Widened to any category and switched to the already-generic
+   `equipGear`/`unequipGear` client functions; added an Unequip button.
+5. **B2** — the two remaining hardcoded `fan: 45` chamber previews (plant detail page,
+   standalone chamber page — `PodCommandCenter.tsx` was already fixed in week 4) now derive fan
+   visual intensity from the pod's real equipped gear via `fanVisualIntensity`/`NO_FAN_BASELINE`,
+   respecting `prefers-reduced-motion`.
+6. **B3** — `CareButtons`' "Inspect" self-link (a dead link to the page it's already on) is now
+   hidden via a new `onDetailPage` prop when mounted on the plant's own detail page.
+7. **New `docs/memory/ADDING_STORE_ITEMS.md`** — the 9-step checklist for wiring a new store item
+   end-to-end (`balance.yaml` → service method → API route → web type → UI listing → purchase
+   flow + query invalidation → **gameplay-effect wiring**, the step every past defect (S3/S4/E1)
+   skipped → tests at each layer → memory/docs update), with real file:line templates from the
+   merged gv-o01/o02/o03 PRs. Also documents the `GearCategory`/`PodEquippedGear["category"]`
+   type-union pair that has drifted out of sync before — treat as a matched pair going forward.
+8. **`BACKLOG.md` reconciled**: A1 (pod tier/capacity/automation invisible, no upgrade UI), A4
+   (dead `active` field / no real archive semantics), A5 (GearPanel 3 hops deep — a genuine
+   design fork on where equip UI should live), B4 (setClimate CTA is a generic dashboard link,
+   needs a pod-anchor feature that doesn't exist yet) recorded as open, deliberately not fixed
+   this pass. Plus 10 new store-item ideas from the audit and the current chain/Algorand wiring
+   status.
+
+Verification: backend `make test` 1210 passed/6 skipped/91.73% coverage, `make check-memory` OK
+(46 files), `make lint` clean; web `npm run typecheck && npm run build && npm run test` clean
+(533/533), `npm run lint` only pre-existing warnings; `npx playwright test route-crash-sweep
+care-loop-shot chamber-landscape-hud-shot` — 35 passed. No backend files touched. No protected
+surfaces touched.
 
 ## What shipped 2026-07-07 (later still — ROADMAP_90D week 4, `gv-o03-pod-equipment-visuals`)
 

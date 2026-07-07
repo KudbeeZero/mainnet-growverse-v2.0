@@ -710,12 +710,14 @@ function GearCard({
   pods,
   onBuy,
   onEquip,
+  onUnequip,
   busy,
 }: {
   item: GearItem;
   pods: Pod[];
   onBuy: (key: string) => void;
   onEquip: (key: string, podId: string) => void;
+  onUnequip: (key: string, podId: string) => void;
   busy: string | null;
 }) {
   const [podId, setPodId] = useState<string>("");
@@ -755,10 +757,10 @@ function GearCard({
           {busy === item.key ? "…" : "Buy"}
         </button>
       </div>
-      {item.category === "light" && item.owned > 0 && (
+      {item.owned > 0 && (
         <div className="mt-1 border-t border-ink-700 pt-2">
           {equippedPod ? (
-            <p className="text-[11px] text-grow-400">✓ Powering “{equippedPod.name}”</p>
+            <p className="text-[11px] text-grow-400">✓ Equipped on “{equippedPod.name}”</p>
           ) : (
             <p className="text-[11px] text-gray-500">Not equipped</p>
           )}
@@ -783,6 +785,15 @@ function GearCard({
               >
                 Equip
               </button>
+              {equippedPod && (
+                <button
+                  onClick={() => onUnequip(item.key, equippedPod.id)}
+                  disabled={busy === item.key}
+                  className="rounded border border-ink-600 px-2 py-1 text-[11px] text-gray-300 hover:border-red-500/50 hover:text-red-300 disabled:opacity-40"
+                >
+                  Unequip
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -843,7 +854,7 @@ function GrowRoomGearSection() {
 
   async function equip(key: string, podId: string) {
     if (!playerId) return;
-    // Key by gear AND pod: equipping the same light to a second pod while the
+    // Key by gear AND pod: equipping the same item to a second pod while the
     // first equip is in flight is a distinct, legitimate request — keying by
     // gear alone silently dropped it (no request, no message).
     const k = `${key}:${podId}`;
@@ -851,11 +862,31 @@ function GrowRoomGearSection() {
     setBusy(key);
     setMsg(null);
     try {
-      await storeApi.equipLight(playerId, podId, key);
+      // Any category (light/fan/soil) — equipLight was light-only and left
+      // fans/soils bought here with no in-store equip path (B1).
+      await storeApi.equipGear(playerId, podId, key);
       setItems(await storeApi.gear(playerId));
-      setMsg("✓ Light equipped — it now drives that pod's light level");
+      setMsg("✓ Equipped");
     } catch (e: unknown) {
       setMsg(e instanceof Error ? e.message : "Equip failed");
+    } finally {
+      guard.stop(k);
+      setBusy(null);
+    }
+  }
+
+  async function unequip(key: string, podId: string) {
+    if (!playerId) return;
+    const k = `${key}:${podId}`;
+    if (!guard.start(k)) return;
+    setBusy(key);
+    setMsg(null);
+    try {
+      await storeApi.unequipGear(playerId, podId, key);
+      setItems(await storeApi.gear(playerId));
+      setMsg("✓ Unequipped");
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : "Unequip failed");
     } finally {
       guard.stop(k);
       setBusy(null);
@@ -891,6 +922,7 @@ function GrowRoomGearSection() {
                 pods={pods}
                 onBuy={buy}
                 onEquip={equip}
+                onUnequip={unequip}
                 busy={busy}
               />
             ))}

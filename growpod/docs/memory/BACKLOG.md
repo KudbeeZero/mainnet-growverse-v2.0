@@ -1,7 +1,11 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-07** (`claude/gv-o03-pod-equipment-visuals`
+once they appear here. Last reconciled: **2026-07-07** (owner-directed pod-organization +
+store-completeness audit, off-roadmap: two independent agents audited pod UX/button-wiring and
+store SKU completeness/chain status; findings A1-A6/B1-B4 added above by severity; new doc
+`docs/memory/ADDING_STORE_ITEMS.md` — the store-item wiring checklist — registered in
+DOCS_INDEX.md/MAP.md; 10 new-item ideas queued 🟡 below. Prior note follows.) (`claude/gv-o03-pod-equipment-visuals`
 [ROADMAP_90D week 4] shipped: real fan/PPFD-driven chamber glow + equipped-gear chip row (icon +
 name per equipped item) replacing the hardcoded `climate={{ fan: 45 }}` and cosmetic-only glow
 (S4); soil substrate tint at the pot base; in-store "Apply to plant" deep-link on owned
@@ -1099,6 +1103,26 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
   fast-forwards under the dev clock and is guarded against early finish. 1117 green.
 
 ## 🔴 Immediate (do now — correctness, truth, or unblocks others)
+- 🔴 ⬜ **Paid-for pod capacity beyond 4 plants is invisible (pod-organization audit, 2026-07-07)**
+  — `CreatePodForm.tsx:14,57-64` lets a player set capacity 1-12 with no price scaling, and the
+  backend independently allows up to 100 (`api/game_api.py:447`) and honors it for planting
+  (`game_service.py:812`) — but `PodCommandCenter.tsx:97,187` hard-slices the carousel/slot math
+  to 4 (`ring = plants.slice(0, 4)`, `slotCap = Math.min(4, pod.capacity || 4)`). A pod bought or
+  research-boosted (`pod_capacity_bonus`, `balance.yaml:407,411`) past 4 plants will accept a 5th+
+  planting on the backend that then never appears anywhere in the dashboard — a paid-for, growing
+  plant becomes an orphan. Fix shape: cap the create-form capacity input at 4 until multi-slot
+  carousels ship, or make the carousel/slot math handle >4 (scroll/paginate) so purchased capacity
+  is never invisible. See `docs/memory/BRANCH_STATUS.md`-adjacent audit note below for the fuller
+  pod-organization findings (A1-A6).
+- 🔴 ⬜ **Store's own gear-equip control only supports "light"; fans/soils bought in-Store have no
+  equip path there (button-wiring audit, 2026-07-07)** — `web/src/app/store/page.tsx:758` gates
+  the equip affordance behind `item.category === "light"` in `GearCard`, so fan/soil purchases
+  show Buy but never a pod-select + Equip control on the page the player lands on right after
+  buying. The handler at `:844-863` also still calls the light-only `storeApi.equipLight`
+  (`lib/api/store.ts:109-114`), not the generalized `equipGear`/`unequipGear` (`:117-124`) that
+  `GearPanel.tsx`/`useGear.ts` already use since the gv-o02/o03 gear-generalization work. Distinct
+  from tracked S3 (fixed at the sim layer) — this is the Store page's own UI never being updated
+  to match.
 - 🔴 ⬜ **Double-click purchase exposure on sibling money buttons (code-review finding,
   2026-07-06)** — the `useInFlightGuard` fix (shipped with PR #161: store/lab/market call
   sites, Set-keyed guard, deterministic concurrency tests) deliberately covered only the
@@ -1178,6 +1202,43 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
   it; resolved by keeping both sides' ✅ entries — this is an append-mostly log. Teeth-tested.)*
 
 ## 🟠 Medium (next 1–2 weeks — quality & the next real capability)
+- 🟠 ⬜ **Pod tier/capacity/automation are invisible to the player; no upgrade UI despite a working
+  backend (pod-organization audit, 2026-07-07, finding A1)** — `GrowPod.tier`/`.capacity`
+  (`db/models.py:351-352`) are real, priced concepts; `POST /pods/<id>/upgrade`
+  (`api/game_api.py:462-474`) and a wired client function (`lib/api/pods.ts:26-30`) both work, but
+  **nothing in the web app ever calls it** — zero hits for `pods.upgrade` under `web/src`. `tier`
+  is read in exactly one place (`lib/cosmetics.ts:50`, cosmetic only) and `capacity` in exactly one
+  place (`PodCommandCenter.tsx:187`), neither ever shown as text/badge. Fix shape: promote
+  tier/capacity/automation to visible pod-pill/badge content, add a real "Upgrade tier" button
+  wired to the existing `pods.upgrade` call.
+- 🟠 ⬜ **Multi-pod switcher doesn't show what actually differs between pods (finding A3)** — the
+  pod-pill switcher (`dashboard/page.tsx:167-191`, shown only when 2+ pods) hardcodes `"{count}/4"`
+  regardless of the pod's real capacity (`:186`, compounds the A2/capacity-4 issue above), and
+  shows no tier/active/automation badge — a player managing a "pro" auto-watered pod alongside a
+  "basic" manual one sees zero visual distinction beyond the name they typed.
+- 🟠 ⬜ **`GrowPod.active` is a dead field; the "ACTIVE PODS" counter is misleading (finding A4)**
+  — no route or service method ever writes `pod.active` after creation (`models.py:353` defaults
+  `True` forever); `FleetCounters.tsx:25-26,31`'s "ACTIVE PODS" stat can therefore never differ
+  from total pod count. Either wire a real archive/deactivate action (mirrors the shipped
+  pod-recycle-for-plants precedent) or drop the counter/field — it currently communicates nothing.
+- 🟠 ⬜ **Gear equip/management is 3 hops from the main pod hub (finding A5)** — `PodCommandCenter`
+  (the main dashboard hub) never mounts `GearPanel`; it's only reachable via Dashboard → pick a
+  plant → small "🕹 Arcade" pill → chamber page → "⚙️ Gear" tile → panel. Given fans/soils just
+  shipped real sim effects this week, this is a significant discoverability gap for a headline
+  feature. Needs an owner call on layout (surface `GearPanel` directly on the hub vs. a clearer
+  entry-point link) — the hub is already dense; this is a genuine design fork, not a quick fix.
+- 🟠 ⬜ **Chamber "hardcoded fan" defect (S4) recurs, untouched, in two more locations (finding
+  B2)** — the S4 fix only touched `PodCommandCenter.tsx`. `dashboard/plants/[plantId]/page.tsx:137`
+  and `.../chamber/page.tsx:83-90,97` still hardcode `fan: 45` / a client-only "(local)" slider
+  with no read from `pod.equipped_gear`. A player who equips a fan sees the chip confirm it on the
+  main hub, then opens the plant detail page or Arcade chamber and sees no fan reflected there —
+  inconsistent state across three "same plant" views. Same fix pattern as the shipped S4 work
+  (`web/src/lib/chamber/gearVisuals.ts`), just applied to the two remaining call sites.
+- 🟠 ⬜ **"AUTO … coming soon" badge contradicts real, working automation (finding A6)** —
+  `EnvironmentRail.tsx:256-263`'s badge tooltip says "Automatic climate control — coming soon", but
+  `auto_water`/`auto_feed` are real, tier-granted, currently-running behavior
+  (`simulation/engine.py:304-307` genuinely tops up water/nutrients below threshold). A pod showing
+  "AUTO ON" is told in the same breath that the thing doing it doesn't exist yet. Trivial copy fix.
 - 🟠 ✅ **CI coverage gate** (2026-06-08) — `pytest --cov` with a ratchet floor (`pyproject.toml`
   `fail_under=78`, ops scripts omitted), wired into `make test` + CI. Completes the "make truth
   automatic" trio (lint + memory-integrity + coverage). *Ratchet the floor up as coverage climbs.*
@@ -1216,6 +1277,29 @@ and University is invisible to onboarding/mobile-nav — see new 🏛️ items b
   Phase B (photosynthesis + transpiration + EC/pH→uptake) — land the sim-cost-cap first.
 
 ## 🟡 Low / later (valuable, not urgent)
+- 🟡 ⬜ **Dead self-link "Inspect" button on the plant detail page (button-wiring audit, finding
+  B3)** — `CareButtons.tsx:82-87`'s "🔍 Inspect" link points at `/dashboard/plants/<id>`; mounted
+  directly on that exact route (`dashboard/plants/[plantId]/page.tsx:191`) it's a no-op
+  (navigates to the page you're already on). Meaningful on its other mount point (`PlantCard.tsx`,
+  list/summary contexts) — just hide it when already on the detail page.
+- ⚪ **`setClimate` CTA always deep-links to generic `/dashboard`, never the specific pod (finding
+  B4)** — `PlantActionCTA.tsx:92-99` — low severity (single-pod players unaffected); needs a
+  pod-anchor/scroll target on the dashboard before this can point at the right pod for 2+ pod
+  players.
+- 🟡 ⬜ **New store item ideas, zero-new-plumbing (store-completeness audit, 2026-07-07)** — 10
+  concrete SKU ideas using ONLY existing mechanisms (`simulation/gear.py` effect keys, existing
+  bundle/seasonal/partner patterns): 3 new gear SKUs (a mid-tier fan, a hydro-leaning soil, a
+  premium soil) using only existing `GearEffects` keys — zero plumbing beyond a `balance.yaml`
+  row; 2 cosmetic gear items (pot finish, wall decor) proving the no-effects-block no-op path
+  already works with a generic chip fallback (`gearChips()`, `gearVisuals.ts:75-81`) — needs the
+  `GearCategory`/`PodEquippedGear["category"]` union widened in lockstep
+  (`store.ts:65`/`types.ts:168`, see `docs/memory/ADDING_STORE_ITEMS.md`); a consumable-only
+  bundle ("Grower's Toolkit") and a new seasonal-strain drop, both proven DB-row patterns. Three
+  more ideas (a CO₂ consumable/gear item, a gear-inclusive partner drop) each need a small, named
+  extension (a new `GearEffects` field or a widened `product_type` union) — scope those as their
+  own short follow-up, not a same-day catalog add. Full idea list + exact mechanism citations in
+  the 2026-07-07 store-audit session transcript; use `docs/memory/ADDING_STORE_ITEMS.md` to wire
+  whichever ships first.
 - 🟡 ⬜ **Constellation leaf-mesh follow-ups (sacred-hash re-pin batch)** (helper review,
   2026-06-11) — three deferred items that each require intentionally changing a pinned render
   function in `web/src/components/viz/Constellation.tsx` (update the sha256 pins in
