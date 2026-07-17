@@ -10,16 +10,16 @@ currency:
 # One-time grant credited when a player account is created (a faucet).
 starting_balance: 500
 # Small, fixed login bonus (retention faucet, intentionally not a wealth pump).
-daily_stipend: 5000
+daily_stipend: 50
 
 seeds:
-  base_cost: 0             # FREE for testing — restore to 25 before launch
+  base_cost: 25            # price of a COMMON seed
   rarity_multiplier:
     common: 1.0
-    uncommon: 1.0
-    rare: 1.0
-    epic: 1.0
-    legendary: 1.0
+    uncommon: 2.5
+    rare: 6.0
+    epic: 15.0
+    legendary: 40.0
 
 nutrients:
   per_application: 5
