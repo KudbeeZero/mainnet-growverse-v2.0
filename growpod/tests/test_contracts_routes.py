@@ -158,12 +158,14 @@ def test_fulfill_happy_path(client):
     pid, key = _new_player(client, "fulfiller")
     hdr = {"X-API-Key": key}
 
+    _stock_common_harvests(pid, grams=60, n=2)  # 120g >= 100g common target
+    contract_id = _seed_common_contract(pid)
+
+    # Capture the pre-fulfill balance AFTER stocking: seeds now cost GROW at
+    # launch pricing, so the wallet is debited before the contract reward lands.
     wallet_before = client.get(
         f"/api/game/players/{pid}/wallet", headers=hdr
     ).get_json()["balance"]
-
-    _stock_common_harvests(pid, grams=60, n=2)  # 120g >= 100g common target
-    contract_id = _seed_common_contract(pid)
 
     r = client.post(
         f"/api/game/players/{pid}/contracts/{contract_id}/fulfill", headers=hdr
