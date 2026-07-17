@@ -69,6 +69,10 @@ const securityHeaders = [
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
+// FRONTIER Clone Room api-server origin (separate Express service). Defaults to
+// the game backend origin so a colocated deploy needs no extra config.
+const PLANT_API_URL = process.env.PLANT_API_URL || BACKEND_URL;
+
 // Build stamp injected at build time so the app can always show the EXACT
 // commit that's deployed (not just a hand-bumped version string). On Vercel,
 // VERCEL_GIT_COMMIT_SHA / VERCEL_ENV are auto-populated; locally they're empty
@@ -91,6 +95,14 @@ const nextConfig = {
   },
   async rewrites() {
     return [
+      // FRONTIER Clone Room api-server (separate Express service). Must be
+      // listed BEFORE the catch-all so /api/plant/* reaches the plant API and
+      // not the Flask game backend. Points at PLANT_API_URL, defaulting to the
+      // same backend origin when the plant service is colocated.
+      {
+        source: "/api/plant/:path*",
+        destination: `${PLANT_API_URL}/api/plant/:path*`,
+      },
       {
         source: "/api/:path*",
         destination: `${BACKEND_URL}/api/:path*`,
