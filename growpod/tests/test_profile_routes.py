@@ -16,6 +16,7 @@ driving them through the client also confirms the route wiring posts faucets.
 import os
 import sys
 from datetime import datetime
+from decimal import Decimal
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -124,9 +125,9 @@ def test_daily_claim_then_cooldown(client):
     r = client.post(f"/api/game/players/{pid}/daily", headers=hdr)
     assert r.status_code == 201
     body = r.get_json()
-    # daily_stipend in the live balance.yaml is 5000; signup grant was 500.
-    assert body["claimed"] == 5000.0
-    assert body["balance"] == 5500.0
+    # daily_stipend in the launch balance.yaml is 50; signup grant was 500.
+    assert body["claimed"] == 50.0
+    assert body["balance"] == 550.0
 
     # Second claim within the cooldown window -> GameError -> 400.
     r2 = client.post(f"/api/game/players/{pid}/daily", headers=hdr)
@@ -226,11 +227,16 @@ def test_claim_unearned_achievement_rejected(client):
 
 
 def test_claim_high_roller_via_daily_stipend(client):
-    """The daily stipend (5000) pushes balance past high_roller's 2000 threshold,
-    so a balance-gated achievement unlocks and claims cleanly over HTTP."""
+    """A funded player (balance past high_roller's 2000 threshold) unlocks and
+    claims the achievement cleanly over HTTP. The launch daily stipend is 50, so
+    fund to the threshold rather than relying on a single stipend claim."""
+    from growpodempire.economy.ledger import post, LedgerEntryType
+
     pid, key = _new_player(client, "roller")
     hdr = {"X-API-Key": key}
-    client.post(f"/api/game/players/{pid}/daily", headers=hdr)  # 500 -> 5500
+    with session_scope() as s:
+        post(s, pid, Decimal("2000"), LedgerEntryType.REWARD)
+    client.post(f"/api/game/players/{pid}/daily", headers=hdr)  # 500 + 2000 + 50
 
     r = client.post(
         f"/api/game/players/{pid}/achievements/high_roller/claim", headers=hdr
