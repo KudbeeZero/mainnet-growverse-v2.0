@@ -132,7 +132,11 @@ def mint_harvest(player_id: str):
     with session_scope() as session:
         player = session.get(Player, player_id)
         if not player or not player.algorand_address:
-            return _error("Algorand wallet not connected", 403)
+            # C9: Friendly "link your wallet" CTA instead of raw 403
+            return _error(
+                "Link your Algorand wallet to list harvests on the marketplace",
+                403
+            )
 
         try:
             minter = NFTMintService(session)

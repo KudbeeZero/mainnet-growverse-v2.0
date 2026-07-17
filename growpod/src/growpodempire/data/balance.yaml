@@ -592,7 +592,7 @@ nft_marketplace:
 # sale_value as a bonus GC payout on claim. Tuning knobs for services/staking.py.
 staking:
   default_cure_hours: 168.0     # 7 days
-  reward_pct: 0.10              # +10% of harvest.sale_value on claim
+  reward_pct: 0.02              # D2: +2% of harvest appraised value on claim
 
 # --- Feature flags -------------------------------------------------------
 # Data-driven launch gates / kill-switches for player-facing surfaces. Each is a

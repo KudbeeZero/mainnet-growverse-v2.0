@@ -98,3 +98,42 @@ def test_link_wallet(db):
         p = svc.create_player("walletuser")
         link_wallet_for_test(svc, p.id, _VALID_PRIV, _VALID_ADDR)
         assert svc.get_player(p.id).algorand_address == _VALID_ADDR
+
+
+def test_cannot_mint_while_curing(db):
+    """C5/D4: Block mint while curing — metadata should snapshot final quality."""
+    from growpodempire.simulation.clock import FrozenClock
+    from datetime import datetime
+
+    clock = FrozenClock(datetime(2025, 1, 1))
+    with session_scope() as s:
+        pid, harvest = _harvest_of(s, "gorilla-glue-no-4")  # rare
+        svc = GameService(s, clock=clock)
+        svc.start_cure(pid, harvest.id, target_hours=72)
+        assert harvest.cure_status == "curing"
+
+        # Should reject mint while curing
+        with pytest.raises(GameError, match="Cannot mint a harvest while it is curing"):
+            MintingService(s).mint_harvest(pid, harvest.id)
+
+
+def test_pending_self_heal_with_asset_id(db):
+    """C6: PENDING self-heal on retry — if asset_id is set, mark as MINTED."""
+    with session_scope() as s:
+        pid, harvest = _harvest_of(s, "gorilla-glue-no-4")
+        provider = MockChainProvider()
+        svc = MintingService(s, provider=provider)
+
+        # First mint succeeds
+        minted = svc.mint_harvest(pid, harvest.id)
+        assert minted.nft_status == NFTStatus.MINTED.value
+        asset_id = minted.nft_asset_id
+
+        # Simulate a crash that left PENDING with asset_id
+        harvest.nft_status = NFTStatus.PENDING.value
+        s.commit()
+
+        # Next retry should see asset_id and mark as MINTED
+        recovered = MintingService(s, provider=provider).mint_harvest(pid, harvest.id)
+        assert recovered.nft_status == NFTStatus.MINTED.value
+        assert recovered.nft_asset_id == asset_id

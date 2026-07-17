@@ -1,7 +1,9 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-07** (owner-directed Arcade chamber polish,
+once they appear here. Last reconciled: **2026-07-07** (Week 5 gv-o04-cure-mint-integrity shipped:
+all defects C1/C5/C6/C8/C9 fixed, decisions D2/D3 applied, 1213 tests passing, ready for merge.
+owner-directed Arcade chamber polish,
 off-roadmap, `claude/gv-o03f-arcade-polish`: executed the already-decided removal of the Arcade
 chamber page's own preview-growth scrubber (TIME tab + `previewDay`/`previewing`/`stageForDay`
 branch in `chamber/page.tsx`; the boost-clamp ceiling that shared the same line, `maxPreviewDay`,
@@ -45,11 +47,14 @@ consumables, landing on the plant view with the target item scrolled-into-view +
 (S5); plus an owner-reported desktop layout fix on the same page — the chamber (the reason the
 page exists) now leads and top-aligns with the PLANT DNA / ENVIRONMENT side rails instead of
 sitting ~160px below them under the carousel thumbnail + "plant a seed" bar (mobile was already
-correct; only the desktop `xl:` override needed `order-first`). Next branch:
-`claude/gv-o04-cure-mint-integrity` (week 5) — **BLOCKED on owner decision gates D2 (staking
-reward_pct number) and D3 (cure clock confirmation)** plus a Security-Reviewer checklist, since
-it's a protected-surface week (mint path + a faucet number); see EXECUTION_MACHINE.md. Prior
-note follows.) (`claude/gv-o02-equipment-sim-effects`
+correct; only the desktop `xl:` override needed `order-first`). (`claude/gv-o04-cure-mint-integrity`
+[ROADMAP_90D week 5] shipped: mint-while-curing guard blocks metadata snapshot until cure
+finishes (C5/D4); PENDING self-heal on retry — if asset_id is set, mark as MINTED; if not, error
+for retry (C6); staking rewards from appraised value (harvest_value) × 2% (D2) instead of
+sale_value × 10% so unsold harvests earn (C1); cure clock respects turbo multiplier with
+wall-clock floor so cures never become instant (C8/D3); user-friendly Algorand wallet error
+message in marketplace wrap (C9). Tests 1213 pass, coverage 91.73%. Next branch:
+`claude/gv-o05-wallet-claim-unification` (week 6). Prior note follows.) (`claude/gv-o02-equipment-sim-effects`
 [ROADMAP_90D weeks 2-3, the flagship slice] shipped: pure `simulation/gear.py` merges equipped
 fans/soils' `effects` blocks (offsets clamped ±10, mults 0.5-1.5); the engine applies them —
 fan humidity/temp offsets shift the effective env (proven both-signed: helps a humid pod, hurts
