@@ -59,6 +59,12 @@ interface FetchOptions {
   apiKey?: string;
   /** Treat `path` as an absolute path under the API host (skip /api/game). */
   raw?: boolean;
+  /**
+   * Admin key sent as the `x-admin-key` header. Used by the FRONTIER Clone Room
+   * api-server (`/api/plant/*`), which is gated by a shared admin key until
+   * wallet-signature auth ships. Implies auth.
+   */
+  adminKey?: string;
   query?: Record<string, string | number | boolean | null | undefined>;
 }
 
@@ -85,13 +91,17 @@ export async function apiFetch<T>(path: string, opts: FetchOptions = {}): Promis
   const headers: Record<string, string> = {};
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
 
-  if (auth || opts.apiKey) {
+  if (auth || opts.apiKey || opts.adminKey) {
     // An explicit key (sign-in validation) wins over the stored session key.
     const key = opts.apiKey ?? readApiKey();
-    if (!key) {
+    if (!key && !opts.adminKey) {
       throw new ApiError("Not authenticated — create or import a player first", 401);
     }
-    headers["X-API-Key"] = key;
+    if (key) headers["X-API-Key"] = key;
+  }
+
+  if (opts.adminKey) {
+    headers["x-admin-key"] = opts.adminKey;
   }
 
   let res: Response;
