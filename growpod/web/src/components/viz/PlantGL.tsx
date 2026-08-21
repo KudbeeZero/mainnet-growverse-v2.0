@@ -592,7 +592,7 @@ function FloraFrost({ flora, purple }: { flora: AggregatedFlora; purple: number 
   const ref = useRef<THREE.InstancedMesh>(null);
   const geom = useMemo(() => new THREE.IcosahedronGeometry(1, 1), []);
   const mat = useMemo(
-    () => new THREE.MeshStandardMaterial({ roughness: 0.12, metalness: 0.1, emissive: new THREE.Color(0.05, 0.07, 0.08), transparent: true, opacity: 0.92 }),
+    () => new THREE.MeshStandardMaterial({ roughness: 0.12, metalness: 0.1, emissive: new THREE.Color(0.05, 0.07, 0.08), transparent: true, opacity: 0.92, depthWrite: false }),
     [],
   );
 
@@ -617,7 +617,7 @@ function FloraFrost({ flora, purple }: { flora: AggregatedFlora; purple: number 
   }, [flora, purple]);
 
   if (flora.frost.length === 0) return null;
-  return <instancedMesh key={`f${flora.frost.length}`} ref={ref} args={[geom, mat, flora.frost.length]} />;
+  return <instancedMesh key={`f${flora.frost.length}`} ref={ref} args={[geom, mat, flora.frost.length]} renderOrder={10} />;
 }
 
 function FloraPistils({ flora }: { flora: AggregatedFlora }) {

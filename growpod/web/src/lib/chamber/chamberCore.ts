@@ -2640,10 +2640,98 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
     const flex = branchFlexFor(S.branchMul);
     // Flowering weight ladder (seed/veg 0 → harvest 1): scales all bud-load droop.
     const stageMul = flowerStageMultiplier(p.stage as GrowthStage, bd);
+
+    // Draws ONE secondary branchlet (forked off a node's branch) in its own depth
+    // slot. Defined as a closure so it shares drawPlant's live state (S, sw0, claw,
+    // p, jig, tt, …). The branchlet re-derives its fork point from the parent
+    // branch tip — identical math to the old inline block — but is now invoked from
+    // the unified back→front `drawList`, so a branchlet that should sit behind the
+    // stem is correctly painted under it instead of on top of the whole plant.
+    function drawBranchlet(
+      nd: Node,
+      bl: Branchlet,
+      endX: number,
+      endY: number,
+      sag: number,
+      depthSat: number,
+      droopRot: number,
+      jig: number,
+    ) {
+      const t = bl.along;
+      const bx = endX * t;
+      const by = endY * t - nd.len * nd.curve * Math.sin(Math.PI * t);
+      const bex = Math.sin(bl.tilt) * nd.side * bl.len;
+      const bey = -Math.cos(bl.tilt) * bl.len * 0.5 + sag * 0.25;
+      ctx!.save();
+      ctx!.translate(bx, by);
+      ctx!.strokeStyle = `hsl(${S.hue - 20}, ${depthSat}%, 32%)`;
+      const blW = clamp(sw0 * 0.48 * (1 - nd.f * 0.3), 1.4, 3.6);
+      ctx!.lineCap = "round";
+      {
+        const qx = bex * 0.5, qy = bey * 0.5 - bl.len * bl.curve;
+        const c1x = qx * (2 / 3), c1y = qy * (2 / 3);
+        const c2x = bex + (qx - bex) * (2 / 3), c2y = bey + (qy - bey) * (2 / 3);
+        strokeTaperedBezier(0, 0, c1x, c1y, c2x, c2y, bex, bey, blW * 1.25, blW * 0.35);
+      }
+      ctx!.save();
+      ctx!.translate(bex, bey);
+      ctx!.rotate(bl.side * (0.4 + bl.tilt * 0.2) + nd.leafRoll * 0.6);
+      drawFan(bl.leafSize, bl.leaflets, nd.f, claw, nd.litAdj, lerp(nd.leafYaw, 1, 0.5), bl.phase);
+      ctx!.restore();
+      if (bl.site) {
+        ctx!.save();
+        ctx!.translate(bex, bey);
+        ctx!.rotate(nd.side * 0.12 + nd.side * droopRot * 0.15);
+        drawBudCollar(bl.site, nd.litAdj - 3);
+        drawFlowerSite(bl.site, p.P, jig, tt, budSiteDensity(nd.f) * 0.7);
+        ctx!.restore();
+      }
+      ctx!.restore();
+    }
+
     // Engine 3 — paint back→front (by azimuth depth) so the spiral reads as a 3-D
     // canopy: branches winding toward the camera overlap the ones behind the stem.
-    const order = p.nodes.map((_, i) => i).sort((a, b) => p.nodes[a].depth - p.nodes[b].depth);
-    for (const i of order) {
+    // Fixed (claude/chamber-branchlet-zorder): secondary branchlets are now merged
+    // into the SAME depth-sorted paint list as the main nodes instead of being drawn
+    // inline inside their parent node's slot. Previously a branchlet forked off a
+    // FRONT-facing node was always painted last (in the parent's slot), so it landed
+    // on top of the main stem / back canopy that should occlude it — the "side branch
+    // renders in front of the plant" bug. Each branchlet gets its own effective depth
+    // (parent depth pushed further front/rear by which way it forks), then the whole
+    // list paints back→front, so a branchlet that actually sits behind the stem is
+    // correctly painted under it.
+    type DrawElt =
+      | { k: "node"; i: number; d: number }
+      | { k: "branchlet"; i: number; bi: number; d: number };
+    const drawList: DrawElt[] = [];
+    for (let i = 0; i < p.nodes.length; i++) {
+      const nd = p.nodes[i];
+      drawList.push({ k: "node", i, d: nd.depth });
+      for (let bi = 0; bi < nd.branchlets.length; bi++) {
+        const bl = nd.branchlets[bi];
+        // Effective depth: parent's depth, pushed forward/back by the fork direction
+        // relative to the camera. `bl.side` flips each branchlet's lean; combined
+        // with the node's own lateral facing this places it correctly in z.
+        const blDepth = clamp(nd.depth + bl.side * nd.side * 0.45, -1, 1);
+        drawList.push({ k: "branchlet", i, bi, d: blDepth });
+      }
+    }
+    drawList.sort((a, b) => a.d - b.d);
+    for (const el of drawList) {
+      if (el.k === "branchlet") {
+        const nd = p.nodes[el.i];
+        const bl = nd.branchlets[el.bi];
+        // endX/endY/sag here are the parent branch's tip + residual sag, recomputed
+        // the same way as for a "node" element (so the fork point is correct).
+        const droopRot = branchDroop(nd.weight, flex, stageMul, SK.budWeightMul, SK.branchStrength);
+        const sag = Math.sin(droopRot) * nd.len * 0.35;
+        const endX = nd.tipX, endY = nd.tipY + sag;
+        const depthSat = clamp(32 - Math.max(0, -nd.depth) * 9, 20, 24);
+        const jig = Math.min(3, Math.abs(phys.nodes[el.i] ? phys.nodes[el.i].av : 0) * 7);
+        drawBranchlet(nd, bl, endX, endY, sag, depthSat, droopRot, jig);
+        continue;
+      }
+      const i = el.i;
       const nd = p.nodes[i];
       // Bud-weight physics: heavier branches droop more (rotated, not just a tip
       // sag, so the whole branch bows) and move with more inertia in the airflow.
@@ -2787,50 +2875,9 @@ export function createChamberCore(opts: ChamberCoreOpts): ChamberCore {
         drawFan(nd.nodeLeafSize * scl, Math.max(3, nd.leaflets - 2), 0, claw, nd.litAdj - 3 - nd.skirt * 8, lerp(nd.leafYaw, 1, 0.4), nd.phase + 6 + fi * 1.9);
         ctx!.restore();
       }
-      // Secondary branchlets — forks part-way along the branch (sharing the
-      // branch's sway/droop), each with its own foliage and small tip bud.
-      for (const bl of nd.branchlets) {
-        const t = bl.along;
-        // point on the branch's bezier at t≈along (linear path + its upward arc)
-        const bx = endX * t;
-        const by = endY * t - nd.len * nd.curve * Math.sin(Math.PI * t);
-        const bex = Math.sin(bl.tilt) * nd.side * bl.len;
-        const bey = -Math.cos(bl.tilt) * bl.len * 0.5 + sag * 0.25;
-        ctx!.save();
-        ctx!.translate(bx, by);
-        // Shares the parent branch's depthSat (code-review fix, 2026-07-04):
-        // was hardcoded 30% regardless of depth, so a branchlet forking off a
-        // rear-facing (desaturated) branch stayed brighter than the branch it
-        // grows from — a visible mismatch right at the fork.
-        ctx!.strokeStyle = `hsl(${S.hue - 20}, ${depthSat}%, 32%)`;
-        const blW = clamp(sw0 * 0.48 * (1 - nd.f * 0.3), 1.4, 3.6);
-        ctx!.lineCap = "round";
-        // Tapered to match the parent branch (round 9 pass 2) — quadratic
-        // control point converted to its equivalent cubic pair so it can share
-        // strokeTaperedBezier's segmented-width trick.
-        {
-          const qx = bex * 0.5, qy = bey * 0.5 - bl.len * bl.curve;
-          const c1x = qx * (2 / 3), c1y = qy * (2 / 3);
-          const c2x = bex + (qx - bex) * (2 / 3), c2y = bey + (qy - bey) * (2 / 3);
-          strokeTaperedBezier(0, 0, c1x, c1y, c2x, c2y, bex, bey, blW * 1.25, blW * 0.35);
-        }
-        ctx!.save();
-        ctx!.translate(bex, bey);
-        ctx!.rotate(bl.side * (0.4 + bl.tilt * 0.2) + nd.leafRoll * 0.6);
-        drawFan(bl.leafSize, bl.leaflets, nd.f, claw, nd.litAdj, lerp(nd.leafYaw, 1, 0.5), bl.phase);
-        ctx!.restore();
-        if (bl.site) {
-          ctx!.save();
-          ctx!.translate(bex, bey);
-          // Small extra nod: the bud hangs a touch beyond the (already drooped) branch.
-          ctx!.rotate(nd.side * 0.12 + nd.side * droopRot * 0.15);
-          // branchlet buds sit lower/outer — thinner frost than their parent node
-          drawBudCollar(bl.site, nd.litAdj - 3);
-          drawFlowerSite(bl.site, p.P, jig, tt, budSiteDensity(nd.f) * 0.7);
-          ctx!.restore();
-        }
-        ctx!.restore();
-      }
+      // Secondary branchlets are no longer drawn inline here — they are merged into
+      // the depth-sorted `drawList` (see above) and painted by `drawBranchlet` so a
+      // branchlet that should sit behind the stem is correctly occluded by it.
       // Bud forming at the node intersection itself (upper/mid nodes).
       if (nd.nodeBud) {
         ctx!.save();
