@@ -25,6 +25,7 @@ import { usePlantState } from "@/hooks/usePlantState";
 import { useStrainMap, usePods } from "@/hooks/queries";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { useSession } from "@/lib/session";
+import { isPlantViewEnabled } from "@/lib/features";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
 import type { Environment } from "@/lib/api";
@@ -413,6 +414,9 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   const c = climateModel({ fan: climate.fan, temp: climate.temperature, hum: climate.humidity, co2: climate.co2_level });
   const health = clamp(plant.health, 0, 100);
   const ended = !plant.is_alive || plant.harvested;
+  // Plant view gate — when off, the live plant is cut and replaced by a greyed
+  // "Coming soon" placeholder (see the PLANT_COMING_SOON overlay below).
+  const plantViewEnabled = isPlantViewEnabled();
   const sharedPod = (pod?.capacity ?? 1) > 1;
   // Honest plant mood pill (mockup: "PLANT MOOD · Thriving"). Derived only from
   // real health + condition flags — no invented streak/vibe score. health < 40
@@ -568,23 +572,50 @@ function ChamberScreen({ plantId }: { plantId: string }) {
             aria-hidden
           />
         )}
-        <GrowChamber
-          seed={seedForPlant(plantId)}
-          day={day}
-          stage={renderStage}
-          morphology={morphology}
-          silhouette={silhouette}
-          dev={dev}
-          budColor={budColor}
-          budDna={budDna}
-          climate={{ fan: climate.fan, temp: climate.temperature, hum: climate.humidity, co2: climate.co2_level }}
-          conditionFlags={plant.condition_flags}
-          view="chamber"
-        />
-        {/* the plant's visible response to care taps (water/feed/prune/train…) */}
-        <PlantReactionLayer />
-        {/* rim/backlight pop (always on) + boost-reactive ring pulse/sparkles */}
-        <BoostAmbientLayer />
+        {plantViewEnabled ? (
+          <>
+            <GrowChamber
+              seed={seedForPlant(plantId)}
+              day={day}
+              stage={renderStage}
+              morphology={morphology}
+              silhouette={silhouette}
+              dev={dev}
+              budColor={budColor}
+              budDna={budDna}
+              climate={{ fan: climate.fan, temp: climate.temperature, hum: climate.humidity, co2: climate.co2_level }}
+              conditionFlags={plant.condition_flags}
+              view="chamber"
+            />
+            {/* the plant's visible response to care taps (water/feed/prune/train…) */}
+            <PlantReactionLayer />
+            {/* rim/backlight pop (always on) + boost-reactive ring pulse/sparkles */}
+            <BoostAmbientLayer />
+          </>
+        ) : (
+          // PLANT_COMING_SOON — the live plant is cut (owner is reworking the
+          // plant art). Grey out the stage and show an honest "Coming soon" so
+          // players don't see a half-finished canopy. Climate / boosts / actions
+          // below this stage keep working; flip NEXT_PUBLIC_ENABLE_PLANT_VIEW=true
+          // to bring the plant back.
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#070d14]/95 text-center">
+            <div
+              className="relative flex h-44 w-44 items-center justify-center rounded-full border border-[#1c2c39] bg-[radial-gradient(circle_at_50%_40%,#10212e,#070d14)]"
+              aria-hidden
+            >
+              {/* faint silhouette hint, desaturated + dimmed */}
+              <div className="h-32 w-24 rounded-[40%_40%_30%_30%/55%_55%_45%_45%] bg-gradient-to-b from-[#1c3340] to-[#0c1822] opacity-30 blur-[1px]" />
+              <span className="absolute bottom-3 text-[10px] font-mono tracking-[0.18em] text-[#3a566b]">
+                PLANT OFFLINE
+              </span>
+            </div>
+            <p className="text-sm font-extrabold tracking-[0.18em] text-[#8fb4c9]">PLANT VIEW</p>
+            <p className="text-xs font-semibold tracking-[0.22em] text-[#5d7d92]">COMING SOON</p>
+            <p className="max-w-[15rem] text-[11px] leading-relaxed text-[#4f6c7e]">
+              We&apos;re rebuilding the grow visuals. Care, climate and boosts still work — the canopy returns shortly.
+            </p>
+          </div>
+        )}
         {/* Compact top HUD — strain + the four key stats in one strip (design
             punch list item 1). Deeper detail stays on the CLIMATE tab.
             Mobile: wrap (no scroll — the strip is pointer-events-none, so an

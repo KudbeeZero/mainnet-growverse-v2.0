@@ -148,6 +148,20 @@ export function isDevBypassEnabled(): boolean {
 }
 
 /**
+ * Whole-plant Grow Chamber view gate.
+ *
+ * The live plant renderer (Canvas-2D `GrowChamber`, and any 3D PlantGL mount) is
+ * ON by default. Set `NEXT_PUBLIC_ENABLE_PLANT_VIEW=false` to cut the plant
+ * visuals and show a greyed "Coming soon" placeholder instead — used while the
+ * plant art is being reworked, so players see an honest state rather than a
+ * half-finished canopy. The rest of the chamber (climate, boosts, actions,
+ * harvest flow) keeps working; only the plant itself is dimmed out.
+ */
+export function isPlantViewEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ENABLE_PLANT_VIEW !== "false";
+}
+
+/**
  * Mission Control v0 gate (owner/admin-only, internal operations board).
  *
  * ⚠️ HONEST LIMITATION: this is NOT a real role/permission system. v0 visibility
