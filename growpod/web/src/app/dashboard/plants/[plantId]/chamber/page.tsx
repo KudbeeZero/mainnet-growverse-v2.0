@@ -50,6 +50,14 @@ import { nudge } from "@/lib/slider";
 import { getBoostMultiplier, BOOST_APPLIED_EVENT, type BoostApplyDetail } from "@/lib/arcade/boostEngine";
 import { useRewindStore } from "@/lib/arcade/timeRewind";
 
+// Premium 3D plant viewer (Tier-2 construction model). Lazy + client-only so the
+// three.js engine stays out of the chamber bundle — it only loads when a player
+// opens the 3D view.
+const PlantViewerModal = dynamic(
+  () => import("@/components/viz/PlantViewerModal").then((m) => m.PlantViewerModal),
+  { ssr: false, loading: () => null },
+);
+
 // Grow Chamber = Tier 1, the canonical whole-plant gameplay renderer. It never
 // mounts the heavy WebGL bud/lab engines directly — those live behind the
 // dedicated "View Bud" screen (bud3d/BudGL) and Lab (plant3d/PlantGL).
@@ -167,6 +175,8 @@ function ChamberScreen({ plantId }: { plantId: string }) {
   // forward + revive it; on success we flash the ⚡ electric surge over the stage.
   const [boostFlash, setBoostFlash] = useState(false);
   const flashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Premium full-screen 3D plant viewer (Tier-2 construction model).
+  const [viewer3dOpen, setViewer3dOpen] = useState(false);
   // The plant lives in this stage; the bounce hook auto-fires the squash-stretch
   // on every arcade boost and returns a trigger the ⚡ growth-boost reuses.
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -545,6 +555,17 @@ function ChamberScreen({ plantId }: { plantId: string }) {
         <span className="hidden text-[9px] font-bold tracking-[0.26em] text-cyan-300 sm:inline">
           GROW CHAMBER · ARCADE
         </span>
+        <span className="flex-1" />
+        {!ended && (
+          <button
+            type="button"
+            onClick={() => setViewer3dOpen(true)}
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-2.5 text-[10px] font-bold tracking-[0.08em] text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-400/20"
+            title="Open this plant in the full 3D construction model"
+          >
+            <span aria-hidden>🌿</span> 3D
+          </button>
+        )}
       </header>
 
       {/* body — stacks portrait (stage over controls); splits to a stage + side
@@ -838,6 +859,19 @@ function ChamberScreen({ plantId }: { plantId: string }) {
       )}
       </div>
 
+      <PlantViewerModal
+        open={viewer3dOpen}
+        onClose={() => setViewer3dOpen(false)}
+        strainName={strain?.name ?? "Plant"}
+        strain={strain?.slug ?? strain?.name}
+        indicaRatio={indicaRatio}
+        seed={seedForPlant(plantId)}
+        day={day}
+        stage={renderStage}
+        dev={dev}
+        budColor={budColor}
+        reducedMotion={reducedMotion}
+      />
     </div>
   );
 }
