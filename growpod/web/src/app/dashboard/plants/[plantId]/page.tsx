@@ -19,6 +19,7 @@ import { ConsumablesPanel } from "@/components/plant/ConsumablesPanel";
 import { EventLog } from "@/components/plant/EventLog";
 import { PlantMetrics } from "@/components/plant/PlantMetrics";
 import { StageTimeline } from "@/components/plant/StageTimeline";
+import { GrowthJourney } from "@/components/plant/GrowthJourney";
 import { AdvisorPanel } from "@/components/plant/AdvisorPanel";
 import { PlantActionCTA } from "@/components/plant/PlantActionCTA";
 import { PlantReactionLayer } from "@/components/plant/PlantReactionLayer";
@@ -213,6 +214,21 @@ function PlantDetail({ plantId }: { plantId: string }) {
       <div data-onboarding="plant-suggestions">
         <AdvisorPanel plantId={plant.id} />
       </div>
+
+      {/* DNA-driven growth journey — this plant's genetics from seed to harvest. */}
+      <GrowthJourney
+        render={render}
+        seed={seedForPlant(plantId)}
+        currentStage={plant.growth_stage}
+        liveNominalDay={render.liveNominalDay}
+        climate={{
+          fan: fanVisual,
+          temp: pod?.temperature ?? 24,
+          hum: pod?.humidity ?? 50,
+          co2: pod?.co2_level ?? 800,
+        }}
+        reducedMotion={reducedMotion}
+      />
 
       <Card id="journal" className="scroll-mt-4">
         <CardHeader title="Event log" subtitle="Stage changes, stress onsets and care actions" />
