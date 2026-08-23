@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { LoadingBlock } from "@/components/ui/Spinner";
@@ -55,7 +55,6 @@ function HarvestCard({
   onEnterCup?: (harvestId: string) => void;
 }) {
   const { playerId } = useSession();
-  const router = useRouter();
   const { map } = useStrainMap();
   const [targetHours, setTargetHours] = useState(48);
   const name = map.get(harvest.strain_id)?.name ?? "Harvest";
@@ -85,17 +84,6 @@ function HarvestCard({
     invalidate: inv,
     successMessage: "Harvest minted as NFT",
   });
-  // Sprint 4 (testnet/mock, gated behind `nft_marketplace`): wraps the mint
-  // above (if it hasn't happened yet) into a marketplace-ready NFTAsset, then
-  // jumps to the Collection/Curing Room section on /profile. Idempotent —
-  // safe to click again from the profile page.
-  const goToNftMarket = useApiMutation(
-    () => api.nft.mint(playerId!, harvest.id),
-    {
-      invalidate: [queryKeys.nftCollection(playerId ?? "")],
-      onSuccess: () => router.push("/profile#nft-collection"),
-    },
-  );
 
   return (
     <div className="panel p-3">
@@ -172,14 +160,12 @@ function HarvestCard({
             </Button>
           )}
           {harvest.nft_status === "minted" && FEATURES.nftMarketplace && (
-            <Button
-              size="sm"
-              variant="ghost"
-              loading={goToNftMarket.isPending}
-              onClick={() => goToNftMarket.mutate()}
+            <Link
+              href="/nft-center"
+              className="flex items-center rounded-md border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-xs font-semibold text-fuchsia-200 hover:bg-fuchsia-500/20"
             >
-              🖼️ NFT Market
-            </Button>
+              🖼️ View in NFT Center
+            </Link>
           )}
           {onEnterCup && (
             <Button size="sm" variant="ghost" onClick={() => onEnterCup(harvest.id)}>

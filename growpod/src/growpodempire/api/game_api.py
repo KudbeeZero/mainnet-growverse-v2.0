@@ -12,6 +12,7 @@ from ..db.session import session_scope
 from ..services.game_service import GameService, GameError
 from ..services.simulation_service import SimulationService
 from ..services.minting_service import MintingService
+from ..services.nft_mint import NFTMintService, NFTMintError
 from ..services.settlement_service import SettlementService
 from ..services.progression_service import ProgressionService
 from ..services.leaderboard_service import LeaderboardService
@@ -2358,11 +2359,25 @@ def unequip_gear(player_id, pod_id):
 def mint_harvest(player_id, harvest_id):
     try:
         with session_scope() as s:
-            harvest = MintingService(s).mint_harvest(player_id, harvest_id)
+            from ..db.models import Player
+            player = s.get(Player, player_id)
+            if not player or not player.algorand_address:
+                # C9: Friendly "link your wallet" CTA instead of raw 403
+                return _error(
+                    "Link your Algorand wallet to mint harvests as NFTs", 403
+                )
+            # Delegate to NFTMintService so minting a harvest always produces a
+            # marketplace-ready NFTAsset wrapper (on-chain ASA + IPFS pin +
+            # NFTAsset row). This unifies the game_api and nft_api mint paths —
+            # see services/nft_mint.py. Before this, the game_api path only set
+            # harvest.nft_status without creating the NFTAsset row, leaving the
+            # NFT on-chain but invisible to the Collection / Curing Room.
+            NFTMintService(s).mint_harvest(player_id, harvest_id, player.algorand_address)
+            harvest = s.get(Harvest, harvest_id)
             BadgeService(s).check_all(player_id)
             payload = S.harvest_dict(harvest)
         return jsonify(payload), 201
-    except GameError as e:
+    except (GameError, NFTMintError) as e:
         return _error(str(e))
 
 
