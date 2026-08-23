@@ -30,6 +30,7 @@ export type NavLink = {
 const ALL_NAV_LINKS: NavLink[] = [
   { href: "/dashboard", label: "Grow", icon: "🌱", primary: true },
   { href: "/lab", label: "Lab", icon: "🧬", primary: true },
+  { href: "/nft-center", label: "NFTs", icon: "🪙", primary: true, feature: "nftMarketplace" },
   { href: "/market", label: "Market", icon: "🛒", primary: true, feature: "marketplace" },
   { href: "/cup", label: "Cup", icon: "🏆", primary: true, feature: "cup" },
   { href: "/store", label: "Store", icon: "🏪" },
