@@ -495,6 +495,7 @@ def plant_seed(player_id):
 
 # ----- Breeding ----------------------------------------------------------
 @game_bp.post("/players/<player_id>/breed")
+@require_feature("breeding_lab")
 @require_player
 def breed(player_id):
     data = request.get_json(force=True, silent=True) or {}
@@ -504,6 +505,7 @@ def breed(player_id):
     # from the client would let players "seed-shop" for ideal offspring.
     try:
         with session_scope() as s:
+            from ..db.models import BreedingEvent
             offspring = GameService(s).breed(
                 player_id,
                 data["parent_a_id"],
@@ -512,6 +514,16 @@ def breed(player_id):
             )
             BadgeService(s).check_all(player_id)
             payload = S.strain_dict(offspring)
+            # Surface which parent contributed each trait so the frontend can
+            # render an inheritance breakdown (the trust/depth layer).
+            event = (
+                s.query(BreedingEvent)
+                .filter(BreedingEvent.offspring_strain_id == offspring.id)
+                .order_by(BreedingEvent.created_at.desc())
+                .first()
+            )
+            if event is not None:
+                payload["inherited_traits"] = event.inherited_traits
         return jsonify(payload), 201
     except (GameError, InsufficientFundsError) as e:
         return _error(str(e))
@@ -519,6 +531,7 @@ def breed(player_id):
 
 # ----- Harvest -----------------------------------------------------------
 @game_bp.post("/players/<player_id>/strains/<strain_id>/stabilize")
+@require_feature("breeding_lab")
 @require_player
 def stabilize_strain(player_id, strain_id):
     # RNG seed is server-generated (anti seed-shopping); not read from the body.

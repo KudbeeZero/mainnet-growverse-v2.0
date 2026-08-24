@@ -19,6 +19,17 @@ import { queryKeys } from "@/lib/queryKeys";
 import { num } from "@/lib/format";
 import type { Strain } from "@/lib/types";
 
+const VISIBLE_TRAITS: Array<{ key: string; label: string; fmt: (v: number) => string }> = [
+  { key: "thc", label: "THC", fmt: (v) => `${num(v, 1)}%` },
+  { key: "cbd", label: "CBD", fmt: (v) => `${num(v, 1)}%` },
+  { key: "indica_ratio", label: "Indica", fmt: (v) => `${Math.round(v * 100)}%` },
+  { key: "flowering_time", label: "Flower", fmt: (v) => `${Math.round(v)}d` },
+  { key: "yield", label: "Yield", fmt: (v) => `${num(v, 0)}g` },
+  { key: "difficulty", label: "Difficulty", fmt: (v) => `${Math.round(v)}/5` },
+];
+
+const TRAIT_FROM: Record<string, string> = { a: "Parent A", b: "Parent B", both: "Both" };
+
 /** A genome constellation with the shared rich hover-card wired in. Used for both
  *  parent previews AND the bred-offspring result — so a bred strain's dots get the
  *  same hover pop-up as any other, right where they're created. */
@@ -163,6 +174,33 @@ function BreedInner() {
                 showCount
               />
             )}
+            {result.inherited_traits && (
+              <div>
+                <div className="instrument-label mb-1">TRAIT INHERITANCE</div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
+                  {VISIBLE_TRAITS.map((t) => {
+                    const child = result.genome?.[t.key]?.value;
+                     const from = result.inherited_traits?.[t.key];
+                    return (
+                      <div key={t.key} className="flex items-center justify-between text-xs">
+                        <span className="text-gray-400">{t.label}</span>
+                        <span className="flex items-center gap-1">
+                          <span className="font-mono text-gray-200">{child != null ? t.fmt(child) : "—"}</span>
+                          <span
+                            className={`text-[9px] font-semibold ${
+                              from === "a" ? "text-sky-400" : from === "b" ? "text-violet-400" : "text-gray-500"
+                            }`}
+                            title={`Inherited from ${from ? TRAIT_FROM[from] : "unknown"}`}
+                          >
+                            {from === "a" ? "A" : from === "b" ? "B" : from === "both" ? "AB" : "?"}
+                          </span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <Link href={`/lab/strains/${result.id}`} className="inline-block text-sm text-grow-300 hover:underline">
               Open in Strain Lab → verify its provenance
             </Link>
@@ -179,28 +217,42 @@ function BreedInner() {
           <p className="text-sm text-gray-500">No bred strains yet — cross two parents above first.</p>
         ) : (
           <ul className="space-y-2">
-            {bred.map((s) => (
-              <li
-                key={s.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-ink-700 bg-ink-900/50 px-3 py-2"
-              >
-                <div className="flex items-center gap-2">
-                  <Link href={`/lab/strains/${s.id}`} className="text-sm text-gray-200 hover:text-grow-300">
-                    {s.name}
-                  </Link>
-                  <RarityChip rarity={s.rarity} />
-                  <span className="text-xs text-gray-500">stability {Math.round(s.stability * 100)}%</span>
-                </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  loading={stabilize.isPending && stabilize.variables === s.id}
-                  onClick={() => stabilize.mutate(s.id)}
+            {bred.map((s) => {
+              const pct = Math.round(s.stability * 100);
+              const mintable = s.stability >= 0.85;
+              return (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between gap-2 rounded-md border border-ink-700 bg-ink-900/50 px-3 py-2"
                 >
-                  Stabilize
-                </Button>
-              </li>
-            ))}
+                  <div className="flex items-center gap-2">
+                    <Link href={`/lab/strains/${s.id}`} className="text-sm text-gray-200 hover:text-grow-300">
+                      {s.name}
+                    </Link>
+                    <RarityChip rarity={s.rarity} />
+                    <div className="hidden items-center gap-1.5 sm:flex">
+                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-ink-700">
+                        <div
+                          className={`h-full rounded-full ${mintable ? "bg-grow-500" : "bg-amber-500"}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className={`text-[10px] ${mintable ? "text-grow-300" : "text-amber-400"}`}>
+                        {pct}%{mintable ? " · mintable" : ""}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={stabilize.isPending && stabilize.variables === s.id}
+                    onClick={() => stabilize.mutate(s.id)}
+                  >
+                    Stabilize
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>

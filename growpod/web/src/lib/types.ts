@@ -135,6 +135,8 @@ export interface Strain {
   bud_dna: GenomeBudDNA | null;
   nft_asset_id: number | null;
   nft_status: NftStatus;
+  /** trait -> "a" | "b" | "both": which parent contributed each trait (bred strains only). */
+  inherited_traits?: Record<string, string> | null;
 }
 
 export type SeedSource = "starter" | "purchased" | "bred" | "market";

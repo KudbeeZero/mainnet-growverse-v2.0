@@ -17,6 +17,7 @@ import { useInFlightGuard } from "@/hooks/useInFlightGuard";
 import { useSession } from "@/lib/session";
 import { queryKeys } from "@/lib/queryKeys";
 import { api } from "@/lib/api";
+import { FEATURES } from "@/lib/features";
 import { grow, titleCase } from "@/lib/format";
 import type { StrainFilters as Filters } from "@/lib/api";
 
@@ -157,9 +158,11 @@ function LabInner() {
             <Link href="/lab/genbank">
               <Button variant="secondary">✦ GenBank</Button>
             </Link>
-            <Link href="/lab/breed">
-              <Button>🧬 Breeding</Button>
-            </Link>
+            {FEATURES.breeding && (
+              <Link href="/lab/breed">
+                <Button>🧬 Breeding</Button>
+              </Link>
+            )}
           </div>
         }
       />

@@ -10,6 +10,7 @@
  */
 
 export type FeatureName =
+  | "breeding"
   | "marketplace"
   | "chain"
   | "cup"
@@ -35,6 +36,7 @@ export function enabledUnlessDisabled(value: string | undefined): boolean {
 }
 
 export type FeatureEnv = {
+  NEXT_PUBLIC_ENABLE_BREEDING?: string;
   NEXT_PUBLIC_ENABLE_MARKETPLACE?: string;
   NEXT_PUBLIC_ENABLE_CHAIN?: string;
   NEXT_PUBLIC_ENABLE_CUP?: string;
@@ -47,6 +49,7 @@ export type FeatureEnv = {
 /** Pure mapper from NEXT_PUBLIC_ENABLE_* env strings to the flag record. */
 export function computeFeatures(env: FeatureEnv): Record<FeatureName, boolean> {
   return {
+    breeding:     enabledUnlessDisabled(env.NEXT_PUBLIC_ENABLE_BREEDING),
     marketplace: on(env.NEXT_PUBLIC_ENABLE_MARKETPLACE),
     chain:       on(env.NEXT_PUBLIC_ENABLE_CHAIN),
     cup:         on(env.NEXT_PUBLIC_ENABLE_CUP),
@@ -72,6 +75,7 @@ export function computeFeatures(env: FeatureEnv): Record<FeatureName, boolean> {
  * for `computeFeatures({ ... })` once the deploy env sets the vars explicitly.
  */
 export const FEATURES: Record<FeatureName, boolean> = {
+  breeding:     enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_BREEDING),
   marketplace: enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_MARKETPLACE),
   chain:       enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_CHAIN),
   cup:         enabledUnlessDisabled(process.env.NEXT_PUBLIC_ENABLE_CUP),
