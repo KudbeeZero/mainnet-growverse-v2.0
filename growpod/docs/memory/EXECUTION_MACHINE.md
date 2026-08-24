@@ -13,25 +13,25 @@
 
 ## ▶️ Current Position (the live pointer — update every closeout)
 
-- **Roadmap adopted:** 2026-07-06 · **90-day owner re-sequencing adopted 2026-07-07:**
-  [ROADMAP_90D_2026Q3.md](ROADMAP_90D_2026Q3.md) now sequences the next 12 weeks (owner-priority
-  `gv-oNN` branches first, gv phases p02/p03/p05 folded into month 3); evidence in
-  [AUDIT_NFT_STORE_LOOP.md](AUDIT_NFT_STORE_LOOP.md). After week 12 the 22-phase order resumes.
-- **Phases complete:** p01 (Architecture Truth). Weeks 1–2/3–4 (PRs #171, #172, #173) merged, all
-  audited PASS. **Off-roadmap:** an owner-directed `/goal` audit (pod organization + button
-  wiring + store completeness + chain-wiring gaps + a new-item/workflow ask) ran in parallel;
-  concrete findings fixed in `gv-o03b-pod-button-fixes` (PR #174, gates green, awaiting
-  `/handoff-audit` + merge). Design-fork findings (A1/A4/A5/B4) queued in `BACKLOG.md`, not built.
-- **NEXT BRANCH (after #174 merges):** `claude/gv-o04-cure-mint-integrity` (ROADMAP_90D week 5)
-- **NEXT PR TITLE:** (not yet named — pick one reflecting the actual seams fixed, e.g.
-  `fix(mint): cure/mint state machine can't strand, lie, or pay zero`)
-- **Owner action pending before next kickoff — STOP, do not build week 5 without these:**
-  week 5 is a **protected-surface week** (touches the mint path + a faucet number:
-  `reward_pct`). Two owner decision gates block it, per ROADMAP_90D §3 week 5:
-  - **D2** — the owner must approve the staking reward number/formula (appraised value ×
-    `reward_pct`) BEFORE code is written; attach an Economy Balancer sim to the PR.
-  - **D3** — the owner must confirm the cure clock moves to the player-effective (turbo) clock
-    with a wall-clock floor.
+- **Active roadmap (condensed):** [STATUS_AND_ROADMAP.md](STATUS_AND_ROADMAP.md) — supersedes
+  ROADMAP_90D_2026Q3.md / GROWVERSE_ROADMAP.md for sequencing. This block tracks the same path at
+  pointer granularity.
+- **Phases complete:** p01 (Architecture Truth). Weeks 1–4 (PRs #171, #172, #173, #174) merged, all
+  audited PASS. **This session (2026-08-24) additionally shipped:** plant lifecycle viz
+  (GrowthJourney), 3D plant viewer (PlantViewerModal), NFT Lifecycle Center (/nft-center),
+  mint-path unification (game_api mint_harvest → NFTMintService), curing-vault polish, breeding
+  flag-gating + trait-inheritance UI + mint-readiness progress. All committed + pushed; branch up to
+  date with origin.
+- **Other cloud agent active:** `claude/chamber-branchlet-zorder` owns `chamberCore.ts` + the chamber
+  page (branchlet z-order + plant-view gate). Do not touch those files.
+- **NEXT BRANCH:** `claude/gv-o04-cure-mint-integrity` (condensed roadmap #1)
+- **NEXT PR TITLE:** `fix(mint): cure/mint state machine can't strand, lie, or pay zero`
+- **Owner action pending before next kickoff — STOP, do not build without these:** week 5 is a
+  **protected-surface week** (touches the mint path + a faucet number: `reward_pct`). Two owner
+  decision gates block it:
+  - **D2** — approve the staking reward number/formula (appraised value × `reward_pct`) BEFORE code is
+    written; attach an Economy Balancer sim to the PR.
+  - **D3** — confirm the cure clock moves to the player-effective (turbo) clock with a wall-clock floor.
   Also required: a Security-Reviewer checklist + owner sign-off in the PR body (BUILD_RULES.md
   protected-surface gate). Record both decisions in `docs/memory/DECISIONS.md` once given.
 - **Carried risk into next branch:** none.
