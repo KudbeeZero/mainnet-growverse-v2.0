@@ -45,17 +45,7 @@ export function OnboardingPanel() {
           <ImportForm />
         )}
 
-        {/* Offline escape hatch: lets the player reach the grow loop even when the
-            backend login is unavailable (no raw 404). Local-only, clearly labeled. */}
-        <div className="mt-4 border-t border-ink-700 pt-4">
-          <p className="mb-2 text-center text-xs text-gray-400">
-            Cloud login not connected yet?
-          </p>
-          <Button variant="secondary" className="w-full" onClick={() => router.push("/demo")}>
-            ▶ Play Demo Grow (offline)
-          </Button>
-        </div>
-      </Card>
+        </Card>
       {/* Dev/test-only shortcut — invisible in production (flag default off). */}
       {isDevBypassEnabled() && <DevSkipLoginButton />}
     </>
