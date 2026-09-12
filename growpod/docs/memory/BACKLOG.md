@@ -1,8 +1,7 @@
 # Backlog (Layer 3) — single source of priority
 
 Status: `⬜ todo · 🔨 doing · ✅ done · ❄️ parked`. Standups may *propose* items; they're only real
-once they appear here. Last reconciled: **2026-07-07** (Week 5 gv-o04-cure-mint-integrity shipped:
-all defects C1/C5/C6/C8/C9 fixed, decisions D2/D3 applied, 1213 tests passing, ready for merge.
+once they appear here. Last reconciled: **2026-09-12** (session `kilo/falling-codec-uit`: demo link removed from OnboardingPanel committed `8653f40`; Clone Room API routes at `artifacts/api-server/src/routes/plant.ts` committed `0c93f6a`; production build passes; web 528/528 + backend 1219/1219 tests green; working tree clean; branch up to date with origin; no uncommitted changes to push.)
 owner-directed Arcade chamber polish,
 off-roadmap, `claude/gv-o03f-arcade-polish`: executed the already-decided removal of the Arcade
 chamber page's own preview-growth scrubber (TIME tab + `previewDay`/`previewing`/`stageForDay`

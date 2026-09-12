@@ -15,6 +15,11 @@
 
 **Reconciled:** 2026-06-14 · **Against:** `main` (post-#46) · **By:** REC-004 (Records Department)
 
+> **⚡ Restamped 2026-09-12 (`kilo/falling-codec-uit`):** session verified all work committed and
+> pushed — demo link removal (`8653f40`), Clone Room API routes (`0c93f6a`), production build
+> passes, web 528 + backend 1219 tests green, working tree clean, branch up to date with origin.
+> The code has advanced past this snapshot; see BACKLOG.md for current state.
+
 ---
 
 ## 1) Canonical Project State (one screen)

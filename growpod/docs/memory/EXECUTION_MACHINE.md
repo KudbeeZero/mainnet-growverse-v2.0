@@ -17,11 +17,16 @@
   [ROADMAP_90D_2026Q3.md](ROADMAP_90D_2026Q3.md) now sequences the next 12 weeks (owner-priority
   `gv-oNN` branches first, gv phases p02/p03/p05 folded into month 3); evidence in
   [AUDIT_NFT_STORE_LOOP.md](AUDIT_NFT_STORE_LOOP.md). After week 12 the 22-phase order resumes.
-- **Phases complete:** p01 (Architecture Truth). Weeks 1–2/3–4 (PRs #171, #172, #173) merged, all
+- **Phases complete:** p01 (Architecture Truth). Weeks 1–8/3–4 (PRs #171, #172, #173) merged, all
   audited PASS. **Off-roadmap:** an owner-directed `/goal` audit (pod organization + button
   wiring + store completeness + chain-wiring gaps + a new-item/workflow ask) ran in parallel;
   concrete findings fixed in `gv-o03b-pod-button-fixes` (PR #174, gates green, awaiting
   `/handoff-audit` + merge). Design-fork findings (A1/A4/A5/B4) queued in `BACKLOG.md`, not built.
+- **Current session state (2026-09-12, `kilo/falling-codec-uit`):** all work is committed and pushed —
+  demo link removal from `OnboardingPanel.tsx` (`8653f40`) and Clone Room API routes at
+  `artifacts/api-server/src/routes/plant.ts` (`0c93f6a`). Production build passes; web 528/528
+  tests pass; backend 1219/1219 tests pass; Flask server healthy on `/health`; working tree clean;
+  branch `kilo/falling-codec-uit` up to date with `origin/kilo/falling-codec-uit`.
 - **NEXT BRANCH (after #174 merges):** `claude/gv-o04-cure-mint-integrity` (ROADMAP_90D week 5)
 - **NEXT PR TITLE:** (not yet named — pick one reflecting the actual seams fixed, e.g.
   `fix(mint): cure/mint state machine can't strand, lie, or pay zero`)

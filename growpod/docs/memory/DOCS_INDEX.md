@@ -1,4 +1,4 @@
-# Docs index — every Markdown file, tracked (2026-07-02 sweep)
+# Docs index — every Markdown file, tracked (2026-09-12 sweep)
 
 > The repo carries ~160 .md files; until now only `docs/memory/` was tracked and the rest rotted
 > silently (the deploy runbook said "nothing is deployed" while prod was live). This index is the

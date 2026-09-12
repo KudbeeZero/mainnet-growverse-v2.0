@@ -1,6 +1,7 @@
 # Branch Status Register
 
-> **Last audited:** 2026-07-03 (session `claude/research-pr-review-1whd6v`)
+> **Last audited:** 2026-09-12 (session `kilo/falling-codec-uit`) — verified clean, up to date with origin,
+> all tests green, production build passes, all memory layers reconciled.
 > **Total branches:** 133 (100 `claude/*` + 16 `design/*` + 2 `fix/*` + 1 `backup/*` + 1 `main` + 13 remaining page-2)
 > **Action available to agent:** cannot delete remote branches (MCP has no delete-branch tool;
 > local git branch-delete is gated by CLAUDE.md security policy). Owner can bulk-delete merged
@@ -14,7 +15,7 @@
 | Closed without merge — content superseded | 14 | Safe to delete; noted below |
 | Closed without merge — **content NOT in main** | 1 | See PR #136 (stamps.ts + pistil/frost) |
 | No PR found — orphaned dev stubs | 7 | Safe to delete after owner glance |
-| Current working branch | 1 | `claude/research-pr-review-1whd6v` (active) |
+| Current working branch | 1 | `kilo/falling-codec-uit` (active, clean, up to date) |
 
 ---
 
@@ -211,7 +212,7 @@ or was exploratory. Safe to delete after a quick owner glance.
 
 | Branch | PR | Status |
 |---|---|---|
-| `claude/research-pr-review-1whd6v` | #137 (merged) | Active session branch — rebased to `main` post-merge; new PRs open from here |
+| `kilo/falling-codec-uit` | `8653f40` + `0c93f6a` | Active session branch — demo link removed, Clone Room API routed, production build passes, all tests green, working tree clean, up to date with origin |
 
 ---
 

@@ -2,9 +2,8 @@
 
 > **Layer 1 companion doc.** `ARCHITECTURE.md` holds the stable invariants; this doc is the
 > **verified inventory** of what exists today, produced from three parallel read-only audits on
-> **2026-07-06** (architecture, game systems, agents/integrations) and cross-checked against the
-> repo. It is the baseline the [GrowVerse Roadmap](GROWVERSE_ROADMAP.md) builds on and the
-> [Execution Machine](EXECUTION_MACHINE.md) executes against.
+> 2026-07-06 and cross-checked against the repo. It is the baseline the [GrowVerse Roadmap](GROWVERSE_ROADMAP.md) builds on and the
+> [Execution Machine](EXECUTION_MACHINE.md) executes against. Restamped 2026-09-12 (`kilo/falling-codec-uit`) to reflect 1,219 backend tests.
 >
 > Capability tags: ✅ built · 🔨 partial · ⬜ planned. Refresh this doc whenever a phase changes a
 > load-bearing fact (same PR, so memory never lies).
@@ -16,7 +15,7 @@
 GROWv2 is a **working, tested game** with far more built than a fresh plan would assume. The
 GrowVerse roadmap is an **upgrade path over existing systems**, not a rebuild. The single most
 important planning fact: the plant-state engine, the ~3,100-LOC chamber renderer, the full
-grow→harvest→breed→mint loop, the ledgered economy, 5 live AI agents (+1 code-ready), and 1,140
+grow→harvest→breed→mint loop, the ledgered economy, 5 live AI agents (+1 code-ready), and 1,219
 passing backend tests **already exist**.
 
 ---
@@ -32,7 +31,7 @@ passing backend tests **already exist**.
 | `ai/` | ✅ Stronger than expected | **5 Claude-backed agents live + 1 code-ready, behind provider ABCs** (see §5). Structured output via `messages.parse()`; deterministic mocks in CI. |
 | `data/balance.yaml` | ✅ PROTECTED | The tuning surface. Economy changes are data-driven here and owner-gated. |
 | `genetics/` | ✅ Solid | Deterministic Mendelian crossbreeding, stability/rarity progression. |
-| DB | ✅ Solid | SQLAlchemy + Alembic; SQLite dev / Postgres prod; alembic-drift CI gate (added PR #148); 1,174 tests, ≥91% coverage (floor 79%, ratcheted). |
+| DB | ✅ Solid | SQLAlchemy + Alembic; SQLite dev / Postgres prod; alembic-drift CI gate (added PR #148); 1,219 tests, ≥91% coverage (floor 79%, ratcheted). |
 
 ### Plant state engine — `simulation/state/plant_state.py` ✅
 Persistent aggregates: `overall_health` (death at ≤1), `water_level`, `nutrient_level`,
@@ -139,8 +138,7 @@ owner approval.
 
 ## 7. Test / CI / deploy state ✅
 
-- Backend: 1,174 tests, 91.64% coverage (floor 79%, ratcheted). Property/invariant tests guard
-  ledger + genetics.
+- Backend: 1219 tests, ≥91% coverage (floor 79%, ratcheted). Property/invariant tests guard ledger + genetics.
 - Web: `typecheck · lint · build · vitest · playwright`; a route-crash sweep across 29 routes is a
   permanent regression net.
 - Gates: `make test`, `make lint`, `make check-memory` (via `scripts/check_memory.py`), alembic
@@ -186,4 +184,4 @@ enable mainnet** without a dedicated security phase + owner approval.
 
 ---
 
-*Baseline frozen 2026-07-06. When a phase changes a fact here, update it in the same PR.*
+*Restamped 2026-09-12 (`kilo/falling-codec-uit`). When a phase changes a fact here, update it in the same PR.*
